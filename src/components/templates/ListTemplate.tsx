@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { UserHeader, SearchBar } from '#components';
@@ -14,6 +14,8 @@ interface HeaderActions {
 interface SearchBarActions {
   left?: SearchBarAction[];
   right?: SearchBarAction[];
+  showSearchIcon?: boolean;
+  innerRightIcon?: ReactNode;
 }
 
 interface ListTemplateProps {
@@ -165,6 +167,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           }
           leftActions={searchBarActions?.left || []}
           rightActions={searchBarActions?.right || []}
+          showSearchIcon={searchBarActions?.showSearchIcon}
+          innerRightIcon={searchBarActions?.innerRightIcon}
           listName={listName || title}
           itemCount={items?.length || 0}
           completedCount={

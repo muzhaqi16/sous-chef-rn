@@ -176,6 +176,19 @@ query GetShoppingListItem($id: ID!) {
   }
 }
 
+query GetRecentlyDeletedShoppingListItems($shoppingListId: ID!, $limit: Int) {
+  recentlyDeletedShoppingListItems(shoppingListId: $shoppingListId, limit: $limit) {
+    id
+    itemName
+    item {
+      id
+      name
+      imageUrl
+    }
+    createdAt
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -354,7 +367,7 @@ mutation UpdateShoppingListItem(
 
 mutation RemoveItemFromShoppingList($id: ID!) {
   removeItemFromShoppingList(id: $id) {
-    ...ShoppingListItemFragment
+    id
   }
 }
 
@@ -391,11 +404,13 @@ mutation ToggleShoppingListItemPurchased(
 mutation UpdateShoppingListItemQuantity(
   $itemId: ID!
   $quantity: String!
+  $unitId: ID
   $version: Int
 ) {
   updateShoppingListItemQuantity(
     itemId: $itemId
     quantity: $quantity
+    unitId: $unitId
     version: $version
   ) {
     ...ShoppingListItemFragment

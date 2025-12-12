@@ -72,7 +72,9 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <View style={[commonStyles.shadow, styles.container]} testID={testID}>{innerContent}</View>
+    <View style={[commonStyles.shadow, styles.container]} testID={testID}>
+      {innerContent}
+    </View>
   );
 };
 

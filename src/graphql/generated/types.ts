@@ -2244,6 +2244,10 @@ export type ItemFilters = {
   timeRange?: InputMaybe<DateRange>;
   type?: InputMaybe<ItemType>;
   types?: InputMaybe<Array<ItemType>>;
+  /** UPC/barcode to search for */
+  upc?: InputMaybe<Scalars['String']['input']>;
+  /** Format hint for UPC validation/normalization (defaults to AUTO) */
+  upcFormat?: InputMaybe<UpcFormat>;
   updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
   updatedBefore?: InputMaybe<Scalars['DateTime']['input']>;
   visibility?: InputMaybe<Visibility>;
@@ -2529,6 +2533,29 @@ export enum LoginFailureReason {
   SuspiciousActivity = 'SUSPICIOUS_ACTIVITY',
 }
 
+/**
+ * Consolidated input for querying login history.
+ * Replaces multiple specialized queries with a single flexible query.
+ */
+export type LoginHistoriesInput = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  hours?: InputMaybe<Scalars['Int']['input']>;
+  ipAddress?: InputMaybe<Scalars['String']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  method?: InputMaybe<LoginMethod>;
+  orderBy?: InputMaybe<LoginHistoryOrderBy>;
+  orderDirection?: InputMaybe<SortOrder>;
+  riskyOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  successOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Security audit log for login attempts - NEVER cache */
 export type LoginHistory = {
   __typename?: 'LoginHistory';
@@ -2613,6 +2640,19 @@ export type LoginHistoryByIpFiltersInput = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type LoginHistoryConnection = {
+  __typename?: 'LoginHistoryConnection';
+  edges: Array<LoginHistoryEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LoginHistoryEdge = {
+  __typename?: 'LoginHistoryEdge';
+  cursor: Scalars['String']['output'];
+  node: LoginHistory;
+};
+
 export type LoginHistoryFiltersInput = {
   failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -2625,6 +2665,12 @@ export type LoginHistoryFiltersInput = {
   take?: InputMaybe<Scalars['Int']['input']>;
   toDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
+
+export enum LoginHistoryOrderBy {
+  CreatedAt = 'CREATED_AT',
+  LoggedInAt = 'LOGGED_IN_AT',
+  RiskScore = 'RISK_SCORE',
+}
 
 export type LoginHistoryPeriod = {
   __typename?: 'LoginHistoryPeriod';
@@ -5333,6 +5379,7 @@ export type Query = {
   devices: DeviceConnection;
   dietaryProfile?: Maybe<DietaryProfile>;
   expirationNotification?: Maybe<ExpirationNotification>;
+  /** @deprecated Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead */
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
   /**
@@ -5361,12 +5408,23 @@ export type Query = {
   itemByExternalId?: Maybe<Item>;
   itemByExternalSource?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
+  /**
+   * Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.
+   * @deprecated Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support
+   */
   itemByUpc?: Maybe<Item>;
   itemPriceHistory?: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
   itemsBySource: Array<Item>;
+  /**
+   * Consolidated login history query with comprehensive filtering.
+   * Replaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory
+   */
+  loginHistories: LoginHistoryConnection;
   loginHistory?: Maybe<LoginHistory>;
+  /** @deprecated Use loginHistories(input: { ipAddress: ... }) instead */
   loginHistoryByIP: Array<LoginHistory>;
+  /** @deprecated Use loginHistories(input: { userId: ... }) instead */
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
@@ -5477,6 +5535,7 @@ export type Query = {
   savedRecipe?: Maybe<SavedRecipe>;
   savedRecipeFolders: Array<Scalars['String']['output']>;
   searchItems?: Maybe<ItemsResponse>;
+  /** @deprecated Use loginHistories(input: { search: ... }) instead */
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: RecipeConnection;
   searchShoppingLists: Array<ShoppingList>;
@@ -5754,6 +5813,10 @@ export type QueryItemsBySourceArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   source: ExternalSource;
+};
+
+export type QueryLoginHistoriesArgs = {
+  input: LoginHistoriesInput;
 };
 
 export type QueryLoginHistoryArgs = {
@@ -7702,6 +7765,20 @@ export enum UnitUsageContext {
   Serving = 'SERVING',
   Shopping = 'SHOPPING',
   Storing = 'STORING',
+}
+
+/** UPC/barcode format for lookup optimization */
+export enum UpcFormat {
+  /** Auto-detect format based on length (default) */
+  Auto = 'AUTO',
+  /** 8-digit shortened European format */
+  Ean_8 = 'EAN_8',
+  /** 13-digit European Article Number */
+  Ean_13 = 'EAN_13',
+  /** 12-digit standard UPC (US/Canada) */
+  UpcA = 'UPC_A',
+  /** 8-digit compressed UPC (auto-expanded to UPC-A) */
+  UpcE = 'UPC_E',
 }
 
 export type UpcValidation = {
@@ -9795,6 +9872,16 @@ export type ShoppingListItemDisplayFragmentFragment = {
             }>
           | null
           | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          id: string;
+          isDefault: boolean;
+          isPreferred: boolean;
+          unit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }>;
       }
     | null
     | undefined;
@@ -15858,6 +15945,35 @@ export type ItemByUpcQuery = {
     | undefined;
 };
 
+export type ItemByUpcFilterQueryVariables = Exact<{
+  upc: Scalars['String']['input'];
+  upcFormat?: InputMaybe<UpcFormat>;
+}>;
+
+export type ItemByUpcFilterQuery = {
+  __typename?: 'Query';
+  items: {
+    __typename?: 'ItemsResponse';
+    totalCount: number;
+    items?:
+      | Array<{
+          __typename?: 'Item';
+          id: string;
+          imageUrl?: string | null | undefined;
+          name: string;
+          netWeight?: number | null | undefined;
+          primaryUpc?: string | null | undefined;
+          units: Array<{
+            __typename?: 'ItemUnit';
+            isDefault: boolean;
+            unitId: string;
+          }>;
+        }>
+      | null
+      | undefined;
+  };
+};
+
 export type ItemBySkuQueryVariables = Exact<{
   sku: Scalars['String']['input'];
   storeId?: InputMaybe<Scalars['String']['input']>;
@@ -20642,6 +20758,21 @@ export type GetShoppingListQuery = {
                         }>
                       | null
                       | undefined;
+                    units: Array<{
+                      __typename?: 'ItemUnit';
+                      id: string;
+                      isDefault: boolean;
+                      isPreferred: boolean;
+                      unit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
+                    }>;
                   }
                 | null
                 | undefined;
@@ -20807,6 +20938,21 @@ export type GetShoppingListsQuery = {
                     }>
                   | null
                   | undefined;
+                units: Array<{
+                  __typename?: 'ItemUnit';
+                  id: string;
+                  isDefault: boolean;
+                  isPreferred: boolean;
+                  unit?:
+                    | {
+                        __typename?: 'Unit';
+                        id: string;
+                        name: string;
+                        symbol: string;
+                      }
+                    | null
+                    | undefined;
+                }>;
               }
             | null
             | undefined;
@@ -21151,6 +21297,30 @@ export type GetShoppingListItemQuery = {
       }
     | null
     | undefined;
+};
+
+export type GetRecentlyDeletedShoppingListItemsQueryVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetRecentlyDeletedShoppingListItemsQuery = {
+  __typename?: 'Query';
+  recentlyDeletedShoppingListItems: Array<{
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null | undefined;
+    createdAt: string;
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          imageUrl?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  }>;
 };
 
 export type CreateShoppingListMutationVariables = Exact<{
@@ -21874,192 +22044,7 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = {
   __typename?: 'Mutation';
-  removeItemFromShoppingList: {
-    __typename?: 'ShoppingListItem';
-    estimatedPrice?: number | null | undefined;
-    budgetPrice?: number | null | undefined;
-    lastKnownPrice?: number | null | undefined;
-    lowestPrice?: number | null | undefined;
-    highestPrice?: number | null | undefined;
-    priceLastUpdated?: string | null | undefined;
-    purchasedQuantity?: number | null | undefined;
-    purchasedPrice?: number | null | undefined;
-    purchaseDate?: string | null | undefined;
-    aisle?: string | null | undefined;
-    storeSection?: string | null | undefined;
-    previouslyPurchased: boolean;
-    lastPurchaseDate?: string | null | undefined;
-    purchaseCount: number;
-    priority: number;
-    sortOrder: string;
-    isAutoAdded: boolean;
-    autoAddReason?: string | null | undefined;
-    isFromMealPlan: boolean;
-    mealPlanReference?: string | null | undefined;
-    createdAt: string;
-    deletedAt?: string | null | undefined;
-    id: string;
-    itemName?: string | null | undefined;
-    quantity?: number | null | undefined;
-    quantityInput?: string | null | undefined;
-    displayFormat: DisplayFormat;
-    isPurchased: boolean;
-    version: number;
-    updatedAt: string;
-    category?: string | null | undefined;
-    notes?: string | null | undefined;
-    unitName?: string | null | undefined;
-    shoppingList: {
-      __typename?: 'ShoppingList';
-      id: string;
-      totalItems: number;
-      completedItems: number;
-      estimatedTotal: number;
-    };
-    item?:
-      | {
-          __typename?: 'Item';
-          id: string;
-          name: string;
-          description?: string | null | undefined;
-          imageUrl?: string | null | undefined;
-          netWeight?: number | null | undefined;
-          displayUnit?:
-            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
-            | null
-            | undefined;
-          categories?:
-            | Array<{
-                __typename?: 'ItemCategory';
-                id: string;
-                isPrimary: boolean;
-                confidence: number;
-                source: CategorySource;
-                assignedAt?: string | null | undefined;
-                category: { __typename?: 'Category'; id: string; name: string };
-              }>
-            | null
-            | undefined;
-        }
-      | null
-      | undefined;
-    unit?:
-      | {
-          __typename?: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          notes?: string | null | undefined;
-          isCommon: boolean;
-          sortOrder: number;
-          createdAt: string;
-          updatedAt: string;
-          id: string;
-          name: string;
-          symbol: string;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-        }
-      | null
-      | undefined;
-    addedBy?:
-      | {
-          __typename?: 'User';
-          id: string;
-          email: string;
-          emailVerified: boolean;
-          role: UserRole;
-          onBoarded: boolean;
-          timezone?: string | null | undefined;
-          preferredCurrency?: string | null | undefined;
-          language?: string | null | undefined;
-          defaultShoppingListId?: string | null | undefined;
-          defaultHomeId?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          lastActiveAt?: string | null | undefined;
-          profile?:
-            | {
-                __typename?: 'UserProfile';
-                id: string;
-                firstName?: string | null | undefined;
-                lastName?: string | null | undefined;
-                displayName?: string | null | undefined;
-                bio?: string | null | undefined;
-                avatar?: string | null | undefined;
-                phone?: string | null | undefined;
-              }
-            | null
-            | undefined;
-          settings?:
-            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
-            | null
-            | undefined;
-        }
-      | null
-      | undefined;
-    purchasedBy?:
-      | {
-          __typename?: 'User';
-          id: string;
-          email: string;
-          emailVerified: boolean;
-          role: UserRole;
-          onBoarded: boolean;
-          timezone?: string | null | undefined;
-          preferredCurrency?: string | null | undefined;
-          language?: string | null | undefined;
-          defaultShoppingListId?: string | null | undefined;
-          defaultHomeId?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          lastActiveAt?: string | null | undefined;
-          profile?:
-            | {
-                __typename?: 'UserProfile';
-                id: string;
-                firstName?: string | null | undefined;
-                lastName?: string | null | undefined;
-                displayName?: string | null | undefined;
-                bio?: string | null | undefined;
-                avatar?: string | null | undefined;
-                phone?: string | null | undefined;
-              }
-            | null
-            | undefined;
-          settings?:
-            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
-            | null
-            | undefined;
-        }
-      | null
-      | undefined;
-    purchasesConnection: {
-      __typename?: 'PurchaseConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'PurchaseEdge';
-        cursor: string;
-        node: {
-          __typename?: 'Purchase';
-          id: string;
-          purchaseDate: string;
-          quantity: number;
-          unitPrice: number;
-          totalPrice: number;
-          itemName: string;
-          unitSymbol: string;
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
-  };
+  removeItemFromShoppingList: { __typename?: 'ShoppingListItem'; id: string };
 };
 
 export type MarkItemPurchasedMutationVariables = Exact<{
@@ -22650,6 +22635,7 @@ export type ToggleShoppingListItemPurchasedMutation = {
 export type UpdateShoppingListItemQuantityMutationVariables = Exact<{
   itemId: Scalars['ID']['input'];
   quantity: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['ID']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 }>;
 

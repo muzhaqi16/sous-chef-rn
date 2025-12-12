@@ -8,7 +8,7 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { getItemImageUrl } from '#utils/imageUtils';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
-import type { CounterElementConfig, ImageElementConfig } from '#components/organisms/SortableShoppingList/types';
+import type { QuantityElementConfig, ImageElementConfig } from '#components/organisms/SortableShoppingList/types';
 
 /**
  * Shopping List Screen Controller Hook - Facade pattern
@@ -94,7 +94,7 @@ export function useShoppingListScreen() {
 
   // PERFORMANCE: Cache config objects to maintain stable references
   // This prevents SortableItem re-renders when item data hasn't changed
-  const rightConfigCacheRef = useRef<Map<string, CounterElementConfig>>(
+  const rightConfigCacheRef = useRef<Map<string, QuantityElementConfig>>(
     new Map(),
   );
   const leftConfigCacheRef = useRef<
@@ -114,14 +114,9 @@ export function useShoppingListScreen() {
       currentIds.add(item.id);
       const imageUrl = getItemImageUrl(item.item);
 
-      // Get primary category from item.item.categories
-      const primaryCategory = item.item?.categories?.find(
-        (cat: any) => cat.isPrimary,
-      );
-      const categoryName =
-        primaryCategory?.category?.name ||
-        item.item?.categories?.[0]?.category?.name ||
-        item.category;
+      // Only use user-set category, don't fall back to item.item.categories
+      // (item.item.categories is for autocomplete suggestions, not display)
+      const categoryName = item.category;
 
       // PERFORMANCE: Reuse rightElementConfig if data hasn't changed
       const cachedRight = rightCache.get(item.id);
@@ -129,7 +124,7 @@ export function useShoppingListScreen() {
       const newUnit = item.unit?.symbol || item.unitName || undefined;
       const newDisabled = item.isPurchased;
 
-      let rightElementConfig: CounterElementConfig;
+      let rightElementConfig: QuantityElementConfig;
       if (
         cachedRight &&
         cachedRight.quantity === newQuantity &&
@@ -141,7 +136,7 @@ export function useShoppingListScreen() {
       } else {
         // Create new config and cache it
         rightElementConfig = {
-          type: 'counter' as const,
+          type: 'quantity' as const,
           quantity: newQuantity,
           unit: newUnit,
           itemId: item.id,

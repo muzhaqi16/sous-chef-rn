@@ -46,7 +46,7 @@ export const SearchResultsScreen: React.FC<{
     handleAddItem,
     handleRetry,
     clearSearch,
-  } = useSearchResults(barcode);
+  } = useSearchResults(barcode, format);
 
   // Handle bottom sheet changes
   useEffect(() => {

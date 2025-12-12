@@ -16,6 +16,7 @@ interface ListItemProps {
   };
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
+  checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
   isPurchased?: boolean; // For strikethrough styling
 }
 
@@ -28,12 +29,17 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   badge,
   rightElement,
   leftElement,
+  checkboxElement,
   isPurchased = false,
 }) => {
   const { theme } = useUnistyles();
 
   const content = (
     <>
+      {/* Optional checkbox element (for shopping list items) */}
+      {checkboxElement && (
+        <View style={styles.checkboxContainer}>{checkboxElement}</View>
+      )}
       {/* Optional left element for image or icon */}
       {leftElement}
       {leftIcon && (
@@ -51,7 +57,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </Text>
         {subtitle && (
           typeof subtitle === 'string' ? (
-            <Text style={[styles.subtitle, isPurchased && styles.purchasedText]}>
+            <Text
+              style={[styles.subtitle, isPurchased && styles.purchasedText]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {subtitle}
             </Text>
           ) : (
@@ -111,6 +121,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.md,
     minHeight: 87, // Specific design requirement for list item height
+    gap: theme.spacing.sm, // Better spacing between elements
+  },
+  checkboxContainer: {
+    marginRight: theme.spacing.xs, // Reduced since gap provides base spacing
+    justifyContent: 'center',
   },
   leftIcon: {
     marginRight: theme.spacing['3'],

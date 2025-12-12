@@ -11,6 +11,7 @@ interface ShoppingTabProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
+  onQuantityPress?: (id: string) => void;
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
@@ -35,6 +36,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onQuantityPress,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
@@ -81,6 +83,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       onItemEdit={onItemEdit}
       onItemDelete={onItemDelete}
       onTogglePurchase={onTogglePurchase}
+      onQuantityPress={onQuantityPress}
       onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
       isDragging={isDragging}

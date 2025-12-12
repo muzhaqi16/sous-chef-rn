@@ -81,7 +81,7 @@ export const ShoppingListItemDetail: React.FC<{
           <Text style={[commonStyles.title, styles.itemName]}>
             {item.itemName}
           </Text>
-          {item.quantity ? (
+          {item.quantity != null ? (
             <View style={styles.itemDescription}>
               <FormattedItemSubtitle
                 quantity={item.quantity}

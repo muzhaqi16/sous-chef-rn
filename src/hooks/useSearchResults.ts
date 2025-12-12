@@ -1,16 +1,28 @@
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/shallow';
 import {
-  useItemByUpcQuery,
+  useItemByUpcFilterQuery,
   useItemBySkuQuery,
   useCreateItemMutation,
   CreateItemMutation,
+  UpcFormat,
 } from '#generated';
 import { useAppStore, selectSearchState, selectBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
+
+// Map Vision Camera barcode format to GraphQL UpcFormat enum
+const mapVisionCameraFormatToUpcFormat = (format?: string): UpcFormat | undefined => {
+  switch (format) {
+    case 'ean-13': return UpcFormat.Ean_13;
+    case 'ean-8': return UpcFormat.Ean_8;
+    case 'upc-a': return UpcFormat.UpcA;
+    case 'upc-e': return UpcFormat.UpcE;
+    default: return undefined; // Let API auto-detect
+  }
+};
 
 // Helper function to convert GraphQL Item to ScannedItem
 const convertToScannedItem = (
@@ -35,7 +47,8 @@ const convertToScannedItem = (
   unitId: item.units?.find((u: any) => u.isDefault)?.unitId || undefined,
 });
 
-export const useSearchResults = (barcode: string) => {
+export const useSearchResults = (barcode: string, format?: string) => {
+  const upcFormat = mapVisionCameraFormatToUpcFormat(format);
   const {
     searchResults,
     setSearching,
@@ -97,9 +110,12 @@ export const useSearchResults = (barcode: string) => {
     data: upcData,
     loading: upcLoading,
     error: upcError,
-  } = useItemByUpcQuery({
-    variables: { upc: barcode },
+  } = useItemByUpcFilterQuery({
+    variables: { upc: barcode, upcFormat },
   });
+
+  // Get first item from UPC filter results
+  const upcItem = upcData?.items?.items?.[0];
 
   const {
     data: skuData,
@@ -107,20 +123,20 @@ export const useSearchResults = (barcode: string) => {
     error: skuError,
   } = useItemBySkuQuery({
     variables: { sku: barcode, storeId: undefined },
-    skip: !!upcData?.itemByUpc, // Skip SKU search if UPC search found a result
+    skip: !!upcItem, // Skip SKU search if UPC search found a result
   });
 
   // Handle UPC query completion
   useEffect(() => {
-    if (upcData && upcData?.itemByUpc) {
+    if (upcItem) {
       setSearching(false);
-      const item = convertToScannedItem(upcData.itemByUpc, barcode);
+      const item = convertToScannedItem(upcItem, barcode);
       setSearchResults([item]);
       addToRecentlyScanned(item);
       hideBottomSheet();
     }
   }, [
-    upcData,
+    upcItem,
     barcode,
     setSearching,
     setSearchResults,

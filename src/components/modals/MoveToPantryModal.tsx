@@ -11,9 +11,14 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
+import { Header } from '#components/molecules/Header';
 import { Icon } from '#utils';
 import { parseFractionalInput } from '#/utils';
-import { StorageState, ShoppingListItemDisplayFragment, BasicPantryFragment } from '#generated';
+import {
+  StorageState,
+  ShoppingListItemDisplayFragment,
+  BasicPantryFragment,
+} from '#generated';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -51,8 +56,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
   const [pantryId, setPantryId] = useState<string | null>(null);
-  const [storageState, setStorageState] = useState<StorageState>(StorageState.Ambient);
-  const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
+  const [storageState, setStorageState] = useState<StorageState>(
+    StorageState.Ambient,
+  );
+  const [expirationDate, setExpirationDate] = useState<Date | undefined>(
+    undefined,
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [removeFromList, setRemoveFromList] = useState(true);
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
@@ -97,9 +106,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     const costPerUnit = costPerUnitInput
       ? parseFloat(costPerUnitInput)
       : undefined;
-    const totalCost = totalCostInput
-      ? parseFloat(totalCostInput)
-      : undefined;
+    const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
     onConfirm({
       pantryId,
@@ -112,7 +119,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       notes: notes || undefined,
     });
     onClose();
-  }, [shoppingListItem, pantryId, quantityInput, storageState, expirationDate, removeFromList, costPerUnitInput, totalCostInput, notes, onConfirm, onClose]);
+  }, [
+    shoppingListItem,
+    pantryId,
+    quantityInput,
+    storageState,
+    expirationDate,
+    removeFromList,
+    costPerUnitInput,
+    totalCostInput,
+    notes,
+    onConfirm,
+    onClose,
+  ]);
 
   const handleDateChange = useCallback((_event: any, date?: Date) => {
     setShowDatePicker(false);
@@ -154,7 +173,22 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>Move to Pantry</Text>
+        <Header
+          title="Move to Pantry"
+          centerTitle
+          leftActions={[
+            {
+              icon: 'close',
+              onPress: onClose,
+            },
+          ]}
+          rightActions={[
+            {
+              icon: 'check',
+              onPress: handleConfirm,
+            },
+          ]}
+        />
 
         {shoppingListItem && (
           <>
@@ -162,7 +196,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{shoppingListItem.itemName}</Text>
               <Text style={styles.itemQuantity}>
-                Shopping list quantity: {shoppingListItem.quantity || 1} {shoppingListItem.unit?.symbol || shoppingListItem.unitName || ''}
+                Shopping list quantity: {shoppingListItem.quantity || 1}{' '}
+                {shoppingListItem.unit?.symbol ||
+                  shoppingListItem.unitName ||
+                  ''}
               </Text>
             </View>
 
@@ -183,27 +220,37 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       <Icon
                         name="cupboard"
                         size={20}
-                        color={pantryId === pantry.id ? theme.colors.white : theme.colors.textSecondary}
+                        color={
+                          pantryId === pantry.id
+                            ? theme.colors.white
+                            : theme.colors.textSecondary
+                        }
                         library="MaterialDesignIcons"
                       />
                       <Text
                         style={[
                           styles.pantryOptionText,
-                          pantryId === pantry.id && styles.pantryOptionTextActive,
+                          pantryId === pantry.id &&
+                            styles.pantryOptionTextActive,
                         ]}
                         numberOfLines={1}
                       >
                         {pantry.name}
                       </Text>
                       {pantry.isDefault && (
-                        <View style={[
-                          styles.defaultBadge,
-                          pantryId === pantry.id && styles.defaultBadgeActive,
-                        ]}>
-                          <Text style={[
-                            styles.defaultBadgeText,
-                            pantryId === pantry.id && styles.defaultBadgeTextActive,
-                          ]}>
+                        <View
+                          style={[
+                            styles.defaultBadge,
+                            pantryId === pantry.id && styles.defaultBadgeActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.defaultBadgeText,
+                              pantryId === pantry.id &&
+                                styles.defaultBadgeTextActive,
+                            ]}
+                          >
                             Default
                           </Text>
                         </View>
@@ -217,7 +264,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Quantity Input */}
             <View style={styles.section}>
               <FractionInput
-                label={`Actual Quantity Purchased (${shoppingListItem.unit?.symbol || shoppingListItem.unitName || 'item'}) *`}
+                label={`Actual Quantity Purchased (${
+                  shoppingListItem.unit?.symbol ||
+                  shoppingListItem.unitName ||
+                  'item'
+                }) *`}
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
@@ -254,13 +305,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
             {/* Expiration Date */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Expiration Date (Optional)</Text>
+              <Text style={styles.sectionLabel}>Expiration Date</Text>
               <View style={styles.dateRow}>
                 <TouchableOpacity
                   style={styles.dateInput}
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <Icon name="event" size={20} color={theme.colors.textSecondary} />
+                  <Icon
+                    name="event"
+                    size={20}
+                    color={theme.colors.textSecondary}
+                  />
                   <Text style={styles.dateText}>
                     {expirationDate
                       ? expirationDate.toLocaleDateString()
@@ -272,7 +327,11 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     style={styles.clearDateButton}
                     onPress={clearExpirationDate}
                   >
-                    <Icon name="close" size={20} color={theme.colors.textSecondary} />
+                    <Icon
+                      name="close"
+                      size={20}
+                      color={theme.colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -288,7 +347,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
             {/* Cost Tracking (Optional) */}
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Cost (Optional)</Text>
               <View style={styles.costRow}>
                 <View style={styles.costField}>
                   <FormInput
@@ -326,7 +384,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Remove from List Toggle */}
             <View style={styles.toggleSection}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Remove from shopping list</Text>
+                <Text style={styles.toggleLabel}>
+                  Remove from shopping list
+                </Text>
                 <Text style={styles.toggleDescription}>
                   Turn off to keep the item in your shopping list
                 </Text>
@@ -334,26 +394,14 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               <Switch
                 value={removeFromList}
                 onValueChange={setRemoveFromList}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                trackColor={{
+                  false: theme.colors.border,
+                  true: theme.colors.primary,
+                }}
                 thumbColor={theme.colors.white}
               />
             </View>
 
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-              >
-                <Text style={styles.confirmButtonText}>Add to Pantry</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </BottomSheetScrollView>
@@ -367,13 +415,6 @@ const styles = StyleSheet.create(theme => ({
   },
   contentContainer: {
     padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
   },
   itemInfo: {
     marginBottom: theme.spacing.xl,
@@ -524,35 +565,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
   },
 }));

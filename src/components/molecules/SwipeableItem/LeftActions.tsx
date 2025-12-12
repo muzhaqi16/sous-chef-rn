@@ -1,6 +1,7 @@
 import React from 'react';
 import { Vibration, Platform } from 'react-native';
 import Reanimated from 'react-native-reanimated';
+import { useUnistyles } from 'react-native-unistyles';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
@@ -22,7 +23,36 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
     isPurchased,
     swipeableRef,
     progress,
+    swipeMode,
+    onEdit,
+    onActionPress,
   }) => {
+    const { theme } = useUnistyles();
+
+    // Shopping mode: Show Edit button on left swipe
+    if (swipeMode === 'shopping' && onEdit) {
+      const handleEditPress = () => {
+        swipeableRef?.current?.close();
+        onActionPress?.('edit');
+      };
+
+      return (
+        <Reanimated.View
+          style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
+          pointerEvents="box-none"
+        >
+          <AnimatedActionButton
+            onPress={handleEditPress}
+            icon="edit"
+            backgroundColor={theme.colors.info}
+            circular={true}
+            library="MaterialIcons"
+            progress={progress}
+            index={0}
+          />
+        </Reanimated.View>
+      );
+    }
     // Show consume, waste, and restock buttons for pantry items
     if (onConsume && onWaste && onRestock) {
       const handleConsumePress = () => {

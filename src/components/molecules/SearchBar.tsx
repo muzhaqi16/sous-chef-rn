@@ -1,8 +1,9 @@
-import { type FC } from 'react';
+import { type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseInput, ActionButton, AnimatedActionButton } from '#components';
 import { commonStyles } from '#/styles';
+import { Icon } from '#utils';
 
 export interface SearchBarAction {
   icon: string;
@@ -29,6 +30,10 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   completedCount?: number;
   leftActions?: SearchBarAction[];
   rightActions?: SearchBarAction[];
+  /** Show search icon inside the input field (left side) */
+  showSearchIcon?: boolean;
+  /** Custom icon/element to show inside the input field (right side, when not showing clear) */
+  innerRightIcon?: ReactNode;
 };
 
 export const SearchBar: FC<SearchBarProps> = ({
@@ -39,6 +44,8 @@ export const SearchBar: FC<SearchBarProps> = ({
   inputStyle,
   leftActions = [],
   rightActions = [],
+  showSearchIcon = false,
+  innerRightIcon,
   ...textInputProps
 }) => {
   const { theme } = useUnistyles();
@@ -68,7 +75,9 @@ export const SearchBar: FC<SearchBarProps> = ({
                 color={action.color || theme.colors.white}
                 backgroundColor={action.backgroundColor || theme.colors.primary}
                 size={action.size}
-                accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
+                accessibilityLabel={
+                  action.accessibilityLabel || `${action.icon} button`
+                }
                 isHighlighted={action.isHighlighted}
                 testID={action.testID}
               />
@@ -82,14 +91,17 @@ export const SearchBar: FC<SearchBarProps> = ({
               onPress={action.onPress}
               style={[
                 {
-                  backgroundColor: action.backgroundColor || theme.colors.primary,
+                  backgroundColor:
+                    action.backgroundColor || theme.colors.primary,
                   ...commonStyles.shadow,
                 },
                 action.style,
               ]}
               color={action.color || '#fff'}
               size={action.size}
-              accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
+              accessibilityLabel={
+                action.accessibilityLabel || `${action.icon} button`
+              }
               testID={action.testID}
             />
           );
@@ -110,6 +122,17 @@ export const SearchBar: FC<SearchBarProps> = ({
         containerStyle={styles.inputContainer}
         showClearIcon={true}
         onClear={() => onChangeText('')}
+        leftIcon={
+          showSearchIcon ? (
+            <Icon
+              name="search"
+              size={16}
+              color={theme.colors.textTertiary}
+              library="Feather"
+            />
+          ) : undefined
+        }
+        rightIcon={!value ? innerRightIcon : undefined}
         {...textInputProps}
       />
 
@@ -122,7 +145,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
   },
   inputContainer: {
     flex: 1,

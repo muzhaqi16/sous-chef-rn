@@ -5,16 +5,17 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, View, Pressable } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation, useProfileData } from '#hooks';
 import { StyleSheet } from 'react-native-unistyles';
 import {
-  SearchBarAction,
   AnimatedItemSelector,
   ListTemplate,
 } from '#components';
+import { Icon } from '#utils';
+import { ShoppingListHeader } from '#/components/molecules/ShoppingListHeader';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
@@ -23,17 +24,20 @@ import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBou
 import { useScreenTransition } from '#hooks/performance';
 import { Telemetry } from '#/services/telemetry';
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
-import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
 import { useTabBarActions } from '#context';
 import { useUnistyles } from 'react-native-unistyles';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
+import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet';
+import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet';
 import {
   useMoveShoppingItemToPantryMutation,
+  useUpdateShoppingListItemQuantityMutation,
   StorageState,
   ShoppingListItemDisplayFragment,
   BasicPantryFragment,
 } from '#generated';
 import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
+import { useStore } from '#store';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater, createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
@@ -67,7 +71,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   const {
     theme: { colors },
   } = useUnistyles();
-  const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
+
+  // Get profile data for header
+  const { profile } = useProfileData();
+  const unreadCount = useStore(state => state.unreadCount);
 
   // Track screen performance
   useScreenTransition('ShoppingListMain');
@@ -97,12 +104,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // --- Actions Hook ---
   const {
     handleSortOrderUpdate,
-    handleIncrementQuantity,
-    handleDecrementQuantity,
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,
-    handleAddItemFromSearch,
   } = useShoppingListActions({
     currentListId,
     items,
@@ -129,9 +133,25 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Local state
   const [refreshing, setRefreshing] = useState(false);
 
+  // Add to shopping list sheet state
+  const [addSheetVisible, setAddSheetVisible] = useState(false);
+
   // Move to pantry modal state
   const [moveToPantryModalVisible, setMoveToPantryModalVisible] = useState(false);
   const [selectedItemForMove, setSelectedItemForMove] = useState<ShoppingListItemDisplayFragment | null>(null);
+
+  // Quantity edit sheet state
+  const [quantitySheetVisible, setQuantitySheetVisible] = useState(false);
+  const [selectedItemForQuantity, setSelectedItemForQuantity] = useState<ShoppingListItemDisplayFragment | null>(null);
+  const [quantityUpdateLoading, setQuantityUpdateLoading] = useState(false);
+
+  // Update shopping list item quantity mutation (syncs both quantity and quantityInput)
+  const [updateShoppingListItemQuantity] = useUpdateShoppingListItemQuantityMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      Alert.alert('Error', error.message || 'Failed to update item');
+    },
+  });
 
   // Get home and pantries for moving items
   const selectedPantryId = useAppStore(selectSelectedPantryId);
@@ -248,6 +268,54 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     setSelectedItemForMove(null);
   }, []);
 
+  // Handle quantity press - open quantity edit sheet
+  const handleQuantityPress = useCallback((itemId: string) => {
+    const item = items.find((i: any) => i.id === itemId);
+    if (item) {
+      setSelectedItemForQuantity(item as ShoppingListItemDisplayFragment);
+      setQuantitySheetVisible(true);
+    }
+  }, [items]);
+
+  // Handle quantity save - update item with new quantity and/or unit
+  const handleQuantitySave = useCallback(async (
+    quantity: number,
+    _unitName: string | null,
+    unitId: string | null
+  ) => {
+    if (!selectedItemForQuantity) return;
+
+    setQuantityUpdateLoading(true);
+    try {
+      await updateShoppingListItemQuantity({
+        variables: {
+          itemId: selectedItemForQuantity.id,
+          quantity: quantity.toString(),
+          unitId: unitId || undefined,
+          version: selectedItemForQuantity.version,
+        },
+      });
+
+      Telemetry.trackEvent('shopping_item_quantity_updated', {
+        item_id: selectedItemForQuantity.id,
+        quantity,
+      });
+
+      setQuantitySheetVisible(false);
+      setSelectedItemForQuantity(null);
+    } catch (error) {
+      // Error handled by mutation onError
+    } finally {
+      setQuantityUpdateLoading(false);
+    }
+  }, [selectedItemForQuantity, updateShoppingListItemQuantity]);
+
+  // Handle close quantity edit sheet
+  const handleCloseQuantitySheet = useCallback(() => {
+    setQuantitySheetVisible(false);
+    setSelectedItemForQuantity(null);
+  }, []);
+
   // Track currently open swipeable across both unpurchased and purchased lists
   const openSwipeableRef =
     useRef<React.RefObject<SwipeableMethods | null> | null>(null);
@@ -265,7 +333,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     }
   }, [items, swipeHint]);
 
-  // Handle add item navigation
+  // Handle add item - open sheet
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
@@ -286,7 +354,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       return;
     }
     Telemetry.trackEvent('add_item_clicked', { list_id: currentListId });
-    navigate('AddItem', { listId: currentListId });
+    setAddSheetVisible(true);
   }, [currentListId, navigate]);
 
   // Handle refresh
@@ -315,54 +383,28 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     openSwipeableRef.current = null;
   }, []);
 
-  // Search bar actions
-  const searchBarActions = useMemo(() => {
-    const hasSearchWithNoResults =
-      searchQuery.trim() && sortableItems.length === 0;
-    const rightActions: SearchBarAction[] = [
-      {
-        icon: 'list',
-        color: colors.white,
-        onPress: handleOpenSelector,
-      },
-    ];
-
-    if (hasSearchWithNoResults) {
-      rightActions.unshift({
-        icon: 'add',
-        onPress: () => handleAddItemFromSearch(searchQuery),
-        color: primaryColor,
-        backgroundColor: primaryLightColor,
-        animated: true,
-        isHighlighted: true,
-        testID: 'shopping-list-add-button',
-      });
-    } else {
-      rightActions.unshift({
-        icon: 'add',
-        onPress: handleAddItem,
-        color: primaryColor,
-        backgroundColor: colors.surface,
-        animated: true,
-        isHighlighted: false,
-        testID: 'shopping-list-add-button',
-      });
-    }
-
-    return {
-      left: [] as SearchBarAction[],
-      right: rightActions,
-    };
-  }, [
-    handleAddItem,
-    handleAddItemFromSearch,
-    handleOpenSelector,
-    searchQuery,
-    sortableItems.length,
-    primaryColor,
-    primaryLightColor,
-    colors,
-  ]);
+  // Search bar actions - icons inside the input (matching pantry style)
+  const searchBarActions = useMemo(
+    () => ({
+      showSearchIcon: true,
+      innerRightIcon:
+        searchQuery.trim().length === 0 ? (
+          <Pressable
+            onPress={handleOpenSelector}
+            hitSlop={8}
+            testID="shopping-list-selector"
+          >
+            <Icon
+              name="list"
+              size={18}
+              color={colors.textTertiary}
+              library="Ionicons"
+            />
+          </Pressable>
+        ) : undefined,
+    }),
+    [handleOpenSelector, searchQuery, colors],
+  );
 
   // Use ref to track currentListId for scanner
   const currentListIdRef = useRef(currentListId);
@@ -399,18 +441,18 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     };
   }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
 
-  // Register add button action - navigate to add shopping list item screen
+  // Register add button action - open add to shopping list sheet
   useEffect(() => {
-    if (isFocused && currentListId) {
+    if (isFocused) {
       setAddProps(() => {
         Telemetry.trackEvent('add_item_from_tab_bar', { list_id: currentListId });
-        navigate('AddItem', { listId: currentListId });
+        setAddSheetVisible(true);
       }, true);
     }
     return () => {
       setAddProps(undefined, false);
     };
-  }, [isFocused, currentListId, setAddProps, navigate]);
+  }, [isFocused, setAddProps, currentListId]);
 
   // Memoized footer
   const footerComponent = useMemo(
@@ -438,20 +480,21 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     };
 
     return (
-      <ShoppingListActionsProvider
-        onIncrementQuantity={handleIncrementQuantity}
-        onDecrementQuantity={handleDecrementQuantity}
-      >
-        <View style={styles.container}>
-          <ListTemplate
-            items={[]}
-            showUserHeader={true}
-            showSearchBar={false}
-            emptyState={noListsEmptyState}
-            hasNoData={true}
-          />
-        </View>
-      </ShoppingListActionsProvider>
+      <View style={styles.container}>
+        <ShoppingListHeader
+          listName="Shopping List"
+          avatarUrl={profile?.avatar}
+          notificationCount={unreadCount}
+          onAvatarPress={() => navigateTo.notificationList()}
+        />
+        <ListTemplate
+          items={[]}
+          showUserHeader={false}
+          showSearchBar={false}
+          emptyState={noListsEmptyState}
+          hasNoData={true}
+        />
+      </View>
     );
   }
 
@@ -466,11 +509,13 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   };
 
   return (
-    <ShoppingListActionsProvider
-      onIncrementQuantity={handleIncrementQuantity}
-      onDecrementQuantity={handleDecrementQuantity}
-    >
-      <View style={styles.container} testID="shopping-list-screen">
+    <View style={styles.container} testID="shopping-list-screen">
+        <ShoppingListHeader
+          listName={currentList?.name || 'Shopping List'}
+          avatarUrl={profile?.avatar}
+          notificationCount={unreadCount}
+          onAvatarPress={() => navigateTo.notificationList()}
+        />
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}
@@ -487,7 +532,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           searchPlaceholder="Search shopping list..."
           listName={currentList?.name || 'Shopping List'}
           completedCount={sortableItems.filter(item => item.isPurchased).length}
-          showUserHeader={true}
+          showUserHeader={false}
           showSearchBar={true}
           searchBarActions={searchBarActions}
           testIDPrefix="shopping-list-item"
@@ -500,6 +545,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
               : handleSortOrderUpdate,
             onTogglePurchase: handleTogglePurchase,
             onMoveToPantry: handleMoveToPantry,
+            onQuantityPress: handleQuantityPress,
             onRefresh: handleRefresh,
             refreshing,
             disabled: !!searchQuery.trim(),
@@ -534,8 +580,38 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           onClose={handleCloseMoveToPantryModal}
           onConfirm={handleConfirmMoveToPantry}
         />
+
+        {/* Add to Shopping List Sheet */}
+        <AddToShoppingListSheet
+          visible={addSheetVisible}
+          shoppingListId={currentListId}
+          onClose={() => setAddSheetVisible(false)}
+        />
+
+        {/* Quantity Edit Sheet */}
+        <QuantityEditSheet
+          visible={quantitySheetVisible}
+          item={selectedItemForQuantity ? {
+            id: selectedItemForQuantity.id,
+            itemName: selectedItemForQuantity.itemName || 'Item',
+            quantity: selectedItemForQuantity.quantity ?? 0,
+            unitName: selectedItemForQuantity.unit?.symbol || selectedItemForQuantity.unitName || null,
+            unitId: selectedItemForQuantity.unit?.id || null,
+            category: selectedItemForQuantity.category || null,
+            version: selectedItemForQuantity.version,
+            itemUnits: selectedItemForQuantity.item?.units?.map(iu => ({
+              id: iu.unit?.id || iu.id,
+              symbol: iu.unit?.symbol || '',
+              name: iu.unit?.name || '',
+              isDefault: iu.isDefault,
+              isPreferred: iu.isPreferred,
+            })).filter(u => u.symbol) || [],
+          } : null}
+          onClose={handleCloseQuantitySheet}
+          onSave={handleQuantitySave}
+          loading={quantityUpdateLoading}
+        />
       </View>
-    </ShoppingListActionsProvider>
   );
 });
 

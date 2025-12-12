@@ -12,10 +12,10 @@ export interface GroupBoundary {
   endY: number;
 }
 
-// Configuration for counter element (avoids creating React elements in useMemo)
-// Callbacks are retrieved from ShoppingListActionsContext for stable references
-export interface CounterElementConfig {
-  type: 'counter';
+// Configuration for quantity element (tappable badge instead of counter)
+// Opens a bottom sheet for editing quantity and unit when tapped
+export interface QuantityElementConfig {
+  type: 'quantity';
   quantity: number;
   unit?: string;
   itemId: string;
@@ -41,7 +41,7 @@ export interface SortableShoppingListItem {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: ReactNode;
-  rightElementConfig?: CounterElementConfig; // Config-based element creation (performance)
+  rightElementConfig?: QuantityElementConfig; // Config-based element creation (performance)
   leftElement?: ReactNode;
   leftElementConfig?: ImageElementConfig; // Config-based element creation (performance)
 }
@@ -54,6 +54,7 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
+  onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
   onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
   onSortOrderUpdate?: (
     itemId: string,

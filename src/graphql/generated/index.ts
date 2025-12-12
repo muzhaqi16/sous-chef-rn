@@ -2248,6 +2248,10 @@ export type ItemFilters = {
   timeRange?: InputMaybe<DateRange>;
   type?: InputMaybe<ItemType>;
   types?: InputMaybe<Array<ItemType>>;
+  /** UPC/barcode to search for */
+  upc?: InputMaybe<Scalars['String']['input']>;
+  /** Format hint for UPC validation/normalization (defaults to AUTO) */
+  upcFormat?: InputMaybe<UpcFormat>;
   updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
   updatedBefore?: InputMaybe<Scalars['DateTime']['input']>;
   visibility?: InputMaybe<Visibility>;
@@ -2533,6 +2537,29 @@ export enum LoginFailureReason {
   SuspiciousActivity = 'SUSPICIOUS_ACTIVITY',
 }
 
+/**
+ * Consolidated input for querying login history.
+ * Replaces multiple specialized queries with a single flexible query.
+ */
+export type LoginHistoriesInput = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  hours?: InputMaybe<Scalars['Int']['input']>;
+  ipAddress?: InputMaybe<Scalars['String']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  method?: InputMaybe<LoginMethod>;
+  orderBy?: InputMaybe<LoginHistoryOrderBy>;
+  orderDirection?: InputMaybe<SortOrder>;
+  riskyOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  successOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Security audit log for login attempts - NEVER cache */
 export type LoginHistory = {
   __typename?: 'LoginHistory';
@@ -2617,6 +2644,19 @@ export type LoginHistoryByIpFiltersInput = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type LoginHistoryConnection = {
+  __typename?: 'LoginHistoryConnection';
+  edges: Array<LoginHistoryEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LoginHistoryEdge = {
+  __typename?: 'LoginHistoryEdge';
+  cursor: Scalars['String']['output'];
+  node: LoginHistory;
+};
+
 export type LoginHistoryFiltersInput = {
   failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -2629,6 +2669,12 @@ export type LoginHistoryFiltersInput = {
   take?: InputMaybe<Scalars['Int']['input']>;
   toDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
+
+export enum LoginHistoryOrderBy {
+  CreatedAt = 'CREATED_AT',
+  LoggedInAt = 'LOGGED_IN_AT',
+  RiskScore = 'RISK_SCORE',
+}
 
 export type LoginHistoryPeriod = {
   __typename?: 'LoginHistoryPeriod';
@@ -5337,6 +5383,7 @@ export type Query = {
   devices: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   expirationNotification: Maybe<ExpirationNotification>;
+  /** @deprecated Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead */
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
   /**
@@ -5365,12 +5412,23 @@ export type Query = {
   itemByExternalId: Maybe<Item>;
   itemByExternalSource: Maybe<Item>;
   itemBySku: Maybe<Item>;
+  /**
+   * Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.
+   * @deprecated Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support
+   */
   itemByUpc: Maybe<Item>;
   itemPriceHistory: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
   itemsBySource: Array<Item>;
+  /**
+   * Consolidated login history query with comprehensive filtering.
+   * Replaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory
+   */
+  loginHistories: LoginHistoryConnection;
   loginHistory: Maybe<LoginHistory>;
+  /** @deprecated Use loginHistories(input: { ipAddress: ... }) instead */
   loginHistoryByIP: Array<LoginHistory>;
+  /** @deprecated Use loginHistories(input: { userId: ... }) instead */
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
@@ -5481,6 +5539,7 @@ export type Query = {
   savedRecipe: Maybe<SavedRecipe>;
   savedRecipeFolders: Array<Scalars['String']['output']>;
   searchItems: Maybe<ItemsResponse>;
+  /** @deprecated Use loginHistories(input: { search: ... }) instead */
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: RecipeConnection;
   searchShoppingLists: Array<ShoppingList>;
@@ -5758,6 +5817,10 @@ export type QueryItemsBySourceArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   source: ExternalSource;
+};
+
+export type QueryLoginHistoriesArgs = {
+  input: LoginHistoriesInput;
 };
 
 export type QueryLoginHistoryArgs = {
@@ -7708,6 +7771,20 @@ export enum UnitUsageContext {
   Storing = 'STORING',
 }
 
+/** UPC/barcode format for lookup optimization */
+export enum UpcFormat {
+  /** Auto-detect format based on length (default) */
+  Auto = 'AUTO',
+  /** 8-digit shortened European format */
+  Ean_8 = 'EAN_8',
+  /** 13-digit European Article Number */
+  Ean_13 = 'EAN_13',
+  /** 12-digit standard UPC (US/Canada) */
+  UpcA = 'UPC_A',
+  /** 8-digit compressed UPC (auto-expanded to UPC-A) */
+  UpcE = 'UPC_E',
+}
+
 export type UpcValidation = {
   __typename?: 'UpcValidation';
   exists: Scalars['Boolean']['output'];
@@ -9651,6 +9728,16 @@ export type ShoppingListItemDisplayFragment = {
             }>
           | null
           | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          id: string;
+          isDefault: boolean;
+          isPreferred: boolean;
+          unit:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }>;
       }
     | null
     | undefined;
@@ -11425,6 +11512,35 @@ export type ItemByUpcQuery = {
       }
     | null
     | undefined;
+};
+
+export type ItemByUpcFilterQueryVariables = Exact<{
+  upc: Scalars['String']['input'];
+  upcFormat?: InputMaybe<UpcFormat>;
+}>;
+
+export type ItemByUpcFilterQuery = {
+  __typename?: 'Query';
+  items: {
+    __typename?: 'ItemsResponse';
+    totalCount: number;
+    items:
+      | Array<{
+          __typename?: 'Item';
+          id: string;
+          imageUrl: string | null | undefined;
+          name: string;
+          netWeight: number | null | undefined;
+          primaryUpc: string | null | undefined;
+          units: Array<{
+            __typename?: 'ItemUnit';
+            isDefault: boolean;
+            unitId: string;
+          }>;
+        }>
+      | null
+      | undefined;
+  };
 };
 
 export type ItemBySkuQueryVariables = Exact<{
@@ -13540,6 +13656,30 @@ export type GetShoppingListItemQuery = {
     | undefined;
 };
 
+export type GetRecentlyDeletedShoppingListItemsQueryVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetRecentlyDeletedShoppingListItemsQuery = {
+  __typename?: 'Query';
+  recentlyDeletedShoppingListItems: Array<{
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName: string | null | undefined;
+    createdAt: string;
+    item:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          imageUrl: string | null | undefined;
+        }
+      | null
+      | undefined;
+  }>;
+};
+
 export type CreateShoppingListMutationVariables = Exact<{
   input: CreateShoppingListInput;
 }>;
@@ -13789,9 +13929,7 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = {
   __typename?: 'Mutation';
-  removeItemFromShoppingList: {
-    __typename?: 'ShoppingListItem';
-  } & ShoppingListItemFragment;
+  removeItemFromShoppingList: { __typename?: 'ShoppingListItem'; id: string };
 };
 
 export type MarkItemPurchasedMutationVariables = Exact<{
@@ -13833,6 +13971,7 @@ export type ToggleShoppingListItemPurchasedMutation = {
 export type UpdateShoppingListItemQuantityMutationVariables = Exact<{
   itemId: Scalars['ID']['input'];
   quantity: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['ID']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
@@ -14679,6 +14818,45 @@ export const ShoppingListItemDisplayFragmentDoc = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'units' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isDefault' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPreferred' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
                             },
                           ],
                         },
@@ -37385,6 +37563,203 @@ export type ItemByUpcQueryResult = ApolloReactCommon.QueryResult<
 export function refetchItemByUpcQuery(variables: ItemByUpcQueryVariables) {
   return { query: ItemByUpcDocument, variables: variables };
 }
+export const ItemByUpcFilterDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'ItemByUpcFilter' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'upc' } },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'String' },
+            },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'upcFormat' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'UpcFormat' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'items' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filters' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'upc' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'upc' },
+                      },
+                    },
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'upcFormat' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'upcFormat' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'items' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'netWeight' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'primaryUpc' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'units' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isDefault' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'unitId' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useItemByUpcFilterQuery__
+ *
+ * To run a query within a React component, call `useItemByUpcFilterQuery` and pass it any options that fit your needs.
+ * When your component renders, `useItemByUpcFilterQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useItemByUpcFilterQuery({
+ *   variables: {
+ *      upc: // value for 'upc'
+ *      upcFormat: // value for 'upcFormat'
+ *   },
+ * });
+ */
+export function useItemByUpcFilterQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  > &
+    (
+      | { variables: ItemByUpcFilterQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  >(ItemByUpcFilterDocument, options);
+}
+export function useItemByUpcFilterLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  >(ItemByUpcFilterDocument, options);
+}
+export function useItemByUpcFilterSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ItemByUpcFilterQuery,
+        ItemByUpcFilterQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  >(ItemByUpcFilterDocument, options);
+}
+export type ItemByUpcFilterQueryHookResult = ReturnType<
+  typeof useItemByUpcFilterQuery
+>;
+export type ItemByUpcFilterLazyQueryHookResult = ReturnType<
+  typeof useItemByUpcFilterLazyQuery
+>;
+export type ItemByUpcFilterSuspenseQueryHookResult = ReturnType<
+  typeof useItemByUpcFilterSuspenseQuery
+>;
+export type ItemByUpcFilterQueryResult = ApolloReactCommon.QueryResult<
+  ItemByUpcFilterQuery,
+  ItemByUpcFilterQueryVariables
+>;
+export function refetchItemByUpcFilterQuery(
+  variables: ItemByUpcFilterQueryVariables,
+) {
+  return { query: ItemByUpcFilterDocument, variables: variables };
+}
 export const ItemBySkuDocument = {
   kind: 'Document',
   definitions: [
@@ -54816,6 +55191,45 @@ export const GetShoppingListDocument = {
                     ],
                   },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'units' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isDefault' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPreferred' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -55257,6 +55671,45 @@ export const GetShoppingListsDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'units' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isDefault' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPreferred' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
                             },
                           ],
                         },
@@ -56261,6 +56714,174 @@ export function refetchGetShoppingListItemQuery(
   variables: GetShoppingListItemQueryVariables,
 ) {
   return { query: GetShoppingListItemDocument, variables: variables };
+}
+export const GetRecentlyDeletedShoppingListItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetRecentlyDeletedShoppingListItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recentlyDeletedShoppingListItems' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'item' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetRecentlyDeletedShoppingListItemsQuery__
+ *
+ * To run a query within a React component, call `useGetRecentlyDeletedShoppingListItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRecentlyDeletedShoppingListItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRecentlyDeletedShoppingListItemsQuery({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetRecentlyDeletedShoppingListItemsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  > &
+    (
+      | {
+          variables: GetRecentlyDeletedShoppingListItemsQueryVariables;
+          skip?: boolean;
+        }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >(GetRecentlyDeletedShoppingListItemsDocument, options);
+}
+export function useGetRecentlyDeletedShoppingListItemsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >(GetRecentlyDeletedShoppingListItemsDocument, options);
+}
+export function useGetRecentlyDeletedShoppingListItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecentlyDeletedShoppingListItemsQuery,
+        GetRecentlyDeletedShoppingListItemsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >(GetRecentlyDeletedShoppingListItemsDocument, options);
+}
+export type GetRecentlyDeletedShoppingListItemsQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedShoppingListItemsQuery
+>;
+export type GetRecentlyDeletedShoppingListItemsLazyQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedShoppingListItemsLazyQuery
+>;
+export type GetRecentlyDeletedShoppingListItemsSuspenseQueryHookResult =
+  ReturnType<typeof useGetRecentlyDeletedShoppingListItemsSuspenseQuery>;
+export type GetRecentlyDeletedShoppingListItemsQueryResult =
+  ApolloReactCommon.QueryResult<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >;
+export function refetchGetRecentlyDeletedShoppingListItemsQuery(
+  variables: GetRecentlyDeletedShoppingListItemsQueryVariables,
+) {
+  return {
+    query: GetRecentlyDeletedShoppingListItemsDocument,
+    variables: variables,
+  };
 }
 export const CreateShoppingListDocument = {
   kind: 'Document',
@@ -58563,377 +59184,10 @@ export const RemoveItemFromShoppingListDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'ShoppingListItemFragment' },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'ShoppingListItemCore' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'ShoppingListItem' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'unit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'displayAsFraction' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'minPrecision' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'autoConvertThreshold' },
-                },
               ],
             },
           },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'ShoppingListItemFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'ShoppingListItem' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'FragmentSpread',
-            name: { kind: 'Name', value: 'ShoppingListItemCore' },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'shoppingList' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalItems' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'completedItems' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'estimatedTotal' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'item' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'displayUnit' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'symbol' },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'categories' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'isPrimary' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'confidence' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'source' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'assignedAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'category' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'name' },
-                            },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'unit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isMetric' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'baseUnitId' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'conversionFactor' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'purchasesConnection' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'first' },
-                value: { kind: 'IntValue', value: '10' },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'edges' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'cursor' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'node' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'FragmentSpread',
-                              name: { kind: 'Name', value: 'PurchaseFragment' },
-                            },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'pageInfo' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'hasNextPage' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'endCursor' },
-                      },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'PartialUser' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'User' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'emailVerified' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'onBoarded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'preferredCurrency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'language' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'defaultShoppingListId' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'defaultHomeId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastActiveAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'profile' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'firstName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'lastName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'bio' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'avatar' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'phone' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'settings' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'theme' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'PurchaseFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'Purchase' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitSymbol' } },
         ],
       },
     },
@@ -60459,6 +60713,14 @@ export const UpdateShoppingListItemQuantityDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
+            name: { kind: 'Name', value: 'unitId' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
             name: { kind: 'Name', value: 'version' },
           },
           type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
@@ -60485,6 +60747,14 @@ export const UpdateShoppingListItemQuantityDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'quantity' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'unitId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'unitId' },
                 },
               },
               {
@@ -60896,6 +61166,7 @@ export type UpdateShoppingListItemQuantityMutationFn =
  *   variables: {
  *      itemId: // value for 'itemId'
  *      quantity: // value for 'quantity'
+ *      unitId: // value for 'unitId'
  *      version: // value for 'version'
  *   },
  * });

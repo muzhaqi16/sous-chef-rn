@@ -31,6 +31,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onSwipeableWillOpen,
   onSwipeableClose,
   testIDPrefix,
+  swipeMode,
 }) => {
   const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
@@ -75,10 +76,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           onActionPress={handleActionPress}
           testIDPrefix={testIDPrefix}
           progress={progress}
+          swipeMode={swipeMode}
         />
       );
     },
-    [onEdit, onDelete, handleActionPress, testIDPrefix],
+    [onEdit, onDelete, handleActionPress, testIDPrefix, swipeMode],
   );
 
   const renderLeftActions = useCallback(
@@ -92,6 +94,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           isPurchased={isPurchased}
           swipeableRef={swipeableRef}
           progress={progress}
+          swipeMode={swipeMode}
+          onEdit={onEdit}
+          onActionPress={handleActionPress}
         />
       );
     },
@@ -102,6 +107,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       onRestock,
       isPurchased,
       swipeableRef,
+      swipeMode,
+      onEdit,
+      handleActionPress,
     ],
   );
 

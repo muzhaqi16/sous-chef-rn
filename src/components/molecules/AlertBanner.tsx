@@ -77,7 +77,9 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, { color: variantColors.text }]}>{title}</Text>
+        <Text style={[styles.title, { color: variantColors.text }]}>
+          {title}
+        </Text>
         {subtitle && (
           <Text style={[styles.subtitle, { color: variantColors.text }]}>
             {subtitle}
@@ -104,7 +106,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing['3'],
     paddingRight: theme.spacing.md,
-    marginHorizontal: theme.spacing.lg,
+    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderWidth: 1,

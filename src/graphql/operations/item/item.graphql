@@ -70,6 +70,23 @@ query ItemByUpc($upc: String!) {
   }
 }
 
+query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
+  items(filters: { upc: $upc, upcFormat: $upcFormat }) {
+    items {
+      id
+      imageUrl
+      name
+      netWeight
+      primaryUpc
+      units {
+        isDefault
+        unitId
+      }
+    }
+    totalCount
+  }
+}
+
 query ItemBySku($sku: String!, $storeId: String) {
   itemBySku(sku: $sku, storeId: $storeId) {
     id

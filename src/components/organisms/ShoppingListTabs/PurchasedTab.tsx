@@ -14,6 +14,7 @@ interface PurchasedTabProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
+  onQuantityPress?: (id: string) => void;
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
@@ -38,6 +39,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onItemDelete,
   onTogglePurchase,
   onMoveToPantry,
+  onQuantityPress,
   onSortOrderUpdate,
   onClearAll,
   loading,
@@ -139,6 +141,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
       onItemDelete={onItemDelete}
       onTogglePurchase={onTogglePurchase}
       onMoveToPantry={onMoveToPantry}
+      onQuantityPress={onQuantityPress}
       onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
       isDragging={isDragging}

@@ -326,7 +326,7 @@ export function useShoppingListActions({
         return;
       }
 
-      const newQuantity = Math.max(0, (cachedItem.quantity || 0) - 1);
+      const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
 
       // Immediate cache update for instant UI feedback (Pattern 5 from apollo-client-patterns.md)
       client.cache.modify({
@@ -389,6 +389,7 @@ export function useShoppingListActions({
   );
 
   // Toggle purchase handler
+  // Animation timing is handled by AnimatedCheckbox via onToggleComplete callback
   const handleTogglePurchase = useCallback(
     async (itemId: string) => {
       Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });

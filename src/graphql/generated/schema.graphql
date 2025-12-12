@@ -2654,6 +2654,14 @@ input ItemFilters {
   timeRange: DateRange
   type: ItemType
   types: [ItemType!]
+  """
+  UPC/barcode to search for
+  """
+  upc: String
+  """
+  Format hint for UPC validation/normalization (defaults to AUTO)
+  """
+  upcFormat: UpcFormat
   updatedAfter: DateTime
   updatedBefore: DateTime
   visibility: Visibility
@@ -2939,6 +2947,29 @@ enum LoginFailureReason {
 }
 
 """
+Consolidated input for querying login history.
+Replaces multiple specialized queries with a single flexible query.
+"""
+input LoginHistoriesInput {
+  after: String
+  before: String
+  failuresOnly: Boolean
+  first: Int = 50
+  fromDate: DateTime
+  hours: Int
+  ipAddress: String
+  last: Int
+  method: LoginMethod
+  orderBy: LoginHistoryOrderBy = LOGGED_IN_AT
+  orderDirection: SortOrder = DESC
+  riskyOnly: Boolean
+  search: String
+  successOnly: Boolean
+  toDate: DateTime
+  userId: ID
+}
+
+"""
 Security audit log for login attempts - NEVER cache
 """
 type LoginHistory {
@@ -3021,6 +3052,17 @@ input LoginHistoryByIPFiltersInput {
   userId: ID
 }
 
+type LoginHistoryConnection {
+  edges: [LoginHistoryEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type LoginHistoryEdge {
+  cursor: String!
+  node: LoginHistory!
+}
+
 input LoginHistoryFiltersInput {
   failuresOnly: Boolean = false
   fromDate: DateTime
@@ -3032,6 +3074,12 @@ input LoginHistoryFiltersInput {
   successOnly: Boolean = false
   take: Int = 50
   toDate: DateTime
+}
+
+enum LoginHistoryOrderBy {
+  CREATED_AT
+  LOGGED_IN_AT
+  RISK_SCORE
 }
 
 type LoginHistoryPeriod {
@@ -4993,6 +5041,9 @@ type Query {
   dietaryProfile(userId: ID!): DietaryProfile
   expirationNotification(id: ID!): ExpirationNotification
   failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
+    @deprecated(
+      reason: "Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead"
+    )
   frequentlyBoughtItems(limit: Int): [ShoppingListItem!]!
   """
   Get best display unit for a quantity
@@ -5023,7 +5074,13 @@ type Query {
   itemByExternalId(externalId: String!, provider: ProviderType!): Item
   itemByExternalSource(externalId: String!, source: ExternalSource!): Item
   itemBySku(sku: String!, storeId: String): Item
+  """
+  Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.
+  """
   itemByUpc(upc: String!): Item
+    @deprecated(
+      reason: "Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support"
+    )
   itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
   items(
     filters: ItemFilters
@@ -5031,15 +5088,22 @@ type Query {
     sort: ItemSortInput
   ): ItemsResponse!
   itemsBySource(limit: Int, offset: Int, source: ExternalSource!): [Item!]!
+  """
+  Consolidated login history query with comprehensive filtering.
+  Replaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory
+  """
+  loginHistories(input: LoginHistoriesInput!): LoginHistoryConnection!
   loginHistory(id: ID!): LoginHistory
   loginHistoryByIP(
     filters: LoginHistoryByIPFiltersInput
     ipAddress: String!
   ): [LoginHistory!]!
+    @deprecated(reason: "Use loginHistories(input: { ipAddress: ... }) instead")
   loginHistoryForUser(
     filters: LoginHistoryFiltersInput
     userId: ID!
   ): [LoginHistory!]!
+    @deprecated(reason: "Use loginHistories(input: { userId: ... }) instead")
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   matchRecipeIngredientsToPantry(
     pantryId: ID!
@@ -5227,6 +5291,7 @@ type Query {
     filters: LoginHistoryFiltersInput
     query: String!
   ): [LoginHistory!]!
+    @deprecated(reason: "Use loginHistories(input: { search: ... }) instead")
   searchRecipes(
     after: String
     before: String
@@ -6758,6 +6823,32 @@ enum UnitUsageContext {
   SERVING
   SHOPPING
   STORING
+}
+
+"""
+UPC/barcode format for lookup optimization
+"""
+enum UpcFormat {
+  """
+  Auto-detect format based on length (default)
+  """
+  AUTO
+  """
+  8-digit shortened European format
+  """
+  EAN_8
+  """
+  13-digit European Article Number
+  """
+  EAN_13
+  """
+  12-digit standard UPC (US/Canada)
+  """
+  UPC_A
+  """
+  8-digit compressed UPC (auto-expanded to UPC-A)
+  """
+  UPC_E
 }
 
 type UpcValidation {

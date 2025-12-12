@@ -4,12 +4,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
+import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
+import { QuantityBadge } from '#/components/atoms/QuantityBadge';
 import { commonStyles } from '#/styles';
 import { HapticService } from '#services/haptic';
-import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
-import { useShoppingListActions } from '#context/ShoppingListActionsContext';
 import { Icon } from '#utils';
-import type { CounterElementConfig, ImageElementConfig } from './types';
+import type { QuantityElementConfig, ImageElementConfig } from './types';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -22,7 +22,7 @@ interface SimpleDraggableItemProps {
       variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
     };
     rightElement?: React.ReactNode;
-    rightElementConfig?: CounterElementConfig; // Config-based element creation
+    rightElementConfig?: QuantityElementConfig; // Config-based element creation
     leftElement?: React.ReactNode;
     leftElementConfig?: ImageElementConfig; // Config-based element creation
   };
@@ -31,6 +31,7 @@ interface SimpleDraggableItemProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
+  onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
   drag?: () => void;
   isActive?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
@@ -44,13 +45,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   onItemDelete,
   onTogglePurchase,
   onMoveToPantry,
+  onQuantityPress,
   drag,
   isActive,
   onSwipeableWillOpen,
   onSwipeableClose,
 }) => {
-  // Get stable callbacks from context (prevents memoization breaking)
-  const { onIncrementQuantity, onDecrementQuantity } = useShoppingListActions();
   const { theme } = useUnistyles();
 
   // Handle long press for drag activation with haptic feedback
@@ -63,70 +63,51 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [drag]);
 
   // Create rightElement from config or use provided element
-  // OPTIMIZATION: Minimal dependencies - callbacks from context are stable
+  // Uses QuantityBadge (tappable) + DragHandle or MoveToPantry button
   const rightElement = React.useMemo(() => {
     // Priority 1: Use config-based element (performance optimized)
-    if (item.rightElementConfig?.type === 'counter') {
+    if (item.rightElementConfig?.type === 'quantity') {
       const config = item.rightElementConfig;
 
-      // For purchased items, show "Move to Pantry" button instead of drag handle
-      let counterRightElement: React.ReactNode;
-
-      if (item.isPurchased && onMoveToPantry) {
-        // "Move to Pantry" icon button for purchased items
-        counterRightElement = (
-          <TouchableOpacity
-            onPress={() => onMoveToPantry(item.id)}
-            style={styles.moveToPantryButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Icon
-              name="cupboard"
-              size={24}
-              color={theme.colors.primary}
-              library="MaterialDesignIcons"
-            />
-          </TouchableOpacity>
-        );
-      } else if (!item.isPurchased && drag) {
-        // Drag handle for unpurchased items
-        counterRightElement = (
-          <DragHandle
-            onLongPress={handleLongPress}
-            disabled={item.isPurchased}
-          />
-        );
-      }
-
       return (
-        <ShoppingListItemCounter
-          quantity={config.quantity}
-          unit={config.unit}
-          onIncrement={() => onIncrementQuantity(config.itemId)}
-          onDecrement={() => onDecrementQuantity(config.itemId)}
-          disabled={config.disabled}
-          rightElement={counterRightElement}
-        />
+        <View style={styles.rightElementContainer}>
+          {/* Tappable quantity badge */}
+          <QuantityBadge
+            quantity={config.quantity}
+            unit={config.unit}
+            onPress={() => onQuantityPress?.(config.itemId)}
+            disabled={config.disabled}
+            isPurchased={item.isPurchased}
+          />
+
+          {/* For purchased items, show "Move to Pantry" button */}
+          {item.isPurchased && onMoveToPantry && (
+            <TouchableOpacity
+              onPress={() => onMoveToPantry(item.id)}
+              style={styles.moveToPantryButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon
+                name="cupboard"
+                size={24}
+                color={theme.colors.primary}
+                library="MaterialDesignIcons"
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* For unpurchased items, show drag handle */}
+          {!item.isPurchased && drag && (
+            <DragHandle
+              onLongPress={handleLongPress}
+              disabled={item.isPurchased}
+            />
+          )}
+        </View>
       );
     }
 
-    // Priority 2: Use provided element with drag handle injection
-    if (!drag || item.isPurchased) {
-      return item.rightElement;
-    }
-
-    // Clone the counter element and inject drag handle
-    if (React.isValidElement(item.rightElement)) {
-      return React.cloneElement(item.rightElement as React.ReactElement<any>, {
-        rightElement: (
-          <DragHandle
-            onLongPress={handleLongPress}
-            disabled={item.isPurchased}
-          />
-        ),
-      });
-    }
-
+    // Priority 2: Use provided element
     return item.rightElement;
   }, [
     drag,
@@ -135,8 +116,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     item.rightElement,
     item.rightElementConfig,
     handleLongPress,
-    onIncrementQuantity,
-    onDecrementQuantity,
+    onQuantityPress,
     onMoveToPantry,
     theme.colors.primary,
   ]);
@@ -167,6 +147,20 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     return item.leftElement;
   }, [item.leftElement, item.leftElementConfig]);
 
+  // Create checkbox element for marking items as purchased
+  // Uses onToggleComplete so animation plays BEFORE mutation moves item
+  const checkboxElement = React.useMemo(() => {
+    if (!onTogglePurchase) return null;
+
+    return (
+      <AnimatedCheckbox
+        checked={!!item.isPurchased}
+        onToggleComplete={() => onTogglePurchase(item.id)}
+        size={28}
+      />
+    );
+  }, [item.isPurchased, item.id, onTogglePurchase]);
+
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
@@ -176,13 +170,11 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         }
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-        onTogglePurchase={
-          onTogglePurchase ? () => onTogglePurchase(item.id) : undefined
-        }
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
+        swipeMode="shopping"
       >
         <ListItem
           title={item.title}
@@ -190,6 +182,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           badge={item.badge}
           rightElement={rightElement}
           leftElement={leftElement}
+          checkboxElement={checkboxElement}
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
@@ -224,6 +217,11 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
     marginLeft: theme.spacing.sm,
   },
+  rightElementContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
@@ -238,7 +236,8 @@ const arePropsEqual = (
     prev.item === next.item &&
     prev.isActive === next.isActive &&
     prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry
+    prev.onMoveToPantry === next.onMoveToPantry &&
+    prev.onQuantityPress === next.onQuantityPress
   ) {
     return true;
   }
@@ -253,7 +252,8 @@ const arePropsEqual = (
     prev.item.leftElementConfig === next.item.leftElementConfig &&
     prev.isActive === next.isActive &&
     prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry
+    prev.onMoveToPantry === next.onMoveToPantry &&
+    prev.onQuantityPress === next.onQuantityPress
   );
 };
 

@@ -42,7 +42,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   const displayWeight = netWeight;
 
   // Handle edge cases
-  const hasQuantity = displayQuantity != null && displayQuantity > 0;
+  const hasQuantity = displayQuantity != null && displayQuantity >= 0;
   const hasWeight = displayWeight != null && displayWeight > 0;
   const hasUnit = unitSymbol != null && unitSymbol.trim() !== '';
 

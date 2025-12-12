@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   FlatList,
   RefreshControl,
@@ -18,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconLibrary } from '#utils';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
-import { AlertBanner } from '../molecules';
+import { AlertBanner, SearchBar } from '../molecules';
 import { PantrySectionHeader } from './PantrySectionHeader';
 import { PantryItemCard, ItemVariant } from './PantryItemCard';
 import {
@@ -165,10 +164,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
 
   // Track open swipeable to close others
   const openSwipeableRef = useRef<SwipeableMethods | null>(null);
-
-  const handleClearSearch = useCallback(() => {
-    onSearchChange('');
-  }, [onSearchChange]);
 
   // Handle swipeable opening
   const handleSwipeableWillOpen = useCallback(
@@ -483,25 +478,12 @@ export const PantryContent: React.FC<PantryContentProps> = ({
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Icon
-            name="search"
-            size={16}
-            color={theme.colors.textTertiary}
-            library="Feather"
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search your pantry..."
-            placeholderTextColor={theme.colors.textTertiary}
-            value={searchQuery}
-            onChangeText={onSearchChange}
-          />
-          {searchQuery.length > 0 ? (
-            <Pressable onPress={handleClearSearch} hitSlop={8}>
-              <Icon name="close" size={20} color={theme.colors.textTertiary} />
-            </Pressable>
-          ) : (
+        <SearchBar
+          value={searchQuery}
+          onChangeText={onSearchChange}
+          placeholder="Search your pantry..."
+          showSearchIcon={true}
+          innerRightIcon={
             <Pressable onPress={onSettingsPress} hitSlop={8}>
               <Icon
                 name="settings"
@@ -510,8 +492,8 @@ export const PantryContent: React.FC<PantryContentProps> = ({
                 library="Feather"
               />
             </Pressable>
-          )}
-        </View>
+          }
+        />
       </View>
 
       {/* Content */}
@@ -693,26 +675,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.white,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['3'],
-    gap: theme.spacing.sm,
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.sm + 1,
-    color: theme.colors.textPrimary,
-    padding: 0,
-  },
-  settingsIcon: {
-    fontSize: theme.typography.fontSize.lg,
-    marginLeft: theme.spacing.sm,
   },
   listContent: {
     // Padding 0 to allow offscreen scroll elements

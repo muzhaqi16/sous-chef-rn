@@ -54,6 +54,16 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
         name
       }
     }
+    units {
+      id
+      isDefault
+      isPreferred
+      unit {
+        id
+        name
+        symbol
+      }
+    }
   }
 }
 

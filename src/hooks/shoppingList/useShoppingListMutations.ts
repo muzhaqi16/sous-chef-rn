@@ -250,65 +250,29 @@ export function useShoppingListMutations({
   });
 
   // Toggle purchased mutation
+  // Uses cache.modify() for instant UI updates (Pattern 5 from apollo-client-patterns.md)
+  // This avoids "Missing field" warnings from partial optimistic responses
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables) => {
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: variables.id,
-      });
+    // No optimisticResponse - cache.modify in update handles instant UI
+    update(cache, { data }, { variables }) {
+      if (!data?.toggleShoppingListItemPurchased || !variables) return;
 
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
+      const itemId = variables.id;
+      const newStatus = variables.purchased;
 
-      if (fullItem) {
-        return {
-          __typename: 'Mutation',
-          toggleShoppingListItemPurchased: {
-            ...fullItem,
-            __typename: 'ShoppingListItem',
-            isPurchased: variables.purchased,
-            updatedAt: new Date().toISOString(),
+      // Directly modify the cached item's fields for instant UI feedback
+      cache.modify({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        fields: {
+          isPurchased() {
+            return newStatus;
           },
-        };
-      }
-
-      // Fallback to core data if fragment is missing in cache
-      const currentItem = items.find(item => item.id === variables.id);
-
-      if (currentItem) {
-        return {
-          __typename: 'Mutation',
-          toggleShoppingListItemPurchased: {
-            __typename: 'ShoppingListItem',
-            id: currentItem.id,
-            itemName: currentItem.itemName,
-            quantity: currentItem.quantity,
-            isPurchased: variables.purchased,
-            version: currentItem.version,
-            updatedAt: new Date().toISOString(),
-            category: currentItem.category,
-            notes: currentItem.notes,
-            unitName: currentItem.unitName,
-            unit: currentItem.unit,
-          } as any,
-        };
-      }
-
-      return {
-        __typename: 'Mutation',
-        toggleShoppingListItemPurchased: {
-          __typename: 'ShoppingListItem',
-          id: variables.id,
-          isPurchased: variables.purchased,
-          updatedAt: new Date().toISOString(),
-        } as any,
-      };
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
     },
     onCompleted: (data) => {
       // Clear optimistic data after successful sync

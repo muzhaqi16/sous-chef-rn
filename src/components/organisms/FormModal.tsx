@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, ScrollView, ActivityIndicator} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {View, ScrollView} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 import {Header} from '../molecules/Header';
 
 interface FormModalProps {
@@ -22,15 +22,6 @@ export const FormModal: React.FC<FormModalProps> = ({
   testID,
   submitButtonTestID,
 }) => {
-  const {theme} = useUnistyles();
-  if (loading) {
-    return (
-      <View style={styles.container} testID={testID ? `${testID}-loading` : undefined}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container} testID={testID}>
       <Header
@@ -40,12 +31,15 @@ export const FormModal: React.FC<FormModalProps> = ({
           {
             icon: 'close',
             onPress: onClose,
+            disabled: loading,
           },
         ]}
         rightActions={[
           {
             icon: 'check',
             onPress: onSave,
+            loading: loading,
+            disabled: loading,
             testID: submitButtonTestID,
           },
         ]}

@@ -1,4 +1,10 @@
-import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import React, {
+  useMemo,
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
@@ -14,6 +20,7 @@ interface ShoppingListTabsProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
+  onQuantityPress?: (id: string) => void;
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
@@ -38,6 +45,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onItemDelete,
   onTogglePurchase,
   onMoveToPantry,
+  onQuantityPress,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
@@ -62,6 +70,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onItemDelete,
     onTogglePurchase,
     onMoveToPantry,
+    onQuantityPress,
     onSortOrderUpdate,
     onRefresh,
     onClearAllPurchased,
@@ -76,6 +85,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onItemDelete,
       onTogglePurchase,
       onMoveToPantry,
+      onQuantityPress,
       onSortOrderUpdate,
       onRefresh,
       onClearAllPurchased,
@@ -173,6 +183,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               isDragging={isDragging}
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
+              onQuantityPress={callbacks.onQuantityPress}
               onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onRefresh={callbacks.onRefresh}
               refreshing={refreshing}
@@ -195,6 +206,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
               onMoveToPantry={callbacks.onMoveToPantry}
+              onQuantityPress={callbacks.onQuantityPress}
               onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onClearAll={callbacks.onClearAllPurchased}
               disabled={disabled}
