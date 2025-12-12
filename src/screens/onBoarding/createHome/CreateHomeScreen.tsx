@@ -598,7 +598,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: 20,
+    lineHeight: theme.typography.lineHeight.normal,
   },
   continueButton: {
     backgroundColor: theme.colors.primary,
@@ -635,11 +635,11 @@ const styles = StyleSheet.create(theme => ({
     elevation: 2,
   },
   inviteHomeName: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    lineHeight: 26,
+    lineHeight: theme.typography.lineHeight.relaxed,
   },
   inviteDetailsContainer: {
     gap: theme.spacing.sm,
