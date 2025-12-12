@@ -139,7 +139,7 @@ const styles = StyleSheet.create(theme => ({
   legendColor: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: theme.radii.full,
     marginRight: theme.spacing.sm,
   },
   legendTextContainer: {

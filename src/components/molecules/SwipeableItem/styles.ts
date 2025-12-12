@@ -17,8 +17,8 @@ export const styles = StyleSheet.create(theme => ({
     paddingLeft: 12, // Compensate for margin to maintain button positioning
     borderTopLeftRadius: 0, // Square edge where it meets the card
     borderBottomLeftRadius: 0,
-    borderTopRightRadius: 12, // Rounded outer edge
-    borderBottomRightRadius: 12,
+    borderTopRightRadius: theme.radii.md, // Rounded outer edge
+    borderBottomRightRadius: theme.radii.md,
   },
   leftActionsContainer: {
     ...commonStyles.row,
@@ -32,8 +32,8 @@ export const styles = StyleSheet.create(theme => ({
     paddingRight: 12, // Compensate for margin to maintain button positioning
     borderTopRightRadius: 0, // Square edge where it meets the card
     borderBottomRightRadius: 0,
-    borderTopLeftRadius: 12, // Rounded outer edge
-    borderBottomLeftRadius: 12,
+    borderTopLeftRadius: theme.radii.md, // Rounded outer edge
+    borderBottomLeftRadius: theme.radii.md,
   },
 
   actionButton: {
@@ -46,7 +46,7 @@ export const styles = StyleSheet.create(theme => ({
   circularActionButton: {
     width: 40,
     height: 40,
-    borderRadius: 28,
+    borderRadius: theme.radii.full,
     ...commonStyles.center,
     marginHorizontal: 4,
     zIndex: 100, // Ensure button is above other elements for touch priority
