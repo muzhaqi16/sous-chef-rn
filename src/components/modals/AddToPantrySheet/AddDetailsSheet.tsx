@@ -105,7 +105,7 @@ const indicatorStyles = StyleSheet.create(theme => ({
   dot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: theme.radii.full,
   },
   label: {
     fontSize: theme.fonts.size.sm,

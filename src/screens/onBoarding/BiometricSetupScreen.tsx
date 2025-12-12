@@ -231,7 +231,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: theme.spacing.xl,
   },
   loadingContainer: {
     flex: 1,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create(theme => ({
   iconBackground: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
