@@ -47,10 +47,8 @@ export const useSearchResults = (barcode: string) => {
   const {showBottomSheet, hideBottomSheet} = useAppStore(
     useShallow(selectBottomSheetState),
   );
-  // const selectedPantryId = useAppStore(state => state.selectedPantryId); // TODO: Use for context-aware search
 
   const { uploadItemImage } = useImageUpload();
-  // const _client = useApolloClient(); // TODO: Use for direct Apollo operations if needed
 
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {
