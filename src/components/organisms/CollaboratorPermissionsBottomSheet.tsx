@@ -393,7 +393,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   roleIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
   },
   roleLabel: {
     fontSize: theme.fonts.size.md,

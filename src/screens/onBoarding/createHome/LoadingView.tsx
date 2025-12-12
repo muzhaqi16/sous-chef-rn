@@ -21,14 +21,14 @@ const styles = StyleSheet.create(theme => ({
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing['2xl'],
   },
   loadingIndicator: {
     color: theme.colors.primary,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
 }));
