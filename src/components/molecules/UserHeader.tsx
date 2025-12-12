@@ -58,7 +58,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.md,
   },
   headerTitle: {

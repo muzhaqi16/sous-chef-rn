@@ -77,7 +77,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const fetchPolicy = useOfflinePresetPolicy('LIST');
 
   // Single source of truth: Apollo cache - now using Connection-based query
-  const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
+  const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
     variables: hasValidPantryId ? {
       id: pantryId,
       itemsFirst: 25, // Initial page size
@@ -450,6 +450,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     items: filteredItems,
     allItems: pantryItems,
     loading,
+    networkStatus,
     error,
     stats,
 

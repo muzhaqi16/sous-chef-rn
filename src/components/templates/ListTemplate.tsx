@@ -159,24 +159,26 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
       )}
 
       {showSearchBar && (
-        <SearchBar
-          value={searchQuery || ''}
-          onChangeText={onSearchChange}
-          placeholder={
-            searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
-          }
-          leftActions={searchBarActions?.left || []}
-          rightActions={searchBarActions?.right || []}
-          showSearchIcon={searchBarActions?.showSearchIcon}
-          innerRightIcon={searchBarActions?.innerRightIcon}
-          listName={listName || title}
-          itemCount={items?.length || 0}
-          completedCount={
-            completedCount !== undefined
-              ? completedCount
-              : items?.filter(item => item.completed).length
-          }
-        />
+        <View style={styles.searchBarWrapper}>
+          <SearchBar
+            value={searchQuery || ''}
+            onChangeText={onSearchChange}
+            placeholder={
+              searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
+            }
+            leftActions={searchBarActions?.left || []}
+            rightActions={searchBarActions?.right || []}
+            showSearchIcon={searchBarActions?.showSearchIcon}
+            innerRightIcon={searchBarActions?.innerRightIcon}
+            listName={listName || title}
+            itemCount={items?.length || 0}
+            completedCount={
+              completedCount !== undefined
+                ? completedCount
+                : items?.filter(item => item.completed).length
+            }
+          />
+        </View>
       )}
 
       {CustomListComponent ? (
@@ -221,8 +223,11 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+  },
+  searchBarWrapper: {
+    paddingHorizontal: theme.spacing.md,
   },
 }));

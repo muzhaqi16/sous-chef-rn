@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { View } from 'react-native';
+import { NetworkStatus } from '@apollo/client';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
@@ -129,6 +130,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     removeItem,
     refetch,
     loading,
+    networkStatus,
     error: pantryError,
     loadMore,
     locationCounts,
@@ -234,8 +236,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const isLoadingInitial =
     loading && !pantryError && locationFilteredItems.length === 0 && !allItems?.length;
 
-  // Don't show refreshing indicator if there's an error (prevents stuck spinner)
-  const isRefreshing = loading && !pantryError;
+  // Only show refreshing indicator during explicit user-initiated pull-to-refresh
+  // Background fetches from cache-and-network are silent to avoid loading flash on navigation
+  const isRefreshing = networkStatus === NetworkStatus.refetch;
 
   // Get user display name and avatar
   const userName =

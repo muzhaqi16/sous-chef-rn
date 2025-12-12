@@ -3,15 +3,13 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
 
-interface ShoppingListHeaderProps {
-  listName: string;
+interface RecipesHeaderProps {
   avatarUrl?: string | null;
   notificationCount?: number;
   onAvatarPress?: () => void;
 }
 
-export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
-  listName,
+export const RecipesHeader: React.FC<RecipesHeaderProps> = ({
   avatarUrl,
   notificationCount = 0,
   onAvatarPress,
@@ -19,10 +17,8 @@ export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text style={styles.label}>Shopping list</Text>
-        <Text style={styles.listName} numberOfLines={1} ellipsizeMode="tail">
-          {listName}
-        </Text>
+        <Text style={styles.label}>What to cook?</Text>
+        <Text style={styles.title}>Recipes</Text>
       </View>
 
       <View style={styles.headerActions}>
@@ -74,7 +70,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
-  listName: {
+  title: {
     fontSize: theme.fonts.size['2xl'],
     fontWeight: 'bold',
     color: theme.colors.textPrimary,

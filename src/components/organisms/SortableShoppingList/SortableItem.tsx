@@ -196,7 +196,7 @@ const styles = StyleSheet.create(theme => ({
     ...commonStyles.shadow,
     opacity: 1,
     // Horizontal margin for shadow visibility
-    marginHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
     // Vertical margin for consistent spacing between items
     marginVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,

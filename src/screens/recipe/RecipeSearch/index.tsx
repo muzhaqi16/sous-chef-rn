@@ -144,13 +144,17 @@ export const RecipeSearch: React.FC = () => {
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
-          color: theme.colors.white,
+          // White background by default, primary when ingredients are selected
+          color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
+          backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,
           badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined,
         },
         {
           icon: 'options',
           onPress: openFilterSheet,
-          color: theme.colors.white,
+          // White background by default, primary when filters are active
+          color: activeFilterCount > 0 ? theme.colors.white : theme.colors.primary,
+          backgroundColor: activeFilterCount > 0 ? theme.colors.primary : theme.colors.surface,
           badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined,
         },
         {

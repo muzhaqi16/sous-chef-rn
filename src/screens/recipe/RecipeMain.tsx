@@ -1,8 +1,8 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { View, Image, Alert, Text, TouchableOpacity } from 'react-native';
+import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { ListTemplate, SearchBarAction, HeaderAction } from '#components';
+import { ListTemplate, HeaderAction, RecipesHeader } from '#components';
 import { useDeleteRecipeMutation } from '#generated';
 import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
@@ -11,6 +11,8 @@ import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils';
 import { useTabBarActions } from '#context';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useStore } from '#store';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 export const RecipeMain: React.FC = React.memo(() => {
@@ -18,6 +20,10 @@ export const RecipeMain: React.FC = React.memo(() => {
   const { theme } = useUnistyles();
   const { setAddProps } = useTabBarActions();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Get user profile and notification data for header
+  const { profile } = useProfileData();
+  const unreadCount = useStore(state => state.unreadCount);
 
   // State for random recipes (shown when user has no saved recipes)
   const [randomRecipes, setRandomRecipes] = useState<RecipeInformation[]>([]);
@@ -213,20 +219,22 @@ export const RecipeMain: React.FC = React.memo(() => {
     [],
   );
 
-  // Search bar actions
+  // Search bar actions - use inner icon pattern for consistency with Pantry/Shopping List
   const searchBarActions = useMemo(
     () => ({
-      left: [] as SearchBarAction[],
-      right: [
-        {
-          icon: 'search',
-          onPress: handleSearchRecipes,
-          color: theme.colors.primary,
-          backgroundColor: theme.colors.surface,
-        },
-      ] as SearchBarAction[],
+      showSearchIcon: true,
+      innerRightIcon: (
+        <Pressable onPress={handleSearchRecipes} hitSlop={8}>
+          <Icon
+            name="search"
+            size={18}
+            color={theme.colors.primary}
+            library="Feather"
+          />
+        </Pressable>
+      ),
     }),
-    [handleSearchRecipes, theme.colors.primary, theme.colors.surface],
+    [handleSearchRecipes, theme.colors.primary],
   );
 
   const emptyStateConfig = {
@@ -287,6 +295,11 @@ export const RecipeMain: React.FC = React.memo(() => {
   // Footer component for pagination
   return (
     <View style={styles.container} testID="recipes-screen">
+      <RecipesHeader
+        avatarUrl={profile?.avatar}
+        notificationCount={unreadCount}
+        onAvatarPress={() => navigate('Notifications')}
+      />
       <ListTemplate
         items={items}
         searchQuery={searchQuery}
@@ -296,6 +309,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         onRefresh={handleRefresh}
         loading={loading || loadingRandom}
         hasNoData={false}
+        showUserHeader={false}
         showHeader={false}
         showSearchBar={true}
         headerActions={headerActions}

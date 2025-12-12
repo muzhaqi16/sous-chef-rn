@@ -47,3 +47,5 @@ export * from './InlineItemAutocomplete';
 export * from './InlineUnitsAutocomplete';
 export * from './DatePickerField';
 export * from './SegmentedControl';
+export * from './ShoppingListHeader';
+export * from './RecipesHeader';

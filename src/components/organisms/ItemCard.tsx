@@ -85,7 +85,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1, // Prevent TouchableOpacity transparency inheritance
     // Horizontal margin for shadow visibility
-    marginHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
     marginVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,

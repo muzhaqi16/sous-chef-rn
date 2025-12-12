@@ -63,7 +63,6 @@ export function useRecipeSearch() {
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const hasAutoSearchedRef = useRef(false);
-  const hasInitializedFiltersRef = useRef(false);
 
   // Memoize excluded ingredients
   const excludedIngredients = useMemo(() => {
@@ -91,38 +90,9 @@ export function useRecipeSearch() {
     return excluded;
   }, [dietaryProfile?.restrictions]);
 
-  // Initialize filters from dietary profile
-  useEffect(() => {
-    if (!dietaryProfile || hasInitializedFiltersRef.current) return;
-
-    const restrictions = dietaryProfile.restrictions || [];
-    let diet: string | null = null;
-    const intolerances: string[] = [];
-
-    for (const restriction of restrictions) {
-      if (restriction.diet && !diet) {
-        diet = restriction.diet.toLowerCase().replace(/_/g, ' ');
-      }
-      if (restriction.intolerance) {
-        intolerances.push(restriction.intolerance.toLowerCase().replace(/_/g, ' '));
-      }
-    }
-
-    let maxReadyTime: number | null = null;
-    if (dietaryProfile.maxCookTimeMinutes) {
-      const cookTime = dietaryProfile.maxCookTimeMinutes;
-      if (cookTime <= 15) maxReadyTime = 15;
-      else if (cookTime <= 30) maxReadyTime = 30;
-      else if (cookTime <= 45) maxReadyTime = 45;
-      else if (cookTime <= 60) maxReadyTime = 60;
-    }
-
-    if (diet || intolerances.length > 0 || maxReadyTime) {
-      setActiveFilters({ diet, intolerances, mealType: null, maxReadyTime });
-    }
-
-    hasInitializedFiltersRef.current = true;
-  }, [dietaryProfile]);
+  // Note: Filters are NOT auto-initialized from dietary profile
+  // User can manually apply filters via the filter sheet when needed
+  // This allows unfiltered searches by default
 
   // Text-based search
   const handleTextSearch = useCallback(async () => {
