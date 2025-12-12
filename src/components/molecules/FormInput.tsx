@@ -1,8 +1,8 @@
 import React from 'react';
-import {Text, TextInput, TextInputProps, ViewStyle} from 'react-native';
-import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
+import { TextInput, TextInputProps, ViewStyle } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -28,13 +28,15 @@ export const FormInput: React.FC<FormInputProps> = ({
   ...textInputProps
 }) => {
   const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   // Generate accessibility label with required indicator if needed
   const inputLabel = accessibilityLabel || label;
   const fullLabel = required ? `${inputLabel}, required` : inputLabel;
   const fullHint = error
-    ? `${accessibilityHint || ''}${accessibilityHint ? '. ' : ''}Error: ${error}`
+    ? `${accessibilityHint || ''}${
+        accessibilityHint ? '. ' : ''
+      }Error: ${error}`
     : accessibilityHint;
 
   return (

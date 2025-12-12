@@ -67,9 +67,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   label: {
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
+    color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
   required: {
@@ -79,8 +79,8 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing['2.5'],
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,

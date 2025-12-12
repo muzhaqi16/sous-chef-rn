@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView, Text, RefreshControl } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
-import { Header } from '../molecules/Header';
+import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
 import { Button } from '../base/Button';
 import { commonStyles } from '#/styles';
 
@@ -12,9 +12,11 @@ interface DetailSection {
 }
 
 interface DetailTemplateProps {
-  title: string;
+  title?: string;
   onBack: () => void;
-  headerActions?: any[];
+  headerActions?: HeaderAction[];
+  /** Header variant preset */
+  headerVariant?: HeaderVariant;
   sections: DetailSection[];
   primaryAction?: {
     label: string;
@@ -29,6 +31,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   title,
   onBack,
   headerActions = [],
+  headerVariant,
   sections,
   primaryAction,
   refreshing,
@@ -41,6 +44,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
         title={title}
         onBack={onBack}
         rightActions={headerActions}
+        variant={headerVariant}
         centerTitle
       />
       <ScrollView

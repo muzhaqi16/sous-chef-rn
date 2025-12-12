@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
-import {TextInput, View, Text} from 'react-native';
+import {TextInput, Text} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import { Label } from '#components/atoms';
+import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 
 interface FractionInputProps {
   value: string;
@@ -54,8 +54,10 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   const hasError = error || (value && !isValidFormat(value));
 
   return (
-    <View style={styles.container}>
-      {label && <Label>{label}</Label>}
+    <FormFieldWrapper
+      label={label || ''}
+      error={hasError ? (error || 'Use format: 1/4, 1 1/4, or 1.5') : undefined}
+    >
       <TextInput
         style={[
           styles.input,
@@ -68,45 +70,31 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.textTertiary}
+        placeholderTextColor={theme.colors.textSecondary}
         keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
         testID={testID}
       />
-      {hasError && (
-        <Text style={styles.errorText}>
-          {error || 'Use format: 1/4, 1 1/4, or 1.5'}
-        </Text>
-      )}
       {!hasError && value && isFocused && (
         <Text style={styles.hintText}>
           Formats: 1/4, 1 1/4, 0.75, or 2
         </Text>
       )}
-    </View>
+    </FormFieldWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginBottom: theme.spacing.md,
-  },
-  label: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
   input: {
-    height: theme.sizes.input.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
+    borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.md,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.inputText,
-    backgroundColor: theme.colors.inputBackground,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
   },
   inputFocused: {
     borderColor: theme.colors.primary,
@@ -118,11 +106,6 @@ const styles = StyleSheet.create(theme => ({
   inputDisabled: {
     backgroundColor: theme.colors.surfaceVariant,
     opacity: 0.6,
-  },
-  errorText: {
-    fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.error,
-    marginTop: theme.spacing.xs,
   },
   hintText: {
     fontSize: theme.typography.fontSize.xs,

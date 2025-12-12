@@ -159,7 +159,8 @@ export const PantryContent: React.FC<PantryContentProps> = ({
 
   // Sort state (local, initialized from props)
   const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
+  const [sortDirection, setSortDirection] =
+    useState<SortDirection>(initialSortDirection);
   const [sortModalVisible, setSortModalVisible] = useState(false);
 
   // Track open swipeable to close others
@@ -448,13 +449,17 @@ export const PantryContent: React.FC<PantryContentProps> = ({
             </Text>
             <Pressable onPress={onHomePress} style={styles.householdBadge}>
               <Icon
-                name="home"
-                size={16}
-                library="Ionicons"
+                size={theme.typography.fontSize.lg}
+                name="home-switch-outline"
+                library="MaterialDesignIcons"
                 color={theme.colors.primary}
               />
               <Text style={styles.householdName}>{householdName}</Text>
-              <Icon name="chevron-right" size={16} color={theme.colors.textTertiary} />
+              <Icon
+                name="chevron-right"
+                size={theme.typography.fontSize.lg}
+                color={theme.colors.textTertiary}
+              />
             </Pressable>
           </View>
 

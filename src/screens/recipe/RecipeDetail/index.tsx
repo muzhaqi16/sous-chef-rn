@@ -254,7 +254,7 @@ const RecipeDetailScreen: React.FC = () => {
                   ))}
                 {!hasBackendInstructions && !hasAnalyzedInstructions && hasHtmlInstructions && (
                   <Text style={styles.description}>
-                    {displayData.instructionsHtml.replace(/<[^>]*>/g, '\n').trim()}
+                    {displayData.instructionsHtml?.replace(/<[^>]*>/g, '\n').trim()}
                   </Text>
                 )}
               </View>

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { Image } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   Easing,
   FadeIn,

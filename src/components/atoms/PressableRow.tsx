@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {Icon} from '#utils';
 
 interface PressableRowProps {
   icon?: string;

@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {Button} from "../base/Button";
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { Button } from '../base/Button';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface ProductCardProps {
   name: string;
@@ -14,7 +14,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   price,
   onAddToCart,
 }) => {
-  const {theme} = useUnistyles();
   return (
     <View style={styles.container}>
       <Text style={styles.text}>

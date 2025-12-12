@@ -8,12 +8,12 @@ import BottomSheet, {
 import { StyleSheet } from 'react-native-unistyles';
 
 import {
-  Header,
   LoadingState,
   ErrorState,
   ItemNotFound,
   SearchResults,
 } from '#components/barcode';
+import { Header } from '#components/molecules/Header';
 import AddItemForm from '#components/organisms/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
@@ -127,8 +127,13 @@ export const SearchResultsScreen: React.FC<{
     <View style={styles.container}>
       <Header
         title="Search Results"
-        onBackPress={handleBackPress}
-        onScanPress={handleScanAnother}
+        onBack={handleBackPress}
+        rightActions={[
+          {
+            icon: 'qr-code-scanner',
+            onPress: handleScanAnother,
+          },
+        ]}
       />
       {renderContent()}
 

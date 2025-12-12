@@ -499,6 +499,7 @@ fragment PantryItemFragment on PantryItem {
     symbol
   }
   packageWeight
+  packageWeightUnitId
   packageWeightUnit {
     id
     name

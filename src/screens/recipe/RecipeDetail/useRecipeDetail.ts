@@ -570,10 +570,10 @@ export function useRecipeDetail() {
     if (isBackendRecipe && backendRecipe) {
       return {
         title: backendRecipe.name,
-        image: backendRecipe.imageUrl,
+        image: backendRecipe.imageUrl ?? undefined,
         servings: backendRecipe.servings,
-        readyInMinutes: backendRecipe.totalTimeMinutes,
-        summary: backendRecipe.description,
+        readyInMinutes: backendRecipe.totalTimeMinutes ?? undefined,
+        summary: backendRecipe.description ?? undefined,
         ingredients: backendRecipe.ingredients || [],
         instructions: backendRecipe.instructions,
       };
