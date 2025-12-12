@@ -123,7 +123,7 @@ const styles = StyleSheet.create(theme => ({
   addButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',

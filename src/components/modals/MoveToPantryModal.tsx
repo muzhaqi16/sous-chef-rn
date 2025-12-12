@@ -441,7 +441,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
   },
   defaultBadgeActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.colors.overlays.light,
   },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,

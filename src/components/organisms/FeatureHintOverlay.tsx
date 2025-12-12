@@ -93,7 +93,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
 const styles = StyleSheet.create(theme => ({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: theme.colors.overlays.heavy,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
