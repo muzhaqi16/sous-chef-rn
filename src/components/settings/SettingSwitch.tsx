@@ -43,11 +43,11 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
         onValueChange={onValueChange}
         disabled={disabled || loading}
         trackColor={{
-          false: theme.colors.border || '#E0E0E0',
-          true: theme.colors.primary || '#62B1F6',
+          false: theme.colors.border,
+          true: theme.colors.primary,
         }}
-        thumbColor={theme.colors.surface || '#FFFFFF'}
-        ios_backgroundColor={theme.colors.border || '#E0E0E0'}
+        thumbColor={theme.colors.surface}
+        ios_backgroundColor={theme.colors.border}
       />
     </View>
   );
@@ -61,7 +61,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
     opacity: 0.6,
@@ -71,19 +71,19 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   title: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   titleDisabled: {
-    color: theme.colors.textTertiary || '#999',
+    color: theme.colors.textTertiary,
   },
   description: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: theme.typography.lineHeight.tight,
   },
   descriptionDisabled: {
-    color: theme.colors.textTertiary || '#999',
+    color: theme.colors.textTertiary,
   },
 }));
