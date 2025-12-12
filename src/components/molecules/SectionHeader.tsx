@@ -88,19 +88,19 @@ const styles = StyleSheet.create(theme => ({
   leftContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   icon: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
   },
   title: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   actionLabel: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.sectionHeader.actionText,
   },

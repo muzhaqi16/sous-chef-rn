@@ -265,7 +265,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   typeIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     marginBottom: theme.spacing.xs,
   },
   typeLabel: {

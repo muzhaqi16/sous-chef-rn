@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useStore } from '#store';
+import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
 
 type BrandItem = {
   id: string;
@@ -45,43 +45,42 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   onBrandSelected,
   suggestedBrands = [],
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const isOnline = useStore(state => state.isOnline);
   const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
+
+  // Use the shared autocomplete hook for debouncing and state management
+  const {
+    inputValue,
+    handleTextChange: hookHandleTextChange,
+    shouldSearch,
+  } = useAutocompleteInput<BrandItem>({
+    minChars: 2,
+    debounceMs: 300,
+    onChangeText: useCallback((text: string) => {
+      // This is called after debounce - trigger the GraphQL query
+      // Only search if no matching suggested brands
+      const lowerSearch = text.toLowerCase();
+      const hasMatchingSuggestions = suggestedBrands.some(b =>
+        b.name.toLowerCase().includes(lowerSearch),
+      );
+      if (suggestedBrands.length === 0 || !hasMatchingSuggestions) {
+        searchBrands({
+          variables: { search: text, limit: 20 },
+        });
+      }
+    }, [searchBrands, suggestedBrands]),
+    getDisplayValue: (item) => item.name,
+  });
 
   // Filter suggested brands by search term
   const filteredSuggestedBrands = useMemo(() => {
-    if (searchTerm.length < 2) {
+    if (inputValue.length < 2) {
       return suggestedBrands;
     }
-    const lowerSearch = searchTerm.toLowerCase();
+    const lowerSearch = inputValue.toLowerCase();
     return suggestedBrands.filter(b =>
       b.name.toLowerCase().includes(lowerSearch),
     );
-  }, [suggestedBrands, searchTerm]);
-
-  // Only search API when:
-  // 1. Search term is at least 2 chars
-  // 2. Online
-  // 3. No matching suggested brands OR no suggested brands at all
-  useEffect(() => {
-    const shouldSearchApi =
-      searchTerm.length >= 2 &&
-      isOnline &&
-      (suggestedBrands.length === 0 || filteredSuggestedBrands.length === 0);
-
-    if (shouldSearchApi) {
-      searchBrands({
-        variables: { search: searchTerm, limit: 20 },
-      });
-    }
-  }, [
-    searchTerm,
-    searchBrands,
-    isOnline,
-    suggestedBrands.length,
-    filteredSuggestedBrands.length,
-  ]);
+  }, [suggestedBrands, inputValue]);
 
   // Combine suggested and searched brands with sections
   const combinedData = useMemo((): ListItem[] => {
@@ -103,7 +102,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     // Only add searched brands if there are no matching suggested brands
     if (
       filteredSuggestedBrands.length === 0 &&
-      searchTerm.length >= 2 &&
+      shouldSearch &&
       searchedBrands.length > 0
     ) {
       // Filter out brands that are already in suggested (shouldn't happen but be safe)
@@ -119,11 +118,11 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     }
 
     return result;
-  }, [filteredSuggestedBrands, brandsData?.brands, suggestedBrands, searchTerm]);
+  }, [filteredSuggestedBrands, brandsData?.brands, suggestedBrands, shouldSearch]);
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
-    setSearchTerm(text);
+    hookHandleTextChange(text);
     // Clear brand selection when user types manually
     onBrandSelected?.(null);
   };
@@ -170,11 +169,11 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
 
   // Determine empty state messaging
   const getEmptySubtext = () => {
-    if (suggestedBrands.length > 0 && searchTerm.length < 2) {
+    if (suggestedBrands.length > 0 && inputValue.length < 2) {
       return 'Select a suggested brand or type to search all brands';
     }
-    if (searchTerm.length >= 2) {
-      return `Continue typing to add "${searchTerm}" as a custom brand`;
+    if (shouldSearch) {
+      return `Continue typing to add "${inputValue}" as a custom brand`;
     }
     return 'Type at least 2 characters to search';
   };
@@ -197,7 +196,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
         suggestedBrands.length > 0 ? 'No matching brands' : 'No brands found'
       }
       emptySubtext={getEmptySubtext()}
-      onSearchChange={setSearchTerm}
+      onSearchChange={hookHandleTextChange}
       minSearchLength={suggestedBrands.length > 0 ? 0 : 2}
     />
   );

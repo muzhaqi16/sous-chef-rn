@@ -29,14 +29,14 @@ export const SubmitButton = ({
 const styles = StyleSheet.create(theme => ({
   nextButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   nextText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
 }));

@@ -1,21 +1,15 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TextInputProps,
-  StyleSheet,
-} from 'react-native';
+import { TextInput, TextInputProps, ViewStyle } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { useUnistyles } from 'react-native-unistyles';
-import { Label } from '#components/atoms';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
   error?: string;
   required?: boolean;
-  containerStyle?: any;
-  inputStyle?: any;
+  containerStyle?: ViewStyle;
+  inputStyle?: ViewStyle;
   accessibilityLabel?: string;
   accessibilityHint?: string;
   /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
@@ -36,29 +30,6 @@ export const FormInput: React.FC<FormInputProps> = ({
   const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
 
-  const styles = StyleSheet.create({
-    container: {
-      marginBottom: 16,
-      ...containerStyle,
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: error ? '#dc3545' : theme.colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 16,
-      backgroundColor: theme.colors.surface,
-      color: theme.colors.textPrimary,
-      ...inputStyle,
-    },
-    errorText: {
-      fontSize: 14,
-      color: '#dc3545',
-      marginTop: 4,
-    },
-  });
-
   // Generate accessibility label with required indicator if needed
   const inputLabel = accessibilityLabel || label;
   const fullLabel = required ? `${inputLabel}, required` : inputLabel;
@@ -69,10 +40,14 @@ export const FormInput: React.FC<FormInputProps> = ({
     : accessibilityHint;
 
   return (
-    <View style={styles.container}>
-      <Label required={required}>{label}</Label>
+    <FormFieldWrapper
+      label={label}
+      error={error}
+      required={required}
+      containerStyle={containerStyle}
+    >
       <InputComponent
-        style={styles.input}
+        style={[styles.input, error && styles.inputError, inputStyle]}
         placeholderTextColor={theme.colors.textSecondary}
         accessible={true}
         accessibilityLabel={fullLabel}
@@ -82,15 +57,22 @@ export const FormInput: React.FC<FormInputProps> = ({
         }}
         {...textInputProps}
       />
-      {error && (
-        <Text
-          style={styles.errorText}
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-        >
-          {error}
-        </Text>
-      )}
-    </View>
+    </FormFieldWrapper>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  input: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.textPrimary,
+  },
+  inputError: {
+    borderColor: theme.colors.error,
+  },
+}));

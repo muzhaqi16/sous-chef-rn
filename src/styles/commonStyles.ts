@@ -463,7 +463,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     right: 20,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

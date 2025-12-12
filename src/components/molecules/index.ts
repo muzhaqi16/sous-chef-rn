@@ -13,7 +13,6 @@ export * from './SettingRow';
 export * from './ActionButton';
 export * from './ItemDetailBottomSheet';
 export * from './SwipeableItem';
-export * from './ActionButton.tsx';
 export * from './UserHeader.tsx';
 export * from './Header';
 export * from './BottomSheet';

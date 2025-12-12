@@ -174,7 +174,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.error,
   },
   input: {
-    height: 48,
+    height: theme.sizes.input.md,
     borderRadius: theme.radii.md,
     fontSize: theme.fonts.size.md,
     paddingHorizontal: theme.spacing.sm,
@@ -202,12 +202,8 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     marginTop: theme.spacing.xs,
     maxHeight: 250,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    zIndex: 1000,
+    zIndex: theme.zIndex.dropdown,
+    ...theme.shadows.lg,
   },
   loadingContainer: {
     padding: theme.spacing.md,
@@ -227,15 +223,15 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   itemImage: {
-    width: 36,
-    height: 36,
+    width: theme.sizes.avatar.sm,
+    height: theme.sizes.avatar.sm,
     borderRadius: theme.radii.sm,
     marginRight: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceVariant,
   },
   itemImagePlaceholder: {
-    width: 36,
-    height: 36,
+    width: theme.sizes.avatar.sm,
+    height: theme.sizes.avatar.sm,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surfaceVariant,
     marginRight: theme.spacing.sm,
@@ -243,7 +239,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   itemImagePlaceholderText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
   },
   itemDetails: {
     flex: 1,
@@ -256,7 +252,7 @@ const styles = StyleSheet.create(theme => ({
   itemBrand: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   separator: {
     height: 1,

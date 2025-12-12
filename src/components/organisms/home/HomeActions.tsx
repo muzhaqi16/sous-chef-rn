@@ -60,22 +60,22 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
 const styles = StyleSheet.create(theme => ({
   homeActions: {
     flexDirection: 'row',
-    gap: 16,
-    paddingTop: 12,
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing['3'],
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing['3'],
+    borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surface,
   },
   actionText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginLeft: 6,
+    marginLeft: theme.spacing.xs + 2,
   },
 }));

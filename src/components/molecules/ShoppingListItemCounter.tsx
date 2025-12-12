@@ -55,7 +55,7 @@ export const ShoppingListItemCounter = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -67,8 +67,8 @@ const styles = StyleSheet.create(() => ({
     justifyContent: 'center',
   },
   unitText: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: theme.typography.fontSize.xs - 1,
+    marginTop: theme.spacing.xs,
     textAlign: 'center',
   },
 }));

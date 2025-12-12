@@ -20,7 +20,7 @@ export const CardContent: React.FC<CardContentProps> = ({
         style={[
           styles.title,
           isPurchased && styles.purchasedTitle,
-          { color: isPurchased ? theme.colors.textTertiary : '#1F2937' },
+          { color: isPurchased ? theme.colors.textTertiary : theme.colors.textPrimary },
         ]}
         numberOfLines={1}
       >
@@ -51,14 +51,14 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 0,
   },
   title: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
-    marginBottom: 2,
+    marginBottom: theme.spacing.xs,
   },
   purchasedTitle: {
     textDecorationLine: 'line-through',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm,
   },
 }));

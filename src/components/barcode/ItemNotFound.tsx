@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils';
 import {Button} from '#components/base/Button';
 
@@ -10,10 +10,12 @@ interface ItemNotFoundProps {
 }
 
 export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) => {
+  const { theme } = useUnistyles();
+
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
-        <Icon name="qr-code-scanner" size={48} color="#6c757d" />
+        <Icon name="qr-code-scanner" size={48} color={theme.colors.textSecondary} />
       </Text>
       <Text style={styles.notFoundText}>Item Not Found</Text>
       <Text style={styles.notFoundMessage}>
@@ -43,7 +45,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   notFoundIcon: {
-    fontSize: 48,
+    fontSize: theme.sizes.avatar.lg,
   },
   notFoundText: {
     fontSize: theme.fonts.size.xl,

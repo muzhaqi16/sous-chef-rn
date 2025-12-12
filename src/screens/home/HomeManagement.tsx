@@ -8,12 +8,13 @@ import {
   TextInput,
   RefreshControl,
   ListRenderItem,
+  Pressable,
 } from 'react-native';
 import Animated, {
   LinearTransition,
   FadeInDown,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#/hooks';
@@ -265,19 +266,18 @@ export const HomeManagement: React.FC = () => {
     <>
       <View style={commonStyles.container}>
         {/* Header */}
-        <View style={commonStyles.header}>
-          <TouchableOpacity onPress={goBack}>
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
-          </TouchableOpacity>
-          <Text style={commonStyles.headerTitle}>My Homes</Text>
-          <TouchableOpacity onPress={() => setShowCreateForm(true)}>
-            <Icon name="add" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <Header
+          title="My Homes"
+          centerTitle
+          onBack={goBack}
+          rightActions={[
+            {
+              icon: 'add',
+              onPress: () => setShowCreateForm(true),
+              variant: 'primary',
+            },
+          ]}
+        />
 
         {/* Stats Section */}
         <HomeStats
@@ -288,12 +288,17 @@ export const HomeManagement: React.FC = () => {
 
         {/* Create/Join Home Form */}
         {showCreateForm && (
-          <Animated.View
-            {...formAnimationPreset}
-            style={[commonStyles.cardWithShadow, styles.formContainer]}
-          >
-            {/* Mode Switcher */}
-            <View style={styles.modeSwitcher}>
+          <View style={commonStyles.absoluteFill}>
+            <Pressable
+              style={commonStyles.overlay}
+              onPress={handleCancelCreate}
+            />
+            <Animated.View
+              {...formAnimationPreset}
+              style={[commonStyles.cardWithShadow, styles.formContainer]}
+            >
+              {/* Mode Switcher */}
+              <View style={styles.modeSwitcher}>
               <TouchableOpacity
                 style={[
                   styles.modeButton,
@@ -399,7 +404,8 @@ export const HomeManagement: React.FC = () => {
                 </View>
               </View>
             )}
-          </Animated.View>
+            </Animated.View>
+          </View>
         )}
 
         {/* Homes List - Virtualized */}

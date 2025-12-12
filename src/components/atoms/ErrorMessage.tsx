@@ -22,9 +22,9 @@ const styles = StyleSheet.create(theme => ({
   },
   errorText: {
     color: theme.colors.primary,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     textAlign: 'center',
-    margin: 16,
+    margin: theme.spacing.md,
   },
 }));
 

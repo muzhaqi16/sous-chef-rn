@@ -6,6 +6,7 @@ import {
   radii,
   shadows,
   sizes,
+  zIndex,
 } from './foundations';
 
 const commonTheme = {
@@ -15,6 +16,7 @@ const commonTheme = {
   radii,
   shadows,
   sizes,
+  zIndex,
 };
 
 export const lightTheme = {

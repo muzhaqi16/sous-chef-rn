@@ -84,7 +84,7 @@ const styles = StyleSheet.create(theme => ({
   progressBar: {
     position: 'absolute',
     backgroundColor: theme.colors.primaryLight || '#DBEAFE',
-    borderRadius: 100,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     left: 0,
   },

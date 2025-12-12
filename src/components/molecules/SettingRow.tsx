@@ -321,14 +321,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   rowWrapper: {
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: theme.radii.md,
+    borderTopRightRadius: theme.radii.md,
   },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
@@ -336,16 +336,16 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  rowLabel: { marginLeft: 8, fontSize: 16, color: theme.colors.textPrimary },
+  rowLabel: { marginLeft: theme.spacing.sm, fontSize: theme.typography.fontSize.md, color: theme.colors.textPrimary },
   rowSpacer: { flex: 1 },
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 4,
+    gap: theme.spacing.xs,
   },
   modalValueText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
   modalContainer: {
@@ -356,52 +356,52 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 24,
-    paddingBottom: 16,
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     textAlign: 'center',
     flex: 1,
   },
   modalCloseButton: {
-    padding: 4,
+    padding: theme.spacing.xs,
     minWidth: 60,
   },
   modalCancelText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
   modalSaveButton: {
-    padding: 4,
+    padding: theme.spacing.xs,
     minWidth: 60,
     alignItems: 'flex-end',
   },
   modalSaveText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.primary,
     fontWeight: '600',
   },
   modalHeaderSpacer: {
-    width: 32,
+    width: theme.sizes.button.sm,
   },
   textInputContainer: {
-    padding: 24,
+    padding: theme.spacing.xl,
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
   modalOptionText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     flex: 1,
     color: theme.colors.textPrimary,
   },

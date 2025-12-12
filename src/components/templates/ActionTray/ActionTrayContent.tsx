@@ -63,7 +63,7 @@ const styles = StyleSheet.create(theme => ({
   closeButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',

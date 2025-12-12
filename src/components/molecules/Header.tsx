@@ -1,107 +1,210 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+
+// ============================================
+// Types
+// ============================================
+
+/**
+ * Semantic color variants for header actions
+ * Maps to theme colors for consistent styling
+ */
+export type ActionVariant =
+  | 'default'
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'error'
+  | 'warning';
+
+/**
+ * Header preset variants for common screen patterns
+ */
+export type HeaderVariant = 'default' | 'detail' | 'form' | 'modal';
 
 export interface HeaderAction {
   icon: IconName;
   onPress: () => void;
-  badge?: number;
-  size?: number;
+  /** Semantic color variant (maps to theme colors) */
+  variant?: ActionVariant;
+  /** Direct color override (takes precedence over variant) */
   color?: string;
+  /** Disable the action */
+  disabled?: boolean;
+  /** Show loading spinner instead of icon */
+  loading?: boolean;
+  /** Badge count to display */
+  badge?: number;
+  /** Icon size (default: 24) */
+  size?: number;
+  /** Icon library */
   library?: IconLibrary;
+  /** Test ID for automation */
   testID?: string;
 }
 
 interface HeaderProps {
-  title: string;
-  onBack?: () => void;
-  leftActions?: HeaderAction[];
-  rightActions?: HeaderAction[];
+  /** Screen title (optional for detail variant) */
+  title?: string;
+  /** Center the title */
   centerTitle?: boolean;
+  /** Back button handler (shows ← arrow) */
+  onBack?: () => void;
+  /** Close button handler (shows ✕, takes precedence over onBack) */
+  onClose?: () => void;
+  /** Left side actions */
+  leftActions?: HeaderAction[];
+  /** Right side actions */
+  rightActions?: HeaderAction[];
+  /** Preset variant for common patterns */
+  variant?: HeaderVariant;
+  /** Transparent background */
+  transparent?: boolean;
+  /** Hide bottom border */
+  borderless?: boolean;
 }
+
+// ============================================
+// Component
+// ============================================
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   leftActions = [],
   rightActions = [],
-  centerTitle = false,
+  centerTitle,
   onBack,
+  onClose,
+  variant = 'default',
+  transparent = false,
+  borderless = false,
 }) => {
+  const { theme } = useUnistyles();
+
+  // Variant color mapping
+  const getVariantColor = (actionVariant: ActionVariant = 'default'): string => {
+    const colorMap: Record<ActionVariant, string> = {
+      default: theme.colors.textPrimary,
+      primary: theme.colors.primary,
+      secondary: theme.colors.textSecondary,
+      success: theme.colors.success,
+      error: theme.colors.error,
+      warning: theme.colors.warning,
+    };
+    return colorMap[actionVariant];
+  };
+
+  // Apply variant presets
+  const shouldCenterTitle = centerTitle ?? (variant === 'form' || variant === 'modal');
+  const showTitle = title !== undefined && title !== '';
+  const showBackButton = onBack && !onClose;
+  const showCloseButton = onClose !== undefined;
+
+  // Render a single action button
+  const renderAction = (action: HeaderAction, index: number) => {
+    const iconColor = action.color || getVariantColor(action.variant);
+
+    return (
+      <TouchableOpacity
+        key={index}
+        style={styles.action}
+        onPress={action.onPress}
+        disabled={action.disabled || action.loading}
+        testID={action.testID}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        {action.loading ? (
+          <ActivityIndicator size="small" color={iconColor} />
+        ) : (
+          <Icon
+            name={action.icon}
+            size={action.size || 24}
+            color={action.disabled ? theme.colors.textTertiary : iconColor}
+            library={action.library}
+          />
+        )}
+        {action.badge !== undefined && action.badge > 0 && (
+          <View style={[commonStyles.badge, styles.badge]}>
+            <Text style={commonStyles.badgeText}>{action.badge}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={commonStyles.header}>
+    <View
+      style={[
+        commonStyles.header,
+        transparent && styles.transparent,
+        borderless && styles.borderless,
+      ]}
+    >
       {/* Left side */}
       <View style={styles.actions}>
-        {onBack && (
-          <TouchableOpacity style={styles.action} onPress={onBack}>
-            <Icon name="arrow-back" size={24} color={styles.title.color} />
+        {showCloseButton && (
+          <TouchableOpacity
+            style={styles.action}
+            onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            testID="header-close-button"
+          >
+            <Icon name="close" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
         )}
-        {leftActions.map((action, index) => (
+        {showBackButton && (
           <TouchableOpacity
-            key={index}
             style={styles.action}
-            onPress={action.onPress}
-            testID={action.testID}
+            onPress={onBack}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            testID="header-back-button"
           >
-            <Icon
-              name={action.icon}
-              size={action.size || 24}
-              color={action.color || styles.title.color}
-              library={action.library}
-            />
-            {action.badge !== undefined && action.badge > 0 && (
-              <View style={styles.badge}>
-                <Text style={commonStyles.badgeText}>{action.badge}</Text>
-              </View>
-            )}
+            <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
-        ))}
+        )}
+        {leftActions.map(renderAction)}
       </View>
 
       {/* Title */}
-      <Text style={[styles.title, centerTitle && styles.centerTitle]}>
-        {title}
-      </Text>
+      {showTitle ? (
+        <Text
+          style={[styles.title, shouldCenterTitle && styles.centerTitle]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+      ) : (
+        <View style={styles.titleSpacer} />
+      )}
 
       {/* Right side */}
-      <View style={styles.actions}>
-        {rightActions.map((action, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.action}
-            onPress={action.onPress}
-            testID={action.testID}
-          >
-            <Icon
-              name={action.icon}
-              size={24}
-              color={action.color || styles.title.color}
-            />
-            {action.badge !== undefined && action.badge > 0 && (
-              <View style={[commonStyles.badge, styles.badge]}>
-                <Text style={commonStyles.badgeText}>{action.badge}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+      <View style={styles.actions}>{rightActions.map(renderAction)}</View>
     </View>
   );
 };
 
+// ============================================
+// Styles
+// ============================================
+
 const styles = StyleSheet.create(theme => ({
   title: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: theme.spacing.sm,
   },
 
   centerTitle: {
     textAlign: 'center',
+  },
+
+  titleSpacer: {
+    flex: 1,
   },
 
   actions: {
@@ -117,13 +220,21 @@ const styles = StyleSheet.create(theme => ({
 
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.radii.lg,
+    minWidth: theme.spacing['5'],
+    height: theme.spacing['5'],
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  transparent: {
+    backgroundColor: 'transparent',
+  },
+
+  borderless: {
+    borderBottomWidth: 0,
   },
 }));

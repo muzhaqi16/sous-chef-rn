@@ -171,32 +171,32 @@ export const TabView: React.FC<TabViewProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   placeholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: theme.spacing.md,
   },
   placeholderText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
   },
   label: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
   },
   tabBarContainer: {
     position: 'relative',
   },
   refreshButtonContainer: {
     position: 'absolute',
-    right: 8,
+    right: theme.spacing.sm,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
+    zIndex: theme.zIndex.sticky,
   },
   refreshButton: {
-    padding: 8,
+    padding: theme.spacing.sm,
   },
 }));

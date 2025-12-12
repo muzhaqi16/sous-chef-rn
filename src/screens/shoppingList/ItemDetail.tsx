@@ -270,13 +270,13 @@ const styles = StyleSheet.create(theme => ({
   itemImage: {
     width: 120,
     height: 120,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
     marginBottom: theme.spacing.md,
   },
   imagePlaceholder: {
     width: 120,
     height: 120,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',

@@ -573,7 +573,7 @@ const styles = StyleSheet.create(theme => ({
   quickAddButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -607,7 +607,7 @@ const styles = StyleSheet.create(theme => ({
   actionIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
-import {TextInput, View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import { Label } from '#components/atoms';
+import {TextInput, Text} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 
 interface FractionInputProps {
   value: string;
@@ -34,6 +34,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   testID,
   keyboardType = 'numbers-and-punctuation',
 }) => {
+  const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
 
   // Validation regex for fraction input
@@ -53,8 +54,10 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   const hasError = error || (value && !isValidFormat(value));
 
   return (
-    <View style={styles.container}>
-      {label && <Label>{label}</Label>}
+    <FormFieldWrapper
+      label={label || ''}
+      error={hasError ? (error || 'Use format: 1/4, 1 1/4, or 1.5') : undefined}
+    >
       <TextInput
         style={[
           styles.input,
@@ -67,45 +70,31 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.colors.textSecondary}
         keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
         testID={testID}
       />
-      {hasError && (
-        <Text style={styles.errorText}>
-          {error || 'Use format: 1/4, 1 1/4, or 1.5'}
-        </Text>
-      )}
       {!hasError && value && isFocused && (
         <Text style={styles.hintText}>
           Formats: 1/4, 1 1/4, 0.75, or 2
         </Text>
       )}
-    </View>
+    </FormFieldWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 8,
-  },
   input: {
-    height: 48,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: theme.colors.inputText,
-    backgroundColor: theme.colors.inputBackground,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
   },
   inputFocused: {
     borderColor: theme.colors.primary,
@@ -118,14 +107,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
     opacity: 0.6,
   },
-  errorText: {
-    fontSize: 12,
-    color: theme.colors.error,
-    marginTop: 4,
-  },
   hintText: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
 }));

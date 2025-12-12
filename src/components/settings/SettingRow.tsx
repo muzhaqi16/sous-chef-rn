@@ -56,7 +56,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         <Icon
           name="chevron-right"
           size={24}
-          color={theme.colors.textTertiary || '#999'}
+          color={theme.colors.textTertiary}
         />
       )}
     </TouchableOpacity>
@@ -70,7 +70,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
     opacity: 0.6,
@@ -82,23 +82,23 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   titleDisabled: {
-    color: theme.colors.textTertiary || '#999',
+    color: theme.colors.textTertiary,
   },
   description: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     lineHeight: 20,
   },
   descriptionDisabled: {
-    color: theme.colors.textTertiary || '#999',
+    color: theme.colors.textTertiary,
   },
   value: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginRight: theme.spacing.xs,
   },

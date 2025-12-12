@@ -308,17 +308,17 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   quietTimeAlert: {
-    backgroundColor: '#E8F4FD',
+    backgroundColor: theme.colors.info + '20',
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
+    borderLeftColor: theme.colors.info,
   },
   quietTimeText: {
-    fontSize: 14,
-    color: '#1565C0',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.info,
     textAlign: 'center',
   },
   indentedSetting: {
@@ -326,7 +326,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     marginBottom: theme.spacing.sm,
   },
   settingLabel: {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     marginBottom: theme.spacing.sm,
   },
   quietHoursText: {

@@ -34,21 +34,21 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   title: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: 'bold',
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   description: {
-    fontSize: 13,
-    color: theme.colors.textTertiary || '#999',
+    fontSize: theme.typography.fontSize.sm - 1,
+    color: theme.colors.textTertiary,
     marginTop: theme.spacing.xs,
   },
   content: {
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: theme.colors.border || '#E0E0E0',
+    borderColor: theme.colors.border,
   },
 }));

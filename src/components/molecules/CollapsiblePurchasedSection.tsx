@@ -206,17 +206,17 @@ export const CollapsiblePurchasedSection: React.FC<
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
     borderTopWidth: 1,
     borderBottomWidth: 1,
   },
@@ -226,24 +226,24 @@ const styles = StyleSheet.create(() => ({
     flex: 1,
   },
   checkIcon: {
-    marginRight: 8,
+    marginRight: theme.spacing.sm,
   },
   headerText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: theme.spacing['3'],
   },
   clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: theme.radii.sm,
   },
   clearButtonText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
   },
 }));

@@ -41,24 +41,24 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
 const styles = StyleSheet.create(theme => ({
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: theme.spacing.md,
+    gap: theme.spacing['3'],
   },
   statCard: {
     flex: 1,
     backgroundColor: theme.colors.surface,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize['2xl'],
     fontWeight: '700',
     color: theme.colors.primary,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
 }));

@@ -132,7 +132,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
           {options.tabBarIcon && (
             <options.tabBarIcon
               focused={isFocused}
-              color={isFocused ? theme.colors.primary : '#CCCCCC'}
+              color={isFocused ? theme.colors.primary : theme.colors.textTertiary}
               size={24}
             />
           )}
@@ -171,35 +171,35 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
 const styles = StyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.secondaryDark,
-    height: 65,
+    height: TAB_BAR_HEIGHT,
     alignSelf: 'center',
-    borderRadius: 20,
+    borderRadius: theme.radii['2xl'],
     position: 'absolute',
     paddingHorizontal: '5%',
     flexDirection: 'row',
-    shadowColor: '#000000',
+    shadowColor: theme.colors.black,
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: theme.spacing.sm,
     },
     shadowOpacity: 0.15,
-    shadowRadius: 16,
+    shadowRadius: theme.spacing.md,
     elevation: 12,
-    zIndex: 1000,
+    zIndex: theme.zIndex.overlay,
   },
   tabItem: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
-    minWidth: 40,
+    minWidth: theme.sizes.touchTarget.sm,
   },
   addButtonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.spacing.sm,
   },
   addButtonPlaceholder: {
-    width: 72, // Same width as addButtonContainer to maintain layout
+    width: theme.sizes.fab.md + theme.spacing.md, // Same width as addButtonContainer to maintain layout
   },
 }));

@@ -300,7 +300,7 @@ export const useImageUpload = () => {
             imageUrl,
           },
         });
-        const result = data?.updateItemImage;
+        const result = data?.updateItem;
         return result || null;
       } catch (error) {
         console.error('Update item image failed:', error);

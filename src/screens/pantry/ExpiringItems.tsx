@@ -1,15 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { SwipeableItem } from '#components';
+import { Header } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton';
 import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery } from '#generated';
@@ -64,15 +59,11 @@ export const ExpiringItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBack()}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[commonStyles.title, styles.headerTitle]}>
-          Expiring Items
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
+      <Header
+        title="Expiring Items"
+        centerTitle
+        onBack={goBack}
+      />
 
       <FlatList
         style={styles.scrollView}
@@ -145,19 +136,6 @@ export const ExpiringItems: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    ...commonStyles.rowSpaceBetween,
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
-  },
   scrollView: {
     flex: 1,
   },

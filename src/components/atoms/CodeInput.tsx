@@ -40,13 +40,13 @@ const styles = StyleSheet.create(theme => ({
   formInput: {
     position: 'relative',
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
   },
   formInputControl: {
-    height: 60,
+    height: theme.sizes.input.lg + theme.spacing.sm,
     color: 'transparent',
     backgroundColor: 'transparent',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
     zIndex: 2,
     opacity: 0,
   },
@@ -59,17 +59,17 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
   },
   formInputChar: {
     flex: 1,
-    lineHeight: 60,
-    fontSize: 34,
+    lineHeight: theme.sizes.input.lg + theme.spacing.sm,
+    fontSize: theme.typography.fontSize['4xl'] - 2,
     textAlign: 'center',
     fontWeight: '600',
   },
   formInputCharEmpty: {
-    color: '#BBB9BC',
+    color: theme.colors.textTertiary,
     fontWeight: '400',
   },
 }));

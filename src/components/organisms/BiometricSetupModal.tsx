@@ -304,7 +304,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlays.medium,
   },
   contentContainer: {
     flex: 1,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create(theme => ({
   iconBackground: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',

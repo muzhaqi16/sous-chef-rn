@@ -339,8 +339,8 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
   },
   errorText: {
-    marginTop: 4,
-    fontSize: 14,
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.error,
   },
 }));
