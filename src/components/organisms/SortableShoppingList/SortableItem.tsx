@@ -206,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.sm,
     // Vertical margin for consistent spacing between items
     marginVertical: theme.spacing.sm,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
   },
   activeContainer: {
     opacity: 0.98,

@@ -408,7 +408,7 @@ const styles = StyleSheet.create(theme => ({
   radioOuter: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: theme.radii.full,
     borderWidth: 2,
     borderColor: theme.colors.border,
     justifyContent: 'center',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create(theme => ({
   radioInner: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: theme.radii.full,
   },
   permissionsContainer: {
     marginTop: theme.spacing.md,

@@ -440,7 +440,7 @@ const styles = StyleSheet.create(theme => ({
     right: -4,
     top: -4,
     backgroundColor: theme.colors.background,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
     padding: 0,
   },
   cropContainer: {

@@ -86,7 +86,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.sm,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
     marginVertical: theme.spacing.sm,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
     boxSizing: 'border-box',
   },
 }));
