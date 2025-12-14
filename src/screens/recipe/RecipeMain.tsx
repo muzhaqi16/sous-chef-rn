@@ -6,7 +6,7 @@ import { ListTemplate, HeaderAction, RecipesHeader } from '#components';
 import { useDeleteRecipeMutation } from '#generated';
 import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
-import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
+import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils';
@@ -132,7 +132,7 @@ export const RecipeMain: React.FC = React.memo(() => {
       if (!data?.deleteRecipe || !variables) return;
 
       try {
-        const removeFromRecipesCache = createRemoveFromQueryFieldUpdater(
+        const removeFromRecipesCache = createRemoveFromQueryConnectionUpdater(
           'recipes',
           'Recipe',
         );

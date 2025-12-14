@@ -28,6 +28,8 @@ export const AddEditItem: React.FC<{
 }> = ({ route }) => {
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
+  // Extract initialItemName (only present when navigating from AddItem route)
+  const initialItemName = 'initialItemName' in route.params ? route.params.initialItemName : undefined;
   const isEdit = !!itemId;
 
   const {
@@ -81,6 +83,13 @@ export const AddEditItem: React.FC<{
       setFromItem(data.shoppingListItem);
     }
   }, [data, setFromItem]);
+
+  // Pre-populate item name when adding new item with initial value
+  useEffect(() => {
+    if (!isEdit && initialItemName) {
+      updateField('itemName', initialItemName);
+    }
+  }, [isEdit, initialItemName, updateField]);
 
   // Handle autocomplete item selection
   const handleItemSelect = (item: ItemSuggestion) => {

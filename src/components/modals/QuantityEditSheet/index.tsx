@@ -255,7 +255,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               setUnitId(null);
             }}
             onUnitSelected={(selectedUnitId, selectedUnitName) => {
-              setUnitName(selectedUnitName);
+              // Only update unitName when a unit is actually selected, not when clearing
+              if (selectedUnitName !== null) {
+                setUnitName(selectedUnitName);
+              }
               setUnitId(selectedUnitId);
             }}
             placeholder={itemUnits.length > 0 ? 'Or type to search...' : 'Type to search units...'}

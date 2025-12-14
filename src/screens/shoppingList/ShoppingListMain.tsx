@@ -586,6 +586,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           visible={addSheetVisible}
           shoppingListId={currentListId}
           onClose={() => setAddSheetVisible(false)}
+          initialSearchQuery={searchQuery}
+          onItemAdded={() => setSearchQuery('')}
         />
 
         {/* Quantity Edit Sheet */}

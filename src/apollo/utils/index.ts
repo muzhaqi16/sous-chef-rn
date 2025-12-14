@@ -14,6 +14,7 @@ export {
   createAddToQueryFieldUpdater,
   createAddToKeyedQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,
+  createRemoveFromQueryConnectionUpdater,
   // Parent entity field updaters
   createAddToParentConnectionUpdater,
   createAddToParentArrayUpdater,

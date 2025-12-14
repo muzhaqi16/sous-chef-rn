@@ -31,12 +31,18 @@ interface AddToShoppingListSheetProps {
   visible: boolean;
   shoppingListId: string | undefined;
   onClose: () => void;
+  /** Initial search query to pre-populate when sheet opens */
+  initialSearchQuery?: string;
+  /** Called when an item is successfully added */
+  onItemAdded?: () => void;
 }
 
 export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   visible,
   shoppingListId,
   onClose,
+  initialSearchQuery = '',
+  onItemAdded,
 }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
@@ -112,15 +118,24 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     };
   }, [searchQuery, isOnline, fetchItems]);
 
+  // Track if we've initialized from the initial search query
+  const hasInitializedRef = useRef(false);
+
   // Control bottom sheet visibility
   useEffect(() => {
     if (visible && shoppingListId) {
       bottomSheetRef.current?.present();
-      setSearchQuery('');
+      // Only pre-populate on first open, not on every re-render
+      if (!hasInitializedRef.current) {
+        setSearchQuery(initialSearchQuery);
+        hasInitializedRef.current = true;
+      }
     } else {
       bottomSheetRef.current?.dismiss();
+      // Reset initialization flag when sheet closes so it can be re-initialized next time
+      hasInitializedRef.current = false;
     }
-  }, [visible, shoppingListId]);
+  }, [visible, shoppingListId, initialSearchQuery]);
 
   // Handle scan barcode press
   const handleScanPress = useCallback(() => {
@@ -135,9 +150,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const handleAddManually = useCallback(() => {
     onClose();
     if (shoppingListId) {
-      navigate('AddItem', { listId: shoppingListId });
+      navigate('AddItem', {
+        listId: shoppingListId,
+        initialItemName: searchQuery.trim() || undefined,
+      });
     }
-  }, [onClose, navigate, shoppingListId]);
+  }, [onClose, navigate, shoppingListId, searchQuery]);
 
   // Handle quick add from autocomplete suggestion
   const handleQuickAddSuggestion = useCallback(
@@ -158,12 +176,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         toastService.success(`Added ${item.name}`);
         setSearchQuery(''); // Clear search after adding
+        onItemAdded?.(); // Notify parent to clear main search
         refetchRecent();
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent],
+    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
   );
 
   // Handle quick add from recent items
@@ -193,12 +212,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         });
 
         toastService.success(`Added ${itemName}`);
+        onItemAdded?.(); // Notify parent to clear main search
         refetchRecent();
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent],
+    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
   );
 
   // Determine if we should show search results
@@ -259,6 +279,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             <TouchableOpacity
               style={styles.clearButton}
               onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              testID="add-sheet-search-clear"
             >
               <Icon
                 name="close"

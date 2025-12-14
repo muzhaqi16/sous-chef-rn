@@ -251,6 +251,76 @@ export function createRemoveFromQueryFieldUpdater(
   };
 }
 
+/**
+ * Creates a function to remove items from a Query root Connection field
+ *
+ * Use this for Query fields that return Connection objects (with edges/pageInfo):
+ * - Query.recipes (RecipeConnection)
+ *
+ * Unlike createRemoveFromQueryFieldUpdater which expects flat arrays,
+ * this handles the Connection pattern with edges.
+ *
+ * @example
+ * const removeFromRecipes = createRemoveFromQueryConnectionUpdater('recipes', 'Recipe');
+ * removeFromRecipes(cache, deletedRecipeId, { evictItem: true });
+ *
+ * @param fieldName - Query field name (e.g., 'recipes')
+ * @param typename - GraphQL typename for eviction (e.g., 'Recipe')
+ * @returns Function to remove items from the Connection field
+ */
+export function createRemoveFromQueryConnectionUpdater(
+  fieldName: string,
+  typename: string,
+) {
+  return (
+    cache: ApolloCache,
+    itemId: string,
+    options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
+  ): void => {
+    const { evictItem = false, updateTotalCount = true } = options;
+
+    try {
+      cache.modify({
+        fields: {
+          [fieldName](
+            existingConnection: any = {},
+            { readField }: CacheFieldHelpers,
+          ) {
+            const existingEdges = existingConnection?.edges || [];
+
+            const edges = existingEdges.filter(
+              (edge: any) => readField('id', edge?.node) !== itemId,
+            );
+
+            const totalCount = updateTotalCount
+              ? Math.max(0, (existingConnection?.totalCount || 0) - 1)
+              : existingConnection?.totalCount;
+
+            return {
+              ...existingConnection,
+              edges,
+              ...(updateTotalCount && { totalCount }),
+            };
+          },
+        },
+      });
+
+      // Optionally evict the item itself from cache
+      if (evictItem) {
+        cache.evict({
+          id: cache.identify({ __typename: typename, id: itemId }),
+        });
+        cache.gc();
+      }
+    } catch (error) {
+      console.warn(
+        `Cache update failed for removing from ${fieldName}:`,
+        error,
+      );
+    }
+  };
+}
+
 // =============================================================================
 // Parent Entity Field Updaters (for nested arrays/connections)
 // =============================================================================
