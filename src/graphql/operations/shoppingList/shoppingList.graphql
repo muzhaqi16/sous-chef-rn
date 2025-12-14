@@ -402,7 +402,19 @@ mutation ToggleShoppingListItemPurchased(
     purchased: $purchased
     version: $version
   ) {
-    ...ShoppingListItemFragment
+    # Use minimal fields matching server response to avoid cache warnings
+    id
+    itemName
+    quantity
+    isPurchased
+    updatedAt
+    category
+    unitName
+    unit {
+      id
+      name
+      symbol
+    }
   }
 }
 
