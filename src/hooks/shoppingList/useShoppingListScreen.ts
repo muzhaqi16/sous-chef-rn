@@ -2,7 +2,7 @@ import { useMemo, useEffect, startTransition, useRef } from 'react';
 import { useAppNavigation } from '#hooks';
 import { useGetShoppingListsQuery } from '#generated';
 import { useShoppingListManagement } from './useShoppingListManagement';
-import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useAppStore, selectShoppingListState, selectSelectedHomeId } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
@@ -28,9 +28,14 @@ export function useShoppingListScreen() {
     useShallow(selectShoppingListState),
   );
 
+  // Get selected home ID for filtering lists by home
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+
   // Query for shopping lists
   // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
+  // Pass homeId to filter lists by the currently selected home
   const { data, previousData } = useGetShoppingListsQuery({
+    variables: { homeId: selectedHomeId || undefined },
     skip: !isFocused,
     fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only',
     errorPolicy: 'all',

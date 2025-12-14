@@ -98,6 +98,7 @@ export function useAllPendingInvites(userId?: string) {
           } invited you to "${invite.shoppingList?.name || 'a shopping list'}"`,
           payload: {
             inviteId: invite.id,
+            token: invite.token,
             listId: invite.shoppingListId,
             listName: invite.shoppingList?.name,
             inviterName:
@@ -111,6 +112,7 @@ export function useAllPendingInvites(userId?: string) {
           actionType: 'ACCEPT_SHOPPING_LIST_INVITE' as const,
           actionData: {
             inviteId: invite.id,
+            token: invite.token,
             listId: invite.shoppingListId,
           },
           expiresAt: invite.expiresAt,

@@ -5,6 +5,7 @@
 query MyShoppingListInvites {
   myShoppingListInvites {
     id
+    token
     shoppingListId
     collaboratorId
     email

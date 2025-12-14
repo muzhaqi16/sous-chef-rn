@@ -58,7 +58,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   // Use SearchUnits query for server-side filtering when user types
   // Only search if we have a search term, otherwise show cached common units
   const { data: searchData, loading: searchLoading } = useSearchUnitsQuery({
-    variables: { query: debouncedSearchTerm },
+    variables: { query: debouncedSearchTerm, limit: 10 },
     skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
     fetchPolicy: 'cache-first',
   });

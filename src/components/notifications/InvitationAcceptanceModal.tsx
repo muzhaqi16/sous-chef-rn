@@ -8,12 +8,15 @@ import {
   Alert,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useApolloClient } from '@apollo/client/react';
 import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
   useDeclineHomeInviteMutation,
   useDeclineShoppingListInviteMutation,
+  MyShoppingListInvitesDocument,
+  MyShoppingListInvitesQuery,
 } from '#generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils';
 
@@ -40,6 +43,7 @@ export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const { theme } = useUnistyles();
+  const client = useApolloClient();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
@@ -71,10 +75,34 @@ export const InvitationAcceptanceModal: React.FC<
 
     setAccepting(true);
     try {
+      let token = invitation.token;
+
+      // Fallback: Fetch token if missing (real-time notifications may not include it)
+      if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+        const result = await client.query<MyShoppingListInvitesQuery>({
+          query: MyShoppingListInvitesDocument,
+          fetchPolicy: 'network-only',
+        });
+        const invites = result.data?.myShoppingListInvites;
+        const invite = invites?.find(
+          inv => inv.id === invitation.payload?.inviteId,
+        );
+        token = invite?.token ?? undefined;
+      }
+
+      if (!token) {
+        Alert.alert(
+          'Error',
+          'Unable to find invitation token. It may have expired or been cancelled.',
+        );
+        setAccepting(false);
+        return;
+      }
+
       if (invitation.type === 'HOME_INVITE') {
         const result = await acceptHomeInvite({
           variables: {
-            token: invitation.token!,
+            token: token!,
           },
         });
 
@@ -87,41 +115,19 @@ export const InvitationAcceptanceModal: React.FC<
             acceptedHomeId: newHomeId,
           };
 
-          Alert.alert(
-            'Success',
-            `You've successfully joined ${invitation.entityName}!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onAccept?.(invitationWithHomeId);
-                  onClose();
-                },
-              },
-            ],
-          );
+          onAccept?.(invitationWithHomeId);
+          onClose();
         }
       } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
         const result = await acceptShoppingListInvite({
           variables: {
-            token: invitation.token!,
+            token: token!,
           },
         });
 
         if (result.data?.acceptShoppingListInvite) {
-          Alert.alert(
-            'Success',
-            `You've been added to ${invitation.entityName}!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onAccept?.(invitation);
-                  onClose();
-                },
-              },
-            ],
-          );
+          onAccept?.(invitation);
+          onClose();
         }
       }
     } catch (error: any) {
@@ -149,9 +155,33 @@ export const InvitationAcceptanceModal: React.FC<
           onPress: async () => {
             setRejecting(true);
             try {
+              let token = invitation.token;
+
+              // Fallback: Fetch token if missing (real-time notifications may not include it)
+              if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+                const result = await client.query<MyShoppingListInvitesQuery>({
+                  query: MyShoppingListInvitesDocument,
+                  fetchPolicy: 'network-only',
+                });
+                const invites = result.data?.myShoppingListInvites;
+                const invite = invites?.find(
+                  inv => inv.id === invitation.payload?.inviteId,
+                );
+                token = invite?.token ?? undefined;
+              }
+
+              if (!token) {
+                Alert.alert(
+                  'Error',
+                  'Unable to find invitation token. It may have expired or been cancelled.',
+                );
+                setRejecting(false);
+                return;
+              }
+
               if (invitation.type === 'HOME_INVITE') {
                 await declineHomeInvite({
-                  variables: {token: invitation.token!},
+                  variables: {token: token!},
                 });
                 Alert.alert(
                   'Invitation Declined',
@@ -168,7 +198,7 @@ export const InvitationAcceptanceModal: React.FC<
                 );
               } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                 await declineShoppingListInvite({
-                  variables: {token: invitation.token!},
+                  variables: {token: token!},
                 });
                 Alert.alert(
                   'Invitation Declined',

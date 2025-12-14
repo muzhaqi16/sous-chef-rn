@@ -88,9 +88,39 @@ interface UsePantryItemFormMutationsOptions {
 // ============================================
 
 /**
- * Build optimistic Unit object for cache updates
+ * Build optimistic Unit object for cache updates.
+ * Includes all Unit fields from PantryItemFragment to prevent cache warnings.
  */
 function buildOptimisticUnit(
+  newUnit: UnitSelection,
+  currentUnit?: PantryItemFragment['unit'] | null,
+): PantryItemFragment['unit'] | null {
+  if (!newUnit.id) return null;
+
+  // Cast type to UnitType if it's a string, fallback to COUNT
+  const unitType = (newUnit.type || currentUnit?.type || 'COUNT') as import('#generated').UnitType;
+
+  return {
+    __typename: 'Unit',
+    id: newUnit.id,
+    symbol: newUnit.symbol || currentUnit?.symbol || '',
+    name: newUnit.name || currentUnit?.name || newUnit.symbol || '',
+    type: unitType,
+    // Preserve existing fields from current unit or use sensible defaults
+    isMetric: currentUnit?.isMetric ?? false,
+    baseUnitId: currentUnit?.baseUnitId ?? null,
+    conversionFactor: currentUnit?.conversionFactor ?? 1,
+    isCommon: currentUnit?.isCommon ?? false,
+    displayAsFraction: currentUnit?.displayAsFraction ?? false,
+    minPrecision: currentUnit?.minPrecision ?? 0,
+    autoConvertThreshold: currentUnit?.autoConvertThreshold ?? null,
+  };
+}
+
+/**
+ * Build optimistic Unit object for packageWeightUnit (has fewer fields).
+ */
+function buildOptimisticWeightUnit(
   newUnit: UnitSelection,
   currentUnit?: { id?: string; name?: string; symbol?: string; type?: string } | null,
 ): { __typename: 'Unit'; id: string; name: string; symbol: string; type: string | null } | null {
@@ -442,7 +472,7 @@ export function usePantryItemFormMutations({
 
         // Include full packageWeightUnit object for cache
         if (updateInput.packageWeightUnitId) {
-          optimisticInput.packageWeightUnit = buildOptimisticUnit(
+          optimisticInput.packageWeightUnit = buildOptimisticWeightUnit(
             weightUnit,
             currentItem.packageWeightUnit,
           );

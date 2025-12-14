@@ -314,8 +314,8 @@ export function makeCache(): InMemoryCache {
         fields: {
           // List-level queries (return collections of lists/homes)
           shoppingLists: {
-            // No keyArgs needed - app doesn't use filters parameter
-            // Simple merge with cache preservation on network errors
+            // Different homes have different shopping lists - cache separately per filter
+            keyArgs: ['filters'],
             merge(existing = [], incoming) {
               // Preserve existing cache if network request failed and returned empty
               // This prevents cache clearing when API is offline
@@ -392,6 +392,10 @@ export function makeCache(): InMemoryCache {
                 readField,
               });
             },
+          },
+          // Item lookups by filters (barcode/UPC, etc.) - cache separately per filter
+          items: {
+            keyArgs: ['filters'],
           },
           recipes: {
             keyArgs: ['category', 'difficulty'],

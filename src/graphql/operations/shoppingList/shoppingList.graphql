@@ -74,8 +74,8 @@ query GetShoppingList(
   }
 }
 
-query GetShoppingLists {
-  shoppingLists {
+query GetShoppingLists($homeId: String) {
+  shoppingLists(filters: { homeId: $homeId }) {
     id
     name
     description
@@ -91,6 +91,11 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
+    homeId
+    home {
+      id
+      name
+    }
     ownerships {
       id
       userId
@@ -633,6 +638,7 @@ subscription ShoppingListCollaboratorsChanged($listId: ID!) {
     listId
     collaborator {
       id
+      token
       collaboratorId
       email
       role

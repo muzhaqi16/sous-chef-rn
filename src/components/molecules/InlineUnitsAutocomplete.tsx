@@ -57,7 +57,7 @@ export const InlineUnitsAutocomplete: React.FC<
 
   // Use SearchUnits query for server-side filtering
   const { data: searchData, loading: searchLoading } = useSearchUnitsQuery({
-    variables: { query: debouncedSearchTerm },
+    variables: { query: debouncedSearchTerm, limit: 6 },
     skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
     fetchPolicy: 'cache-first',
   });
@@ -144,7 +144,7 @@ export const InlineUnitsAutocomplete: React.FC<
             </View>
           ) : (
             <FlatList
-              data={filteredUnits.slice(0, 6)} // Limit to 6 suggestions
+              data={filteredUnits}
               keyExtractor={item => item.id}
               renderItem={renderUnitItem}
               keyboardShouldPersistTaps="handled"

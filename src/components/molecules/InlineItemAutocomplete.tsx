@@ -51,7 +51,7 @@ export const InlineItemAutocomplete: React.FC<InlineItemAutocompleteProps> = ({
     if (searchTerm.length >= 2 && isOnline) {
       debounceTimerRef.current = setTimeout(() => {
         fetchItems({
-          variables: { input: { query: searchTerm } },
+          variables: { input: { query: searchTerm, limit: 5 } },
         });
       }, 250);
     }
@@ -143,7 +143,7 @@ export const InlineItemAutocomplete: React.FC<InlineItemAutocompleteProps> = ({
             </View>
           ) : (
             <FlatList
-              data={items.slice(0, 5)} // Limit to 5 suggestions
+              data={items}
               keyExtractor={item => item.id}
               renderItem={renderItemOption}
               keyboardShouldPersistTaps="handled"

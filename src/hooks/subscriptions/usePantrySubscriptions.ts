@@ -18,9 +18,27 @@ import {
   usePantryUpdatedSubscription,
   usePantryLowStockAlertSubscription,
   usePantryExpiringItemsAlertSubscription,
+  PantryItemFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils';
+
+// Cache updaters for Pantry.itemsConnection (connection pattern)
+const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
+
+const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
 
 /**
  * Initialize pantry subscriptions for the current user
@@ -38,19 +56,64 @@ export function usePantrySubscriptions(userId?: string) {
   //
   // Pantry Items Changed Subscription
   // Handles CREATE/UPDATE/DELETE operations on pantry items
-  //
-  // NOTE: After GraphQL fix, this will receive full PantryItemFragment
-  // Currently only receives minimal data (id, itemName, unit)
+  // Uses custom handler for Pantry.itemsConnection cache updates
   //
   const itemsHandlers = subscriptionService.register({
     subscriptionName: 'PantryItemsChanged',
     entityType: 'PantryItem',
     enableDeduplication: true,
     userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC, // Will work after GraphQL fragment fix
-    cacheFieldName: 'pantryItems',
+    cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler for connection pattern
     enableLogging: true,
     entityId: selectedPantryId,
+    // Custom handler for itemsConnection updates
+    // payload IS pantryItemsChanged (already extracted by SubscriptionService)
+    customOnData: (payload: any, client: any) => {
+      if (!payload || !selectedPantryId) return;
+
+      const mutation = payload.mutation;
+      const item = payload.item;
+
+      if (!item) return;
+
+      if (
+        mutation === MutationType.CREATE ||
+        mutation === 'CREATED' ||
+        mutation === 'ITEM_ADDED'
+      ) {
+        // Add new item to Pantry.itemsConnection
+        addToPantryItemsConnection(client.cache, selectedPantryId, item);
+      } else if (
+        mutation === MutationType.DELETE ||
+        mutation === 'DELETED' ||
+        mutation === 'ITEM_REMOVED'
+      ) {
+        // Remove item from Pantry.itemsConnection
+        removeFromPantryItemsConnection(client.cache, selectedPantryId, item.id, {
+          evictItem: true,
+        });
+      } else if (
+        mutation === MutationType.UPDATE ||
+        mutation === 'UPDATED' ||
+        mutation === 'ITEM_UPDATED'
+      ) {
+        // Check if item exists in cache
+        const cacheId = client.cache.identify({ __typename: 'PantryItem', id: item.id });
+
+        if (cacheId) {
+          // Item exists in cache - update it with writeFragment
+          client.cache.writeFragment({
+            id: cacheId,
+            fragment: PantryItemFragmentDoc,
+            fragmentName: 'PantryItemFragment',
+            data: item,
+          });
+        } else {
+          // Item not in cache - add to connection (could be from another user's create)
+          addToPantryItemsConnection(client.cache, selectedPantryId, item);
+        }
+      }
+    },
   });
 
   usePantryItemsChangedSubscription({

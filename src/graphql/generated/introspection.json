@@ -38683,6 +38683,59 @@
             "deprecationReason": null
           },
           {
+            "name": "autocompleteUnits",
+            "description": "Optimized autocomplete for unit selection dropdowns.\nReturns units matching query, prioritizing common units.\nDefault limit: 10",
+            "args": [
+              {
+                "name": "limit",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "10",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "query",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "type",
+                "description": null,
+                "type": { "kind": "ENUM", "name": "UnitType", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "OBJECT", "name": "Unit", "ofType": null }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "brand",
             "description": null,
             "args": [
@@ -43179,8 +43232,16 @@
           },
           {
             "name": "searchUnits",
-            "description": null,
+            "description": "Search units by name or symbol.\nDefault limit: 10",
             "args": [
+              {
+                "name": "limit",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "10",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
               {
                 "name": "query",
                 "description": null,
@@ -43823,13 +43884,21 @@
           },
           {
             "name": "units",
-            "description": null,
+            "description": "Get all units, optionally filtered by type and/or common flag.\nDefault limit: 50",
             "args": [
               {
                 "name": "isCommon",
                 "description": null,
                 "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
                 "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "limit",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "50",
                 "isDeprecated": false,
                 "deprecationReason": null
               },
@@ -49194,6 +49263,14 @@
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "token",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           }

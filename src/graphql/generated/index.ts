@@ -5463,6 +5463,12 @@ export type Query = {
   aggregateQuantities: AggregationResult;
   autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems: Maybe<AutocompleteResponse>;
+  /**
+   * Optimized autocomplete for unit selection dropdowns.
+   * Returns units matching query, prioritizing common units.
+   * Default limit: 10
+   */
+  autocompleteUnits: Array<Unit>;
   brand: Maybe<Brand>;
   brands: Array<Brand>;
   /**
@@ -5677,6 +5683,10 @@ export type Query = {
   searchRecipes: RecipeConnection;
   searchShoppingLists: Array<ShoppingList>;
   searchStores: Array<Store>;
+  /**
+   * Search units by name or symbol.
+   * Default limit: 10
+   */
   searchUnits: Array<Unit>;
   shoppingList: Maybe<ShoppingList>;
   shoppingListByShareCode: Maybe<ShoppingList>;
@@ -5717,6 +5727,10 @@ export type Query = {
   suspiciousLoginActivity: SuspiciousActivity;
   unit: Maybe<Unit>;
   unitBySymbol: Maybe<Unit>;
+  /**
+   * Get all units, optionally filtered by type and/or common flag.
+   * Default limit: 50
+   */
   units: Array<Unit>;
   unreadNotificationCount: Scalars['Int']['output'];
   user: Maybe<User>;
@@ -5743,6 +5757,12 @@ export type QueryAutocompleteCategoriesArgs = {
 
 export type QueryAutocompleteItemsArgs = {
   input: AutocompleteInput;
+};
+
+export type QueryAutocompleteUnitsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
+  type?: InputMaybe<UnitType>;
 };
 
 export type QueryBrandArgs = {
@@ -6262,6 +6282,7 @@ export type QuerySearchStoresArgs = {
 };
 
 export type QuerySearchUnitsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
   query: Scalars['String']['input'];
   type?: InputMaybe<UnitType>;
 };
@@ -6348,6 +6369,7 @@ export type QueryUnitBySymbolArgs = {
 
 export type QueryUnitsArgs = {
   isCommon?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
   type?: InputMaybe<UnitType>;
 };
 
@@ -7001,6 +7023,7 @@ export type ShoppingListCollaborator = {
   shoppingListId: Scalars['String']['output'];
   status: CollaboratorStatus;
   statusChangedAt: Maybe<Scalars['DateTime']['output']>;
+  token: Maybe<Scalars['String']['output']>;
 };
 
 export type ShoppingListCollaboratorChangedPayload = {
@@ -12031,6 +12054,7 @@ export type GetUnitBySymbolQuery = {
 export type SearchUnitsQueryVariables = Exact<{
   query: Scalars['String']['input'];
   type?: InputMaybe<UnitType>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 export type SearchUnitsQuery = {
@@ -12053,6 +12077,7 @@ export type SearchUnitsQuery = {
 
 export type GetCommonUnitsQueryVariables = Exact<{
   type?: InputMaybe<UnitType>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 export type GetCommonUnitsQuery = {
@@ -13278,6 +13303,7 @@ export type MyShoppingListInvitesQuery = {
   myShoppingListInvites: Array<{
     __typename?: 'ShoppingListCollaborator';
     id: string;
+    token: string | null | undefined;
     shoppingListId: string;
     collaboratorId: string | null | undefined;
     email: string | null | undefined;
@@ -13693,7 +13719,9 @@ export type GetShoppingListQuery = {
     | undefined;
 };
 
-export type GetShoppingListsQueryVariables = Exact<{ [key: string]: never }>;
+export type GetShoppingListsQueryVariables = Exact<{
+  homeId?: InputMaybe<Scalars['String']['input']>;
+}>;
 
 export type GetShoppingListsQuery = {
   __typename?: 'Query';
@@ -13714,6 +13742,8 @@ export type GetShoppingListsQuery = {
     priority: number;
     createdAt: string;
     updatedAt: string;
+    homeId: string | null | undefined;
+    home: { __typename?: 'Home'; id: string; name: string } | null | undefined;
     ownerships:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -14474,6 +14504,7 @@ export type ShoppingListCollaboratorsChangedSubscription = {
           | {
               __typename?: 'ShoppingListCollaborator';
               id: string;
+              token: string | null | undefined;
               collaboratorId: string | null | undefined;
               email: string | null | undefined;
               role: CollaboratorRole;
@@ -38794,6 +38825,14 @@ export const SearchUnitsDocument = {
             name: { kind: 'Name', value: 'UnitType' },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -38816,6 +38855,14 @@ export const SearchUnitsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'type' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
                 },
               },
             ],
@@ -38865,6 +38912,7 @@ export const SearchUnitsDocument = {
  *   variables: {
  *      query: // value for 'query'
  *      type: // value for 'type'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -38943,6 +38991,14 @@ export const GetCommonUnitsDocument = {
             name: { kind: 'Name', value: 'UnitType' },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -38962,6 +39018,14 @@ export const GetCommonUnitsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'type' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
                 },
               },
             ],
@@ -39010,6 +39074,7 @@ export const GetCommonUnitsDocument = {
  * const { data, loading, error } = useGetCommonUnitsQuery({
  *   variables: {
  *      type: // value for 'type'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -52742,6 +52807,7 @@ export const MyShoppingListInvitesDocument = {
               kind: 'SelectionSet',
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'token' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'shoppingListId' },
@@ -54740,12 +54806,41 @@ export const GetShoppingListsDocument = {
       kind: 'OperationDefinition',
       operation: 'query',
       name: { kind: 'Name', value: 'GetShoppingLists' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+      ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingLists' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filters' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'homeId' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'homeId' },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -54770,6 +54865,18 @@ export const GetShoppingListsDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'home' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'ownerships' },
@@ -55036,6 +55143,7 @@ export const GetShoppingListsDocument = {
  * @example
  * const { data, loading, error } = useGetShoppingListsQuery({
  *   variables: {
+ *      homeId: // value for 'homeId'
  *   },
  * });
  */
@@ -64351,6 +64459,7 @@ export const ShoppingListCollaboratorsChangedDocument = {
                     kind: 'SelectionSet',
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'token' } },
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'collaboratorId' },

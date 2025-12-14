@@ -122,7 +122,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // Only search when online and query is long enough
     if (searchQuery.length >= 2 && isOnline) {
       debounceTimerRef.current = setTimeout(() => {
-        fetchItems({ variables: { input: { query: searchQuery } } });
+        fetchItems({ variables: { input: { query: searchQuery, limit: 10 } } });
       }, 250);
     }
 

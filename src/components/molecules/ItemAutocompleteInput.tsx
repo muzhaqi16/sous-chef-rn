@@ -43,7 +43,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
     onChangeText: useCallback((text: string) => {
       // This is called after debounce - trigger the GraphQL query
       fetchItems({
-        variables: { input: { query: text } },
+        variables: { input: { query: text, limit: 10 } },
       });
     }, [fetchItems]),
     getDisplayValue: (item) => item.name,

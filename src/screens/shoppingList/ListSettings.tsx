@@ -287,8 +287,8 @@ export const ListSettings: React.FC<{
               />
             </View>
 
-            {/* Home selector - only show for new lists when user has homes */}
-            {!listId && homes && homes.length > 0 && (
+            {/* Home selector - only show for new lists */}
+            {!listId && (
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Link to Home (Optional)</Text>
                 <TouchableOpacity
@@ -298,7 +298,7 @@ export const ListSettings: React.FC<{
                   <Text style={styles.pickerText}>
                     {homes?.find(h => h.id === selectedHomeId)?.name || 'Personal (No Home)'}
                   </Text>
-                  <Icon name="chevron-down" size={20} color={theme.colors.textSecondary} />
+                  <Icon library="Feather" name="chevron-down" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             )}

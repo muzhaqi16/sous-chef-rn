@@ -5095,6 +5095,12 @@ type Query {
     input: AutocompleteCategoryInput!
   ): AutocompleteCategoryResponse!
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
+  """
+  Optimized autocomplete for unit selection dropdowns.
+  Returns units matching query, prioritizing common units.
+  Default limit: 10
+  """
+  autocompleteUnits(limit: Int = 10, query: String!, type: UnitType): [Unit!]!
   brand(id: ID!): Brand
   brands(
     parentId: String
@@ -5435,7 +5441,11 @@ type Query {
   ): RecipeConnection!
   searchShoppingLists(query: String!): [ShoppingList!]!
   searchStores(query: String!): [Store!]!
-  searchUnits(query: String!, type: UnitType): [Unit!]!
+  """
+  Search units by name or symbol.
+  Default limit: 10
+  """
+  searchUnits(limit: Int = 10, query: String!, type: UnitType): [Unit!]!
   shoppingList(id: ID!): ShoppingList
   shoppingListByShareCode(shareCode: String!): ShoppingList
   shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!
@@ -5479,7 +5489,11 @@ type Query {
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
   unit(id: ID!): Unit
   unitBySymbol(symbol: String!): Unit
-  units(isCommon: Boolean, type: UnitType): [Unit!]!
+  """
+  Get all units, optionally filtered by type and/or common flag.
+  Default limit: 50
+  """
+  units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   unreadNotificationCount: Int!
   user(id: ID!): User
   userModeration(userId: ID!): UserModeration
@@ -6097,6 +6111,7 @@ type ShoppingListCollaborator {
   shoppingListId: String!
   status: CollaboratorStatus!
   statusChangedAt: DateTime
+  token: String
 }
 
 type ShoppingListCollaboratorChangedPayload {
