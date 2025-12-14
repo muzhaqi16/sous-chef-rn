@@ -128,6 +128,7 @@ export const getNotificationTitle = (
     case NotificationType.ItemDeleted:
       return 'Item Removed';
     case NotificationType.MembershipInvite:
+    case NotificationType.HomeInvitation:
       return '🏠 Home Invitation';
     case NotificationType.CollaborationInvite:
       return '👥 List Invitation';
@@ -152,7 +153,8 @@ export const getNotificationMessage = (
       const stockCount = payload?.items?.length || 0;
       return `${stockCount} item${stockCount !== 1 ? 's' : ''} running low`;
     case NotificationType.MembershipInvite:
-      return `You've been invited to join ${payload?.homeName || 'a home'}`;
+    case NotificationType.HomeInvitation:
+      return `${payload?.inviterName || 'Someone'} invited you to join "${payload?.homeName || 'a home'}"`;
     case NotificationType.CollaborationInvite:
       return `You've been added to ${payload?.listName || 'a shopping list'}`;
     default:

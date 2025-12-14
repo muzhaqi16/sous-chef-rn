@@ -440,6 +440,13 @@ type AddIngredientResult {
   wasUpdated: Boolean!
 }
 
+"""
+Result of adding a pantry item to a shopping list
+"""
+type AddPantryItemToShoppingListResult {
+  shoppingListItemId: String!
+}
+
 type AddRecipeToShoppingListResult {
   addedItems: [ShoppingListItem!]!
   skippedItems: [RecipeIngredient!]!
@@ -478,6 +485,16 @@ input AddTemplateItemInput {
 input AddWarningInput {
   reason: String!
   userId: ID!
+}
+
+"""
+Item that was added to the shopping list from low stock detection
+"""
+type AddedLowStockItem {
+  itemName: String!
+  pantryItemId: String!
+  quantity: Float!
+  shoppingListItemId: String!
 }
 
 """
@@ -785,6 +802,16 @@ enum CategoryType {
   MEAL_TYPE
   STORAGE
   SYSTEM
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+type ChangePasswordResponse {
+  message: String!
+  success: Boolean!
 }
 
 """
@@ -1380,6 +1407,7 @@ input CreateRecipeInput {
 input CreateShoppingListInput {
   budgetAmount: Float
   description: String
+  homeId: String
   isDefault: Boolean
   name: String!
   tags: [String!]
@@ -2243,6 +2271,13 @@ type Home {
     first: Int
     last: Int
   ): PantryConnection!
+  shoppingListsConnection(
+    after: String
+    before: String
+    filters: ShoppingListFilters
+    first: Int
+    last: Int
+  ): ShoppingListConnection!
   tags: [String!]!
   timezone: String
   type: HomeType!
@@ -2272,6 +2307,7 @@ type HomeInvite {
   role: MembershipRole!
   sentAt: DateTime!
   status: InviteStatus!
+  token: String!
   updatedAt: DateTime!
   version: Int!
 }
@@ -3126,6 +3162,32 @@ type LoginMethodStat {
   method: LoginMethod!
 }
 
+"""
+A pantry item that is running low on stock
+"""
+type LowStockItem {
+  currentQuantity: Float!
+  id: ID!
+  itemId: String!
+  itemName: String!
+  minQuantity: Float!
+  pantryId: String!
+  pantryName: String!
+  restockQuantity: Float
+  unitId: String!
+  unitName: String!
+}
+
+"""
+Result of adding low stock items to a shopping list
+"""
+type LowStockToShoppingListResult {
+  addedCount: Int!
+  addedItems: [AddedLowStockItem!]!
+  skippedCount: Int!
+  skippedItems: [SkippedLowStockItem!]!
+}
+
 input MarkActionInput {
   action: ExpirationAction!
   notificationId: ID!
@@ -3471,6 +3533,36 @@ enum ModerationStatus {
 }
 
 """
+Result of moving all purchased items to pantry
+"""
+type MovePurchasedItemsResult {
+  """
+  Number of items successfully moved to pantry
+  """
+  movedCount: Int!
+  """
+  Details of successfully moved items
+  """
+  movedItems: [MovedItemInfo!]!
+  """
+  Number of items skipped (no itemId, already moved, or error)
+  """
+  skippedCount: Int!
+  """
+  Details of skipped items with reasons
+  """
+  skippedItems: [SkippedItemInfo!]!
+  """
+  ID of the pantry items were moved to
+  """
+  targetPantryId: ID!
+  """
+  Name of the pantry items were moved to
+  """
+  targetPantryName: String!
+}
+
+"""
 Input for moving a shopping list item to the pantry.
 Creates a PantryItem from a ShoppingListItem after purchase.
 """
@@ -3527,12 +3619,39 @@ input MoveShoppingListItemInput {
   itemId: ID!
 }
 
+"""
+Info about a successfully moved item
+"""
+type MovedItemInfo {
+  itemName: String!
+  pantryItemId: ID!
+  quantity: Float!
+  shoppingListItemId: ID!
+}
+
 type Mutation {
   _empty: String
   acceptHomeInvite(token: String!): Membership!
   acceptShoppingListInvite(token: String!): ShoppingListCollaborator!
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItem!
+  """
+  Add all low stock items from a home's pantries to a shopping list.
+  If no shoppingListId is provided, uses the home's default shopping list.
+  """
+  addLowStockItemsToShoppingList(
+    homeId: ID!
+    shoppingListId: ID
+  ): LowStockToShoppingListResult!
+  """
+  Add a specific pantry item to a shopping list.
+  Useful for manually adding items when running low.
+  """
+  addPantryItemToShoppingList(
+    pantryItemId: ID!
+    quantity: Float
+    shoppingListId: ID!
+  ): AddPantryItemToShoppingListResult!
   """
   Add recipe ingredients to shopping list with smart unit handling
   Checks pantry for available items and only adds deficit
@@ -3584,6 +3703,10 @@ type Mutation {
     isPrimary: Boolean
     itemId: ID!
   ): ItemCategory!
+  """
+  Change password for authenticated user (requires current password verification)
+  """
+  changePassword(input: ChangePasswordInput!): ChangePasswordResponse!
   """
   Cleanup stale or deleted devices.
   Admin operation for maintenance.
@@ -3810,6 +3933,12 @@ type Mutation {
   Merge duplicate items into one
   """
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
+  """
+  Move all purchased items from a shopping list to the home's default pantry.
+  Only available for shopping lists linked to a home.
+  Items without an itemId (custom items not in catalog) will be skipped.
+  """
+  movePurchasedItemsToPantry(shoppingListId: ID!): MovePurchasedItemsResult!
   """
   Move a shopping list item to the pantry after purchase.
   Creates a PantryItem with full traceability back to the shopping list item.
@@ -5105,6 +5234,11 @@ type Query {
   ): [LoginHistory!]!
     @deprecated(reason: "Use loginHistories(input: { userId: ... }) instead")
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
+  """
+  Get all low stock items for a home's pantries.
+  Returns items where currentQuantity <= minQuantity and lowStockAlert is enabled.
+  """
+  lowStockItems(homeId: ID!): [LowStockItem!]!
   matchRecipeIngredientsToPantry(
     pantryId: ID!
     recipeId: ID!
@@ -5820,8 +5954,18 @@ type ShoppingList {
     orderBy: ShoppingListActivityOrderBy
   ): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
+  """
+  Available pantries for moving items (from linked home).
+  Returns empty array if not linked to a home.
+  """
+  availablePantries: [Pantry!]!
   basedOnTemplate: ShoppingList
   budgetAmount: Float
+  """
+  Whether items from this list can be moved to pantry.
+  True only if the list is linked to a home.
+  """
+  canMoveToPantry: Boolean!
   category: String
   collaboratorsConnection(
     after: String
@@ -5835,9 +5979,15 @@ type ShoppingList {
   completedShopDate: DateTime
   createdAt: DateTime!
   currency: String
+  """
+  Default pantry for the linked home (if any).
+  """
+  defaultPantry: Pantry
   description: String
   estimatedTotal: Float!
   generatedFromMealPlan: Boolean!
+  home: Home
+  homeId: String
   id: ID!
   isCompleted: Boolean!
   isDefault: Boolean!
@@ -5986,6 +6136,7 @@ type ShoppingListEdge {
 }
 
 input ShoppingListFilters {
+  homeId: String
   isArchived: Boolean
   isCompleted: Boolean
   isDefault: Boolean
@@ -6147,6 +6298,24 @@ type ShoppingListUpdatedPayload {
 type SkippedItem {
   identifier: String
   name: String!
+  reason: String!
+}
+
+"""
+Info about a skipped item
+"""
+type SkippedItemInfo {
+  itemName: String!
+  reason: String!
+  shoppingListItemId: ID!
+}
+
+"""
+Item that was skipped when adding to shopping list
+"""
+type SkippedLowStockItem {
+  itemName: String!
+  pantryItemId: String!
   reason: String!
 }
 
@@ -7341,6 +7510,7 @@ input UpdateShoppingListInput {
   category: String
   currency: String
   description: String
+  homeId: String
   isCompleted: Boolean
   isDefault: Boolean
   name: String

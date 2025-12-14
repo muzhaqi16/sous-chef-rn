@@ -152,6 +152,8 @@ export const ProfileScreen = () => {
                       navigate('DebugInfo');
                     } else if (item.key === 'performanceDashboard') {
                       navigate('PerformanceDashboard');
+                    } else if (item.key === 'changePassword') {
+                      navigate('ChangePassword');
                     }
                   },
                 };

@@ -198,8 +198,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   };
 
   const handleClose = () => {
-    setCollaborator(null);
-    setSelectedRole(null);
+    // Don't clear state here - open() always sets fresh data
+    // Clearing here causes race conditions when user quickly reopens the sheet
   };
 
   // Available roles (excluding OWNER - that's only for list owners)

@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
+import { Button } from '#/components/base/Button';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 
 interface CreateHomeFormProps {
@@ -24,20 +26,21 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
 
   return (
     <View style={styles.createForm}>
-      <TextInput
-        style={styles.input}
+      <BaseInput
         value={homeName}
         onChangeText={onHomeNameChange}
         placeholder="Enter home name"
         autoFocus
+        autoCapitalize="words"
       />
       <View style={styles.formActions}>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
+        <Button
+          variant="secondary"
           onPress={onCancel}
+          fullWidth
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+          Cancel
+        </Button>
         <AnimatedButton
           loading={isCreating}
           disabled={!homeName.trim()}
@@ -58,40 +61,10 @@ const styles = StyleSheet.create(theme => ({
   },
   formActions: {
     flexDirection: 'row',
-    marginTop: theme.spacing['3'],
-    gap: theme.spacing['3'],
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   button: {
     flex: 1,
-    paddingVertical: theme.spacing['3'] + 2,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  createButtonText: {
-    color: theme.colors.white,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.sm,
-    paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
   },
 }));

@@ -562,6 +562,7 @@ fragment PantryItemFragment on PantryItem {
 
 fragment HomeInviteFragment on HomeInvite {
   id
+  token
   email
   homeId
   invitedUserId

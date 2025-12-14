@@ -39,12 +39,6 @@ export default StyleSheet.create((theme, _rt) => ({
       sm: 48,
       md: 52,
     },
-
-    // Subtle animation effect through opacity
-    opacity: isFocused ? 1 : 0.95,
-
-    // Enhanced shadow when focused
-    ...(isFocused ? theme.shadows.sm : {}),
   }),
 
   input: {

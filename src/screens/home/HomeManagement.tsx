@@ -3,16 +3,15 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
-  TextInput,
   RefreshControl,
   ListRenderItem,
-  Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import Animated, {
   LinearTransition,
   FadeInDown,
+  FadeOutUp,
 } from 'react-native-reanimated';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks';
@@ -21,6 +20,8 @@ import { useHomeManagement } from '#/hooks';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
+import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
 import {
   HomeStats,
@@ -34,7 +35,6 @@ import {
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles';
-import { formAnimationPreset } from '#/constants/animations';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
@@ -286,19 +286,16 @@ export const HomeManagement: React.FC = () => {
           totalPantries={stats.totalPantries}
         />
 
-        {/* Create/Join Home Form */}
+        {/* Create/Join Home Form - slides down inline */}
         {showCreateForm && (
-          <View style={commonStyles.absoluteFill}>
-            <Pressable
-              style={commonStyles.overlay}
-              onPress={handleCancelCreate}
-            />
-            <Animated.View
-              {...formAnimationPreset}
-              style={[commonStyles.cardWithShadow, styles.formContainer]}
-            >
-              {/* Mode Switcher */}
-              <View style={styles.modeSwitcher}>
+          <Animated.View
+            entering={FadeInDown.duration(300).springify()}
+            exiting={FadeOutUp.duration(200)}
+            layout={LinearTransition.duration(300)}
+            style={[commonStyles.cardWithShadow, styles.formContainer]}
+          >
+            {/* Mode Switcher */}
+            <View style={styles.modeSwitcher}>
               <TouchableOpacity
                 style={[
                   styles.modeButton,
@@ -343,26 +340,17 @@ export const HomeManagement: React.FC = () => {
                 isCreating={creating}
               />
             ) : (
-              /* Join Home Form */
+              /* Join Home Form - uses same components as CreateHomeForm */
               <View style={styles.joinForm}>
-                <Text style={styles.joinFormTitle}>Enter Join Code</Text>
-                <Text style={styles.joinFormSubtitle}>
-                  Ask a home member for the join code to join their home
-                </Text>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Join Code</Text>
-                  <TextInput
-                    style={[commonStyles.input, styles.textInput]}
-                    placeholder="Enter code here..."
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={joinCode}
-                    onChangeText={setJoinCode}
-                    onBlur={handlePreviewHome}
-                    autoCapitalize="characters"
-                  />
-                </View>
+                <BaseInput
+                  value={joinCode}
+                  onChangeText={setJoinCode}
+                  onBlur={handlePreviewHome}
+                  placeholder="Enter join code"
+                  autoCapitalize="characters"
+                />
 
-                {/* Preview */}
+                {/* Preview - only shows when code is validated */}
                 {loadingPreview && (
                   <ActivityIndicator
                     size="small"
@@ -384,28 +372,28 @@ export const HomeManagement: React.FC = () => {
                   </View>
                 )}
 
-                {/* Actions */}
+                {/* Actions - same as CreateHomeForm */}
                 <View style={styles.formActions}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.cancelButton]}
+                  <Button
+                    variant="secondary"
                     onPress={handleCancelCreate}
+                    fullWidth
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                  </TouchableOpacity>
+                    Cancel
+                  </Button>
                   <AnimatedButton
                     loading={joiningByCode}
                     disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
                     variant="primary"
-                    style={styles.button}
+                    style={styles.actionButton}
                   >
-                    Join Home
+                    Join
                   </AnimatedButton>
                 </View>
               </View>
             )}
-            </Animated.View>
-          </View>
+          </Animated.View>
         )}
 
         {/* Homes List - Virtualized */}
@@ -480,28 +468,15 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   joinForm: {
+    backgroundColor: theme.colors.surface,
+  },
+  formActions: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.md,
     gap: theme.spacing.md,
   },
-  joinFormTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  joinFormSubtitle: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: -theme.spacing.sm,
-  },
-  inputContainer: {
-    gap: theme.spacing.sm,
-  },
-  inputLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  textInput: {
-    textTransform: 'uppercase',
+  actionButton: {
+    flex: 1,
   },
   previewLoader: {
     marginVertical: theme.spacing.sm,
@@ -525,37 +500,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  submitButtonText: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.white,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
   },
 }));

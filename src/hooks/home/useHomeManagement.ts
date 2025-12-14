@@ -276,6 +276,8 @@ export function useHomeManagement() {
               // Set first remaining home as default
               const newDefaultHome = remainingHomes[0];
               setSelectedHomeId(newDefaultHome.id);
+              // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
+              setSelectedPantryId(null);
               setDefaultHomeMutation({
                 variables: { homeId: newDefaultHome.id },
               }).catch((error: any) => {
@@ -288,8 +290,9 @@ export function useHomeManagement() {
                 );
               });
             } else {
-              // No homes left, clear the selection
+              // No homes left, clear all selections
               setSelectedHomeId(null);
+              setSelectedPantryId(null);
             }
           }
         }

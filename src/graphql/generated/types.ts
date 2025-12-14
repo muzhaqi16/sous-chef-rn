@@ -71,6 +71,12 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
+/** Result of adding a pantry item to a shopping list */
+export type AddPantryItemToShoppingListResult = {
+  __typename?: 'AddPantryItemToShoppingListResult';
+  shoppingListItemId: Scalars['String']['output'];
+};
+
 export type AddRecipeToShoppingListResult = {
   __typename?: 'AddRecipeToShoppingListResult';
   addedItems: Array<ShoppingListItem>;
@@ -110,6 +116,15 @@ export type AddTemplateItemInput = {
 export type AddWarningInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
+};
+
+/** Item that was added to the shopping list from low stock detection */
+export type AddedLowStockItem = {
+  __typename?: 'AddedLowStockItem';
+  itemName: Scalars['String']['output'];
+  pantryItemId: Scalars['String']['output'];
+  quantity: Scalars['Float']['output'];
+  shoppingListItemId: Scalars['String']['output'];
 };
 
 /** Cost analytics for additions/restocks */
@@ -410,6 +425,17 @@ export enum CategoryType {
   Storage = 'STORAGE',
   System = 'SYSTEM',
 }
+
+export type ChangePasswordInput = {
+  currentPassword: Scalars['String']['input'];
+  newPassword: Scalars['String']['input'];
+};
+
+export type ChangePasswordResponse = {
+  __typename?: 'ChangePasswordResponse';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
 
 /** Source of the change for audit purposes */
 export enum ChangeSource {
@@ -976,6 +1002,7 @@ export type CreateRecipeInput = {
 export type CreateShoppingListInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  homeId?: InputMaybe<Scalars['String']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -1786,6 +1813,7 @@ export type Home = {
   myMembership?: Maybe<Membership>;
   name: Scalars['String']['output'];
   pantriesConnection: PantryConnection;
+  shoppingListsConnection: ShoppingListConnection;
   tags: Array<Scalars['String']['output']>;
   timezone?: Maybe<Scalars['String']['output']>;
   type: HomeType;
@@ -1826,6 +1854,18 @@ export type HomePantriesConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
+export type HomeShoppingListsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ShoppingListFilters>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type HomeInvite = {
   __typename?: 'HomeInvite';
   acceptedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -1849,6 +1889,7 @@ export type HomeInvite = {
   role: MembershipRole;
   sentAt: Scalars['DateTime']['output'];
   status: InviteStatus;
+  token: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
@@ -2720,6 +2761,30 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+/** A pantry item that is running low on stock */
+export type LowStockItem = {
+  __typename?: 'LowStockItem';
+  currentQuantity: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  itemId: Scalars['String']['output'];
+  itemName: Scalars['String']['output'];
+  minQuantity: Scalars['Float']['output'];
+  pantryId: Scalars['String']['output'];
+  pantryName: Scalars['String']['output'];
+  restockQuantity?: Maybe<Scalars['Float']['output']>;
+  unitId: Scalars['String']['output'];
+  unitName: Scalars['String']['output'];
+};
+
+/** Result of adding low stock items to a shopping list */
+export type LowStockToShoppingListResult = {
+  __typename?: 'LowStockToShoppingListResult';
+  addedCount: Scalars['Int']['output'];
+  addedItems: Array<AddedLowStockItem>;
+  skippedCount: Scalars['Int']['output'];
+  skippedItems: Array<SkippedLowStockItem>;
+};
+
 export type MarkActionInput = {
   action: ExpirationAction;
   notificationId: Scalars['ID']['input'];
@@ -3070,6 +3135,23 @@ export enum ModerationStatus {
   Warned = 'WARNED',
 }
 
+/** Result of moving all purchased items to pantry */
+export type MovePurchasedItemsResult = {
+  __typename?: 'MovePurchasedItemsResult';
+  /** Number of items successfully moved to pantry */
+  movedCount: Scalars['Int']['output'];
+  /** Details of successfully moved items */
+  movedItems: Array<MovedItemInfo>;
+  /** Number of items skipped (no itemId, already moved, or error) */
+  skippedCount: Scalars['Int']['output'];
+  /** Details of skipped items with reasons */
+  skippedItems: Array<SkippedItemInfo>;
+  /** ID of the pantry items were moved to */
+  targetPantryId: Scalars['ID']['output'];
+  /** Name of the pantry items were moved to */
+  targetPantryName: Scalars['String']['output'];
+};
+
 /**
  * Input for moving a shopping list item to the pantry.
  * Creates a PantryItem from a ShoppingListItem after purchase.
@@ -3105,6 +3187,15 @@ export type MoveShoppingListItemInput = {
   itemId: Scalars['ID']['input'];
 };
 
+/** Info about a successfully moved item */
+export type MovedItemInfo = {
+  __typename?: 'MovedItemInfo';
+  itemName: Scalars['String']['output'];
+  pantryItemId: Scalars['ID']['output'];
+  quantity: Scalars['Float']['output'];
+  shoppingListItemId: Scalars['ID']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
@@ -3112,6 +3203,16 @@ export type Mutation = {
   acceptShoppingListInvite: ShoppingListCollaborator;
   addCollaborator: ShoppingListCollaborator;
   addItemToShoppingList: ShoppingListItem;
+  /**
+   * Add all low stock items from a home's pantries to a shopping list.
+   * If no shoppingListId is provided, uses the home's default shopping list.
+   */
+  addLowStockItemsToShoppingList: LowStockToShoppingListResult;
+  /**
+   * Add a specific pantry item to a shopping list.
+   * Useful for manually adding items when running low.
+   */
+  addPantryItemToShoppingList: AddPantryItemToShoppingListResult;
   /**
    * Add recipe ingredients to shopping list with smart unit handling
    * Checks pantry for available items and only adds deficit
@@ -3141,6 +3242,8 @@ export type Mutation = {
   bulkUpdateItems: BulkOperationSummary;
   cancelRecurring: ShoppingList;
   categorizeItem: ItemCategory;
+  /** Change password for authenticated user (requires current password verification) */
+  changePassword: ChangePasswordResponse;
   /**
    * Cleanup stale or deleted devices.
    * Admin operation for maintenance.
@@ -3275,6 +3378,12 @@ export type Mutation = {
   markRecipeAsCooked: CookingLog;
   /** Merge duplicate items into one */
   mergeItems: Item;
+  /**
+   * Move all purchased items from a shopping list to the home's default pantry.
+   * Only available for shopping lists linked to a home.
+   * Items without an itemId (custom items not in catalog) will be skipped.
+   */
+  movePurchasedItemsToPantry: MovePurchasedItemsResult;
   /**
    * Move a shopping list item to the pantry after purchase.
    * Creates a PantryItem with full traceability back to the shopping list item.
@@ -3471,6 +3580,17 @@ export type MutationAddItemToShoppingListArgs = {
   input: CreateShoppingListItemInput;
 };
 
+export type MutationAddLowStockItemsToShoppingListArgs = {
+  homeId: Scalars['ID']['input'];
+  shoppingListId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type MutationAddPantryItemToShoppingListArgs = {
+  pantryItemId: Scalars['ID']['input'];
+  quantity?: InputMaybe<Scalars['Float']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
 export type MutationAddRecipeToShoppingListArgs = {
   checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
   recipeId: Scalars['ID']['input'];
@@ -3541,6 +3661,10 @@ export type MutationCategorizeItemArgs = {
   categoryId: Scalars['ID']['input'];
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
   itemId: Scalars['ID']['input'];
+};
+
+export type MutationChangePasswordArgs = {
+  input: ChangePasswordInput;
 };
 
 export type MutationCleanupDevicesArgs = {
@@ -3953,6 +4077,10 @@ export type MutationMarkRecipeAsCookedArgs = {
 export type MutationMergeItemsArgs = {
   duplicateIds: Array<Scalars['ID']['input']>;
   primaryId: Scalars['ID']['input'];
+};
+
+export type MutationMovePurchasedItemsToPantryArgs = {
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationMoveShoppingItemToPantryArgs = {
@@ -5427,6 +5555,11 @@ export type Query = {
   /** @deprecated Use loginHistories(input: { userId: ... }) instead */
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
+  /**
+   * Get all low stock items for a home's pantries.
+   * Returns items where currentQuantity <= minQuantity and lowStockAlert is enabled.
+   */
+  lowStockItems: Array<LowStockItem>;
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   me?: Maybe<User>;
   mealPlan?: Maybe<MealPlan>;
@@ -5836,6 +5969,10 @@ export type QueryLoginHistoryForUserArgs = {
 export type QueryLoginHistoryStatsArgs = {
   days?: InputMaybe<Scalars['Int']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type QueryLowStockItemsArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryMatchRecipeIngredientsToPantryArgs = {
@@ -6695,8 +6832,18 @@ export type ShoppingList = {
   __typename?: 'ShoppingList';
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
+  /**
+   * Available pantries for moving items (from linked home).
+   * Returns empty array if not linked to a home.
+   */
+  availablePantries: Array<Pantry>;
   basedOnTemplate?: Maybe<ShoppingList>;
   budgetAmount?: Maybe<Scalars['Float']['output']>;
+  /**
+   * Whether items from this list can be moved to pantry.
+   * True only if the list is linked to a home.
+   */
+  canMoveToPantry: Scalars['Boolean']['output'];
   category?: Maybe<Scalars['String']['output']>;
   collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -6704,9 +6851,13 @@ export type ShoppingList = {
   completedShopDate?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   currency?: Maybe<Scalars['String']['output']>;
+  /** Default pantry for the linked home (if any). */
+  defaultPantry?: Maybe<Pantry>;
   description?: Maybe<Scalars['String']['output']>;
   estimatedTotal: Scalars['Float']['output'];
   generatedFromMealPlan: Scalars['Boolean']['output'];
+  home?: Maybe<Home>;
+  homeId?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isCompleted: Scalars['Boolean']['output'];
   isDefault: Scalars['Boolean']['output'];
@@ -6886,6 +7037,7 @@ export type ShoppingListEdge = {
 };
 
 export type ShoppingListFilters = {
+  homeId?: InputMaybe<Scalars['String']['input']>;
   isArchived?: InputMaybe<Scalars['Boolean']['input']>;
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -7055,6 +7207,22 @@ export type SkippedItem = {
   __typename?: 'SkippedItem';
   identifier?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+};
+
+/** Info about a skipped item */
+export type SkippedItemInfo = {
+  __typename?: 'SkippedItemInfo';
+  itemName: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  shoppingListItemId: Scalars['ID']['output'];
+};
+
+/** Item that was skipped when adding to shopping list */
+export type SkippedLowStockItem = {
+  __typename?: 'SkippedLowStockItem';
+  itemName: Scalars['String']['output'];
+  pantryItemId: Scalars['String']['output'];
   reason: Scalars['String']['output'];
 };
 
@@ -8242,6 +8410,7 @@ export type UpdateShoppingListInput = {
   category?: InputMaybe<Scalars['String']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  homeId?: InputMaybe<Scalars['String']['input']>;
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -9049,6 +9218,19 @@ export type ResendVerificationEmailMutationVariables = Exact<{
 export type ResendVerificationEmailMutation = {
   __typename?: 'Mutation';
   resendVerificationEmail: boolean;
+};
+
+export type ChangePasswordMutationVariables = Exact<{
+  input: ChangePasswordInput;
+}>;
+
+export type ChangePasswordMutation = {
+  __typename?: 'Mutation';
+  changePassword: {
+    __typename?: 'ChangePasswordResponse';
+    success: boolean;
+    message: string;
+  };
 };
 
 export type GetMyDevicesQueryVariables = Exact<{
@@ -10690,6 +10872,7 @@ export type PantryItemFragmentFragment = {
 export type HomeInviteFragmentFragment = {
   __typename?: 'HomeInvite';
   id: string;
+  token: string;
   email: string;
   homeId: string;
   invitedUserId?: string | null | undefined;
@@ -11079,6 +11262,7 @@ export type HomeWithPantriesFragmentFragment = {
       node: {
         __typename?: 'HomeInvite';
         id: string;
+        token: string;
         email: string;
         homeId: string;
         invitedUserId?: string | null | undefined;
@@ -11249,6 +11433,7 @@ export type HomeFragmentFragment = {
       node: {
         __typename?: 'HomeInvite';
         id: string;
+        token: string;
         email: string;
         homeId: string;
         invitedUserId?: string | null | undefined;
@@ -11819,6 +12004,7 @@ export type GetHomeQuery = {
             node: {
               __typename?: 'HomeInvite';
               id: string;
+              token: string;
               email: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
@@ -12258,6 +12444,7 @@ export type GetHomeBasicQuery = {
             node: {
               __typename?: 'HomeInvite';
               id: string;
+              token: string;
               email: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
@@ -12435,6 +12622,7 @@ export type GetHomesQuery = {
         node: {
           __typename?: 'HomeInvite';
           id: string;
+          token: string;
           email: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
@@ -12846,6 +13034,7 @@ export type GetMyPendingInvitesQuery = {
   myPendingInvites: Array<{
     __typename?: 'HomeInvite';
     id: string;
+    token: string;
     email: string;
     homeId: string;
     invitedUserId?: string | null | undefined;
@@ -12922,6 +13111,7 @@ export type GetHomeByJoinCodeQuery = {
             node: {
               __typename?: 'HomeInvite';
               id: string;
+              token: string;
               email: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
@@ -13360,6 +13550,7 @@ export type CreateHomeMutation = {
         node: {
           __typename?: 'HomeInvite';
           id: string;
+          token: string;
           email: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
@@ -13797,6 +13988,7 @@ export type UpdateHomeMutation = {
         node: {
           __typename?: 'HomeInvite';
           id: string;
+          token: string;
           email: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
@@ -14207,434 +14399,7 @@ export type DeleteHomeMutationVariables = Exact<{
 
 export type DeleteHomeMutation = {
   __typename?: 'Mutation';
-  deleteHome: {
-    __typename?: 'Home';
-    id: string;
-    name: string;
-    type: HomeType;
-    description?: string | null | undefined;
-    timezone?: string | null | undefined;
-    currency?: string | null | undefined;
-    isPublic: boolean;
-    joinCode?: string | null | undefined;
-    allowJoinCode: boolean;
-    maxMembers?: number | null | undefined;
-    tags: Array<string>;
-    metadata?: any | null | undefined;
-    version: number;
-    createdAt: string;
-    updatedAt: string;
-    invitesConnection: {
-      __typename?: 'HomeInviteConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'HomeInviteEdge';
-        cursor: string;
-        node: {
-          __typename?: 'HomeInvite';
-          id: string;
-          email: string;
-          homeId: string;
-          invitedUserId?: string | null | undefined;
-          recipientName?: string | null | undefined;
-          role: MembershipRole;
-          status: InviteStatus;
-          expiresAt: string;
-          sentAt: string;
-          lastReminderAt?: string | null | undefined;
-          reminderCount: number;
-          acceptedAt?: string | null | undefined;
-          declinedAt?: string | null | undefined;
-          revokedAt?: string | null | undefined;
-          message?: string | null | undefined;
-          createdAt: string;
-          customPermissions?:
-            | {
-                __typename?: 'HomePermissions';
-                canViewPantry?: boolean | null | undefined;
-                canEditPantry?: boolean | null | undefined;
-                canAddItems?: boolean | null | undefined;
-                canRemoveItems?: boolean | null | undefined;
-                canInviteOthers?: boolean | null | undefined;
-                canManageHome?: boolean | null | undefined;
-              }
-            | null
-            | undefined;
-          home: { __typename?: 'Home'; id: string; name: string };
-          inviter: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
-    membersConnection: {
-      __typename?: 'MembershipConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'MembershipEdge';
-        cursor: string;
-        node: {
-          __typename?: 'Membership';
-          id: string;
-          homeId: string;
-          userId: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            emailVerified: boolean;
-            role: UserRole;
-            onBoarded: boolean;
-            timezone?: string | null | undefined;
-            preferredCurrency?: string | null | undefined;
-            language?: string | null | undefined;
-            defaultShoppingListId?: string | null | undefined;
-            defaultHomeId?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            lastActiveAt?: string | null | undefined;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  firstName?: string | null | undefined;
-                  lastName?: string | null | undefined;
-                  displayName?: string | null | undefined;
-                  bio?: string | null | undefined;
-                  avatar?: string | null | undefined;
-                  phone?: string | null | undefined;
-                }
-              | null
-              | undefined;
-            settings?:
-              | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
-              | null
-              | undefined;
-          };
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
-    pantriesConnection: {
-      __typename?: 'PantryConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'PantryEdge';
-        cursor: string;
-        node: {
-          __typename?: 'Pantry';
-          id: string;
-          homeId: string;
-          name: string;
-          description?: string | null | undefined;
-          isDefault: boolean;
-          location?: string | null | undefined;
-          temperature?: string | null | undefined;
-          tags: Array<string>;
-          metadata?: any | null | undefined;
-          version: number;
-          createdAt: string;
-          updatedAt: string;
-          itemsConnection: {
-            __typename?: 'PantryItemConnection';
-            totalCount: number;
-            edges: Array<{
-              __typename?: 'PantryItemEdge';
-              cursor: string;
-              node: {
-                __typename?: 'PantryItem';
-                id: string;
-                pantryId: string;
-                itemId: string;
-                itemName: string;
-                unitName: string;
-                unitId?: string | null | undefined;
-                expiresAt?: string | null | undefined;
-                storageState: StorageState;
-                storageNotes?: string | null | undefined;
-                initialQuantity: number;
-                currentQuantity: number;
-                consumedQuantity: number;
-                normalizedUnitId?: string | null | undefined;
-                packageWeight?: number | null | undefined;
-                packageWeightUnitId?: string | null | undefined;
-                createdAt: string;
-                updatedAt?: string | null | undefined;
-                version?: number | null | undefined;
-                tags: Array<string>;
-                lowStockAlert: boolean;
-                minQuantity?: number | null | undefined;
-                restockQuantity?: number | null | undefined;
-                lastUsedAt?: string | null | undefined;
-                wasteAmount: number;
-                wasteDate?: string | null | undefined;
-                wasteReason?: WasteReason | null | undefined;
-                item: {
-                  __typename?: 'Item';
-                  id: string;
-                  name: string;
-                  description?: string | null | undefined;
-                  dataSource: DataSource;
-                  type: ItemType;
-                  storageState: StorageState;
-                  showInOnboarding: boolean;
-                  shelfLifeDays?: number | null | undefined;
-                  popularity: number;
-                  status: ItemStatus;
-                  visibility: Visibility;
-                  imageUrl?: string | null | undefined;
-                  tags: Array<string>;
-                  healthBenefits?: any | null | undefined;
-                  allergens?: any | null | undefined;
-                  nutritions?: any | null | undefined;
-                  metadata?: any | null | undefined;
-                  ingredients?: any | null | undefined;
-                  createdAt: string;
-                  updatedAt: string;
-                  deletedAt?: string | null | undefined;
-                  version: number;
-                  netWeight?: number | null | undefined;
-                  density?: number | null | undefined;
-                  preferredTrackingUnitId?: string | null | undefined;
-                  preferredTrackingUnit?:
-                    | {
-                        __typename?: 'Unit';
-                        id: string;
-                        name: string;
-                        symbol: string;
-                      }
-                    | null
-                    | undefined;
-                  displayUnit?:
-                    | {
-                        __typename?: 'Unit';
-                        id: string;
-                        name: string;
-                        symbol: string;
-                      }
-                    | null
-                    | undefined;
-                  units: Array<{
-                    __typename?: 'ItemUnit';
-                    id: string;
-                    itemId: string;
-                    unitId: string;
-                    isDefault: boolean;
-                    isPreferred: boolean;
-                    isCommon: boolean;
-                    packageSize?: number | null | undefined;
-                    packageDescription?: string | null | undefined;
-                    retailUnit: boolean;
-                    usageContext: Array<UnitUsageContext>;
-                    recommendedFor: Array<UnitRecommendation>;
-                    minQuantity?: number | null | undefined;
-                    maxQuantity?: number | null | undefined;
-                    quantityStep?: number | null | undefined;
-                    averagePricePerUnit?: number | null | undefined;
-                    lastPriceUpdate?: string | null | undefined;
-                    priceSource?: string | null | undefined;
-                    usageCount: number;
-                    lastUsedAt?: string | null | undefined;
-                    popularityScore: number;
-                    source: UnitSource;
-                    confidence?: number | null | undefined;
-                    isVerified: boolean;
-                    verifiedAt?: string | null | undefined;
-                    createdAt: string;
-                    updatedAt: string;
-                    version: number;
-                  }>;
-                  brands: Array<{
-                    __typename?: 'ItemBrand';
-                    id: string;
-                    brand: {
-                      __typename?: 'Brand';
-                      id: string;
-                      name: string;
-                      description?: string | null | undefined;
-                      createdAt: string;
-                      updatedAt: string;
-                      version: number;
-                    };
-                  }>;
-                  categories?:
-                    | Array<{
-                        __typename?: 'ItemCategory';
-                        id: string;
-                        isPrimary: boolean;
-                        assignedAt?: string | null | undefined;
-                        assignedBy?:
-                          | { __typename?: 'User'; id: string }
-                          | null
-                          | undefined;
-                        category: {
-                          __typename?: 'Category';
-                          id: string;
-                          name: string;
-                          slug: string;
-                          description?: string | null | undefined;
-                          icon?: string | null | undefined;
-                          color?: string | null | undefined;
-                          sortOrder: number;
-                          type: CategoryType;
-                          isActive: boolean;
-                          isSystem: boolean;
-                          visibility: Visibility;
-                          itemCount: number;
-                          usageCount: number;
-                          createdAt: string;
-                          updatedAt: string;
-                          deletedAt?: string | null | undefined;
-                          version: number;
-                        };
-                      }>
-                    | null
-                    | undefined;
-                  creations: Array<{
-                    __typename?: 'ItemCreation';
-                    id: string;
-                    source: DataSource;
-                    reason?: string | null | undefined;
-                    metadata?: any | null | undefined;
-                    createdAt: string;
-                  }>;
-                  edits: Array<{
-                    __typename?: 'ItemEdit';
-                    id: string;
-                    fieldsChanged: Array<string>;
-                    oldValues?: any | null | undefined;
-                    newValues?: any | null | undefined;
-                    editReason?: string | null | undefined;
-                    createdAt: string;
-                  }>;
-                };
-                unit?:
-                  | {
-                      __typename?: 'Unit';
-                      id: string;
-                      name: string;
-                      symbol: string;
-                      type: UnitType;
-                      isMetric: boolean;
-                      baseUnitId?: string | null | undefined;
-                      conversionFactor: number;
-                      isCommon: boolean;
-                      displayAsFraction: boolean;
-                      minPrecision: number;
-                      autoConvertThreshold?: number | null | undefined;
-                    }
-                  | null
-                  | undefined;
-                storageLocation?:
-                  | {
-                      __typename?: 'StorageLocation';
-                      id: string;
-                      name: string;
-                      type: StorageType;
-                    }
-                  | null
-                  | undefined;
-                normalizedUnit?:
-                  | {
-                      __typename?: 'Unit';
-                      id: string;
-                      name: string;
-                      symbol: string;
-                    }
-                  | null
-                  | undefined;
-                packageWeightUnit?:
-                  | {
-                      __typename?: 'Unit';
-                      id: string;
-                      name: string;
-                      symbol: string;
-                      type: UnitType;
-                    }
-                  | null
-                  | undefined;
-                brand?:
-                  | { __typename?: 'Brand'; id: string; name: string }
-                  | null
-                  | undefined;
-                store?:
-                  | { __typename?: 'Store'; id: string; name: string }
-                  | null
-                  | undefined;
-                usageRecords: Array<{
-                  __typename?: 'PantryItemUsage';
-                  id: string;
-                  quantityUsed: number;
-                  usedAt: string;
-                  purpose: UsagePurpose;
-                  notes?: string | null | undefined;
-                  pantryItem: { __typename?: 'PantryItem'; id: string };
-                  usedBy?:
-                    | { __typename?: 'User'; id: string }
-                    | null
-                    | undefined;
-                  cookingLog?:
-                    | { __typename?: 'CookingLog'; id: string }
-                    | null
-                    | undefined;
-                  mealPlanItem?:
-                    | { __typename?: 'MealPlanItem'; id: string }
-                    | null
-                    | undefined;
-                  recipe?:
-                    | { __typename?: 'Recipe'; id: string }
-                    | null
-                    | undefined;
-                }>;
-              };
-            }>;
-            pageInfo: {
-              __typename?: 'PageInfo';
-              hasNextPage: boolean;
-              endCursor?: string | null | undefined;
-            };
-          };
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
-  };
+  deleteHome: { __typename?: 'Home'; id: string; name: string };
 };
 
 export type InviteToHomeMutationVariables = Exact<{
@@ -14646,6 +14411,7 @@ export type InviteToHomeMutation = {
   inviteToHome: {
     __typename?: 'HomeInvite';
     id: string;
+    token: string;
     email: string;
     homeId: string;
     invitedUserId?: string | null | undefined;
@@ -14756,7 +14522,7 @@ export type UpdateMembershipMutation = {
 };
 
 export type RemoveMemberMutationVariables = Exact<{
-  membershipId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
 }>;
 
 export type RemoveMemberMutation = {
@@ -15083,6 +14849,7 @@ export type GetDefaultHomeQuery = {
             node: {
               __typename?: 'HomeInvite';
               id: string;
+              token: string;
               email: string;
               homeId: string;
               invitedUserId?: string | null | undefined;

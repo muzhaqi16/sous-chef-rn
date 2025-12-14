@@ -8,13 +8,13 @@
  * that open the InvitationAcceptanceModal when tapped.
  */
 
-import {useEffect, useRef} from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useMyShoppingListInvitesQuery,
   useGetMyPendingInvitesQuery,
   NotificationType,
 } from '#generated';
-import {useStore} from '#store';
+import { useStore } from '#store';
 import {
   NotificationCategory,
   NotificationPriority,
@@ -41,14 +41,15 @@ export function useAllPendingInvites(userId?: string) {
   const processedRef = useRef(false);
 
   // Query pending shopping list invites
-  const {data: shoppingListData, error: shoppingListError} = useMyShoppingListInvitesQuery({
-    skip: !userId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all', // Return partial data on errors
-  });
+  const { data: shoppingListData, error: shoppingListError } =
+    useMyShoppingListInvitesQuery({
+      skip: !userId,
+      fetchPolicy: 'cache-and-network',
+      errorPolicy: 'all', // Return partial data on errors
+    });
 
   // Query pending home invites
-  const {data: homeData, error: homeError} = useGetMyPendingInvitesQuery({
+  const { data: homeData, error: homeError } = useGetMyPendingInvitesQuery({
     skip: !userId,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all', // Return partial data on errors
@@ -58,7 +59,10 @@ export function useAllPendingInvites(userId?: string) {
   useEffect(() => {
     if (__DEV__) {
       if (shoppingListError) {
-        console.warn('⚠️ Partial error loading shopping list invites:', shoppingListError);
+        console.warn(
+          '⚠️ Partial error loading shopping list invites:',
+          shoppingListError,
+        );
       }
       if (homeError) {
         console.warn('⚠️ Partial error loading home invites:', homeError);
@@ -87,14 +91,17 @@ export function useAllPendingInvites(userId?: string) {
           category: NotificationCategory.COLLABORATION,
           priority: NotificationPriority.HIGH,
           title: 'Shopping List Invitation',
-          message: `${invite.invitedBy?.profile?.displayName || invite.invitedBy?.email || 'Someone'} invited you to "${invite.shoppingList?.name || 'a shopping list'}"`,
+          message: `${
+            invite.invitedBy?.profile?.displayName ||
+            invite.invitedBy?.email ||
+            'Someone'
+          } invited you to "${invite.shoppingList?.name || 'a shopping list'}"`,
           payload: {
             inviteId: invite.id,
             listId: invite.shoppingListId,
             listName: invite.shoppingList?.name,
             inviterName:
-              invite.invitedBy?.profile?.displayName ||
-              invite.invitedBy?.email,
+              invite.invitedBy?.profile?.displayName || invite.invitedBy?.email,
             inviterEmail: invite.invitedBy?.email,
             role: invite.role,
           },
@@ -123,9 +130,14 @@ export function useAllPendingInvites(userId?: string) {
           category: NotificationCategory.MEMBERSHIP,
           priority: NotificationPriority.HIGH,
           title: 'Home Invitation',
-          message: `${invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone'} invited you to join "${invite.home?.name || 'a home'}"`,
+          message: `${
+            invite.inviter?.profile?.displayName ||
+            invite.inviter?.email ||
+            'Someone'
+          } invited you to join "${invite.home?.name || 'a home'}"`,
           payload: {
             inviteId: invite.id,
+            token: invite.token,
             homeId: invite.homeId,
             homeName: invite.home?.name,
             inviterName:

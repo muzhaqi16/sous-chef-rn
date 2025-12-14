@@ -14,7 +14,7 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsQuery,
 } from '#generated';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 import { createShoppingListSchema } from '#utils';
 
@@ -27,6 +27,7 @@ export const CreateShoppingListScreen = () => {
 
   const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
   const user = useAppStore(selectUser);
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
 
   // State management
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -101,6 +102,7 @@ export const CreateShoppingListScreen = () => {
             description: 'Created during onboarding',
             isDefault: !existingList, // Only set as default if no existing list
             tags: ['onboarding', 'groceries'],
+            homeId: selectedHomeId || undefined,
           },
         },
       });

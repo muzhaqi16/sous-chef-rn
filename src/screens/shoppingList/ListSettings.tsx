@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useShoppingListDetails, useAppNavigation } from '#/hooks';
+import { useShoppingListDetails, useAppNavigation, useHomeManagement } from '#/hooks';
+import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
@@ -46,10 +47,13 @@ export const ListSettings: React.FC<{
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
+  const [showHomePicker, setShowHomePicker] = useState(false);
 
   const { shoppingList, isShared, collaborators } =
     useShoppingListDetails(listId);
   const { user } = useAuth();
+  const { homes } = useHomeManagement();
 
   // Check if current user is the owner
   const isOwner =
@@ -161,6 +165,7 @@ export const ListSettings: React.FC<{
               description: 'Created from list settings',
               isDefault,
               tags: ['user-created'],
+              homeId: selectedHomeId || undefined,
             },
           },
         });
@@ -282,6 +287,22 @@ export const ListSettings: React.FC<{
               />
             </View>
 
+            {/* Home selector - only show for new lists when user has homes */}
+            {!listId && homes && homes.length > 0 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Link to Home (Optional)</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setShowHomePicker(true)}
+                >
+                  <Text style={styles.pickerText}>
+                    {homes?.find(h => h.id === selectedHomeId)?.name || 'Personal (No Home)'}
+                  </Text>
+                  <Icon name="chevron-down" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            )}
+
             <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>Default List</Text>
@@ -339,6 +360,25 @@ export const ListSettings: React.FC<{
           </View>
         )}
       </ScrollView>
+
+      {/* Home picker modal */}
+      <ModalPicker
+        visible={showHomePicker}
+        label="Select Home"
+        options={[
+          { label: 'Personal (No Home)', value: '' },
+          ...(homes?.map(home => ({
+            label: home.name,
+            value: home.id,
+          })) || []),
+        ]}
+        selected={selectedHomeId || ''}
+        onSelect={(value) => {
+          setSelectedHomeId(value || null);
+          setShowHomePicker(false);
+        }}
+        onCancel={() => setShowHomePicker(false)}
+      />
     </View>
   );
 };
@@ -482,5 +522,20 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.sm + 2,
+    backgroundColor: theme.colors.surface,
+  },
+  pickerText: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
   },
 }));

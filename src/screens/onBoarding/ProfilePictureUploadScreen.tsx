@@ -499,7 +499,7 @@ const styles = StyleSheet.create(theme => ({
   },
   formFooter: {
     marginTop: 'auto',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing['2xl'],
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: '400',

@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
@@ -39,6 +39,7 @@ interface InvitationAcceptanceModalProps {
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
+  const { theme } = useUnistyles();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
@@ -217,12 +218,12 @@ export const InvitationAcceptanceModal: React.FC<
                   invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
                 }
                 size={32}
-                color="#4CAF50"
+                color={theme.colors.primary}
               />
             </View>
             <Text style={styles.title}>{invitation.title}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Icon name="close" size={24} color="#666" />
+              <Icon name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -232,7 +233,7 @@ export const InvitationAcceptanceModal: React.FC<
 
             {invitation.inviterName && (
               <View style={styles.inviterContainer}>
-                <Icon name="person" size={16} color="#666" />
+                <Icon name="person" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.inviterText}>
                   Invited by {invitation.inviterName}
                 </Text>
@@ -245,7 +246,7 @@ export const InvitationAcceptanceModal: React.FC<
                   invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
                 }
                 size={16}
-                color="#666"
+                color={theme.colors.textSecondary}
               />
               <Text style={styles.entityText}>{invitation.entityName}</Text>
             </View>
@@ -259,10 +260,10 @@ export const InvitationAcceptanceModal: React.FC<
               disabled={accepting || rejecting}
             >
               {rejecting ? (
-                <ActivityIndicator color="#f44336" />
+                <ActivityIndicator color={theme.colors.error} />
               ) : (
                 <>
-                  <Icon name="close" size={20} color="#f44336" />
+                  <Icon name="close" size={20} color={theme.colors.error} />
                   <Text style={[styles.buttonText, styles.rejectText]}>
                     Reject
                   </Text>
@@ -276,10 +277,10 @@ export const InvitationAcceptanceModal: React.FC<
               disabled={accepting || rejecting}
             >
               {accepting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.colors.white} />
               ) : (
                 <>
-                  <Icon name="check" size={20} color="#fff" />
+                  <Icon name="check" size={20} color={theme.colors.white} />
                   <Text style={[styles.buttonText, styles.acceptText]}>
                     Accept
                   </Text>
@@ -318,13 +319,13 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.success + '20',
+    backgroundColor: theme.colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.error,
   },
   acceptButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.primary,
   },
   buttonText: {
     fontSize: theme.fonts.size.md,
