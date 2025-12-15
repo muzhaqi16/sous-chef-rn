@@ -181,8 +181,6 @@ export const BarcodeScannerScreen: React.FC<{
         device={device}
         isActive={isActive}
         codeScanner={codeScanner}
-        // Reduce CPU by limiting camera FPS instead of per-frame JS throttling
-        fps={2}
         torch={flashEnabled ? 'on' : 'off'}
         enableZoomGesture
       />
@@ -289,8 +287,8 @@ const styles = StyleSheet.create(theme => ({
   headerButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -315,7 +313,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   subInstructionsText: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: theme.colors.overlays.light,
     fontSize: theme.fonts.size.sm,
     textAlign: 'center',
   },
@@ -331,8 +329,8 @@ const styles = StyleSheet.create(theme => ({
   scanDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.overlays.medium,
     marginBottom: theme.spacing.sm,
   },
   scanDotActive: { backgroundColor: theme.colors.primary },

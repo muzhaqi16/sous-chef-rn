@@ -55,6 +55,18 @@ query GetUserProfile {
   }
 }
 
+query CanDeleteAccount {
+  canDeleteAccount {
+    canDelete
+    blockers {
+      type
+      resourceId
+      resourceName
+      message
+    }
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -159,13 +171,6 @@ subscription UserUpdated($userId: ID) {
         bio
       }
     }
-    previousValues {
-      email
-      role
-      timezone
-      preferredCurrency
-      language
-    }
     updatedFields
     userId
     timestamp
@@ -219,13 +224,6 @@ subscription UserProfileChanged($userId: ID) {
       phone
       website
       profileVisibility
-    }
-    previousValues {
-      firstName
-      lastName
-      displayName
-      bio
-      avatar
     }
     updatedFields
     timestamp

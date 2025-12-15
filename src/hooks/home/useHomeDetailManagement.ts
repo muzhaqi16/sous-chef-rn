@@ -88,7 +88,7 @@ export function useHomeDetailManagement(homeId: string) {
           'membersConnection',
           'Membership',
         );
-        removeFromMembersCache(cache, homeId, variables.membershipId, { evictItem: true });
+        removeFromMembersCache(cache, homeId, variables.id, { evictItem: true });
       } catch (error) {
         console.warn('Cache update failed for removeMember:', error);
       }

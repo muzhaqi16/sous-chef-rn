@@ -222,7 +222,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
     gap: theme.spacing.md,
   },
   homeInfo: {
@@ -242,7 +242,7 @@ const styles = StyleSheet.create(theme => ({
   badgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: theme.spacing.xs + 2,
   },
   roleBadge: {
     paddingHorizontal: theme.spacing.sm,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
   },
   roleText: {
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.semibold,
   },
   defaultBadge: {

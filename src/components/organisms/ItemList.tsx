@@ -30,10 +30,12 @@ interface ItemListProps {
   onItemDelete?: (id: string) => void;
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
+  onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   testIDPrefix?: string;
   emptyState?: {
@@ -54,10 +56,12 @@ export const ItemList: React.FC<ItemListProps> = ({
   onItemDelete,
   onItemConsume,
   onItemWaste,
+  onItemRestock,
   onRefresh,
   onSwipeableWillOpen,
   onEndReached,
   onEndReachedThreshold = 0.5,
+  ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,
   emptyState,
@@ -120,11 +124,12 @@ export const ItemList: React.FC<ItemListProps> = ({
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
         onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
         onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
+        onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
         onSwipeableWillOpen={onSwipeableWillOpen}
         testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
       />
     ),
-    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onSwipeableWillOpen, testIDPrefix],
+    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onItemRestock, onSwipeableWillOpen, testIDPrefix],
   );
 
   if (items.length === 0 && emptyState) {
@@ -151,6 +156,14 @@ export const ItemList: React.FC<ItemListProps> = ({
       updateCellsBatchingPeriod={50}
       windowSize={5}
       removeClippedSubviews={true}
+      ListHeaderComponent={
+        ListHeaderComponent &&
+        (typeof ListHeaderComponent === 'function' ? (
+          <ListHeaderComponent />
+        ) : (
+          ListHeaderComponent
+        ))
+      }
       ListFooterComponent={
         ListFooterComponent &&
         (typeof ListFooterComponent === 'function' ? (

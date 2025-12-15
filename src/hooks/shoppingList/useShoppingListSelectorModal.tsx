@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
-import { useScanner } from '#context';
+import { useTabBarActions } from '#context';
 import { Icon } from '#utils';
 import { ShoppingListAvatar } from '#components/atoms';
 import { useSelectorManagement } from '#hooks/ui';
@@ -35,7 +35,7 @@ export function useShoppingListSelectorModal({
   setSelectedShoppingListId,
 }: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
-  const { setOverlayOpen } = useScanner();
+  const { setOverlayOpen } = useTabBarActions();
   const {
     theme: { colors },
   } = useUnistyles();
@@ -62,15 +62,25 @@ export function useShoppingListSelectorModal({
         <ShoppingListAvatar list={list} size={40} />
         <View style={styles.selectorItemInfo}>
           <Text style={styles.selectorItemName}>{list.name}</Text>
-          <Text style={styles.selectorItemSubtext}>
-            {list._isOwner
-              ? 'You own this list'
-              : `Shared by ${
-                  list.ownerships?.[0]?.user?.profile?.displayName ||
-                  list.ownerships?.[0]?.user?.email ||
-                  'someone'
-                }`}
-          </Text>
+          {list.home?.name ? (
+            <View style={styles.homeIndicator}>
+              <Icon
+                name="home"
+                size={12}
+                color={colors.textTertiary}
+                library="MaterialIcons"
+              />
+              <Text style={styles.homeIndicatorText}>{list.home.name}</Text>
+            </View>
+          ) : !list._isOwner ? (
+            <Text style={styles.selectorItemSubtext}>
+              {`Shared by ${
+                list.ownerships?.[0]?.user?.profile?.displayName ||
+                list.ownerships?.[0]?.user?.email ||
+                'someone'
+              }`}
+            </Text>
+          ) : null}
         </View>
         {isSelected && (
           <Icon
@@ -187,5 +197,14 @@ const styles = StyleSheet.create(theme => ({
   selectorItemSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  homeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  homeIndicatorText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
   },
 }));

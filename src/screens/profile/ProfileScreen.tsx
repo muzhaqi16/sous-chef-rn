@@ -12,7 +12,7 @@ import {
   useAppNavigation,
 } from '#hooks';
 import { ActionTray, ActionTrayRef } from '#/components/templates/ActionTray';
-import { useScanner } from '#/context/ScannerContext';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
 import { Icon } from '#/utils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
@@ -22,12 +22,12 @@ import { Environment } from '#/utils/environment';
 const TAB_BAR_HEIGHT = 65;
 
 export const ProfileScreen = () => {
-  const { navigate, goBack } = useAppNavigation();
+  const { navigate, goBack, isFocused } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, biometricLoading } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { setOverlayOpen } = useScanner();
+  const { setOverlayOpen, setAddProps } = useTabBarActions();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
 
@@ -38,6 +38,19 @@ export const ProfileScreen = () => {
       has_avatar: !!profile?.avatar,
     });
   }, [profile]);
+
+  // Register add button - opens quick actions tray on Profile screen
+  useEffect(() => {
+    if (isFocused) {
+      setAddProps(() => {
+        Telemetry.trackEvent('profile_quick_actions_opened', { source: 'tab_bar' });
+        actionTrayRef.current?.open();
+      }, true);
+    }
+    return () => {
+      setAddProps(undefined, false);
+    };
+  }, [isFocused, setAddProps]);
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
@@ -139,6 +152,8 @@ export const ProfileScreen = () => {
                       navigate('DebugInfo');
                     } else if (item.key === 'performanceDashboard') {
                       navigate('PerformanceDashboard');
+                    } else if (item.key === 'changePassword') {
+                      navigate('ChangePassword');
                     }
                   },
                 };

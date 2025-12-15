@@ -14,7 +14,7 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsQuery,
 } from '#generated';
-import { useAppStore, selectUser } from '#store/useAppStore';
+import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 import { createShoppingListSchema } from '#utils';
 
@@ -27,6 +27,7 @@ export const CreateShoppingListScreen = () => {
 
   const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
   const user = useAppStore(selectUser);
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
 
   // State management
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -101,6 +102,7 @@ export const CreateShoppingListScreen = () => {
             description: 'Created during onboarding',
             isDefault: !existingList, // Only set as default if no existing list
             tags: ['onboarding', 'groceries'],
+            homeId: selectedHomeId || undefined,
           },
         },
       });
@@ -241,67 +243,67 @@ export const CreateShoppingListScreen = () => {
 const styles = StyleSheet.create(theme => ({
   nextButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   nextText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
   errorText: {
     color: theme.colors.error,
-    marginTop: 12,
+    marginTop: theme.spacing['3'],
     textAlign: 'center',
   },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing['2xl'],
   },
   loadingIndicator: {
     color: theme.colors.primary,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
   existingListContainer: {
-    marginBottom: 20,
+    marginBottom: theme.spacing.lg,
   },
   existingListCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   existingListTitle: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   existingListName: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   defaultBadge: {
     backgroundColor: theme.colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.xs,
     alignSelf: 'flex-start',
   },
   defaultBadgeText: {
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.primary,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -309,40 +311,40 @@ const styles = StyleSheet.create(theme => ({
   orText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
-    fontSize: 14,
-    marginVertical: 16,
+    fontSize: theme.typography.fontSize.sm,
+    marginVertical: theme.spacing.md,
   },
   createNewText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   buttonContainer: {
-    gap: 12,
-    marginTop: 20,
+    gap: theme.spacing['3'],
+    marginTop: theme.spacing.lg,
   },
   skipButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   skipText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
   createButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   createText: {
     color: theme.colors.primary,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
 }));

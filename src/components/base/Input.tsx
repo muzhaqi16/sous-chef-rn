@@ -14,6 +14,7 @@ interface InputProps {
   autoFocus?: boolean;
   required?: boolean;
   testID?: string;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -28,6 +29,7 @@ export const Input: React.FC<InputProps> = ({
   autoFocus = false,
   required = false,
   testID,
+  autoCapitalize,
 }) => {
   const {theme} = useUnistyles();
   return (
@@ -52,6 +54,7 @@ export const Input: React.FC<InputProps> = ({
         autoFocus={autoFocus}
         placeholderTextColor={theme.colors.textSecondary}
         testID={testID}
+        autoCapitalize={autoCapitalize}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -60,14 +63,14 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
     flex: 1,
   },
   label: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
   },
   required: {
     color: theme.colors.error,
@@ -75,23 +78,23 @@ const styles = StyleSheet.create(theme => ({
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
   textArea: {
-    minHeight: 80,
+    minHeight: theme.spacing['2xl'] + theme.spacing.xl,
     textAlignVertical: 'top',
   },
   inputError: {
     borderColor: theme.colors.error,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.error,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
 }));

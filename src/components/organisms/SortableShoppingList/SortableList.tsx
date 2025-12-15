@@ -28,6 +28,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onMoveToPantry,
+  onQuantityPress,
   onSortOrderUpdate,
   disabled = false,
   ListFooterComponent,
@@ -216,11 +218,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // PERFORMANCE: Only wrap in ScaleDecorator when actively dragging
   // This reduces Reanimated shared value creation from 300+ to ~18 on initial render
   const renderItem = useCallback(
-    ({
-      item,
-      drag,
-      isActive,
-    }: RenderItemParams<SortableShoppingListItem>) => {
+    ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
       const itemComponent = (
         <SimpleDraggableItem
           item={item}
@@ -228,6 +226,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           onItemEdit={onItemEdit}
           onItemDelete={onItemDelete}
           onTogglePurchase={onTogglePurchase}
+          onMoveToPantry={onMoveToPantry}
+          onQuantityPress={onQuantityPress}
           drag={disabled ? undefined : drag}
           isActive={isActive}
           onSwipeableWillOpen={handleSwipeableWillOpen}
@@ -246,6 +246,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       onItemEdit,
       onItemDelete,
       onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
       disabled,
       handleSwipeableWillOpen,
       handleSwipeableClose,

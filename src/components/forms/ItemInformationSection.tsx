@@ -8,12 +8,18 @@ import {
 } from '#components/molecules/DynamicFormFields';
 import { ItemSuggestion } from '#generated';
 
+type SuggestedBrand = {
+  id: string;
+  name: string;
+};
+
 interface ItemInformationSectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   onSelectItem?: (item: ItemSuggestion) => void;
   mode: 'add' | 'edit';
   currentItemName?: string;
+  suggestedBrands?: SuggestedBrand[];
   testID?: string;
 }
 
@@ -32,6 +38,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   onSelectItem,
   mode,
   currentItemName,
+  suggestedBrands,
   testID,
 }) => {
   const readOnlyComponent = useMemo(
@@ -57,6 +64,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
           label: 'Brand',
           placeholder: "e.g., Kellogg's",
           component: 'brandAutocomplete',
+          props: { suggestedBrands },
         },
       ];
     } else {

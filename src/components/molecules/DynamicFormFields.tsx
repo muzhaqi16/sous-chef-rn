@@ -51,12 +51,13 @@ export type FieldDef<T extends FieldValues> = {
   transformOnBlur?: boolean;
   // Autocomplete specific props
   onSelectItem?: (item: any) => void;
-  onUnitSelected?: (unitId: string | null) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
   onStorageLocationSelected?: (
     locationId: string | null,
     location: any,
   ) => void;
+  onAddNewLocation?: (name: string) => void;
   storageLocations?: any[];
   testID?: string;
 };
@@ -91,6 +92,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onAddNewLocation,
           storageLocations,
           testID,
         },
@@ -110,6 +112,7 @@ export function DynamicFormFields<T extends FieldValues>({
         onUnitSelected,
         onCategorySelected,
         onStorageLocationSelected,
+        onAddNewLocation,
         storageLocations,
         testID,
         key: `${String(name)}-${idx}`,
@@ -134,6 +137,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onAddNewLocation,
           storageLocations,
           testID,
           key,
@@ -235,6 +239,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       error={errors[name]?.message?.toString()}
                       storageLocations={storageLocations || []}
                       onStorageLocationSelected={onStorageLocationSelected}
+                      onAddNewLocation={onAddNewLocation}
                       {...props}
                     />
                   );
@@ -257,6 +262,7 @@ export function DynamicFormFields<T extends FieldValues>({
                   const inputProps: any = {
                     label,
                     ...(placeholder && { placeholder }),
+                    ...(testID && { testID }),
                     ...props,
                   };
 
@@ -333,8 +339,8 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
   },
   errorText: {
-    marginTop: 4,
-    fontSize: 14,
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.error,
   },
 }));

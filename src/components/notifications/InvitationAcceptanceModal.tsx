@@ -7,13 +7,16 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useApolloClient } from '@apollo/client/react';
 import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
   useDeclineHomeInviteMutation,
   useDeclineShoppingListInviteMutation,
+  MyShoppingListInvitesDocument,
+  MyShoppingListInvitesQuery,
 } from '#generated';
 import { createAddToQueryFieldUpdater } from '#/apollo/utils';
 
@@ -39,6 +42,8 @@ interface InvitationAcceptanceModalProps {
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
+  const { theme } = useUnistyles();
+  const client = useApolloClient();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
@@ -70,10 +75,34 @@ export const InvitationAcceptanceModal: React.FC<
 
     setAccepting(true);
     try {
+      let token = invitation.token;
+
+      // Fallback: Fetch token if missing (real-time notifications may not include it)
+      if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+        const result = await client.query<MyShoppingListInvitesQuery>({
+          query: MyShoppingListInvitesDocument,
+          fetchPolicy: 'network-only',
+        });
+        const invites = result.data?.myShoppingListInvites;
+        const invite = invites?.find(
+          inv => inv.id === invitation.payload?.inviteId,
+        );
+        token = invite?.token ?? undefined;
+      }
+
+      if (!token) {
+        Alert.alert(
+          'Error',
+          'Unable to find invitation token. It may have expired or been cancelled.',
+        );
+        setAccepting(false);
+        return;
+      }
+
       if (invitation.type === 'HOME_INVITE') {
         const result = await acceptHomeInvite({
           variables: {
-            token: invitation.token!,
+            token: token!,
           },
         });
 
@@ -86,41 +115,19 @@ export const InvitationAcceptanceModal: React.FC<
             acceptedHomeId: newHomeId,
           };
 
-          Alert.alert(
-            'Success',
-            `You've successfully joined ${invitation.entityName}!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onAccept?.(invitationWithHomeId);
-                  onClose();
-                },
-              },
-            ],
-          );
+          onAccept?.(invitationWithHomeId);
+          onClose();
         }
       } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
         const result = await acceptShoppingListInvite({
           variables: {
-            token: invitation.token!,
+            token: token!,
           },
         });
 
         if (result.data?.acceptShoppingListInvite) {
-          Alert.alert(
-            'Success',
-            `You've been added to ${invitation.entityName}!`,
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  onAccept?.(invitation);
-                  onClose();
-                },
-              },
-            ],
-          );
+          onAccept?.(invitation);
+          onClose();
         }
       }
     } catch (error: any) {
@@ -148,9 +155,33 @@ export const InvitationAcceptanceModal: React.FC<
           onPress: async () => {
             setRejecting(true);
             try {
+              let token = invitation.token;
+
+              // Fallback: Fetch token if missing (real-time notifications may not include it)
+              if (!token && invitation.type === 'SHOPPING_LIST_INVITE') {
+                const result = await client.query<MyShoppingListInvitesQuery>({
+                  query: MyShoppingListInvitesDocument,
+                  fetchPolicy: 'network-only',
+                });
+                const invites = result.data?.myShoppingListInvites;
+                const invite = invites?.find(
+                  inv => inv.id === invitation.payload?.inviteId,
+                );
+                token = invite?.token ?? undefined;
+              }
+
+              if (!token) {
+                Alert.alert(
+                  'Error',
+                  'Unable to find invitation token. It may have expired or been cancelled.',
+                );
+                setRejecting(false);
+                return;
+              }
+
               if (invitation.type === 'HOME_INVITE') {
                 await declineHomeInvite({
-                  variables: {token: invitation.token!},
+                  variables: {token: token!},
                 });
                 Alert.alert(
                   'Invitation Declined',
@@ -167,7 +198,7 @@ export const InvitationAcceptanceModal: React.FC<
                 );
               } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
                 await declineShoppingListInvite({
-                  variables: {token: invitation.token!},
+                  variables: {token: token!},
                 });
                 Alert.alert(
                   'Invitation Declined',
@@ -217,12 +248,12 @@ export const InvitationAcceptanceModal: React.FC<
                   invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
                 }
                 size={32}
-                color="#4CAF50"
+                color={theme.colors.primary}
               />
             </View>
             <Text style={styles.title}>{invitation.title}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Icon name="close" size={24} color="#666" />
+              <Icon name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -232,7 +263,7 @@ export const InvitationAcceptanceModal: React.FC<
 
             {invitation.inviterName && (
               <View style={styles.inviterContainer}>
-                <Icon name="person" size={16} color="#666" />
+                <Icon name="person" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.inviterText}>
                   Invited by {invitation.inviterName}
                 </Text>
@@ -245,7 +276,7 @@ export const InvitationAcceptanceModal: React.FC<
                   invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
                 }
                 size={16}
-                color="#666"
+                color={theme.colors.textSecondary}
               />
               <Text style={styles.entityText}>{invitation.entityName}</Text>
             </View>
@@ -259,10 +290,10 @@ export const InvitationAcceptanceModal: React.FC<
               disabled={accepting || rejecting}
             >
               {rejecting ? (
-                <ActivityIndicator color="#f44336" />
+                <ActivityIndicator color={theme.colors.error} />
               ) : (
                 <>
-                  <Icon name="close" size={20} color="#f44336" />
+                  <Icon name="close" size={20} color={theme.colors.error} />
                   <Text style={[styles.buttonText, styles.rejectText]}>
                     Reject
                   </Text>
@@ -276,10 +307,10 @@ export const InvitationAcceptanceModal: React.FC<
               disabled={accepting || rejecting}
             >
               {accepting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.colors.white} />
               ) : (
                 <>
-                  <Icon name="check" size={20} color="#fff" />
+                  <Icon name="check" size={20} color={theme.colors.white} />
                   <Text style={[styles.buttonText, styles.acceptText]}>
                     Accept
                   </Text>
@@ -318,13 +349,13 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.success + '20',
+    backgroundColor: theme.colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -390,7 +421,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.error,
   },
   acceptButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.primary,
   },
   buttonText: {
     fontSize: theme.fonts.size.md,

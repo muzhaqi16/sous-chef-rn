@@ -37,6 +37,7 @@ import {
   PersonalInformationScreen,
   PerformanceDashboard,
   DebugInfo,
+  ChangePasswordScreen,
 } from '#screens/profile';
 import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
@@ -70,6 +71,7 @@ export type RootStackParamList = {
   AppSettings: undefined;
   PerformanceDashboard: undefined;
   DebugInfo: undefined;
+  ChangePassword: undefined;
   NotFound: undefined;
 };
 
@@ -253,10 +255,10 @@ function RootNavigator() {
               <Stack.Screen
                 name="AppSettings"
                 component={AppSettingsScreen}
-                options={{
-                  animation: 'fade',
-                  animationDuration: 200,
-                }}
+              />
+              <Stack.Screen
+                name="ChangePassword"
+                component={ChangePasswordScreen}
               />
             </>
           )}

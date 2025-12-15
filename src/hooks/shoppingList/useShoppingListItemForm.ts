@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ShoppingListItemFragment } from '#generated';
+import { parseFractionalInput } from '#/utils';
 
 type FormState = {
   itemName: string;
@@ -9,6 +10,15 @@ type FormState = {
   selectedUnitId: string | null;
   notes: string;
   category: string;
+};
+
+type DirtyFields = {
+  itemName: boolean;
+  quantityInput: boolean;
+  unit: boolean;
+  selectedUnitId: boolean;
+  notes: boolean;
+  category: boolean;
 };
 
 const DEFAULT_FORM_STATE: FormState = {
@@ -20,11 +30,41 @@ const DEFAULT_FORM_STATE: FormState = {
   category: '',
 };
 
+const DEFAULT_DIRTY_FIELDS: DirtyFields = {
+  itemName: false,
+  quantityInput: false,
+  unit: false,
+  selectedUnitId: false,
+  notes: false,
+  category: false,
+};
+
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const [formState, setFormState] = useState<FormState>({
     ...DEFAULT_FORM_STATE,
     ...initialState,
   });
+
+  // Track initial state for dirty field comparison (edit mode)
+  const [savedInitialState, setSavedInitialState] = useState<FormState | null>(null);
+
+  // Compute dirty fields by comparing current state with initial state
+  const dirtyFields = useMemo<DirtyFields>(() => {
+    if (!savedInitialState) return DEFAULT_DIRTY_FIELDS;
+    return {
+      itemName: formState.itemName !== savedInitialState.itemName,
+      quantityInput: formState.quantityInput !== savedInitialState.quantityInput,
+      unit: formState.unit !== savedInitialState.unit,
+      selectedUnitId: formState.selectedUnitId !== savedInitialState.selectedUnitId,
+      notes: formState.notes !== savedInitialState.notes,
+      category: formState.category !== savedInitialState.category,
+    };
+  }, [formState, savedInitialState]);
+
+  const hasDirtyFields = useMemo(
+    () => Object.values(dirtyFields).some(Boolean),
+    [dirtyFields],
+  );
 
   const updateField = useCallback(
     <K extends keyof FormState>(field: K, value: FormState[K]) => {
@@ -34,14 +74,16 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   );
 
   const setFromItem = useCallback((item: ShoppingListItemFragment) => {
-    setFormState({
+    const state: FormState = {
       itemName: item.itemName || '',
       quantityInput: item.quantityInput || item.quantity?.toString() || '1',
       unit: item.unitName || '',
       notes: item.notes || '',
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
-    });
+    };
+    setFormState(state);
+    setSavedInitialState(state); // Save initial state for dirty comparison
   }, []);
 
   const buildUnitInput = useCallback(() => {
@@ -51,45 +93,56 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     };
   }, [formState.selectedUnitId, formState.unit]);
 
-  const parseQuantityInput = useCallback(() => {
-    const trimmed = formState.quantityInput.trim();
+  // Build partial input with only dirty fields (for edit mode)
+  const buildDirtyInput = useCallback(
+    (quantityValue: number) => {
+      const input: Record<string, any> = {};
 
-    if (!trimmed) {
-      return null;
-    }
+      if (dirtyFields.itemName) {
+        input.itemName = formState.itemName;
+      }
 
-    try {
-      let quantityValue: number;
+      if (dirtyFields.quantityInput) {
+        input.quantity = quantityValue;
+      }
 
-      if (trimmed.includes('/')) {
-        const parts = trimmed.split(/\s+/);
-        if (parts.length === 2) {
-          const whole = parseInt(parts[0]);
-          const [num, den] = parts[1].split('/').map(Number);
-          quantityValue = whole + num / den;
-        } else {
-          const [num, den] = trimmed.split('/').map(Number);
-          quantityValue = num / den;
+      // Send unit fields together if either changed
+      if (dirtyFields.unit || dirtyFields.selectedUnitId) {
+        input.unitName = formState.unit;
+        if (formState.selectedUnitId) {
+          input.unitId = formState.selectedUnitId;
         }
-      } else {
-        quantityValue = parseFloat(trimmed);
       }
 
-      if (isNaN(quantityValue) || quantityValue <= 0) {
-        return null;
+      if (dirtyFields.notes) {
+        input.notes = formState.notes;
       }
 
-      return quantityValue;
-    } catch (error) {
+      if (dirtyFields.category) {
+        input.category = formState.category;
+      }
+
+      return input;
+    },
+    [dirtyFields, formState],
+  );
+
+  const parseQuantityInput = useCallback(() => {
+    const result = parseFractionalInput(formState.quantityInput);
+    if (result === null || result <= 0) {
       return null;
     }
+    return result;
   }, [formState.quantityInput]);
 
   return {
     formState,
+    dirtyFields,
+    hasDirtyFields,
     updateField,
     setFromItem,
     parseQuantityInput,
     buildUnitInput,
+    buildDirtyInput,
   } as const;
 }

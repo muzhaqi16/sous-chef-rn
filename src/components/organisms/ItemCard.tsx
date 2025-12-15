@@ -14,6 +14,7 @@ interface ItemCardProps {
   onDelete?: () => void;
   onConsume?: () => void;
   onWaste?: () => void;
+  onRestock?: () => void;
   onSwipeableWillOpen?: (ref: any) => void;
   badge?: {
     text: string;
@@ -32,6 +33,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   onDelete,
   onConsume,
   onWaste,
+  onRestock,
   onSwipeableWillOpen,
   badge,
   rightElement,
@@ -39,13 +41,14 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   testID,
 }) => {
   const innerContent =
-    onEdit || onDelete || onConsume || onWaste ? (
+    onEdit || onDelete || onConsume || onWaste || onRestock ? (
       <SwipeableItem
         onPress={onPress}
         onEdit={onEdit}
         onDelete={onDelete}
         onConsume={onConsume}
         onWaste={onWaste}
+        onRestock={onRestock}
         onSwipeableWillOpen={onSwipeableWillOpen}
         testIDPrefix={testID}
       >
@@ -69,7 +72,9 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <View style={[commonStyles.shadow, styles.container]} testID={testID}>{innerContent}</View>
+    <View style={[commonStyles.shadow, styles.container]} testID={testID}>
+      {innerContent}
+    </View>
   );
 };
 
@@ -80,10 +85,10 @@ const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1, // Prevent TouchableOpacity transparency inheritance
     // Horizontal margin for shadow visibility
-    marginHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
     marginVertical: theme.spacing.sm,
-    borderRadius: 12,
+    borderRadius: theme.radii.md,
     boxSizing: 'border-box',
   },
 }));

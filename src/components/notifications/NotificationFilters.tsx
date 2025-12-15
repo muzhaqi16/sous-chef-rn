@@ -64,7 +64,7 @@ const styles = StyleSheet.create(theme => ({
   filterContainer: {
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   filterScroll: {
     padding: theme.spacing.sm,
@@ -73,23 +73,23 @@ const styles = StyleSheet.create(theme => ({
   filterPill: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
-    borderRadius: 20,
+    borderRadius: theme.radii['2xl'],
     backgroundColor: theme.colors.background,
     marginRight: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: theme.colors.border || '#E0E0E0',
+    borderColor: theme.colors.border,
   },
   filterPillActive: {
-    backgroundColor: theme.colors.primary || '#62B1F6',
-    borderColor: theme.colors.primary || '#62B1F6',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     textTransform: 'capitalize',
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontWeight: 'bold',
   },
 }));

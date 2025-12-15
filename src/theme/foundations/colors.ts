@@ -83,6 +83,70 @@ export const colors = {
     infoBg: '#E3F2FD',
   },
 
+  // Pantry expiration colors - for item status display
+  expiration: {
+    expiredBg: '#FEF2F2',
+    expiredBorder: '#FECACA',
+    expiredText: '#DC2626',
+    expiredIconBg: '#FEE2E2',
+    warningText: '#EA580C',
+    warningBg: '#FFFBEB',
+    warningBorder: '#FDE68A',
+  },
+
+  // Filter tab colors
+  filterTab: {
+    activeBg: '#F97316',
+    activeText: '#FFFFFF',
+    inactiveBg: '#F3F4F6',
+    inactiveText: '#4B5563',
+    countBg: '#E5E7EB',
+    countText: '#6B7280',
+    activeCountBg: 'rgba(255,255,255,0.25)',
+  },
+
+  // Avatar gradient colors
+  avatar: {
+    gradientStart: '#F97316',
+    gradientEnd: '#FB923C',
+    shadow: 'rgba(249, 115, 22, 0.3)',
+  },
+
+  // Section header colors
+  sectionHeader: {
+    warningText: '#EA580C',
+    defaultText: '#6B7280',
+    actionText: '#F97316',
+  },
+
+  // Alert banner colors - for generic status banners
+  alertBanner: {
+    error: {
+      bg: '#FEF2F2',
+      border: '#FECACA',
+      text: '#DC2626',
+      iconBg: '#FEE2E2',
+    },
+    warning: {
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+      text: '#EA580C',
+      iconBg: '#FEF3C7',
+    },
+    info: {
+      bg: '#EFF6FF',
+      border: '#BFDBFE',
+      text: '#2563EB',
+      iconBg: '#DBEAFE',
+    },
+    success: {
+      bg: '#F0FDF4',
+      border: '#BBF7D0',
+      text: '#16A34A',
+      iconBg: '#DCFCE7',
+    },
+  },
+
   // Overlay variations - for modals, backdrops
   overlays: {
     light: 'rgba(0, 0, 0, 0.3)',

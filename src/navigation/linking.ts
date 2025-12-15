@@ -12,7 +12,7 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
           Login: 'login',
           SignUp: 'signup',
           ForgotPassword: 'forgot-password',
-          CodeVerification: 'verify/:email?',
+          CodeVerification: 'auth/verify/:email?',
         },
       },
       Verification: 'verify/:email?',

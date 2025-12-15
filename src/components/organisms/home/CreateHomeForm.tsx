@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
+import { Button } from '#/components/base/Button';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 
 interface CreateHomeFormProps {
@@ -24,20 +26,21 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
 
   return (
     <View style={styles.createForm}>
-      <TextInput
-        style={styles.input}
+      <BaseInput
         value={homeName}
         onChangeText={onHomeNameChange}
         placeholder="Enter home name"
         autoFocus
+        autoCapitalize="words"
       />
       <View style={styles.formActions}>
-        <TouchableOpacity
-          style={[styles.button, styles.cancelButton]}
+        <Button
+          variant="secondary"
           onPress={onCancel}
+          fullWidth
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+          Cancel
+        </Button>
         <AnimatedButton
           loading={isCreating}
           disabled={!homeName.trim()}
@@ -58,40 +61,10 @@ const styles = StyleSheet.create(theme => ({
   },
   formActions: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 12,
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  createButtonText: {
-    color: theme.colors.white,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
   },
 }));

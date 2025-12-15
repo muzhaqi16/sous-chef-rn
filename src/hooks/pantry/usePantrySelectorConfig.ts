@@ -109,6 +109,18 @@ export function usePantrySelectorConfig(
           iconLibrary: 'MaterialIcons' as IconLibrary,
           disabled: !selectedPantryId,
         },
+        {
+          icon: 'bar-chart',
+          label: 'View Analytics',
+          onPress: () => {
+            selectorRef.current?.close();
+            if (selectedPantryId) {
+              navigate('PantryAnalytics', { pantryId: selectedPantryId });
+            }
+          },
+          iconLibrary: 'MaterialIcons' as IconLibrary,
+          disabled: !selectedPantryId,
+        },
       ],
     }),
     [

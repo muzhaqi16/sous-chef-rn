@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-} from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { Button } from '#components';
 import { StyleSheet } from 'react-native-unistyles';
@@ -30,7 +23,9 @@ export const InviteMemberScreen = () => {
   const { user } = useAuth();
 
   const selectedHomeId = useAppStore(state => state.selectedHomeId);
-  const selectedShoppingListId = useAppStore(state => state.selectedShoppingListId);
+  const selectedShoppingListId = useAppStore(
+    state => state.selectedShoppingListId,
+  );
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -212,12 +207,8 @@ export const InviteMemberScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          style={styles.invitesList}
-          data={invites}
-          keyExtractor={(invite) => invite.id}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
+        <View style={styles.invitesList}>
+          {invites.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 No invitations added yet
@@ -226,37 +217,37 @@ export const InviteMemberScreen = () => {
                 Add email addresses above to invite members
               </Text>
             </View>
-          }
-          ListHeaderComponent={
-            invites.length > 0 ? (
+          ) : (
+            <>
               <Text style={styles.listHeader}>
                 Inviting {invites.length}{' '}
                 {invites.length === 1 ? 'person' : 'people'}:
               </Text>
-            ) : null
-          }
-          renderItem={({ item: invite }) => (
-            <View style={styles.inviteItem}>
-              <View style={styles.inviteInfo}>
-                <Text style={styles.inviteEmail}>{invite.email}</Text>
-                <TouchableOpacity
-                  onPress={() => toggleInviteType(invite.id)}
-                  style={styles.typeButton}
-                >
-                  <Text style={styles.typeText}>
-                    {getInviteTypeLabel(invite.type)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                onPress={() => removeInvite(invite.id)}
-                style={styles.removeButton}
-              >
-                <Text style={styles.removeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+              {invites.map(invite => (
+                <View key={invite.id} style={styles.inviteItem}>
+                  <View style={styles.inviteInfo}>
+                    <Text style={styles.inviteEmail}>{invite.email}</Text>
+                    <TouchableOpacity
+                      onPress={() => toggleInviteType(invite.id)}
+                      style={styles.typeButton}
+                    >
+                      <Text style={styles.typeText}>
+                        {getInviteTypeLabel(invite.type)}
+                        <Text style={styles.typeHint}> (tap to change)</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => removeInvite(invite.id)}
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
           )}
-        />
+        </View>
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
@@ -285,81 +276,86 @@ export const InviteMemberScreen = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   inputContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
-    gap: 10,
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.sm,
   },
   emailInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#c9d3db',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.md,
+    backgroundColor: theme.colors.surface,
   },
   addButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
   },
   addButtonText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
   invitesList: {
     flex: 1,
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing['2xl'],
   },
   emptyStateText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary || '#666',
-    marginBottom: 8,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: theme.colors.textSecondary || '#999',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   listHeader: {
-    fontSize: 14,
-    color: theme.colors.textSecondary || '#666',
-    marginBottom: 12,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing['3'],
   },
   inviteItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm,
+    padding: theme.spacing['3'],
+    marginBottom: theme.spacing.sm,
   },
   inviteInfo: {
     flex: 1,
   },
   inviteEmail: {
-    fontSize: 16,
-    color: '#222',
-    marginBottom: 4,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
   typeButton: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   typeText: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
     color: theme.colors.primary,
     fontWeight: '500',
+  },
+  typeHint: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textSecondary,
+    fontWeight: '400',
   },
   removeButton: {
     width: 32,
@@ -368,30 +364,31 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   removeButtonText: {
-    fontSize: 20,
-    color: '#999',
+    fontSize: theme.typography.fontSize.xl,
+    color: theme.colors.textTertiary,
   },
   infoBox: {
-    backgroundColor: '#f0f8ff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: theme.colors.info + '20',
+    borderRadius: theme.radii.sm,
+    padding: theme.spacing['3'],
+    marginBottom: theme.spacing.md,
   },
   infoText: {
-    fontSize: 13,
-    color: '#555',
-    lineHeight: 18,
+    fontSize: theme.typography.fontSize.sm - 1,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.typography.lineHeight.tight,
+    textAlign: 'center',
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   nextText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
 }));

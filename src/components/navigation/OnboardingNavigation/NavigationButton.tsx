@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
@@ -16,6 +16,8 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const { theme } = useUnistyles();
+
   return (
     <AnimatedTouchableOpacity
       onPress={action.onPress}
@@ -36,7 +38,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
         style={[
           styles.label,
           {
-            color: action.labelColor || '#FFFFFF',
+            color: action.labelColor || theme.colors.white,
           },
           textStyle,
         ]}
@@ -48,18 +50,18 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   button: {
-    height: 60,
+    height: theme.sizes.button.lg + 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 30,
+    borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     flexDirection: 'row',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.xl,
   },
   label: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     letterSpacing: 0.5,
     textAlign: 'center',

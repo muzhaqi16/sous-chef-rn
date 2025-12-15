@@ -198,8 +198,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   };
 
   const handleClose = () => {
-    setCollaborator(null);
-    setSelectedRole(null);
+    // Don't clear state here - open() always sets fresh data
+    // Clearing here causes race conditions when user quickly reopens the sheet
   };
 
   // Available roles (excluding OWNER - that's only for list owners)
@@ -393,7 +393,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   roleIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
   },
   roleLabel: {
     fontSize: theme.fonts.size.md,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create(theme => ({
   radioOuter: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: theme.radii.full,
     borderWidth: 2,
     borderColor: theme.colors.border,
     justifyContent: 'center',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create(theme => ({
   radioInner: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: theme.radii.full,
   },
   permissionsContainer: {
     marginTop: theme.spacing.md,

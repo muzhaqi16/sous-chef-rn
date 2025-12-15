@@ -138,6 +138,11 @@ export function makeCache(): InMemoryCache {
       ShoppingListItem: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          unit: {
+            merge: false, // Always replace unit with incoming data, never merge
+          },
+        },
       },
       ShoppingList: {
         keyFields: ['id'],
@@ -292,6 +297,32 @@ export function makeCache(): InMemoryCache {
       PantryItem: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          unit: {
+            merge: false, // Always replace unit with incoming data, never merge
+          },
+        },
+      },
+      Unit: {
+        keyFields: ['id'],
+      },
+      Item: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          imageUrl: {
+            // Preserve existing imageUrl if incoming mutation returns null
+            // This prevents partial responses from clearing cached images
+            merge(existing, incoming) {
+              // If incoming is null but we have an existing value, keep existing
+              if (incoming === null && existing) {
+                return existing;
+              }
+              // Otherwise use incoming (handles updates and initial loads)
+              return incoming;
+            },
+          },
+        },
       },
       Recipe: {
         keyFields: ['id'],
@@ -301,8 +332,8 @@ export function makeCache(): InMemoryCache {
         fields: {
           // List-level queries (return collections of lists/homes)
           shoppingLists: {
-            // No keyArgs needed - app doesn't use filters parameter
-            // Simple merge with cache preservation on network errors
+            // Different homes have different shopping lists - cache separately per filter
+            keyArgs: ['filters'],
             merge(existing = [], incoming) {
               // Preserve existing cache if network request failed and returned empty
               // This prevents cache clearing when API is offline
@@ -379,6 +410,10 @@ export function makeCache(): InMemoryCache {
                 readField,
               });
             },
+          },
+          // Item lookups by filters (barcode/UPC, etc.) - cache separately per filter
+          items: {
+            keyArgs: ['filters'],
           },
           recipes: {
             keyArgs: ['category', 'difficulty'],

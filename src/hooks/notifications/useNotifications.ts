@@ -117,6 +117,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         case NotificationType.CollaborationInvite:
           return userPreferences.collaborationInvites;
         case NotificationType.MembershipInvite:
+        case NotificationType.HomeInvitation:
         case NotificationType.HomeJoined:
           return userPreferences.homeInvites;
         default:
@@ -166,11 +167,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       // Determine if notification requires action based on type
       const requiresAction =
         notification.type === NotificationType.MembershipInvite ||
+        notification.type === NotificationType.HomeInvitation ||
         notification.type === NotificationType.CollaborationInvite;
 
       // Set action type based on notification type
       const actionType =
-        notification.type === NotificationType.MembershipInvite
+        notification.type === NotificationType.MembershipInvite ||
+        notification.type === NotificationType.HomeInvitation
           ? 'ACCEPT_HOME_INVITE'
           : notification.type === NotificationType.CollaborationInvite
           ? 'ACCEPT_SHOPPING_LIST_INVITE'

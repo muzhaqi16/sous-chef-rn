@@ -47,24 +47,48 @@ query GetUnitBySymbol($symbol: String!) {
   }
 }
 
-query SearchUnits($query: String!, $type: UnitType) {
-  searchUnits(query: $query, type: $type) {
+query SearchUnits($query: String!, $type: UnitType, $limit: Int) {
+  searchUnits(query: $query, type: $type, limit: $limit) {
     id
     name
     symbol
     type
+    isMetric
     isCommon
     sortOrder
+    displayAsFraction
+    minPrecision
+    conversionFactor
+    baseUnitId
   }
 }
 
-query GetCommonUnits($type: UnitType) {
-  units(isCommon: true, type: $type) {
+query GetCommonUnits($type: UnitType, $limit: Int) {
+  units(isCommon: true, type: $type, limit: $limit) {
     id
     name
     symbol
     type
+    isMetric
     isCommon
     sortOrder
+    displayAsFraction
+    minPrecision
+    conversionFactor
+    baseUnitId
+  }
+}
+
+query GetConvertibleUnits($unitId: ID!) {
+  getConvertibleUnits(unitId: $unitId) {
+    id
+    name
+    symbol
+    type
+    isMetric
+    isCommon
+    displayAsFraction
+    minPrecision
+    conversionFactor
   }
 }

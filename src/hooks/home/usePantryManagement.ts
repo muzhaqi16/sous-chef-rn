@@ -27,6 +27,7 @@ import {
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
+import { subscriptionService } from '#/services/subscriptions';
 
 // Cache updater utilities for pantry items
 const addToPantryItemsCache = createAddToParentConnectionUpdater(
@@ -76,7 +77,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const fetchPolicy = useOfflinePresetPolicy('LIST');
 
   // Single source of truth: Apollo cache - now using Connection-based query
-  const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
+  const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
     variables: hasValidPantryId ? {
       id: pantryId,
       itemsFirst: 25, // Initial page size
@@ -100,8 +101,10 @@ export function usePantryManagement(pantryId: string | undefined) {
     [data?.pantry],
   );
 
+  // Filter out items that are pending deletion to prevent flicker
+  // during the race condition between optimistic delete and subscription auto-normalization
   const pantryItems = useMemo(
-    () => normalizedPantry?.items || [],
+    () => subscriptionService.filterPendingDeletes(normalizedPantry?.items || []),
     [normalizedPantry],
   );
 
@@ -139,8 +142,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     }).length;
 
     const lowStock = pantryItems.filter(item => {
-      if (!item.currentQuantity || !item.autoReorderPoint) return false;
-      return item.currentQuantity <= item.autoReorderPoint;
+      // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
+      return item.currentQuantity <= 1 || item.lowStockAlert;
     }).length;
 
     return {
@@ -148,6 +151,69 @@ export function usePantryManagement(pantryId: string | undefined) {
       expired,
       expiringSoon,
       lowStock,
+    };
+  }, [pantryItems]);
+
+  // Location counts for filter tabs
+  const locationCounts = useMemo(() => {
+    if (!pantryItems || pantryItems.length === 0) {
+      return {
+        all: 0,
+        fridge: 0,
+        freezer: 0,
+        pantry: 0,
+      };
+    }
+
+    return {
+      all: pantryItems.length,
+      fridge: pantryItems.filter(
+        item => item.storageState === StorageState.Refrigerated,
+      ).length,
+      freezer: pantryItems.filter(
+        item => item.storageState === StorageState.Frozen,
+      ).length,
+      pantry: pantryItems.filter(
+        item => item.storageState === StorageState.Ambient || !item.storageState,
+      ).length,
+    };
+  }, [pantryItems]);
+
+  // Sectioned items for redesign
+  const sectionedItems = useMemo(() => {
+    if (!pantryItems || pantryItems.length === 0) {
+      return {
+        expiredItems: [],
+        expiringSoonItems: [],
+        normalItems: [],
+      };
+    }
+
+    const now = new Date();
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    const expiredItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      return new Date(item.expiresAt) < now;
+    });
+
+    const expiringSoonItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      const expirationDate = new Date(item.expiresAt);
+      return expirationDate >= now && expirationDate <= threeDaysFromNow;
+    });
+
+    const normalItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return true; // Items without expiry go to normal
+      const expirationDate = new Date(item.expiresAt);
+      return expirationDate > threeDaysFromNow;
+    });
+
+    return {
+      expiredItems,
+      expiringSoonItems,
+      normalItems,
     };
   }, [pantryItems]);
 
@@ -162,8 +228,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   });
 
   // CRUD operations utilities
-  const { createAddOperation, createUpdateOperation, createRemoveOperation } =
-    useCrudOperations();
+  const { createAddOperation, createUpdateOperation } = useCrudOperations();
 
   // Mutations with optimistic updates
   const [addItemMutation] = useCreatePantryItemMutation({
@@ -275,7 +340,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // The optimistic response provides instant UI feedback
   });
 
-  const [removeItemMutation] = useDeletePantryItemMutation({
+  const [removeItemMutation, { client }] = useDeletePantryItemMutation({
     errorPolicy: 'all',
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
@@ -338,15 +403,46 @@ export function usePantryManagement(pantryId: string | undefined) {
     return operation(updates);
   };
 
-  // Simplified remove item using CRUD utilities
+  // Remove item with optimistic cache update for instant UI feedback
   const removeItem = async (itemId: string) => {
-    const operation = createRemoveOperation({
-      mutation: removeItemMutation,
-      parentId: () => pantryId,
+    if (!pantryId) return;
+
+    // Register pending delete to handle subscription race condition
+    // This prevents Apollo's auto-normalization from re-adding the item
+    // We pass the parent typename and connection field so the subscription handler
+    // can properly remove from the Connection if Apollo re-adds the item
+    subscriptionService.registerPendingDelete(
       itemId,
-      operationName: 'Delete Pantry Item',
-    });
-    return operation();
+      pantryId,
+      'PantryItem',
+      'Pantry',
+      'itemsConnection',
+    );
+
+    // Optimistically remove from cache IMMEDIATELY for instant UI feedback
+    // This removes the row from the list before the mutation completes
+    removeFromPantryItemsCache(client.cache, pantryId, itemId, { evictItem: true });
+
+    try {
+      // Now call the mutation - the update callback will be a no-op since item is already removed
+      const result = await removeItemMutation({
+        variables: { id: itemId },
+      });
+
+      // With errorPolicy: 'all', GraphQL errors don't reject but are in result.error
+      // If there's an error, refetch to restore correct state
+      if (result.error) {
+        console.warn('Delete mutation had errors, refetching to restore state');
+        refetch();
+      }
+    } catch (error) {
+      // Network errors will reject the promise
+      console.warn('Delete mutation failed, refetching to restore state:', error);
+      refetch();
+    } finally {
+      // Clean up pending delete registry
+      subscriptionService.unregisterPendingDelete(itemId);
+    }
   };
 
   return {
@@ -354,8 +450,13 @@ export function usePantryManagement(pantryId: string | undefined) {
     items: filteredItems,
     allItems: pantryItems,
     loading,
+    networkStatus,
     error,
     stats,
+
+    // Redesign data
+    locationCounts,
+    sectionedItems,
 
     // Pagination
     loadMore,
@@ -388,8 +489,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     },
     getLowStockItems: () =>
       pantryItems.filter(item => {
-        if (!item.currentQuantity || !item.autoReorderPoint) return false;
-        return item.currentQuantity <= item.autoReorderPoint;
+        // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
+        return item.currentQuantity <= 1 || item.lowStockAlert;
       }),
     getExpiredItems: () => {
       const now = new Date();

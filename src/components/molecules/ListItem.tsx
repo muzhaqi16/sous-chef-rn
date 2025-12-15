@@ -16,6 +16,7 @@ interface ListItemProps {
   };
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
+  checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
   isPurchased?: boolean; // For strikethrough styling
 }
 
@@ -28,12 +29,17 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   badge,
   rightElement,
   leftElement,
+  checkboxElement,
   isPurchased = false,
 }) => {
   const { theme } = useUnistyles();
 
   const content = (
     <>
+      {/* Optional checkbox element (for shopping list items) */}
+      {checkboxElement && (
+        <View style={styles.checkboxContainer}>{checkboxElement}</View>
+      )}
       {/* Optional left element for image or icon */}
       {leftElement}
       {leftIcon && (
@@ -51,7 +57,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </Text>
         {subtitle && (
           typeof subtitle === 'string' ? (
-            <Text style={[styles.subtitle, isPurchased && styles.purchasedText]}>
+            <Text
+              style={[styles.subtitle, isPurchased && styles.purchasedText]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {subtitle}
             </Text>
           ) : (
@@ -102,34 +112,39 @@ export const ListItem = React.memo(ListItemComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    minHeight: 87,
+    padding: theme.spacing.md,
+    minHeight: 87, // Specific design requirement for list item height
+    gap: theme.spacing.sm, // Better spacing between elements
+  },
+  checkboxContainer: {
+    marginRight: theme.spacing.xs, // Reduced since gap provides base spacing
+    justifyContent: 'center',
   },
   leftIcon: {
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   subtitleContainer: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   purchasedText: {
     textDecorationLine: 'line-through',

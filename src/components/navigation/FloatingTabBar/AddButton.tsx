@@ -4,7 +4,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { AddButtonProps } from './types';
 
-export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
+export const AddButton: React.FC<AddButtonProps> = ({
+  onPress,
+  icon = 'add',
+  iconLibrary = 'MaterialIcons',
+}) => {
   const { theme } = useUnistyles();
   return (
     <TouchableOpacity
@@ -12,14 +16,14 @@ export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
       style={styles.addButton}
       activeOpacity={0.8}
       accessibilityRole="button"
-      accessibilityLabel="Scan barcode"
-      accessibilityHint="Opens camera to scan product barcodes and add items"
+      accessibilityLabel="Action button"
+      accessibilityHint="Opens the action for the current tab"
     >
       <Icon
-        name="qr-code-scanner"
-        size={24}
+        name={icon}
+        size={28}
         color={theme.colors.iconOnPrimary}
-        library="MaterialIcons"
+        library={iconLibrary}
       />
     </TouchableOpacity>
   );
@@ -27,24 +31,20 @@ export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
 
 const styles = StyleSheet.create(theme => ({
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: theme.sizes.fab.md,
+    height: theme.sizes.button.md,
+    borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    right: 4, // Position outside the tab bar on the right
-    top: -75, // Align with the tab bar height
-    zIndex: 2,
     // Shadow for elevated effect
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: theme.spacing.xs,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: theme.radii.md,
     elevation: 8,
   },
 }));

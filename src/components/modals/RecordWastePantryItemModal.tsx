@@ -1,17 +1,18 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { Icon } from '#/utils';
+import { Icon, parseFractionalInput } from '#/utils';
 import { WasteReason, PantryItemFragment } from '#generated';
 
 interface RecordWastePantryItemModalProps {
@@ -24,7 +25,31 @@ interface RecordWastePantryItemModalProps {
     isComposted: boolean,
     isRecycled: boolean,
     notes: string,
+    wasteUnitId?: string,
+    wasteWeight?: number,
+    wasteWeightUnitId?: string,
   ) => void;
+}
+
+type TrackingMode = 'count' | 'weight' | 'both';
+
+/**
+ * Determines the tracking mode based on item properties:
+ * - No weight → count only
+ * - Count = 1 → weight only
+ * - Count > 1 AND has weight → let user choose
+ *
+ * Uses pantryItem.packageWeight (user's actual weight), not item.netWeight (catalog)
+ */
+function determineTrackingMode(pantryItem: PantryItemFragment): TrackingMode {
+  // Only require packageWeight to be set (unit can fall back to 'g')
+  const hasWeight = pantryItem.packageWeight != null && pantryItem.packageWeight > 0;
+  const count = pantryItem.currentQuantity;
+
+  if (!hasWeight) return 'count';
+  // Use tolerance for floating point comparison
+  if (Math.abs(count - 1) < 0.001) return 'weight';
+  return 'both';
 }
 
 const WASTE_REASON_OPTIONS: Array<{ label: string; value: WasteReason }> = [
@@ -44,6 +69,7 @@ export const RecordWastePantryItemModal: React.FC<
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const animationConfigs = useSharedBottomSheetConfigs();
   const [wasteAmountInput, setWasteAmountInput] = useState('');
   const [wasteReason, setWasteReason] = useState<WasteReason>(
     WasteReason.Expired,
@@ -51,13 +77,37 @@ export const RecordWastePantryItemModal: React.FC<
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
   const [notes, setNotes] = useState('');
+  const [trackingUnit, setTrackingUnit] = useState<'count' | 'weight'>('count');
+
+  // Determine tracking mode based on item properties
+  const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
+
+  /**
+   * Get the total weight for an item.
+   * Only uses pantryItem.packageWeight (user's actual weight), not catalog data.
+   */
+  const getEffectiveTotalWeight = useCallback(
+    (item: PantryItemFragment): number => {
+      return item.packageWeight ?? 0;
+    },
+    [],
+  );
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
     if (visible && pantryItem) {
       bottomSheetRef.current?.present();
       // Reset form when modal opens with new item
-      setWasteAmountInput(pantryItem.currentQuantity.toString());
+      const mode = determineTrackingMode(pantryItem);
+      if (mode === 'count') {
+        setTrackingUnit('count');
+        setWasteAmountInput(pantryItem.currentQuantity.toString());
+      } else {
+        // Default to weight when available
+        setTrackingUnit('weight');
+        const totalWeight = getEffectiveTotalWeight(pantryItem);
+        setWasteAmountInput(totalWeight.toString());
+      }
       setWasteReason(WasteReason.Expired);
       setIsComposted(false);
       setIsRecycled(false);
@@ -65,40 +115,24 @@ export const RecordWastePantryItemModal: React.FC<
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, pantryItem]);
-
-  const parseFractionalInput = useCallback((input: string): number | null => {
-    try {
-      const trimmed = input.trim();
-
-      // Check if it contains a fraction
-      if (trimmed.includes('/')) {
-        const parts = trimmed.split(/\s+/);
-        if (parts.length === 2) {
-          // Mixed number like "1 1/4"
-          const whole = parseInt(parts[0]);
-          const [num, den] = parts[1].split('/').map(Number);
-          return whole + num / den;
-        } else {
-          // Simple fraction like "3/4"
-          const [num, den] = trimmed.split('/').map(Number);
-          return num / den;
-        }
-      } else {
-        // Regular number
-        return parseFloat(trimmed);
-      }
-    } catch (err) {
-      return null;
-    }
-  }, []);
+  }, [visible, pantryItem, getEffectiveTotalWeight]);
 
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const wasteAmount = parseFractionalInput(wasteAmountInput);
-    if (wasteAmount === null) return null;
-    return pantryItem.currentQuantity - wasteAmount;
-  }, [pantryItem, wasteAmountInput, parseFractionalInput]);
+    if (wasteAmount === null || isNaN(wasteAmount)) return null;
+
+    if (trackingUnit === 'weight') {
+      // Calculate remaining weight using effective total weight
+      const totalWeight = getEffectiveTotalWeight(pantryItem);
+      const remaining = totalWeight - wasteAmount;
+      return isNaN(remaining) ? null : remaining;
+    } else {
+      // Calculate remaining count
+      const remaining = pantryItem.currentQuantity - wasteAmount;
+      return isNaN(remaining) ? null : remaining;
+    }
+  }, [pantryItem, wasteAmountInput, trackingUnit, getEffectiveTotalWeight]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -110,17 +144,61 @@ export const RecordWastePantryItemModal: React.FC<
       return;
     }
 
-    if (wasteValue > pantryItem.currentQuantity) {
-      Alert.alert(
-        'Error',
-        `Cannot waste more than available quantity (${
-          pantryItem.currentQuantity
-        } ${pantryItem.unit?.symbol || ''})`,
-      );
-      return;
+    // Validate based on tracking unit
+    if (trackingUnit === 'weight') {
+      const totalWeight = getEffectiveTotalWeight(pantryItem);
+      if (wasteValue > totalWeight) {
+        Alert.alert(
+          'Error',
+          `Cannot waste more than available weight (${totalWeight} ${
+            pantryItem.packageWeightUnit?.symbol || 'g'
+          })`,
+        );
+        return;
+      }
+    } else {
+      if (wasteValue > pantryItem.currentQuantity) {
+        Alert.alert(
+          'Error',
+          `Cannot waste more than available quantity (${
+            pantryItem.currentQuantity
+          } ${pantryItem.unit?.symbol || ''})`,
+        );
+        return;
+      }
     }
 
-    onConfirm(wasteValue, wasteReason, isComposted, isRecycled, notes);
+    // Determine the unit ID to send
+    const wasteUnitId =
+      trackingUnit === 'weight'
+        ? pantryItem.packageWeightUnit?.id
+        : pantryItem.unit?.id;
+
+    // Calculate proportional weight when tracking by count and item has weight
+    let wasteWeight: number | undefined;
+    let wasteWeightUnitId: string | undefined;
+
+    if (trackingUnit === 'count') {
+      const totalWeight = getEffectiveTotalWeight(pantryItem);
+      if (totalWeight > 0) {
+        // Calculate per-item weight and multiply by waste quantity
+        const perItemWeight = totalWeight / pantryItem.currentQuantity;
+        wasteWeight = wasteValue * perItemWeight;
+        wasteWeightUnitId = pantryItem.packageWeightUnit?.id;
+      }
+      // If no weight tracking, wasteWeight and wasteWeightUnitId remain undefined
+    }
+
+    onConfirm(
+      wasteValue,
+      wasteReason,
+      isComposted,
+      isRecycled,
+      notes,
+      wasteUnitId,
+      wasteWeight,
+      wasteWeightUnitId,
+    );
     onClose();
   }, [
     pantryItem,
@@ -131,7 +209,8 @@ export const RecordWastePantryItemModal: React.FC<
     notes,
     onConfirm,
     onClose,
-    parseFractionalInput,
+    trackingUnit,
+    getEffectiveTotalWeight,
   ]);
 
   const remaining = pantryItem ? calculateRemaining() : null;
@@ -144,6 +223,7 @@ export const RecordWastePantryItemModal: React.FC<
       enableDynamicSizing={false}
       topInset={insets.top}
       onDismiss={onClose}
+      animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       backdropComponent={props => (
@@ -173,24 +253,96 @@ export const RecordWastePantryItemModal: React.FC<
               <Text style={styles.itemName}>{pantryItem.itemName}</Text>
               <View style={styles.availableRow}>
                 <Text style={styles.availableLabel}>Available: </Text>
-                <FormattedItemSubtitle
-                  quantity={pantryItem.currentQuantity}
-                  quantityInput={pantryItem.quantityInput}
-                  displayFormat={pantryItem.displayFormat}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  netWeight={pantryItem.item?.netWeight}
-                  unitSymbol={pantryItem.item?.displayUnit?.symbol || pantryItem.unit?.symbol}
-                />
+                {trackingMode === 'count' ? (
+                  <FormattedItemSubtitle
+                    quantity={pantryItem.currentQuantity}
+                    displayAsFraction={pantryItem.unit?.displayAsFraction}
+                    unitSymbol={pantryItem.unit?.symbol}
+                  />
+                ) : (
+                  <Text style={styles.availableValue}>
+                    {getEffectiveTotalWeight(pantryItem)}{' '}
+                    {pantryItem.packageWeightUnit?.symbol || 'g'}
+                  </Text>
+                )}
               </View>
             </View>
+
+            {/* Unit Toggle - only show when both count and weight are available */}
+            {trackingMode === 'both' && (
+              <View style={styles.section}>
+                <Text style={styles.label}>Track by</Text>
+                <View style={styles.unitToggleContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.unitToggleOption,
+                      trackingUnit === 'count' &&
+                        styles.unitToggleOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setTrackingUnit('count');
+                      setWasteAmountInput(
+                        pantryItem.currentQuantity.toString(),
+                      );
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.unitToggleText,
+                        trackingUnit === 'count' &&
+                          styles.unitToggleTextSelected,
+                      ]}
+                    >
+                      Count ({pantryItem.unit?.symbol || 'item'})
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.unitToggleOption,
+                      trackingUnit === 'weight' &&
+                        styles.unitToggleOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setTrackingUnit('weight');
+                      setWasteAmountInput(
+                        getEffectiveTotalWeight(pantryItem).toString(),
+                      );
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.unitToggleText,
+                        trackingUnit === 'weight' &&
+                          styles.unitToggleTextSelected,
+                      ]}
+                    >
+                      Weight ({pantryItem.packageWeightUnit?.symbol || 'g'})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             {/* Waste Amount Input */}
             <View style={styles.section}>
               <FractionInput
-                label="Waste Amount *"
+                label={
+                  trackingUnit === 'weight'
+                    ? `Waste Amount (${
+                        pantryItem.packageWeightUnit?.symbol || 'g'
+                      }) *`
+                    : `Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`
+                }
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
+                keyboardType={
+                  trackingUnit === 'weight'
+                    ? Platform.OS === 'ios'
+                      ? 'numbers-and-punctuation'
+                      : 'decimal-pad'
+                    : 'numeric'
+                }
               />
               {remaining !== null && (
                 <Text
@@ -200,7 +352,9 @@ export const RecordWastePantryItemModal: React.FC<
                   ]}
                 >
                   Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
-                  {pantryItem.unit?.symbol || ''}
+                  {trackingUnit === 'weight'
+                    ? pantryItem.packageWeightUnit?.symbol || 'g'
+                    : pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
@@ -328,6 +482,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
   },
+  availableValue: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.semibold,
+  },
   section: {
     marginBottom: theme.spacing.xl,
   },
@@ -344,6 +503,32 @@ const styles = StyleSheet.create(theme => ({
   },
   remainingTextError: {
     color: theme.colors.error,
+  },
+  unitToggleContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  unitToggleOption: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  unitToggleOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surfaceVariant,
+  },
+  unitToggleText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  unitToggleTextSelected: {
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.semibold,
   },
   reasonOptions: {
     flexDirection: 'row',

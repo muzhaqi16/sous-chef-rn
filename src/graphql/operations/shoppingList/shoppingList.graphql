@@ -2,9 +2,7 @@
 # QUERIES
 # ============================================
 
-query GetShoppingList(
-  $id: ID!
-) {
+query GetShoppingList($id: ID!) {
   shoppingList(id: $id) {
     id
     name
@@ -74,8 +72,8 @@ query GetShoppingList(
   }
 }
 
-query GetShoppingLists {
-  shoppingLists {
+query GetShoppingLists($homeId: String) {
+  shoppingLists(filters: { homeId: $homeId }) {
     id
     name
     description
@@ -91,6 +89,11 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
+    homeId
+    home {
+      id
+      name
+    }
     ownerships {
       id
       userId
@@ -173,6 +176,22 @@ query GetDefaultShoppingList {
 query GetShoppingListItem($id: ID!) {
   shoppingListItem(id: $id) {
     ...ShoppingListItemFragment
+  }
+}
+
+query GetRecentlyDeletedShoppingListItems($shoppingListId: ID!, $limit: Int) {
+  recentlyDeletedShoppingListItems(
+    shoppingListId: $shoppingListId
+    limit: $limit
+  ) {
+    id
+    itemName
+    item {
+      id
+      name
+      imageUrl
+    }
+    createdAt
   }
 }
 
@@ -282,7 +301,10 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
 }
 
 mutation DeleteShoppingList($id: ID!) {
-  deleteShoppingList(id: $id)
+  deleteShoppingList(id: $id) {
+    id
+    name
+  }
 }
 
 mutation SetDefaultShoppingList($id: ID!) {
@@ -318,7 +340,6 @@ mutation AddCollaborator($data: AddCollaboratorInput!) {
     canInviteOthers
     canViewHistory
     canExport
-    inviteToken
     invitedAt
     statusChangedAt
     expiresAt
@@ -352,7 +373,7 @@ mutation UpdateShoppingListItem(
 
 mutation RemoveItemFromShoppingList($id: ID!) {
   removeItemFromShoppingList(id: $id) {
-    ...ShoppingListItemFragment
+    id
   }
 }
 
@@ -382,18 +403,32 @@ mutation ToggleShoppingListItemPurchased(
     purchased: $purchased
     version: $version
   ) {
-    ...ShoppingListItemFragment
+    # Use minimal fields matching server response to avoid cache warnings
+    id
+    itemName
+    quantity
+    isPurchased
+    updatedAt
+    category
+    unitName
+    unit {
+      id
+      name
+      symbol
+    }
   }
 }
 
 mutation UpdateShoppingListItemQuantity(
   $itemId: ID!
   $quantity: String!
+  $unitId: ID
   $version: Int
 ) {
   updateShoppingListItemQuantity(
     itemId: $itemId
     quantity: $quantity
+    unitId: $unitId
     version: $version
   ) {
     ...ShoppingListItemFragment
@@ -430,6 +465,12 @@ mutation UpdateCollaboratorRole(
     collaboratorId: $collaboratorId
     role: $role
   )
+}
+
+mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
+  moveShoppingItemToPantry(input: $input) {
+    ...PantryItemFragment
+  }
 }
 
 # ============================================
@@ -548,14 +589,6 @@ subscription ShoppingListUpdated($listId: ID!) {
       }
     }
     updatedFields
-    previousValues {
-      name
-      status
-      isCompleted
-      budgetAmount
-      totalCost
-      estimatedTotal
-    }
     userId
     timestamp
   }
@@ -573,11 +606,6 @@ subscription MyShoppingListsUpdated {
       status
       isCompleted
     }
-    previousValues {
-      name
-      status
-      isCompleted
-    }
     updatedFields
     userId
     timestamp
@@ -591,13 +619,6 @@ subscription ShoppingListItemsChanged($listId: ID!) {
     item {
       ...ShoppingListItemFragment
     }
-    previousValues {
-      name
-      quantity
-      isCompleted
-      price
-      notes
-    }
     updatedFields
     userId
     timestamp
@@ -610,6 +631,7 @@ subscription ShoppingListCollaboratorsChanged($listId: ID!) {
     listId
     collaborator {
       id
+      token
       collaboratorId
       email
       role

@@ -1,4 +1,10 @@
-import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import React, {
+  useMemo,
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
@@ -13,6 +19,8 @@ interface ShoppingListTabsProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
+  onMoveToPantry?: (id: string) => void;
+  onQuantityPress?: (id: string) => void;
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
@@ -30,12 +38,14 @@ interface ShoppingListTabsProps {
   onSwipeableClose?: () => void;
 }
 
-export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
+const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
   onItemPress,
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onMoveToPantry,
+  onQuantityPress,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
@@ -59,23 +69,39 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onItemEdit,
     onItemDelete,
     onTogglePurchase,
+    onMoveToPantry,
+    onQuantityPress,
     onSortOrderUpdate,
     onRefresh,
     onClearAllPurchased,
     onSwipeableClose,
   });
 
-  // Keep ref updated with latest callbacks
+  // PERFORMANCE: Store state props in ref to prevent renderScene recreation
+  const stateRef = useRef({
+    loading,
+    disabled,
+    refreshing,
+  });
+
+  // Keep refs updated with latest callbacks and state
   useEffect(() => {
     callbacksRef.current = {
       onItemPress,
       onItemEdit,
       onItemDelete,
       onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
       onSortOrderUpdate,
       onRefresh,
       onClearAllPurchased,
       onSwipeableClose,
+    };
+    stateRef.current = {
+      loading,
+      disabled,
+      refreshing,
     };
   });
 
@@ -150,13 +176,14 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   }, []);
 
   // Render scene for each tab
-  // PERFORMANCE: Use refs for both callbacks AND items to prevent scene recreation
-  // renderScene only recreates when truly static props change (loading, disabled, refreshing, isDragging)
-  // Items are accessed via refs - child components re-render via their own React.memo when props change
+  // PERFORMANCE: Use refs for callbacks, items, AND state to prevent scene recreation
+  // renderScene only recreates when stable handlers change (never for state/data changes)
+  // All dynamic data accessed via refs - child components re-render via their own React.memo
   const renderScene = useCallback(
     ({ route }: { route: TabRoute }) => {
-      // Access latest callbacks from ref to avoid stale closures
+      // Access latest callbacks and state from refs to avoid stale closures
       const callbacks = callbacksRef.current;
+      const state = stateRef.current;
 
       switch (route.key) {
         case 'shopping':
@@ -169,11 +196,12 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               isDragging={isDragging}
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
+              onQuantityPress={callbacks.onQuantityPress}
               onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onRefresh={callbacks.onRefresh}
-              refreshing={refreshing}
-              loading={loading}
-              disabled={disabled}
+              refreshing={state.refreshing}
+              loading={state.loading}
+              disabled={state.disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={callbacks.onSwipeableClose}
               onDragBegin={handleDragBegin}
@@ -190,10 +218,12 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onItemEdit={callbacks.onItemEdit}
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
+              onMoveToPantry={callbacks.onMoveToPantry}
+              onQuantityPress={callbacks.onQuantityPress}
               onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onClearAll={callbacks.onClearAllPurchased}
-              disabled={disabled}
-              loading={loading}
+              disabled={state.disabled}
+              loading={state.loading}
               isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={callbacks.onSwipeableClose}
@@ -206,21 +236,10 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           return null;
       }
     },
-    // PERFORMANCE: Only depend on truly static props - NO array dependencies
-    // Items accessed via refs, callbacks accessed via callbacksRef
-    // This prevents renderScene recreation when items change
-    [
-      loading,
-      disabled,
-      refreshing,
-      isDragging,
-      handleSwipeableWillOpen,
-      handleDragBegin,
-      handleDragRelease,
-      // NOTE: unpurchasedCount/purchasedCount intentionally NOT included
-      // Changes to items trigger TabView re-render via routes badge update
-      // which causes renderScene to be called with latest ref values
-    ],
+    // PERFORMANCE: Only depend on stable handlers - NO state/data dependencies
+    // All dynamic data (items, loading, disabled, refreshing) accessed via refs
+    // isDragging kept as dependency since it's used for conditional logic
+    [isDragging, handleSwipeableWillOpen, handleDragBegin, handleDragRelease],
   );
 
   // If no items at all AND not loading, show empty state
@@ -257,3 +276,13 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     />
   );
 };
+
+// PERFORMANCE: Memoize with shallow comparison
+// Since we use refs internally for callbacks and items, we only need to check:
+// - items array reference
+// - loading/disabled/refreshing state
+// Callbacks are accessed via refs so changing references don't matter
+const MemoizedShoppingListTabs = React.memo(ShoppingListTabs);
+
+// Export memoized version as default to ensure it's always used with optimization
+export { MemoizedShoppingListTabs as ShoppingListTabs };

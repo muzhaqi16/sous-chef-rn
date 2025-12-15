@@ -146,6 +146,12 @@ export const PROFILE_SETTINGS_CONFIG = [
         type: 'switch',
         subtitle: 'Use fingerprint or face recognition to login',
       },
+      {
+        key: 'changePassword',
+        label: 'Change Password',
+        type: 'navigation',
+        subtitle: 'Update your account password',
+      },
     ],
   },
   {

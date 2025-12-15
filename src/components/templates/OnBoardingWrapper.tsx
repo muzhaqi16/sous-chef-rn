@@ -62,7 +62,11 @@ export const OnBoardingWrapper = ({
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.iconButton} testID={testID ? `${testID}-back-button` : undefined}>
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.iconButton}
+            testID={testID ? `${testID}-back-button` : undefined}
+          >
             <Icon
               library="Feather"
               name="arrow-left"
@@ -80,7 +84,9 @@ export const OnBoardingWrapper = ({
             steps={onboardingContext.steps}
             activeIndex={onboardingContext.activeStepIndex}
             stepSize={12}
-            onStepPress={allowStepNavigation ? onboardingContext.goToStep : undefined}
+            onStepPress={
+              allowStepNavigation ? onboardingContext.goToStep : undefined
+            }
             allowStepNavigation={allowStepNavigation}
           />
         </View>
@@ -95,7 +101,9 @@ export const OnBoardingWrapper = ({
           keyboardShouldPersistTaps="handled"
         >
           {displayTitle && <Text style={styles.title}>{displayTitle}</Text>}
-          {displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
+          {displaySubtitle && (
+            <Text style={styles.subtitle}>{displaySubtitle}</Text>
+          )}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -103,7 +111,9 @@ export const OnBoardingWrapper = ({
       {showNavigation && !isLegacyMode && onboardingContext ? (
         <OnboardingNavigation
           showBackButton={onboardingContext.canGoBack}
-          showContinueButton={onboardingContext.canGoNext || onboardingContext.isLastStep}
+          showContinueButton={
+            onboardingContext.canGoNext || onboardingContext.isLastStep
+          }
           showSkipButton={!!skipAction}
           backAction={{
             label: 'Back',
@@ -111,25 +121,33 @@ export const OnBoardingWrapper = ({
             backgroundColor: theme.colors.surface,
             labelColor: theme.colors.textPrimary,
           }}
-          continueAction={continueAction || {
-            label: 'Continue',
-            onPress: onboardingContext.goToNextStep,
-            backgroundColor: theme.colors.primary,
-            labelColor: theme.colors.background,
-          }}
+          continueAction={
+            continueAction || {
+              label: 'Continue',
+              onPress: onboardingContext.goToNextStep,
+              backgroundColor: theme.colors.primary,
+              labelColor: theme.colors.background,
+            }
+          }
           skipAction={skipAction}
           isLastStep={onboardingContext.isLastStep}
         />
       ) : (
         <View style={styles.bottomNavigation}>
           {onSkip && (
-            <TouchableOpacity onPress={onSkip} style={styles.skipButton} testID={testID ? `${testID}-skip-button` : undefined}>
+            <TouchableOpacity
+              onPress={onSkip}
+              style={styles.skipButton}
+              testID={testID ? `${testID}-skip-button` : undefined}
+            >
               <Text style={styles.skipText}>Skip</Text>
             </TouchableOpacity>
           )}
           {step != null && totalSteps != null && (
             <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+              <View
+                style={[styles.progressBarFill, { width: `${progress}%` }]}
+              />
             </View>
           )}
         </View>
@@ -146,24 +164,24 @@ const styles = StyleSheet.create(theme => ({
   headerContainer: {
     flexDirection: 'column',
     justifyContent: 'flex-start',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.md,
   },
   stepsContainer: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
   },
 
   iconButton: {
-    width: 40,
-    height: 40,
+    width: theme.sizes.button.md,
+    height: theme.sizes.button.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: theme.spacing.sm,
   },
   skipButton: {
     marginLeft: 'auto',
-    padding: 8,
+    padding: theme.spacing.sm,
   },
   skipText: {
     color: theme.colors.textSecondary,
@@ -171,15 +189,15 @@ const styles = StyleSheet.create(theme => ({
   },
   progressBarBackground: {
     flex: 1,
-    height: 4,
+    height: theme.spacing.xs,
     backgroundColor: theme.colors.surface,
-    borderRadius: 2,
-    marginHorizontal: 16,
+    borderRadius: theme.radii.xs,
+    marginHorizontal: theme.spacing.md,
   },
   progressBarFill: {
-    height: 4,
+    height: theme.spacing.xs,
     backgroundColor: theme.colors.primary,
-    borderRadius: 2,
+    borderRadius: theme.radii.xs,
   },
   keyboardAvoid: {
     flex: 1,
@@ -188,27 +206,27 @@ const styles = StyleSheet.create(theme => ({
   scrollContainer: {
     flexGrow: 1,
     flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   bottomNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   title: {
-    fontSize: 28,
+    fontSize: theme.typography.fontSize['2xl'] + 4,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
     color: theme.colors.textSecondary,
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
     textAlign: 'center',
   },
   content: {

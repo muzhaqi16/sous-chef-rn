@@ -16,6 +16,7 @@ export interface BaseInputProps extends TextInputProps {
   label?: string;
   containerStyle?: StyleProp<ViewStyle>;
   errorMessage?: string;
+  leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   showClearIcon?: boolean;
   onClear?: () => void;
@@ -25,6 +26,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   label,
   containerStyle,
   errorMessage,
+  leftIcon,
   rightIcon,
   showClearIcon = false,
   onClear,
@@ -54,6 +56,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
     <View style={[styles.container, containerStyle]}>
       {label != null && <Text style={styles.label}>{label}</Text>}
       <View style={styles.inputContainer(isFocused, hasError)}>
+        {leftIcon != null && <View style={styles.iconWrapper}>{leftIcon}</View>}
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={theme.colors.inputPlaceholder}
@@ -72,7 +75,11 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </TouchableOpacity>
         )}
         {rightIcon != null && (
-          <View style={styles.iconWrapper}>{rightIcon}</View>
+          <View
+            style={[styles.iconWrapper, { paddingRight: theme.spacing.sm }]}
+          >
+            {rightIcon}
+          </View>
         )}
       </View>
       {hasError && (

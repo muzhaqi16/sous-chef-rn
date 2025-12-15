@@ -21,7 +21,10 @@ import {
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
+import {
+  useOfflineAwareFetchPolicy,
+  OFFLINE_FETCH_POLICIES,
+} from '#/apollo/policies/offlineFetchPolicies';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -39,11 +42,12 @@ const addToShoppingListItemsCache = createAddToParentConnectionUpdater<any>(
   'ShoppingListItem',
 );
 
-const removeFromShoppingListItemsCache = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
+const removeFromShoppingListItemsCache =
+  createRemoveFromParentConnectionUpdater(
+    'ShoppingList',
+    'itemsConnection',
+    'ShoppingListItem',
+  );
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -83,29 +87,24 @@ export function useShoppingListManagement() {
   // Online: cache-and-network (fresh data + instant UI)
   // Offline: cache-only (stops network thrashing and loading flickers)
   const fetchPolicy = useOfflineAwareFetchPolicy(
-    OFFLINE_FETCH_POLICIES.LIST.online,   // 'cache-and-network'
-    OFFLINE_FETCH_POLICIES.LIST.offline   // 'cache-only'
+    OFFLINE_FETCH_POLICIES.LIST.online, // 'cache-and-network'
+    OFFLINE_FETCH_POLICIES.LIST.offline, // 'cache-only'
   );
 
   // Watch cache for updates from mutations and subscriptions
   // Uses GetShoppingList with itemsConnection as single source of truth
   // PERFORMANCE: Include previousData to prevent UI flash during refetch
-  const {
-    data,
-    previousData,
-    loading,
-    error,
-    refetch,
-  } = useGetShoppingListQuery({
-    variables: {
-      id: selectedShoppingListId ?? '',
-    },
-    skip: shouldSkip,
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // After first fetch, use cache-first to prevent refetch on tab switch
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all', // Return both data and errors for better debugging
-  });
+  const { data, previousData, loading, error, refetch } =
+    useGetShoppingListQuery({
+      variables: {
+        id: selectedShoppingListId ?? '',
+      },
+      skip: shouldSkip,
+      fetchPolicy,
+      nextFetchPolicy: 'cache-first', // After first fetch, use cache-first to prevent refetch on tab switch
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all', // Return both data and errors for better debugging
+    });
 
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // This eliminates duplicate subscription code and provides consistent behavior
@@ -113,15 +112,16 @@ export function useShoppingListManagement() {
 
   // OPTIMIZATION: Extract items from itemsConnection edges
   // Use previousData as fallback to prevent UI flash during refetch
-  const items = useMemo(
-    () => {
-      const edges = data?.shoppingList?.itemsConnection?.edges
-        ?? previousData?.shoppingList?.itemsConnection?.edges
-        ?? [];
-      return edges.map(edge => edge.node);
-    },
-    [data?.shoppingList?.itemsConnection?.edges, previousData?.shoppingList?.itemsConnection?.edges],
-  );
+  const items = useMemo(() => {
+    const edges =
+      data?.shoppingList?.itemsConnection?.edges ??
+      previousData?.shoppingList?.itemsConnection?.edges ??
+      [];
+    return edges.map(edge => edge.node);
+  }, [
+    data?.shoppingList?.itemsConnection?.edges,
+    previousData?.shoppingList?.itemsConnection?.edges,
+  ]);
 
   // Search functionality - using reusable search utility
   const {
@@ -264,7 +264,11 @@ export function useShoppingListManagement() {
 
       try {
         // Add to cache using parent connection pattern: (cache, parentId, newItem)
-        addToShoppingListItemsCache(cache, selectedShoppingListId, data.addItemToShoppingList);
+        addToShoppingListItemsCache(
+          cache,
+          selectedShoppingListId,
+          data.addItemToShoppingList,
+        );
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -283,14 +287,18 @@ export function useShoppingListManagement() {
     errorPolicy: 'all',
     // No optimisticResponse here - will be passed at call site with fresh cache data
     // This avoids stale closure issues as per Apollo best practices
-    onCompleted: (data) => {
+    onCompleted: data => {
       // Clear all optimistic data for this item after successful sync
       // This ensures offline edits are cleared once synced with server
       if (data?.updateShoppingListItem) {
         const itemId = data.updateShoppingListItem.id;
         // Clear common fields that might be updated
         optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantityInput');
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          itemId,
+          'quantityInput',
+        );
         optimisticDataPersistence.clear('ShoppingListItem', itemId, 'itemName');
         optimisticDataPersistence.clear('ShoppingListItem', itemId, 'notes');
         optimisticDataPersistence.clear('ShoppingListItem', itemId, 'category');
@@ -308,7 +316,7 @@ export function useShoppingListManagement() {
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables) => {
+    optimisticResponse: variables => {
       // Find the item being removed to return in optimistic response
       const item = items.find(i => i.id === variables.id);
       if (!item) {
@@ -328,16 +336,31 @@ export function useShoppingListManagement() {
       };
     },
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !selectedShoppingListId || !variables) return;
+      if (
+        !data?.removeItemFromShoppingList ||
+        !selectedShoppingListId ||
+        !variables
+      )
+        return;
 
       try {
         const itemId = variables.id;
 
         // Save to optimistic persistence before removing
-        optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          '__deleted',
+          true,
+        );
 
         // Remove from cache using parent connection pattern: (cache, parentId, itemId, options)
-        removeFromShoppingListItemsCache(cache, selectedShoppingListId, itemId, { evictItem: true });
+        removeFromShoppingListItemsCache(
+          cache,
+          selectedShoppingListId,
+          itemId,
+          { evictItem: true },
+        );
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',
@@ -347,10 +370,14 @@ export function useShoppingListManagement() {
         refetch();
       }
     },
-    onCompleted: (data) => {
+    onCompleted: data => {
       // Clear optimistic data after successful sync
       if (data?.removeItemFromShoppingList) {
-        optimisticDataPersistence.clear('ShoppingListItem', data.removeItemFromShoppingList.id, '__deleted');
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          data.removeItemFromShoppingList.id,
+          '__deleted',
+        );
       }
     },
     onError: error => {
@@ -363,7 +390,7 @@ export function useShoppingListManagement() {
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables) => {
+    optimisticResponse: variables => {
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: variables.id,
@@ -384,6 +411,7 @@ export function useShoppingListManagement() {
             ...fullItem,
             __typename: 'ShoppingListItem',
             isPurchased: variables.purchased,
+            version: (fullItem.version ?? 0) + 1, // Increment version for optimistic concurrency
             updatedAt: new Date().toISOString(),
           },
         };
@@ -402,6 +430,7 @@ export function useShoppingListManagement() {
             itemName: currentItem.itemName,
             quantity: currentItem.quantity,
             isPurchased: variables.purchased,
+            version: (currentItem.version ?? 0) + 1, // Increment version for optimistic concurrency
             updatedAt: new Date().toISOString(),
             category: currentItem.category,
             unitName: currentItem.unitName,
@@ -416,6 +445,7 @@ export function useShoppingListManagement() {
           __typename: 'ShoppingListItem',
           id: variables.id,
           isPurchased: variables.purchased,
+          version: (variables.version ?? 0) + 1, // Increment version for optimistic concurrency
           updatedAt: new Date().toISOString(),
         } as any,
       };
@@ -424,10 +454,14 @@ export function useShoppingListManagement() {
     // The comprehensive optimisticResponse (lines 361-418) provides instant UI feedback
     // Apollo's automatic normalization merges the server response into the cache
     // No manual cache.modify needed - this was causing unnecessary complexity
-    onCompleted: (data) => {
+    onCompleted: data => {
       // Clear optimistic data after successful sync
       if (data?.toggleShoppingListItemPurchased) {
-        optimisticDataPersistence.clear('ShoppingListItem', data.toggleShoppingListItemPurchased.id, 'isPurchased');
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          data.toggleShoppingListItemPurchased.id,
+          'isPurchased',
+        );
       }
     },
     onError: error => {
@@ -521,7 +555,12 @@ export function useShoppingListManagement() {
       Object.keys(updates).forEach(field => {
         const value = updates[field as keyof ShoppingListItemUpdate];
         if (value !== undefined) {
-          optimisticDataPersistence.save('ShoppingListItem', itemId, field, value);
+          optimisticDataPersistence.save(
+            'ShoppingListItem',
+            itemId,
+            field,
+            value,
+          );
         }
       });
 

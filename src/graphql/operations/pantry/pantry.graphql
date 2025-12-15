@@ -38,7 +38,7 @@ query GetPantry(
     itemsConnection(first: $itemsFirst, after: $itemsCursor) {
       edges {
         node {
-          ...PantryItemFragment
+          ...PantryItemDisplay
         }
         cursor
       }
@@ -100,6 +100,188 @@ query GetDefaultPantry($homeId: ID!) {
   }
 }
 
+query GetRecentlyDeletedPantryItems($pantryId: ID!, $limit: Int) {
+  recentlyDeletedPantryItems(pantryId: $pantryId, limit: $limit) {
+    id
+    itemName
+    itemId
+    item {
+      id
+      name
+      imageUrl
+    }
+    createdAt
+  }
+}
+
+# ============================================
+# ANALYTICS QUERIES
+# ============================================
+
+query GetPantryLedgerAnalytics(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+  $granularity: PeriodGranularity
+) {
+  pantryLedgerAnalytics(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+    granularity: $granularity
+  ) {
+    summary {
+      totalAdded
+      totalConsumed
+      totalWasted
+      netQuantity
+      additionCount
+      consumptionCount
+      wasteCount
+      unitName
+      additionsByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+      consumptionByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+    }
+    periodData {
+      periodStart
+      periodEnd
+      periodLabel
+      added
+      consumed
+      wasted
+      net
+      additionCost
+    }
+    costAnalytics {
+      totalSpent
+      averageCostPerUnit
+      costByStore {
+        storeId
+        storeName
+        totalSpent
+        itemCount
+        averageCostPerUnit
+      }
+    }
+    topRestockedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      unitName
+      imageUrl
+    }
+    periodStart
+    periodEnd
+    granularity
+  }
+}
+
+query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
+  pantryItemLedger(pantryItemId: $pantryItemId, filter: $filter) {
+    totalAdded
+    totalConsumed
+    totalWasted
+    netQuantity
+    additionCount
+    consumptionCount
+    wasteCount
+    unitName
+    additionsByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+    consumptionByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+  }
+}
+
+query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalUsageCount
+    totalQuantityUsed
+    averageUsagePerDay
+    periodStart
+    periodEnd
+    usageTrend {
+      date
+      value
+      count
+    }
+    usageByPurpose {
+      purpose
+      totalQuantity
+      count
+      percentage
+    }
+    usageBySource {
+      source
+      totalQuantity
+      count
+      percentage
+    }
+    topUsedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      unitName
+      imageUrl
+    }
+  }
+}
+
+query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalWasteCount
+    totalWasteQuantity
+    totalWasteValue
+    wasteRate
+    averageWastePerDay
+    composted
+    recycled
+    periodStart
+    periodEnd
+    wasteTrend {
+      date
+      value
+      count
+    }
+    wasteByReason {
+      reason
+      totalQuantity
+      count
+      percentage
+      estimatedValue
+    }
+    topWastedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      estimatedValue
+      unitName
+      imageUrl
+    }
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -139,7 +321,10 @@ mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
 }
 
 mutation DeletePantry($id: ID!) {
-  deletePantry(id: $id)
+  deletePantry(id: $id) {
+    id
+    name
+  }
 }
 
 mutation SetDefaultPantry($pantryId: ID!) {
@@ -153,13 +338,13 @@ mutation SetDefaultPantry($pantryId: ID!) {
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
-    ...PantryItemFragment
+    ...PantryItemDisplay
   }
 }
 
 mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   updatePantryItem(id: $id, input: $input) {
-    ...PantryItemFragment
+    ...PantryItemCore
   }
 }
 
@@ -173,12 +358,26 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
     id
     quantityUsed
+    usageUnitId
+    usageUnit {
+      id
+      name
+      symbol
+    }
+    weightUsed
+    weightUsedUnitId
+    weightUsedUnit {
+      id
+      name
+      symbol
+    }
     usedAt
     purpose
     notes
     pantryItem {
       id
       currentQuantity
+      packageWeight
       consumedQuantity
       ...PantryItemFragment
     }
@@ -193,6 +392,9 @@ mutation RecordPantryItemWaste(
   $id: ID!
   $wasteAmount: Float!
   $wasteReason: WasteReason!
+  $wasteUnitId: String
+  $wasteWeight: Float
+  $wasteWeightUnitId: String
   $isComposted: Boolean
   $isRecycled: Boolean
 ) {
@@ -200,10 +402,26 @@ mutation RecordPantryItemWaste(
     id: $id
     wasteAmount: $wasteAmount
     wasteReason: $wasteReason
+    wasteUnitId: $wasteUnitId
+    wasteWeight: $wasteWeight
+    wasteWeightUnitId: $wasteWeightUnitId
     isComposted: $isComposted
     isRecycled: $isRecycled
   ) {
     ...PantryItemFragment
+  }
+}
+
+mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
+  restockPantryItem(id: $id, input: $input) {
+    id
+    quantityUsed
+    purpose
+    costPerUnit
+    totalCost
+    pantryItem {
+      ...PantryItemFragment
+    }
   }
 }
 
@@ -219,7 +437,7 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    ...PantryItemFragment
+    ...PantryItemCore
   }
 }
 
@@ -284,14 +502,6 @@ subscription PantryUpdated($pantryId: ID!) {
       metadata
       version
       updatedAt
-    }
-    previousValues {
-      name
-      description
-      location
-      temperature
-      tags
-      metadata
     }
     updatedFields
     userId
@@ -368,7 +578,7 @@ subscription PantryItemsChanged($pantryId: ID!) {
   pantryItemsChanged(pantryId: $pantryId) {
     pantryId
     item {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
     updatedFields
     mutation
@@ -393,10 +603,6 @@ subscription PantryItemUsageChanged($pantryId: ID!) {
       usedBy {
         id
       }
-    }
-    previousValues {
-      quantityUsed
-      purpose
     }
     userId
     timestamp

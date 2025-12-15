@@ -18,3 +18,6 @@
 # React Native Config - BuildConfig class (contains all .env variables)
 # CRITICAL: Without this, ProGuard renames BuildConfig and env vars are inaccessible
 -keep class dev.souschef.app.BuildConfig { *; }
+
+# React native skia 
+-keep class com.shopify.reactnative.skia.** { *; }

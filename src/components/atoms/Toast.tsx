@@ -1,7 +1,7 @@
 import React, {useState, useRef, ReactNode, useEffect} from 'react';
 import {Text, Platform, ToastAndroid} from 'react-native';
 import Animated, {SlideInDown, SlideOutUp} from 'react-native-reanimated';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {ToastContext} from '../../hooks/useToast';
 import {toastService} from '#/services/toastService';
 
@@ -16,13 +16,14 @@ export interface ToastOptions {
 export type ToastFn = (options: ToastOptions) => void;
 
 export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
+  const {theme} = useUnistyles();
   const [opts, setOpts] = useState<ToastOptions>({
     message: '',
     duration: ToastAndroid.SHORT,
     type: 'default',
   });
   const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast: ToastFn = ({
     message,
@@ -51,16 +52,16 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   // Initialize toast service with bridge to existing toast provider
   useEffect(() => {
     toastService.init((message, type) => {
-      showToast({ message, type: type === 'warning' ? 'error' : type });
+      showToast({message, type: type === 'warning' ? 'error' : type});
     });
   }, []);
 
   // Background colors per type for iOS fallback
   const backgroundColors: Record<ToastType, string> = {
-    default: '#333',
-    success: '#4CAF50',
-    error: '#F44336',
-    info: '#2196F3',
+    default: theme.colors.textPrimary,
+    success: theme.colors.success,
+    error: theme.colors.error,
+    info: theme.colors.info,
   };
 
   return (
@@ -86,30 +87,23 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   toastContainer: {
     position: 'absolute',
     top: 60,
-    left: 16,
-    right: 16,
-    backgroundColor: 'black',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    left: theme.spacing.md,
+    right: theme.spacing.md,
+    backgroundColor: theme.colors.textPrimary,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    borderRadius: theme.radii.lg,
     alignItems: 'center',
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    zIndex: theme.zIndex.toast,
+    ...theme.shadows.md,
   },
   toastText: {
-    color: 'white',
-    fontSize: 14,
+    color: theme.colors.white,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '500',
   },
 }));

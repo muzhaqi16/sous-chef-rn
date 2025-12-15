@@ -46,12 +46,15 @@ export const AcceptInvite: React.FC = () => {
   const loading = shoppingListLoading || homeInviteLoading;
 
   // Find the specific invite and determine type
+  // Note: Tokens are no longer exposed in query responses for security.
+  // When navigating via deep link, token comes from route params.
+  // When navigating via in-app UI, inviteId is used to match.
   const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(inv =>
-    token ? inv.inviteToken === token : inv.id === inviteId,
+    inviteId ? inv.id === inviteId : false,
   );
 
   const homeInvite = homeInviteData?.myPendingInvites?.find(inv =>
-    token ? inv.token === token : inv.id === inviteId,
+    inviteId ? inv.id === inviteId : false,
   );
 
   // Determine invitation type
@@ -66,16 +69,18 @@ export const AcceptInvite: React.FC = () => {
   }, [shoppingListInvite, homeInvite, loading]);
 
   const handleAccept = async () => {
+    // Token comes from route params (deep link) or we use invite ID
+    // Note: Tokens are no longer exposed in query responses for security reasons
     let inviteToken: string | undefined;
 
     if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
+      inviteToken = token || shoppingListInvite.id;
     } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
+      inviteToken = token || homeInvite.id;
     }
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invite token');
+      Alert.alert('Error', 'Invalid invitation');
       return;
     }
 
@@ -126,16 +131,18 @@ export const AcceptInvite: React.FC = () => {
   };
 
   const handleDecline = async () => {
+    // Token comes from route params (deep link) or we use invite ID
+    // Note: Tokens are no longer exposed in query responses for security reasons
     let inviteToken: string | undefined;
 
     if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
+      inviteToken = token || shoppingListInvite.id;
     } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
+      inviteToken = token || homeInvite.id;
     }
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invite token');
+      Alert.alert('Error', 'Invalid invitation');
       return;
     }
 
@@ -293,7 +300,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -301,73 +308,73 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    padding: theme.spacing.xl,
   },
   title: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   },
   iconContainer: {
-    marginBottom: 32,
+    marginBottom: theme.spacing.xl,
   },
   inviteText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
-    marginTop: 16,
+    marginTop: theme.spacing.md,
     textAlign: 'center',
   },
   inviteDetails: {
-    marginTop: 24,
-    padding: 16,
+    marginTop: theme.spacing.xl,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   inviteName: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
   inviteType: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   inviteRole: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     marginTop: 2,
     fontWeight: '500',
   },
   messageContainer: {
-    marginTop: 24,
-    padding: 16,
+    marginTop: theme.spacing.xl,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     width: '100%',
   },
   messageLabel: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
     color: theme.colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   message: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
   },
   actions: {
     flexDirection: 'row',
-    marginTop: 32,
-    gap: 12,
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing['3'],
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   declineButton: {
@@ -377,7 +384,7 @@ const styles = StyleSheet.create(theme => ({
   },
   declineButtonText: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
   acceptButton: {
@@ -385,7 +392,7 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptButtonText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
 }));

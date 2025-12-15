@@ -1,6 +1,10 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
 
+// Pantry sort preferences
+export type PantrySortOption = 'name' | 'expiry' | 'quantity' | 'recent';
+export type PantrySortDirection = 'asc' | 'desc';
+
 export enum ThemePreference {
   LIGHT = 'LIGHT',
   DARK = 'DARK',
@@ -30,6 +34,12 @@ export interface PreferencesState {
   hapticFeedbackEnabled: boolean;
   setHapticFeedbackEnabled: (enabled: boolean) => void;
 
+  // Pantry Sort Preferences
+  pantrySortOption: PantrySortOption;
+  pantrySortDirection: PantrySortDirection;
+  setPantrySortOption: (option: PantrySortOption) => void;
+  setPantrySortDirection: (direction: PantrySortDirection) => void;
+
   // Reset
   resetPreferences: () => void;
 }
@@ -41,6 +51,8 @@ const initialPreferencesState = {
   pushNotifications: false,
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
+  pantrySortOption: 'recent' as PantrySortOption,
+  pantrySortDirection: 'desc' as PantrySortDirection, // Newest first
 };
 
 export const createPreferencesSlice: StateCreator<
@@ -57,6 +69,8 @@ export const createPreferencesSlice: StateCreator<
   setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
   setRememberMe: remember => set({ rememberMe: remember }),
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
+  setPantrySortOption: option => set({ pantrySortOption: option }),
+  setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 
   resetPreferences: () => set(initialPreferencesState),
 });

@@ -20,6 +20,7 @@ query GetItems(
       status
       visibility
       showInOnboarding
+      popularity
       units {
         id
         isDefault
@@ -39,6 +40,7 @@ query GetItems(
       version
     }
     totalCount
+    hasMore
   }
 }
 
@@ -60,10 +62,28 @@ query ItemByUpc($upc: String!) {
     imageUrl
     name
     netWeight
+    primaryUpc
     units {
       isDefault
       unitId
     }
+  }
+}
+
+query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
+  items(filters: { upc: $upc, upcFormat: $upcFormat }) {
+    items {
+      id
+      imageUrl
+      name
+      netWeight
+      primaryUpc
+      units {
+        isDefault
+        unitId
+      }
+    }
+    totalCount
   }
 }
 
@@ -74,6 +94,7 @@ query ItemBySku($sku: String!, $storeId: String) {
     name
     netWeight
     description
+    primaryUpc
     units {
       isDefault
       unitId
@@ -104,6 +125,8 @@ query AutocompleteItems($input: AutocompleteInput!) {
       name
       imageUrl
       images
+      netWeight
+      displayUnit
       defaultUnit {
         id
         name
@@ -112,7 +135,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
         isDefault
         isPreferred
       }
-      brand {
+      brands {
         id
         name
       }

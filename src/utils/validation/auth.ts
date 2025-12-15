@@ -93,3 +93,26 @@ export const resetPasswordSchema = yup.object({
 // })
 
 export const getResetPasswordValidationSchema = () => resetPasswordSchema;
+
+// ----------------------------------------------------------------------------
+
+// 6) change-password (current password + new password + confirm)
+export const changePasswordSchema = yup.object({
+  currentPassword: yup.string().required('Current password is required'),
+  newPassword: passwordRule.notOneOf(
+    [yup.ref('currentPassword')],
+    'New password must be different from current password',
+  ),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref('newPassword')], 'Passwords must match')
+    .required('Please confirm your new password'),
+});
+
+// usage in ChangePasswordScreen:
+// const { control, handleSubmit, formState } = useForm<ChangePasswordForm>({
+//   resolver: yupResolver(changePasswordSchema),
+//   defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+// })
+
+export const getChangePasswordValidationSchema = () => changePasswordSchema;

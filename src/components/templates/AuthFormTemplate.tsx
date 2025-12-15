@@ -20,6 +20,8 @@ interface Props<T extends FieldValues> {
   footerLinkText?: string;
   footerLinkTestID?: string;
   onFooterLinkPress?: () => void;
+  footerLinkDisabled?: boolean;
+  footerLinkCountdown?: number; // seconds remaining for countdown display
   onLinkPress?: () => void;
   linkText?: string;
   linkTestID?: string;
@@ -39,6 +41,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   footerLinkText,
   footerLinkTestID,
   onFooterLinkPress,
+  footerLinkDisabled,
+  footerLinkCountdown,
   linkText,
   linkTestID,
   onLinkPress,
@@ -81,9 +85,22 @@ export function AuthFormTemplate<T extends FieldValues>({
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
-        <TouchableOpacity onPress={onFooterLinkPress} testID={footerLinkTestID}>
-          <Text style={styles.footer}>
-            {footerText} <Text style={styles.link}>{footerLinkText}</Text>
+        <TouchableOpacity
+          onPress={onFooterLinkPress}
+          disabled={footerLinkDisabled}
+          testID={footerLinkTestID}
+        >
+          <Text
+            style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
+          >
+            {footerText}{' '}
+            <Text
+              style={[styles.link, footerLinkDisabled && styles.linkDisabled]}
+            >
+              {footerLinkCountdown && footerLinkCountdown > 0
+                ? `${footerLinkText} (${footerLinkCountdown}s)`
+                : footerLinkText}
+            </Text>
           </Text>
         </TouchableOpacity>
       )}
@@ -97,26 +114,26 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-around',
   },
   headerAction: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: theme.sizes.button.md,
+    height: theme.sizes.button.md,
+    borderRadius: theme.radii.full,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    backgroundColor: 'transparent',
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.transparent,
   },
   title: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize['2xl'],
     fontWeight: '700',
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   link: {
     textAlign: 'right',
@@ -125,12 +142,12 @@ const styles = StyleSheet.create(theme => ({
     textDecorationLine: 'underline',
   },
   action: {
-    marginVertical: 24,
+    marginVertical: theme.spacing.xl,
   },
   button: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
     alignSelf: 'center',
   },
@@ -141,7 +158,13 @@ const styles = StyleSheet.create(theme => ({
   footer: {
     marginTop: 'auto',
     textAlign: 'center',
-    paddingVertical: 24,
+    paddingVertical: theme.spacing.xl,
     color: theme.colors.textSecondary,
+  },
+  footerDisabled: {
+    opacity: 0.5,
+  },
+  linkDisabled: {
+    textDecorationLine: 'none',
   },
 }));

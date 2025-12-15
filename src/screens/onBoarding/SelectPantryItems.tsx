@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Text, ActivityIndicator, FlatList, ListRenderItemInfo } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { Text, ActivityIndicator, ScrollView, View } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation, useSelectableItems } from '#hooks';
@@ -11,6 +11,7 @@ import {
   AcquisitionMethod,
   ItemSortField,
   SortOrder,
+  ItemType,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components';
@@ -30,6 +31,7 @@ export const SelectPantryItems = () => {
     variables: {
       filters: {
         showInOnboarding: true,
+        types: [ItemType.Food, ItemType.Foundation],
       },
       sort: {
         field: ItemSortField.Popularity,
@@ -63,29 +65,6 @@ export const SelectPantryItems = () => {
       initialItems: selectableItems,
       maxSelection: 100,
     },
-  );
-
-  // PERFORMANCE: Memoized callbacks for FlatList - must be before early returns
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<typeof items[0]>) => (
-      <AnimatedChip
-        label={item.name}
-        selected={item.selected}
-        onPress={() => toggleItem(item.id)}
-        disabled={!item.selected && isMaxReached}
-        imageUrl={item.imageUrl}
-      />
-    ),
-    [toggleItem, isMaxReached],
-  );
-
-  const keyExtractor = useCallback((item: typeof items[0]) => item.id, []);
-
-  const ListHeaderComponent = useCallback(
-    () => (
-      <Text style={styles.helperText}>{selectedItems.length} selected</Text>
-    ),
-    [selectedItems.length],
   );
 
   if (loading) {
@@ -162,20 +141,25 @@ export const SelectPantryItems = () => {
       onSkip={() => navigateToNextStep('SelectPantryItems')}
       testID="onboarding-select-pantry-items-screen"
     >
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        ListHeaderComponent={ListHeaderComponent}
-        numColumns={3}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
-        initialNumToRender={15}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={true}
+      <ScrollView
         style={styles.form}
-      />
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
+        <View style={styles.chipContainer}>
+          {items.map(item => (
+            <AnimatedChip
+              key={item.id}
+              label={item.name}
+              selected={item.selected}
+              onPress={() => toggleItem(item.id)}
+              disabled={!item.selected && isMaxReached}
+              imageUrl={item.imageUrl}
+            />
+          ))}
+        </View>
+      </ScrollView>
 
       <Button
         title={
@@ -197,40 +181,42 @@ export const SelectPantryItems = () => {
 const styles = StyleSheet.create(theme => ({
   form: {
     flex: 1,
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
   },
   helperText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary || '#666',
-    marginBottom: 16,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
-  columnWrapper: {
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: theme.spacing.xs,
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   nextText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
   errorText: {
-    color: theme.colors.error || 'red',
+    color: theme.colors.error,
     textAlign: 'center',
-    marginVertical: 12,
+    marginVertical: theme.spacing['3'],
   },
   loader: {
-    marginVertical: 24,
+    marginVertical: theme.spacing.xl,
   },
 }));

@@ -50,11 +50,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     padding: theme.spacing.lg,
-    shadowColor: theme.colors.primaryDark,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...theme.shadows.md,
   },
   itemImage: {
     width: '100%',
@@ -72,7 +68,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   placeholderText: {
-    fontSize: 48,
+    fontSize: theme.sizes.avatar.lg,
   },
   itemDetails: {
     gap: theme.spacing.sm,
@@ -85,7 +81,7 @@ const styles = StyleSheet.create(theme => ({
   itemDescription: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: theme.typography.lineHeight.normal,
   },
   itemPrice: {
     fontSize: theme.fonts.size.xl,

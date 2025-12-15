@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { UserHeader, SearchBar } from '#components';
@@ -14,6 +14,8 @@ interface HeaderActions {
 interface SearchBarActions {
   left?: SearchBarAction[];
   right?: SearchBarAction[];
+  showSearchIcon?: boolean;
+  innerRightIcon?: ReactNode;
 }
 
 interface ListTemplateProps {
@@ -28,6 +30,7 @@ interface ListTemplateProps {
   onItemDelete?: (id: string) => void;
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
+  onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
@@ -35,6 +38,7 @@ interface ListTemplateProps {
   // Pagination
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
 
   // State management
@@ -77,6 +81,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemDelete = () => {},
   onItemConsume,
   onItemWaste,
+  onItemRestock,
   onRefresh = async () => {},
   onSwipeableWillOpen,
   emptyState,
@@ -84,6 +89,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Pagination
   onEndReached,
   onEndReachedThreshold = 0.5,
+  ListHeaderComponent,
   ListFooterComponent,
 
   // State management
@@ -153,22 +159,26 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
       )}
 
       {showSearchBar && (
-        <SearchBar
-          value={searchQuery || ''}
-          onChangeText={onSearchChange}
-          placeholder={
-            searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
-          }
-          leftActions={searchBarActions?.left || []}
-          rightActions={searchBarActions?.right || []}
-          listName={listName || title}
-          itemCount={items?.length || 0}
-          completedCount={
-            completedCount !== undefined
-              ? completedCount
-              : items?.filter(item => item.completed).length
-          }
-        />
+        <View style={styles.searchBarWrapper}>
+          <SearchBar
+            value={searchQuery || ''}
+            onChangeText={onSearchChange}
+            placeholder={
+              searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
+            }
+            leftActions={searchBarActions?.left || []}
+            rightActions={searchBarActions?.right || []}
+            showSearchIcon={searchBarActions?.showSearchIcon}
+            innerRightIcon={searchBarActions?.innerRightIcon}
+            listName={listName || title}
+            itemCount={items?.length || 0}
+            completedCount={
+              completedCount !== undefined
+                ? completedCount
+                : items?.filter(item => item.completed).length
+            }
+          />
+        </View>
       )}
 
       {CustomListComponent ? (
@@ -179,10 +189,12 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemDelete={isLoading ? () => {} : onItemDelete}
           onItemConsume={isLoading ? undefined : onItemConsume}
           onItemWaste={isLoading ? undefined : onItemWaste}
+          onItemRestock={isLoading ? undefined : onItemRestock}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
+          ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
@@ -196,10 +208,12 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemDelete={isLoading ? () => {} : onItemDelete}
           onItemConsume={isLoading ? undefined : onItemConsume}
           onItemWaste={isLoading ? undefined : onItemWaste}
+          onItemRestock={isLoading ? undefined : onItemRestock}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
+          ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
@@ -209,8 +223,11 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+  },
+  searchBarWrapper: {
+    paddingHorizontal: theme.spacing.md,
   },
 }));

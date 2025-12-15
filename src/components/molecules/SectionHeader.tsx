@@ -1,0 +1,107 @@
+import React from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+export type SectionHeaderVariant = 'warning' | 'default' | 'info' | 'success';
+
+export interface SectionHeaderProps {
+  /** Emoji or icon to display */
+  icon?: string;
+  /** Section title (will be uppercased) */
+  title: string;
+  /** Item count to display */
+  count: number;
+  /** Visual variant affecting text color */
+  variant?: SectionHeaderVariant;
+  /** Optional action button label */
+  actionLabel?: string;
+  /** Callback when action button is pressed */
+  onActionPress?: () => void;
+  /** Test ID for accessibility */
+  testID?: string;
+}
+
+/**
+ * Generic section header component for list sections
+ *
+ * @example
+ * <SectionHeader
+ *   icon="⏰"
+ *   title="EXPIRING SOON"
+ *   count={5}
+ *   variant="warning"
+ *   actionLabel="Sort ↕"
+ *   onActionPress={handleSort}
+ * />
+ */
+export const SectionHeader: React.FC<SectionHeaderProps> = ({
+  icon,
+  title,
+  count,
+  variant = 'default',
+  actionLabel,
+  onActionPress,
+  testID,
+}) => {
+  const { theme } = useUnistyles();
+
+  const getTitleColor = () => {
+    switch (variant) {
+      case 'warning':
+        return theme.colors.sectionHeader.warningText;
+      case 'info':
+        return theme.colors.info;
+      case 'success':
+        return theme.colors.success;
+      default:
+        return theme.colors.sectionHeader.defaultText;
+    }
+  };
+
+  return (
+    <View style={styles.container} testID={testID}>
+      <View style={styles.leftContent}>
+        {icon && <Text style={styles.icon}>{icon}</Text>}
+        <Text style={[styles.title, { color: getTitleColor() }]}>
+          {title} ({count})
+        </Text>
+      </View>
+
+      {actionLabel && onActionPress && (
+        <Pressable onPress={onActionPress} hitSlop={8}>
+          <Text style={styles.actionLabel}>{actionLabel}</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  icon: {
+    fontSize: theme.typography.fontSize.sm,
+  },
+  title: {
+    fontSize: theme.typography.fontSize.sm - 1,
+    fontWeight: theme.fonts.weight.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  actionLabel: {
+    fontSize: theme.typography.fontSize.sm - 1,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.sectionHeader.actionText,
+  },
+}));

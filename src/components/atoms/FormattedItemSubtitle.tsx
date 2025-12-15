@@ -6,6 +6,7 @@ import { DisplayFormat } from '#/graphql/generated';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;
+  initialQuantity?: number | null;
   quantityInput?: string | null;
   displayFormat?: DisplayFormat | null;
   displayAsFraction?: boolean | null;
@@ -20,6 +21,7 @@ interface FormattedItemSubtitleProps {
  */
 export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   quantity,
+  initialQuantity,
   quantityInput,
   displayFormat,
   displayAsFraction,
@@ -29,18 +31,53 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
+  // Check if this is a partially consumed single item
+  // When initialQuantity is 1 and 0 < currentQuantity < 1, display as "1" with remaining weight
+  const isPartialSingleItem =
+    initialQuantity === 1 && quantity != null && quantity > 0 && quantity < 1;
+
+  // For partial single items, display quantity as 1 and use the actual weight from the server
+  const displayQuantity = isPartialSingleItem ? 1 : quantity;
+  // netWeight already contains the actual remaining weight from the server (packageWeight)
+  const displayWeight = netWeight;
+
   // Handle edge cases
-  const hasQuantity = quantity != null && quantity > 0;
-  const hasWeight = netWeight != null && netWeight > 0;
+  const hasQuantity = displayQuantity != null && displayQuantity >= 0;
+  const hasWeight = displayWeight != null && displayWeight > 0;
   const hasUnit = unitSymbol != null && unitSymbol.trim() !== '';
 
   // Case 1: Both quantity and weight
   if (hasQuantity && hasWeight && hasUnit) {
+    // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
+    // Use tolerance for floating point comparison
+    // This also applies to partial single items (initialQuantity=1, currentQuantity<1)
+    const isQuantityOne = displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
+    if (isQuantityOne) {
+      return (
+        <View style={styles.container}>
+          <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
+            {displayWeight} {unitSymbol}
+          </Text>
+          {additionalInfo && (
+            <>
+              <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+                {' • '}
+              </Text>
+              <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+                {additionalInfo}
+              </Text>
+            </>
+          )}
+        </View>
+      );
+    }
+
+    // Quantity > 1 or partial single item: show "2 × 100g" format
     return (
       <View style={styles.container}>
         <QuantityDisplay
-          quantity={quantity}
-          quantityInput={quantityInput}
+          quantity={displayQuantity}
+          quantityInput={isPartialSingleItem ? undefined : quantityInput}
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
@@ -50,7 +87,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           {' × '}
         </Text>
         <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-          {netWeight} {unitSymbol}
+          {displayWeight} {unitSymbol}{isPartialSingleItem ? ' remaining' : ''}
         </Text>
         {additionalInfo && (
           <>
@@ -71,13 +108,18 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     return (
       <View style={styles.container}>
         <QuantityDisplay
-          quantity={quantity}
-          quantityInput={quantityInput}
+          quantity={displayQuantity}
+          quantityInput={isPartialSingleItem ? undefined : quantityInput}
           displayFormat={displayFormat}
           unitSymbol={unitSymbol}
           displayAsFraction={displayAsFraction}
           style={{ ...styles.quantity, color: theme.colors.textPrimary }}
         />
+        {isPartialSingleItem && (
+          <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
+            {' '}({Math.round(quantity! * 100)}% remaining)
+          </Text>
+        )}
         {additionalInfo && (
           <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
@@ -92,12 +134,12 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     );
   }
 
-  // Case 3: Only weight (no quantity)
+  // Case 3: Only weight (no quantity) - weight is primary info
   if (hasWeight && hasUnit && !hasQuantity) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
-          {netWeight} {unitSymbol}
+        <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
+          {displayWeight} {unitSymbol}
         </Text>
         {additionalInfo && (
           <>
@@ -118,13 +160,18 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     return (
       <View style={styles.container}>
         <QuantityDisplay
-          quantity={quantity}
-          quantityInput={quantityInput}
+          quantity={displayQuantity}
+          quantityInput={isPartialSingleItem ? undefined : quantityInput}
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
           style={{ ...styles.quantity, color: theme.colors.textPrimary }}
         />
+        {isPartialSingleItem && (
+          <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
+            {' '}({Math.round(quantity! * 100)}% remaining)
+          </Text>
+        )}
         {additionalInfo && (
           <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>

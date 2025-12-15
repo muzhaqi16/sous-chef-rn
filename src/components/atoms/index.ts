@@ -23,3 +23,5 @@ export { Avatar } from './Avatar';
 export { ShoppingListAvatar } from './ShoppingListAvatar';
 export { HomeAvatar } from './HomeAvatar';
 export { default as Loader } from './Loader';
+export { FormFieldWrapper } from './FormFieldWrapper';
+export { PressableRow } from './PressableRow';

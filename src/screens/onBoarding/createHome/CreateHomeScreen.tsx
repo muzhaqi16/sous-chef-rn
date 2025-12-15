@@ -424,13 +424,13 @@ const CreateHomeScreenComponent = () => {
                   <View style={styles.inviteActions}>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteDeclineButton]}
-                      onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
+                      onPress={() => handleDeclineInvite(invite.id, inviteHomeName)}
                       disabled={accepting}>
                       <Text style={styles.inviteDeclineButtonText}>Decline</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteAcceptButton]}
-                      onPress={() => handleAcceptInvite(invite.token)}
+                      onPress={() => handleAcceptInvite(invite.id)}
                       disabled={accepting}>
                       {accepting ? (
                         <ActivityIndicator size="small" color={theme.colors.white} />
@@ -598,7 +598,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: 20,
+    lineHeight: theme.typography.lineHeight.normal,
   },
   continueButton: {
     backgroundColor: theme.colors.primary,
@@ -635,11 +635,11 @@ const styles = StyleSheet.create(theme => ({
     elevation: 2,
   },
   inviteHomeName: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
-    lineHeight: 26,
+    lineHeight: theme.typography.lineHeight.relaxed,
   },
   inviteDetailsContainer: {
     gap: theme.spacing.sm,

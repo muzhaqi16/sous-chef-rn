@@ -28,6 +28,8 @@ export const AddEditItem: React.FC<{
 }> = ({ route }) => {
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
+  // Extract initialItemName (only present when navigating from AddItem route)
+  const initialItemName = 'initialItemName' in route.params ? route.params.initialItemName : undefined;
   const isEdit = !!itemId;
 
   const {
@@ -36,6 +38,8 @@ export const AddEditItem: React.FC<{
     parseQuantityInput,
     setFromItem,
     buildUnitInput,
+    buildDirtyInput,
+    hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
 
@@ -80,12 +84,25 @@ export const AddEditItem: React.FC<{
     }
   }, [data, setFromItem]);
 
+  // Pre-populate item name when adding new item with initial value
+  useEffect(() => {
+    if (!isEdit && initialItemName) {
+      updateField('itemName', initialItemName);
+    }
+  }, [isEdit, initialItemName, updateField]);
+
   // Handle autocomplete item selection
   const handleItemSelect = (item: ItemSuggestion) => {
-    // When user selects from autocomplete, just set the item name
-    // In the future, you could extend this to fetch more item details
-    // and populate other fields like category, default unit, etc.
     updateField('itemName', item.name);
+    if (item.defaultUnit?.symbol) {
+      updateField('unit', item.defaultUnit.symbol);
+    }
+    if (item.defaultUnit?.id) {
+      updateField('selectedUnitId', item.defaultUnit.id);
+    }
+    if (item.category?.name) {
+      updateField('category', item.category.name);
+    }
   };
 
   // Handle unit selection from autocomplete
@@ -113,17 +130,16 @@ export const AddEditItem: React.FC<{
 
       let result;
       if (isEdit) {
+        // Skip mutation if no fields changed
+        if (!hasDirtyFields) {
+          navigation.goBack();
+          return;
+        }
+
+        // Only send changed fields
+        const input = buildDirtyInput(quantityValue);
         result = await updateItem({
-          variables: {
-            id: itemId,
-            input: {
-              itemName,
-              quantity: quantityValue,
-              ...unitData,
-              notes,
-              category,
-            },
-          },
+          variables: { id: itemId, input },
         });
       } else {
         result = await addItem({

@@ -48,24 +48,24 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    marginVertical: 4,
+    borderRadius: theme.radii.md,
+    marginVertical: theme.spacing.xs,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
   actionButtonText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
-    marginLeft: 12,
+    marginLeft: theme.spacing['3'],
     flex: 1,
   },
 }));

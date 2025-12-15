@@ -61,7 +61,7 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
 
   // Filter out current location from parent options (can't be its own parent)
   const parentOptions = availableLocations.filter(
-    loc => loc.id !== initialData?.id
+    loc => loc.id !== initialData?.id,
   );
 
   const handleSubmit = () => {
@@ -224,10 +224,8 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.md,
   },
   typeScroll: {
     marginTop: theme.spacing.xs,
@@ -265,7 +263,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   typeIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     marginBottom: theme.spacing.xs,
   },
   typeLabel: {

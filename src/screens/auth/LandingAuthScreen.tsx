@@ -91,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
     width: 40,
     height: 3,
     backgroundColor: theme.colors.primary,
-    borderRadius: 2,
+    borderRadius: theme.radii.xs,
     alignSelf: 'flex-start',
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,

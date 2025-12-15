@@ -82,14 +82,9 @@ export function useShoppingListItemTransformation<T extends ShoppingListItem>(
     return sortedItems.map(item => {
       const imageUrl = getItemImageUrl(item.item);
 
-      // Get primary category from item.item.categories
-      const primaryCategory = item.item?.categories?.find(
-        cat => cat.isPrimary,
-      );
-      const categoryName =
-        primaryCategory?.category?.name ||
-        item.item?.categories?.[0]?.category?.name ||
-        item.category;
+      // Only use user-set category, don't fall back to item.item.categories
+      // (item.item.categories is for autocomplete suggestions, not display)
+      const categoryName = item.category;
 
       return {
         id: item.id,

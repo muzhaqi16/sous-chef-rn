@@ -7,6 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { enableScreens } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
+import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
 import { Navigation } from '#navigation';
 import { hasCredentials } from '#storage/keychain';
@@ -21,6 +22,10 @@ import { queueManager } from '#/apollo/offlineQueue';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
+import {
+  initAppStateTokenRefresh,
+  cleanupAppStateTokenRefresh,
+} from '#store/slices/authSlice';
 
 // Enable native screens for better performance
 enableScreens();
@@ -71,6 +76,10 @@ const App = () => {
       if (__DEV__) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
       }
+
+      // Initialize AppState token refresh to handle background resume
+      // This ensures tokens are refreshed before queries fire when app resumes
+      initAppStateTokenRefresh(() => useStore.getState().accessToken);
     }
 
     return () => {
@@ -78,6 +87,8 @@ const App = () => {
       if (__DEV__) {
         MemoryMonitor.stop();
       }
+      // Cleanup AppState token refresh listener
+      cleanupAppStateTokenRefresh();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
@@ -158,15 +169,9 @@ const App = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
-  },
-  text: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    textAlign: 'center',
-    margin: 10,
   },
 }));
 
