@@ -38,7 +38,7 @@ interface ShoppingListTabsProps {
   onSwipeableClose?: () => void;
 }
 
-export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
+const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
   onItemPress,
   onItemEdit,
