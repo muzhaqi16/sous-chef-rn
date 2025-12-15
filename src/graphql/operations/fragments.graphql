@@ -323,6 +323,17 @@ fragment CompleteUser on User {
   }
 }
 
+# DISPLAY: Lightweight unit info for nested display (4 fields)
+# Contains only essential unit fields for rendering in lists
+# Used in: Nested in ShoppingListItemDisplay, PantryItemDisplay
+fragment UnitDisplay on Unit {
+  id
+  name
+  symbol
+  displayAsFraction
+  __typename
+}
+
 fragment UnitFragment on ItemUnit {
   id
   itemId
@@ -383,9 +394,52 @@ fragment CategoryFragment on Category {
   version
 }
 
-fragment ItemFragment on Item {
+# ============================================
+# ITEM FRAGMENTS (3-tier pattern)
+# ============================================
+
+# CORE: Minimal for cache normalization (5 fields)
+fragment ItemCore on Item {
   id
   name
+  __typename
+  version
+  updatedAt
+}
+
+# DISPLAY: Nested in lists (ShoppingListItem, PantryItem) (12 fields)
+# Contains only fields needed for list view rendering
+# Used in: GetShoppingLists, GetPantry, AutocompleteItems
+fragment ItemDisplay on Item {
+  id
+  name
+  imageUrl
+  netWeight
+  __typename
+  displayUnit {
+    id
+    symbol
+    __typename
+  }
+  categories {
+    id
+    isPrimary
+    category {
+      id
+      name
+      color
+      icon
+      __typename
+    }
+  }
+}
+
+# FULL: Detail views and item management (45+ fields)
+# Contains all item fields except audit trails (creations, edits)
+# Used in: GetItem, CreateItem, item detail screens
+fragment ItemFragment on Item {
+  ...ItemDisplay
+  # Extended fields not in Display - only for detail views and item management
   description
   dataSource
   type
@@ -395,7 +449,6 @@ fragment ItemFragment on Item {
   popularity
   status
   visibility
-  imageUrl
   tags
   healthBenefits
   allergens
@@ -403,10 +456,7 @@ fragment ItemFragment on Item {
   metadata
   ingredients
   createdAt
-  updatedAt
   deletedAt
-  version
-  netWeight
   density
   preferredTrackingUnitId
   preferredTrackingUnit {
@@ -425,32 +475,8 @@ fragment ItemFragment on Item {
   brands {
     ...BrandFragment
   }
-  categories {
-    id
-    isPrimary
-    assignedAt
-    assignedBy {
-      id
-    }
-    category {
-      ...CategoryFragment
-    }
-  }
-  creations {
-    id
-    source
-    reason
-    metadata
-    createdAt
-  }
-  edits {
-    id
-    fieldsChanged
-    oldValues
-    newValues
-    editReason
-    createdAt
-  }
+  # categories already included in ItemDisplay spread above
+  # REMOVED: creations and edits (audit trails) - not used in UI
 }
 
 fragment NotificationSubscription on NotificationPayload {
@@ -468,20 +494,87 @@ fragment NotificationSubscription on NotificationPayload {
   timestamp
 }
 
-fragment PantryItemFragment on PantryItem {
+# ============================================
+# PANTRY ITEM FRAGMENTS (3-tier pattern)
+# ============================================
+
+# CORE: Essential fields for mutations and cache normalization (15 fields)
+# Contains only the minimum fields needed for optimistic updates and version control
+fragment PantryItemCore on PantryItem {
   id
   pantryId
   itemId
   itemName
-  item {
-    ...ItemFragment
-  }
-  unitName
+  currentQuantity
   unitId
+  unitName
+  version
+  updatedAt
+  storageState
+  expiresAt
+  lowStockAlert
+  minQuantity
+  lastUsedAt
+  __typename
+}
+
+# DISPLAY: List views - Pantry screen cards (25 fields)
+# Contains Core fields + display-critical fields for rendering pantry item cards
+# Used in: GetPantry query (main pantry screen)
+fragment PantryItemDisplay on PantryItem {
+  ...PantryItemCore
+  item {
+    id
+    imageUrl
+    name
+    netWeight
+    displayUnit {
+      id
+      symbol
+      __typename
+    }
+    __typename
+  }
   unit {
     id
     name
     symbol
+    __typename
+  }
+  storageLocation {
+    id
+    name
+    type
+    __typename
+  }
+  brand {
+    id
+    name
+    __typename
+  }
+  packageWeight
+  packageWeightUnit {
+    id
+    name
+    symbol
+    __typename
+  }
+  tags
+  initialQuantity
+  consumedQuantity
+  __typename
+}
+
+# FULL: Detail views and analytics (86 fields)
+# Contains all fields including usage records, analytics, and extended metadata
+# Used in: GetPantryItem query (detail screen), analytics queries
+fragment PantryItemFragment on PantryItem {
+  ...PantryItemDisplay
+  # Extended fields not in Display - only for detail views
+  item {
+    ...ItemFragment
+  }
+  unit {
     type
     isMetric
     baseUnitId
@@ -491,17 +584,7 @@ fragment PantryItemFragment on PantryItem {
     minPrecision
     autoConvertThreshold
   }
-  expiresAt
-  storageLocation {
-    id
-    name
-    type
-  }
-  storageState
   storageNotes
-  initialQuantity
-  currentQuantity
-  consumedQuantity
   normalizedUnitId
   normalizedUnit {
     id
@@ -517,17 +600,7 @@ fragment PantryItemFragment on PantryItem {
     type
   }
   createdAt
-  updatedAt
-  version
-  tags
-  brand {
-    id
-    name
-  }
-  lowStockAlert
-  minQuantity
   restockQuantity
-  lastUsedAt
   wasteAmount
   wasteDate
   wasteReason
@@ -535,7 +608,6 @@ fragment PantryItemFragment on PantryItem {
     id
     name
   }
-
   usageRecords {
     id
     quantityUsed
@@ -724,6 +796,66 @@ fragment HomeWithPantriesFragment on Home {
   }
 }
 
+# ============================================
+# HOME FRAGMENTS
+# ============================================
+
+# DISPLAY: Home selector, list views (lightweight)
+# Contains only basic home info with member count and pantry list
+# Used in: GetHomes query (home selector dropdown)
+fragment HomeDisplay on Home {
+  id
+  name
+  type
+  currency
+  timezone
+  version
+  updatedAt
+  __typename
+  membersConnection(first: 0) {
+    edges {
+      node {
+        id
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  invitesConnection(first: 0) {
+    edges {
+      node {
+        id
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        ...BasicPantryFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+# FULL: Home detail views and management
+# Contains full home data with all connections (invites, members, pantries with items)
+# Used in: GetHome query (home detail screen)
 fragment HomeFragment on Home {
   id
   name

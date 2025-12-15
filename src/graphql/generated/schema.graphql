@@ -2555,6 +2555,9 @@ type Item {
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
   creations: [ItemCreation!]!
+    @deprecated(
+      reason: "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
+    )
   dataSource: DataSource!
   deletedAt: DateTime
   density: Float
@@ -2562,6 +2565,9 @@ type Item {
   displayUnit: Unit
   displayUnitId: String
   edits: [ItemEdit!]!
+    @deprecated(
+      reason: "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
+    )
   externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
   id: ID!
@@ -2569,6 +2575,7 @@ type Item {
   images: JSON
   ingredients: JSON
   isUserCreated: Boolean!
+  matchedVariation: ProductVariation
   metadata: JSON
   name: String!
   needsApproval: Boolean!
@@ -3489,7 +3496,6 @@ type MembershipStatusStats {
 type MembershipUpdatePayload {
   mutation: MembershipMutationType!
   node: Membership
-  previousValues: Membership
   updatedFields: [String!]
   userId: String!
 }
@@ -4446,7 +4452,6 @@ Cache: None - subscription events must be real-time
 type NotificationSubscriptionPayload {
   mutation: MutationType!
   node: Notification!
-  previousValues: Notification
   updatedFields: [String!]
 }
 
@@ -4753,7 +4758,6 @@ type PantryItemChangedPayload {
   item: PantryItem!
   mutation: MutationType!
   pantryId: String!
-  previousValue: PantryItem
   timestamp: DateTime!
   updatedFields: [String!]!
   userId: String!
@@ -4834,7 +4838,6 @@ type PantryItemUsage {
 type PantryItemUsageChangedPayload {
   mutation: MutationType!
   pantryId: String!
-  previousValues: PantryItemUsage
   timestamp: DateTime!
   usage: PantryItemUsage!
   userId: String!
@@ -4849,15 +4852,6 @@ type PantryLowStockAlertPayload {
   userId: String!
 }
 
-type PantryPreviousValues {
-  description: String
-  location: String
-  metadata: JSON
-  name: String
-  tags: [String!]
-  temperature: String
-}
-
 type PantryStats {
   activeItems: Int!
   expiringCount: Int!
@@ -4869,7 +4863,6 @@ type PantryStats {
 type PantryUpdatedPayload {
   mutation: MutationType!
   node: Pantry
-  previousValues: PantryPreviousValues
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
@@ -4948,6 +4941,25 @@ enum Priority {
   LOW
   NORMAL
   URGENT
+}
+
+"""
+Product variation data from ExternalSourceMapping
+Represents a specific UPC/package variation of an Item
+"""
+type ProductVariation {
+  brandInfo: VariationBrandInfo
+  confidence: Float
+  createdAt: DateTime!
+  externalType: String
+  id: ID!
+  images: [VariationImage!]
+  netWeight: Float
+  netWeightUnit: String
+  packageSize: String
+  source: String!
+  upc: String
+  updatedAt: DateTime!
 }
 
 enum ProfileVisibility {
@@ -6232,7 +6244,6 @@ type ShoppingListItemChangedPayload {
   item: ShoppingListItem
   listId: ID!
   mutation: MutationType!
-  previousValues: ShoppingListItemPreviousValues
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
@@ -6262,14 +6273,6 @@ input ShoppingListItemOrderBy {
   updatedAt: SortOrder
 }
 
-type ShoppingListItemPreviousValues {
-  isCompleted: Boolean
-  name: String
-  notes: String
-  price: Float
-  quantity: Float
-}
-
 type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
@@ -6279,16 +6282,6 @@ type ShoppingListOwnership {
   transferredFrom: String
   user: User!
   userId: String!
-}
-
-type ShoppingListPreviousValues {
-  budgetAmount: Float
-  description: String
-  estimatedTotal: Float
-  isCompleted: Boolean
-  name: String
-  status: ListStatus
-  totalCost: Float
 }
 
 type ShoppingListStatusChangedPayload {
@@ -6304,7 +6297,6 @@ type ShoppingListStatusChangedPayload {
 type ShoppingListUpdatedPayload {
   mutation: MutationType!
   node: ShoppingList
-  previousValues: ShoppingListPreviousValues
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
@@ -7963,7 +7955,6 @@ type UserProfile {
 
 type UserProfileChangedPayload {
   mutation: String!
-  previousValues: UserProfile
   profile: UserProfile!
   timestamp: DateTime!
   updatedFields: [String!]
@@ -8057,7 +8048,6 @@ enum UserStatusType {
 type UserUpdatedPayload {
   mutation: String!
   node: User!
-  previousValues: User
   timestamp: DateTime!
   updatedFields: [String!]
   userId: String!
@@ -8084,6 +8074,25 @@ type ValidationWarning {
   field: String!
   message: String!
   suggestion: String
+}
+
+"""
+Brand information for a product variation
+"""
+type VariationBrandInfo {
+  id: ID
+  name: String!
+  type: String
+}
+
+"""
+Image information for a product variation
+"""
+type VariationImage {
+  isPrimary: Boolean
+  size: String
+  source: String
+  url: String!
 }
 
 enum Visibility {

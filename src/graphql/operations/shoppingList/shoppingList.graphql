@@ -2,9 +2,7 @@
 # QUERIES
 # ============================================
 
-query GetShoppingList(
-  $id: ID!
-) {
+query GetShoppingList($id: ID!) {
   shoppingList(id: $id) {
     id
     name
@@ -182,7 +180,10 @@ query GetShoppingListItem($id: ID!) {
 }
 
 query GetRecentlyDeletedShoppingListItems($shoppingListId: ID!, $limit: Int) {
-  recentlyDeletedShoppingListItems(shoppingListId: $shoppingListId, limit: $limit) {
+  recentlyDeletedShoppingListItems(
+    shoppingListId: $shoppingListId
+    limit: $limit
+  ) {
     id
     itemName
     item {
@@ -588,14 +589,6 @@ subscription ShoppingListUpdated($listId: ID!) {
       }
     }
     updatedFields
-    previousValues {
-      name
-      status
-      isCompleted
-      budgetAmount
-      totalCost
-      estimatedTotal
-    }
     userId
     timestamp
   }
@@ -613,11 +606,6 @@ subscription MyShoppingListsUpdated {
       status
       isCompleted
     }
-    previousValues {
-      name
-      status
-      isCompleted
-    }
     updatedFields
     userId
     timestamp
@@ -630,13 +618,6 @@ subscription ShoppingListItemsChanged($listId: ID!) {
     listId
     item {
       ...ShoppingListItemFragment
-    }
-    previousValues {
-      name
-      quantity
-      isCompleted
-      price
-      notes
     }
     updatedFields
     userId

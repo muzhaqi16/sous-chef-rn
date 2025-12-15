@@ -34,16 +34,6 @@ subscription MembershipUpdated($homeId: ID) {
         }
       }
     }
-    previousValues {
-      role
-      status
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-    }
     updatedFields
     userId
   }
@@ -72,10 +62,6 @@ subscription MyMembershipUpdated {
         joinCode
       }
     }
-    previousValues {
-      role
-      status
-    }
     updatedFields
     userId
   }
@@ -92,25 +78,6 @@ subscription MemberJoined($homeId: ID!) {
           displayName
         }
       }
-    }
-    previousValues {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-      lastActiveAt
-      joinedAt
-      leftAt
-      createdAt
-      updatedAt
     }
     updatedFields
     userId
@@ -134,11 +101,6 @@ subscription MemberLeft($homeId: ID!) {
           avatar
         }
       }
-    }
-    previousValues {
-      role
-      status
-      displayName
     }
     updatedFields
     userId

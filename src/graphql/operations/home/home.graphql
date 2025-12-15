@@ -16,7 +16,7 @@ query GetHomeBasic($homeId: ID!) {
 
 query GetHomes {
   homes {
-    ...HomeFragment
+    ...HomeDisplay
   }
 }
 

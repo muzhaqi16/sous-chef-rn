@@ -169,9 +169,9 @@ function buildDirtyUpdateInput(
   // Weight changes - MUST send both packageWeight and packageWeightUnitId together
   if (dirtyFields.itemWeight || dirtyFields.weightUnit) {
     input.packageWeight = data.itemWeight ?? null;
-    if (data.itemWeight && weightUnitId) {
-      input.packageWeightUnitId = weightUnitId;
-    }
+    // Always send packageWeightUnitId when weight fields are dirty
+    // This allows clearing both weight and unit by sending null
+    input.packageWeightUnitId = weightUnitId ?? null;
   }
 
   if (dirtyFields.minQuantity) {

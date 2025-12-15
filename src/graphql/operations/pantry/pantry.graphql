@@ -38,7 +38,7 @@ query GetPantry(
     itemsConnection(first: $itemsFirst, after: $itemsCursor) {
       edges {
         node {
-          ...PantryItemFragment
+          ...PantryItemDisplay
         }
         cursor
       }
@@ -338,13 +338,13 @@ mutation SetDefaultPantry($pantryId: ID!) {
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
-    ...PantryItemFragment
+    ...PantryItemDisplay
   }
 }
 
 mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   updatePantryItem(id: $id, input: $input) {
-    ...PantryItemFragment
+    ...PantryItemCore
   }
 }
 
@@ -437,7 +437,7 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    ...PantryItemFragment
+    ...PantryItemCore
   }
 }
 
@@ -502,14 +502,6 @@ subscription PantryUpdated($pantryId: ID!) {
       metadata
       version
       updatedAt
-    }
-    previousValues {
-      name
-      description
-      location
-      temperature
-      tags
-      metadata
     }
     updatedFields
     userId
@@ -586,7 +578,7 @@ subscription PantryItemsChanged($pantryId: ID!) {
   pantryItemsChanged(pantryId: $pantryId) {
     pantryId
     item {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
     updatedFields
     mutation
@@ -611,10 +603,6 @@ subscription PantryItemUsageChanged($pantryId: ID!) {
       usedBy {
         id
       }
-    }
-    previousValues {
-      quantityUsed
-      purpose
     }
     userId
     timestamp
