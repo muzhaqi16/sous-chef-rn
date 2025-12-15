@@ -156,6 +156,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Handle add manually press
   const handleAddManually = useCallback(() => {
+    bottomSheetRef.current?.dismiss(); // Close main sheet first
     setPrefilledItemName(searchQuery);
     setShowAddDetails(true);
   }, [searchQuery]);
