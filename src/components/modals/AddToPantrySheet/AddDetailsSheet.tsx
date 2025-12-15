@@ -12,7 +12,6 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FormInput,
   EditableCounter,
-  InlineItemAutocomplete,
   InlineUnitsAutocomplete,
   InlineBrandAutocomplete,
   InlineStorageLocationAutocomplete,
@@ -25,7 +24,6 @@ import { parseFractionalInput } from '#/utils';
 import {
   StorageState,
   useCreatePantryItemMutation,
-  ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
@@ -131,7 +129,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Form state - Page 1 (Main)
   const [itemName, setItemName] = useState('');
-  const [selectedItem, setSelectedItem] = useState<ItemSuggestion | null>(null);
   const [quantityInput, setQuantityInput] = useState('1');
   const [unit, setUnit] = useState('');
   const [unitId, setUnitId] = useState<string | null>(null);
@@ -183,7 +180,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   // Reset form for adding another item
   const resetForm = useCallback(() => {
     setItemName('');
-    setSelectedItem(null);
     setQuantityInput('1');
     setUnit('');
     setUnitId(null);
@@ -216,30 +212,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryId, prefilledItemName, resetForm]);
-
-  // Handle item selection from autocomplete
-  const handleItemSelect = useCallback((item: ItemSuggestion) => {
-    setSelectedItem(item);
-    setItemName(item.name);
-    // Set suggested brands from item
-    if (item.brands && item.brands.length > 0) {
-      setSuggestedBrands(item.brands.map(b => ({ id: b.id, name: b.name })));
-      setBrand(item.brands[0].name);
-    } else {
-      setSuggestedBrands([]);
-    }
-  }, []);
-
-  // Handle item name change (manual entry)
-  const handleItemNameChange = useCallback(
-    (name: string) => {
-      setItemName(name);
-      if (selectedItem && name !== selectedItem.name) {
-        setSelectedItem(null);
-      }
-    },
-    [selectedItem],
-  );
 
   // Handle unit selection
   const handleUnitSelected = useCallback(
@@ -317,7 +289,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         variables: {
           input: {
             pantryId,
-            itemId: selectedItem?.id,
             itemName: itemName.trim(),
             initialQuantity: quantity,
             unitId: unitId || undefined,
@@ -359,7 +330,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pantryId,
     itemName,
     quantityInput,
-    selectedItem,
     unitId,
     storageState,
     packageWeight,
@@ -387,7 +357,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       onDismiss={onClose}
       animationConfigs={animationConfigs}
       keyboardBehavior="fillParent"
-      keyboardBlurBehavior="restore"
+      keyboardBlurBehavior="none"
       android_keyboardInputMode="adjustResize"
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
@@ -445,14 +415,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             keyboardShouldPersistTaps="handled"
           >
             {/* Item Name */}
-            <View style={[styles.section, { zIndex: 20 }]}>
-              <InlineItemAutocomplete
+            <View style={styles.section}>
+              <FormInput
                 label="Item Name"
                 required
                 value={itemName}
-                onChangeText={handleItemNameChange}
-                onSelectItem={handleItemSelect}
+                onChangeText={setItemName}
                 placeholder="e.g., Milk, Eggs, Bread..."
+                useBottomSheetInput
+                autoCapitalize="words"
               />
             </View>
 

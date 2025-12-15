@@ -280,7 +280,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               value={searchQuery}
               onChangeText={setSearchQuery}
               returnKeyType="search"
-              autoCapitalize="none"
+              autoCapitalize="words"
               autoCorrect={false}
             />
             {searchQuery.length > 0 && (
@@ -322,6 +322,24 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                 </View>
               ) : (
                 <>
+                  {/* Add manually option - shown first */}
+                  <TouchableOpacity
+                    style={styles.addManuallyOption}
+                    onPress={handleAddManually}
+                  >
+                    <Icon
+                      name="add-circle-outline"
+                      size={20}
+                      color={theme.colors.primary}
+                      library="MaterialIcons"
+                    />
+                    <Text style={styles.addManuallyText}>
+                      {hasResults
+                        ? `Add "${searchQuery}" manually`
+                        : `No matches. Add "${searchQuery}" manually`}
+                    </Text>
+                  </TouchableOpacity>
+
                   {/* Autocomplete suggestions */}
                   {suggestions.map((item: ItemSuggestion) => {
                     const imageUrl = item.imageUrl || null;
@@ -375,24 +393,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                       </View>
                     );
                   })}
-
-                  {/* Add manually option */}
-                  <TouchableOpacity
-                    style={styles.addManuallyOption}
-                    onPress={handleAddManually}
-                  >
-                    <Icon
-                      name="add-circle-outline"
-                      size={20}
-                      color={theme.colors.primary}
-                      library="MaterialIcons"
-                    />
-                    <Text style={styles.addManuallyText}>
-                      {hasResults
-                        ? `Add "${searchQuery}" manually`
-                        : `No matches. Add "${searchQuery}" manually`}
-                    </Text>
-                  </TouchableOpacity>
                 </>
               )}
             </View>
@@ -586,6 +586,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.md,
     gap: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   addManuallyText: {
     fontSize: theme.fonts.size.base,

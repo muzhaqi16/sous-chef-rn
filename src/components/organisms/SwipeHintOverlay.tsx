@@ -59,7 +59,7 @@ const DualSwipeHint: React.FC = () => {
           direction="right"
           icon="delete"
           library="MaterialIcons"
-          delay={800}
+          delay={500}
         />
         <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
           Delete

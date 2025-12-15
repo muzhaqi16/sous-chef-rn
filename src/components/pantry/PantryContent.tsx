@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconLibrary } from '#utils';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
@@ -154,7 +153,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   loading: _loading = false,
 }) => {
   const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
 
   // Sort state (local, initialized from props)
   const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
@@ -435,7 +433,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   return (
     <View style={styles.container}>
       {/* Header Section */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
         {/* Greeting Row */}
         <View style={styles.greetingRow}>
           <View style={styles.greetingContent}>
@@ -602,6 +600,7 @@ const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.xs,
   },
   greetingRow: {
     flexDirection: 'row',

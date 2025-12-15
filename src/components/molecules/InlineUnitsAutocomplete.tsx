@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchUnitsQuery } from '#generated';
@@ -143,15 +143,21 @@ export const InlineUnitsAutocomplete: React.FC<
               <Text style={styles.loadingText}>Searching...</Text>
             </View>
           ) : (
-            <FlatList
-              data={filteredUnits}
-              keyExtractor={item => item.id}
-              renderItem={renderUnitItem}
+            <ScrollView
+              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={true}
               nestedScrollEnabled={true}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+              showsVerticalScrollIndicator={true}
+            >
+              {filteredUnits.map((item, index) => (
+                <React.Fragment key={item.id}>
+                  {renderUnitItem({ item })}
+                  {index < filteredUnits.length - 1 && (
+                    <View style={styles.separator} />
+                  )}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           )}
         </View>
       )}
@@ -202,6 +208,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     marginTop: theme.spacing.xs,
     maxHeight: 220,
+    overflow: 'hidden',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms';
@@ -207,15 +207,19 @@ export const InlineStorageLocationAutocomplete: React.FC<InlineStorageLocationAu
 
       {showSuggestions && shouldShowSuggestions && (
         <View style={styles.suggestionsContainer}>
-          <FlatList
-            data={dataWithAddNew.slice(0, 6)}
-            keyExtractor={item => item.id}
-            renderItem={renderLocationItem}
+          <ScrollView
+            style={{ flex: 1 }}
             keyboardShouldPersistTaps="handled"
-            scrollEnabled={true}
             nestedScrollEnabled={true}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
+            showsVerticalScrollIndicator={true}
+          >
+            {dataWithAddNew.slice(0, 6).map((item, index, arr) => (
+              <React.Fragment key={item.id}>
+                {renderLocationItem({ item })}
+                {index < arr.length - 1 && <View style={styles.separator} />}
+              </React.Fragment>
+            ))}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -266,6 +270,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     marginTop: theme.spacing.xs,
     maxHeight: 250,
+    overflow: 'hidden',
     zIndex: theme.zIndex.dropdown,
     ...theme.shadows.lg,
   },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchBrandsLazyQuery } from '#generated';
@@ -151,6 +151,7 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
         onChangeText={handleTextChange}
         placeholder={placeholder}
         onBlur={handleBlur}
+        autoCapitalize="words"
         testID={testID}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -162,15 +163,19 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
               <Text style={styles.loadingText}>Searching...</Text>
             </View>
           ) : (
-            <FlatList
-              data={brands.slice(0, 6)}
-              keyExtractor={item => item.id}
-              renderItem={renderBrandOption}
+            <ScrollView
+              style={{ flex: 1 }}
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={true}
               nestedScrollEnabled={true}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+              showsVerticalScrollIndicator={true}
+            >
+              {brands.slice(0, 6).map((item, index, arr) => (
+                <React.Fragment key={item.id}>
+                  {renderBrandOption({ item })}
+                  {index < arr.length - 1 && <View style={styles.separator} />}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           )}
         </View>
       )}
@@ -222,6 +227,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     marginTop: theme.spacing.xs,
     maxHeight: 200,
+    overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
