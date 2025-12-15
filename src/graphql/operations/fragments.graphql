@@ -812,10 +812,23 @@ fragment HomeDisplay on Home {
   version
   updatedAt
   __typename
-  membersConnection(first: 0) {
+  membersConnection(first: 10) {
     edges {
       node {
         id
+        role
+        status
+        userId
+        displayName
+        user {
+          id
+          email
+          profile {
+            firstName
+            lastName
+            displayName
+          }
+        }
       }
       cursor
     }
@@ -825,10 +838,10 @@ fragment HomeDisplay on Home {
     }
     totalCount
   }
-  invitesConnection(first: 0) {
+  invitesConnection(first: 10) {
     edges {
       node {
-        id
+        ...HomeInviteFragment
       }
       cursor
     }

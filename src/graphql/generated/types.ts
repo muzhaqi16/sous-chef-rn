@@ -11431,7 +11431,28 @@ export type HomeDisplayFragment = {
     edges: Array<{
       __typename?: 'MembershipEdge';
       cursor: string;
-      node: { __typename?: 'Membership'; id: string };
+      node: {
+        __typename?: 'Membership';
+        id: string;
+        role: MembershipRole;
+        status: MembershipStatus;
+        userId: string;
+        displayName?: string | null | undefined;
+        user: {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        };
+      };
     }>;
     pageInfo: {
       __typename?: 'PageInfo';
@@ -11445,7 +11466,51 @@ export type HomeDisplayFragment = {
     edges: Array<{
       __typename?: 'HomeInviteEdge';
       cursor: string;
-      node: { __typename?: 'HomeInvite'; id: string };
+      node: {
+        __typename?: 'HomeInvite';
+        id: string;
+        token: string;
+        email: string;
+        homeId: string;
+        invitedUserId?: string | null | undefined;
+        recipientName?: string | null | undefined;
+        role: MembershipRole;
+        status: InviteStatus;
+        expiresAt: string;
+        sentAt: string;
+        lastReminderAt?: string | null | undefined;
+        reminderCount: number;
+        acceptedAt?: string | null | undefined;
+        declinedAt?: string | null | undefined;
+        revokedAt?: string | null | undefined;
+        message?: string | null | undefined;
+        createdAt: string;
+        customPermissions?:
+          | {
+              __typename?: 'HomePermissions';
+              canViewPantry?: boolean | null | undefined;
+              canEditPantry?: boolean | null | undefined;
+              canAddItems?: boolean | null | undefined;
+              canRemoveItems?: boolean | null | undefined;
+              canInviteOthers?: boolean | null | undefined;
+              canManageHome?: boolean | null | undefined;
+            }
+          | null
+          | undefined;
+        home: { __typename?: 'Home'; id: string; name: string };
+        inviter: {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        };
+      };
     }>;
     pageInfo: {
       __typename?: 'PageInfo';
@@ -12613,7 +12678,28 @@ export type GetHomesQuery = {
       edges: Array<{
         __typename?: 'MembershipEdge';
         cursor: string;
-        node: { __typename?: 'Membership'; id: string };
+        node: {
+          __typename?: 'Membership';
+          id: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          userId: string;
+          displayName?: string | null | undefined;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  firstName?: string | null | undefined;
+                  lastName?: string | null | undefined;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        };
       }>;
       pageInfo: {
         __typename?: 'PageInfo';
@@ -12627,7 +12713,51 @@ export type GetHomesQuery = {
       edges: Array<{
         __typename?: 'HomeInviteEdge';
         cursor: string;
-        node: { __typename?: 'HomeInvite'; id: string };
+        node: {
+          __typename?: 'HomeInvite';
+          id: string;
+          token: string;
+          email: string;
+          homeId: string;
+          invitedUserId?: string | null | undefined;
+          recipientName?: string | null | undefined;
+          role: MembershipRole;
+          status: InviteStatus;
+          expiresAt: string;
+          sentAt: string;
+          lastReminderAt?: string | null | undefined;
+          reminderCount: number;
+          acceptedAt?: string | null | undefined;
+          declinedAt?: string | null | undefined;
+          revokedAt?: string | null | undefined;
+          message?: string | null | undefined;
+          createdAt: string;
+          customPermissions?:
+            | {
+                __typename?: 'HomePermissions';
+                canViewPantry?: boolean | null | undefined;
+                canEditPantry?: boolean | null | undefined;
+                canAddItems?: boolean | null | undefined;
+                canRemoveItems?: boolean | null | undefined;
+                canInviteOthers?: boolean | null | undefined;
+                canManageHome?: boolean | null | undefined;
+              }
+            | null
+            | undefined;
+          home: { __typename?: 'Home'; id: string; name: string };
+          inviter: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        };
       }>;
       pageInfo: {
         __typename?: 'PageInfo';

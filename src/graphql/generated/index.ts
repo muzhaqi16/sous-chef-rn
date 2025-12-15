@@ -10668,7 +10668,28 @@ export type HomeDisplayFragment = {
     edges: Array<{
       __typename?: 'MembershipEdge';
       cursor: string;
-      node: { __typename?: 'Membership'; id: string };
+      node: {
+        __typename?: 'Membership';
+        id: string;
+        role: MembershipRole;
+        status: MembershipStatus;
+        userId: string;
+        displayName: string | null | undefined;
+        user: {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile:
+            | {
+                __typename?: 'UserProfile';
+                firstName: string | null | undefined;
+                lastName: string | null | undefined;
+                displayName: string | null | undefined;
+              }
+            | null
+            | undefined;
+        };
+      };
     }>;
     pageInfo: {
       __typename?: 'PageInfo';
@@ -10682,7 +10703,7 @@ export type HomeDisplayFragment = {
     edges: Array<{
       __typename?: 'HomeInviteEdge';
       cursor: string;
-      node: { __typename?: 'HomeInvite'; id: string };
+      node: { __typename?: 'HomeInvite' } & HomeInviteFragment;
     }>;
     pageInfo: {
       __typename?: 'PageInfo';
@@ -16748,7 +16769,7 @@ export const HomeDisplayFragmentDoc = {
               {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'first' },
-                value: { kind: 'IntValue', value: '0' },
+                value: { kind: 'IntValue', value: '10' },
               },
             ],
             selectionSet: {
@@ -16769,6 +16790,69 @@ export const HomeDisplayFragmentDoc = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'role' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'status' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'userId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayName' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'user' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'email' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'profile' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'firstName',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'lastName',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'displayName',
+                                          },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
                             },
                           ],
                         },
@@ -16808,7 +16892,7 @@ export const HomeDisplayFragmentDoc = {
               {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'first' },
-                value: { kind: 'IntValue', value: '0' },
+                value: { kind: 'IntValue', value: '10' },
               },
             ],
             selectionSet: {
@@ -16827,8 +16911,11 @@ export const HomeDisplayFragmentDoc = {
                           kind: 'SelectionSet',
                           selections: [
                             {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
+                              kind: 'FragmentSpread',
+                              name: {
+                                kind: 'Name',
+                                value: 'HomeInviteFragment',
+                              },
                             },
                           ],
                         },
@@ -16921,6 +17008,118 @@ export const HomeDisplayFragmentDoc = {
                   },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeInviteFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'HomeInvite' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'token' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'invitedUserId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'recipientName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'customPermissions' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canViewPantry' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canEditPantry' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'canAddItems' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canRemoveItems' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canInviteOthers' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canManageHome' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sentAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastReminderAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'reminderCount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acceptedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'declinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'revokedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'inviter' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -26630,6 +26829,118 @@ export const GetHomesDocument = {
     },
     {
       kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeInviteFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'HomeInvite' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'token' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'invitedUserId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'recipientName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'customPermissions' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canViewPantry' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canEditPantry' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'canAddItems' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canRemoveItems' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canInviteOthers' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canManageHome' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sentAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastReminderAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'reminderCount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acceptedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'declinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'revokedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'inviter' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
       name: { kind: 'Name', value: 'BasicPantryFragment' },
       typeCondition: {
         kind: 'NamedType',
@@ -26678,7 +26989,7 @@ export const GetHomesDocument = {
               {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'first' },
-                value: { kind: 'IntValue', value: '0' },
+                value: { kind: 'IntValue', value: '10' },
               },
             ],
             selectionSet: {
@@ -26699,6 +27010,69 @@ export const GetHomesDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'role' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'status' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'userId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayName' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'user' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'email' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'profile' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'firstName',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'lastName',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'displayName',
+                                          },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
                             },
                           ],
                         },
@@ -26738,7 +27112,7 @@ export const GetHomesDocument = {
               {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'first' },
-                value: { kind: 'IntValue', value: '0' },
+                value: { kind: 'IntValue', value: '10' },
               },
             ],
             selectionSet: {
@@ -26757,8 +27131,11 @@ export const GetHomesDocument = {
                           kind: 'SelectionSet',
                           selections: [
                             {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
+                              kind: 'FragmentSpread',
+                              name: {
+                                kind: 'Name',
+                                value: 'HomeInviteFragment',
+                              },
                             },
                           ],
                         },

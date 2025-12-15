@@ -50,9 +50,14 @@ export function getInviteStatusColor(status: string, theme: any): string {
  */
 export function getInviteDisplayName(invite: {
   recipientName?: string | null;
-  email: string;
+  email?: string | null;
 }): string {
-  return invite.recipientName || invite.email.split('@')[0] || invite.email;
+  if (invite.recipientName) return invite.recipientName;
+  if (invite.email) {
+    const emailParts = invite.email.split('@');
+    return emailParts[0] || invite.email;
+  }
+  return 'Unknown';
 }
 
 /**

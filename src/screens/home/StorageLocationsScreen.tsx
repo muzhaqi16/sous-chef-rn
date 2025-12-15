@@ -5,7 +5,6 @@ import {
   Text,
   ActivityIndicator,
   TouchableOpacity,
-  Pressable,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -147,6 +146,29 @@ export const StorageLocationsScreen: React.FC<{
             </View>
           )}
 
+          {/* Create/Edit Form - Shows inline at top when active */}
+          {(showCreateForm || editingLocation) && (
+            <Animated.View
+              {...formAnimationPreset}
+              style={[commonStyles.shadow, styles.inlineForm]}
+            >
+              <StorageLocationForm
+                initialData={editingLocation || undefined}
+                onSubmit={
+                  editingLocation
+                    ? data => handleUpdate(editingLocation.id, data)
+                    : handleCreate
+                }
+                onCancel={() => {
+                  setShowCreateForm(false);
+                  setEditingId(null);
+                }}
+                isSubmitting={creating}
+                availableLocations={locations}
+              />
+            </Animated.View>
+          )}
+
           {/* View Mode Toggle */}
           {locations.length > 0 && (
             <View style={styles.viewModeToggle}>
@@ -187,7 +209,7 @@ export const StorageLocationsScreen: React.FC<{
             </View>
           )}
 
-          {locations.length === 0 ? (
+          {locations.length === 0 && !showCreateForm ? (
             <View style={commonStyles.emptyState}>
               <Icon
                 name="storage"
@@ -224,68 +246,27 @@ export const StorageLocationsScreen: React.FC<{
   ];
 
   return (
-    <>
-      <DetailTemplate
-        title="Storage Locations"
-        onBack={goBack}
-        headerActions={[
-          {
-            icon: 'add',
-            onPress: () => {
+    <DetailTemplate
+      title="Storage Locations"
+      onBack={goBack}
+      headerActions={[
+        {
+          icon: showCreateForm || editingId ? 'close' : 'add',
+          onPress: () => {
+            if (showCreateForm || editingId) {
+              setShowCreateForm(false);
               setEditingId(null);
+            } else {
               setShowCreateForm(true);
-            },
-            variant: 'primary',
+            }
           },
-        ]}
-        sections={sections}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-      />
-
-      {/* Create Form Overlay */}
-      {showCreateForm && (
-        <View style={commonStyles.absoluteFill}>
-          <Pressable
-            style={commonStyles.overlay}
-            onPress={() => setShowCreateForm(false)}
-          />
-          <Animated.View
-            {...formAnimationPreset}
-            style={[commonStyles.shadow, styles.formOverlay]}
-          >
-            <StorageLocationForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateForm(false)}
-              isSubmitting={creating}
-              availableLocations={locations}
-            />
-          </Animated.View>
-        </View>
-      )}
-
-      {/* Edit Form Overlay */}
-      {editingLocation && (
-        <View style={commonStyles.absoluteFill}>
-          <Pressable
-            style={commonStyles.overlay}
-            onPress={() => setEditingId(null)}
-          />
-          <Animated.View
-            {...formAnimationPreset}
-            style={[commonStyles.shadow, styles.formOverlay]}
-          >
-            <StorageLocationForm
-              initialData={editingLocation}
-              onSubmit={data => handleUpdate(editingLocation.id, data)}
-              onCancel={() => setEditingId(null)}
-              isSubmitting={false}
-              availableLocations={locations}
-            />
-          </Animated.View>
-        </View>
-      )}
-    </>
+          variant: 'primary',
+        },
+      ]}
+      sections={sections}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+    />
   );
 };
 
@@ -317,6 +298,14 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     zIndex: 1000,
     maxHeight: '80%',
+  },
+  inlineForm: {
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.background,
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   viewModeToggle: {
     flexDirection: 'row',
