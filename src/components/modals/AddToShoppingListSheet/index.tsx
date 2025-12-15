@@ -66,35 +66,41 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
 
   // Fetch recently deleted items
+  // PERFORMANCE: Only fetch when sheet is visible to avoid unnecessary queries on screen mount
   const {
     data: recentData,
     loading: loadingRecent,
     refetch: refetchRecent,
   } = useGetRecentlyDeletedShoppingListItemsQuery({
     variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
-    skip: !shoppingListId,
+    skip: !shoppingListId || !visible,
     fetchPolicy: 'cache-and-network',
   });
 
   const recentItems = recentData?.recentlyDeletedShoppingListItems ?? [];
 
   // Add shopping list item mutation for quick add
-  const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
-    update: (cache, { data }) => {
-      if (!data?.addItemToShoppingList || !shoppingListId) return;
+  const [addItemMutation, { loading: adding }] =
+    useAddItemToShoppingListMutation({
+      update: (cache, { data }) => {
+        if (!data?.addItemToShoppingList || !shoppingListId) return;
 
-      try {
-        const addToShoppingListCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
-        addToShoppingListCache(cache, shoppingListId, data.addItemToShoppingList);
-      } catch (error) {
-        console.warn('Cache update failed for addItemToShoppingList:', error);
-      }
-    },
-  });
+        try {
+          const addToShoppingListCache = createAddToParentConnectionUpdater(
+            'ShoppingList',
+            'itemsConnection',
+            'ShoppingListItem',
+          );
+          addToShoppingListCache(
+            cache,
+            shoppingListId,
+            data.addItemToShoppingList,
+          );
+        } catch (error) {
+          console.warn('Cache update failed for addItemToShoppingList:', error);
+        }
+      },
+    });
 
   // Debounced autocomplete search (250ms)
   useEffect(() => {
@@ -308,10 +314,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           <View style={styles.searchResultsContainer}>
             {searchLoading ? (
               <View style={styles.searchLoadingContainer}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.primary}
-                />
+                <ActivityIndicator size="small" color={theme.colors.primary} />
                 <Text style={styles.searchLoadingText}>Searching...</Text>
               </View>
             ) : (

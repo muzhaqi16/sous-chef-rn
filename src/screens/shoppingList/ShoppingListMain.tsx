@@ -10,10 +10,7 @@ import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSw
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation, useProfileData } from '#hooks';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  AnimatedItemSelector,
-  ListTemplate,
-} from '#components';
+import { AnimatedItemSelector, ListTemplate } from '#components';
 import { Icon } from '#utils';
 import { ShoppingListHeader } from '#/components/molecules/ShoppingListHeader';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
@@ -40,7 +37,10 @@ import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { normalizeHome } from '#/utils/connectionUtils';
-import { createAddToParentConnectionUpdater, createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
@@ -133,25 +133,35 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Local state
   const [refreshing, setRefreshing] = useState(false);
 
+  // PERFORMANCE: Store items in ref to avoid recreating callbacks on every items change
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   // Add to shopping list sheet state
   const [addSheetVisible, setAddSheetVisible] = useState(false);
 
   // Move to pantry modal state
-  const [moveToPantryModalVisible, setMoveToPantryModalVisible] = useState(false);
-  const [selectedItemForMove, setSelectedItemForMove] = useState<ShoppingListItemDisplayFragment | null>(null);
+  const [moveToPantryModalVisible, setMoveToPantryModalVisible] =
+    useState(false);
+  const [selectedItemForMove, setSelectedItemForMove] =
+    useState<ShoppingListItemDisplayFragment | null>(null);
 
   // Quantity edit sheet state
   const [quantitySheetVisible, setQuantitySheetVisible] = useState(false);
-  const [selectedItemForQuantity, setSelectedItemForQuantity] = useState<ShoppingListItemDisplayFragment | null>(null);
+  const [selectedItemForQuantity, setSelectedItemForQuantity] =
+    useState<ShoppingListItemDisplayFragment | null>(null);
   const [quantityUpdateLoading, setQuantityUpdateLoading] = useState(false);
 
   // Update shopping list item quantity mutation (syncs both quantity and quantityInput)
-  const [updateShoppingListItemQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
-    onError: error => {
-      Alert.alert('Error', error.message || 'Failed to update item');
-    },
-  });
+  const [updateShoppingListItemQuantity] =
+    useUpdateShoppingListItemQuantityMutation({
+      errorPolicy: 'all',
+      onError: error => {
+        Alert.alert('Error', error.message || 'Failed to update item');
+      },
+    });
 
   // Get home and pantries for moving items
   const selectedPantryId = useAppStore(selectSelectedPantryId);
@@ -181,86 +191,104 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           'itemsConnection',
           'PantryItem',
         );
-        addToPantryCache(cache, moveToPantryIdRef.current, data.moveShoppingItemToPantry);
+        addToPantryCache(
+          cache,
+          moveToPantryIdRef.current,
+          data.moveShoppingItemToPantry,
+        );
 
         // Remove from shopping list cache if removeFromList was true (default)
         if (selectedItemForMove && currentListId) {
-          const removeFromShoppingListCache = createRemoveFromParentConnectionUpdater(
-            'ShoppingList',
-            'itemsConnection',
-            'ShoppingListItem',
+          const removeFromShoppingListCache =
+            createRemoveFromParentConnectionUpdater(
+              'ShoppingList',
+              'itemsConnection',
+              'ShoppingListItem',
+            );
+          removeFromShoppingListCache(
+            cache,
+            currentListId,
+            selectedItemForMove.id,
           );
-          removeFromShoppingListCache(cache, currentListId, selectedItemForMove.id);
         }
       } catch (error) {
-        console.warn('Cache update failed for moveShoppingItemToPantry:', error);
+        console.warn(
+          'Cache update failed for moveShoppingItemToPantry:',
+          error,
+        );
       }
     },
-    onError: (error) => {
+    onError: error => {
       Alert.alert('Error', error.message || 'Failed to move item to pantry');
     },
   });
 
   // Handle move to pantry button press
-  const handleMoveToPantry = useCallback((itemId: string) => {
-    if (pantries.length === 0) {
-      Alert.alert(
-        'No Pantry Available',
-        'Please create a pantry in your home first.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+  const handleMoveToPantry = useCallback(
+    (itemId: string) => {
+      if (pantries.length === 0) {
+        Alert.alert(
+          'No Pantry Available',
+          'Please create a pantry in your home first.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
 
-    const item = items.find((i: any) => i.id === itemId);
-    if (item) {
-      setSelectedItemForMove(item as ShoppingListItemDisplayFragment);
-      setMoveToPantryModalVisible(true);
-    }
-  }, [items, pantries.length]);
+      const item = itemsRef.current.find((i: any) => i.id === itemId);
+      if (item) {
+        setSelectedItemForMove(item as ShoppingListItemDisplayFragment);
+        setMoveToPantryModalVisible(true);
+      }
+    },
+    [pantries.length],
+  );
 
   // Handle confirm move to pantry
-  const handleConfirmMoveToPantry = useCallback(async (input: {
-    pantryId: string;
-    actualQuantity: number;
-    storageState?: StorageState;
-    expiresAt?: string;
-    removeFromList: boolean;
-    costPerUnit?: number;
-    totalCost?: number;
-    notes?: string;
-  }) => {
-    if (!selectedItemForMove) return;
+  const handleConfirmMoveToPantry = useCallback(
+    async (input: {
+      pantryId: string;
+      actualQuantity: number;
+      storageState?: StorageState;
+      expiresAt?: string;
+      removeFromList: boolean;
+      costPerUnit?: number;
+      totalCost?: number;
+      notes?: string;
+    }) => {
+      if (!selectedItemForMove) return;
 
-    // Set the ref for cache update
-    moveToPantryIdRef.current = input.pantryId;
+      // Set the ref for cache update
+      moveToPantryIdRef.current = input.pantryId;
 
-    try {
-      await moveShoppingItemToPantry({
-        variables: {
-          input: {
-            shoppingListItemId: selectedItemForMove.id,
-            pantryId: input.pantryId,
-            actualQuantity: input.actualQuantity,
-            storageState: input.storageState,
-            expiresAt: input.expiresAt,
-            removeFromList: input.removeFromList,
-            costPerUnit: input.costPerUnit,
-            totalCost: input.totalCost,
-            notes: input.notes,
+      try {
+        await moveShoppingItemToPantry({
+          variables: {
+            input: {
+              shoppingListItemId: selectedItemForMove.id,
+              pantryId: input.pantryId,
+              actualQuantity: input.actualQuantity,
+              storageState: input.storageState,
+              expiresAt: input.expiresAt,
+              removeFromList: input.removeFromList,
+              costPerUnit: input.costPerUnit,
+              totalCost: input.totalCost,
+              notes: input.notes,
+            },
           },
-        },
-      });
+        });
 
-      Telemetry.trackEvent('shopping_item_moved_to_pantry', {
-        shopping_list_id: currentListId,
-        pantry_id: input.pantryId,
-        remove_from_list: input.removeFromList,
-      });
-    } catch (error) {
-      // Error handled by mutation onError
-    }
-  }, [selectedItemForMove, currentListId, moveShoppingItemToPantry]);
+        Telemetry.trackEvent('shopping_item_moved_to_pantry', {
+          shopping_list_id: currentListId,
+          pantry_id: input.pantryId,
+          remove_from_list: input.removeFromList,
+        });
+      } catch (error) {
+        // Error handled by mutation onError
+      }
+    },
+    [selectedItemForMove, currentListId, moveShoppingItemToPantry],
+  );
 
   // Handle close move to pantry modal
   const handleCloseMoveToPantryModal = useCallback(() => {
@@ -270,45 +298,48 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Handle quantity press - open quantity edit sheet
   const handleQuantityPress = useCallback((itemId: string) => {
-    const item = items.find((i: any) => i.id === itemId);
+    const item = itemsRef.current.find((i: any) => i.id === itemId);
     if (item) {
       setSelectedItemForQuantity(item as ShoppingListItemDisplayFragment);
       setQuantitySheetVisible(true);
     }
-  }, [items]);
+  }, []);
 
   // Handle quantity save - update item with new quantity and/or unit
-  const handleQuantitySave = useCallback(async (
-    quantity: number,
-    _unitName: string | null,
-    unitId: string | null
-  ) => {
-    if (!selectedItemForQuantity) return;
+  const handleQuantitySave = useCallback(
+    async (
+      quantity: number,
+      _unitName: string | null,
+      unitId: string | null,
+    ) => {
+      if (!selectedItemForQuantity) return;
 
-    setQuantityUpdateLoading(true);
-    try {
-      await updateShoppingListItemQuantity({
-        variables: {
-          itemId: selectedItemForQuantity.id,
-          quantity: quantity.toString(),
-          unitId: unitId || undefined,
-          version: selectedItemForQuantity.version,
-        },
-      });
+      setQuantityUpdateLoading(true);
+      try {
+        await updateShoppingListItemQuantity({
+          variables: {
+            itemId: selectedItemForQuantity.id,
+            quantity: quantity.toString(),
+            unitId: unitId || undefined,
+            version: selectedItemForQuantity.version,
+          },
+        });
 
-      Telemetry.trackEvent('shopping_item_quantity_updated', {
-        item_id: selectedItemForQuantity.id,
-        quantity,
-      });
+        Telemetry.trackEvent('shopping_item_quantity_updated', {
+          item_id: selectedItemForQuantity.id,
+          quantity,
+        });
 
-      setQuantitySheetVisible(false);
-      setSelectedItemForQuantity(null);
-    } catch (error) {
-      // Error handled by mutation onError
-    } finally {
-      setQuantityUpdateLoading(false);
-    }
-  }, [selectedItemForQuantity, updateShoppingListItemQuantity]);
+        setQuantitySheetVisible(false);
+        setSelectedItemForQuantity(null);
+      } catch (error) {
+        // Error handled by mutation onError
+      } finally {
+        setQuantityUpdateLoading(false);
+      }
+    },
+    [selectedItemForQuantity, updateShoppingListItemQuantity],
+  );
 
   // Handle close quantity edit sheet
   const handleCloseQuantitySheet = useCallback(() => {
@@ -321,9 +352,12 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     useRef<React.RefObject<SwipeableMethods | null> | null>(null);
 
   // Show swipe hint after items load (only once, only if there are unpurchased items)
+  // PERFORMANCE: Only depend on items.length to avoid re-running on every items change
   useEffect(() => {
     if (items.length > 0 && !swipeHint.hasBeenShown) {
-      const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+      const unpurchasedItems = itemsRef.current.filter(
+        (item: any) => !item.isPurchased,
+      );
       if (unpurchasedItems.length > 0) {
         const timer = setTimeout(() => {
           swipeHint.show();
@@ -331,7 +365,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         return () => clearTimeout(timer);
       }
     }
-  }, [items, swipeHint]);
+  }, [items.length, swipeHint]);
 
   // Handle add item - open sheet
   const handleAddItem = useCallback(() => {
@@ -406,6 +440,36 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     [handleOpenSelector, searchQuery, colors],
   );
 
+  // PERFORMANCE: Memoize customListProps to prevent ShoppingListTabs re-renders
+  const customListProps = useMemo(
+    () => ({
+      loading: isLoadingInitial,
+      onSortOrderUpdate: searchQuery.trim() ? undefined : handleSortOrderUpdate,
+      onTogglePurchase: handleTogglePurchase,
+      onMoveToPantry: handleMoveToPantry,
+      onQuantityPress: handleQuantityPress,
+      onRefresh: handleRefresh,
+      refreshing,
+      disabled: !!searchQuery.trim(),
+      onClearAllPurchased: handleClearAllPurchased,
+      onSwipeableWillOpen: handleSwipeableWillOpen,
+      onSwipeableClose: handleSwipeableClose,
+    }),
+    [
+      isLoadingInitial,
+      searchQuery,
+      handleSortOrderUpdate,
+      handleTogglePurchase,
+      handleMoveToPantry,
+      handleQuantityPress,
+      handleRefresh,
+      refreshing,
+      handleClearAllPurchased,
+      handleSwipeableWillOpen,
+      handleSwipeableClose,
+    ],
+  );
+
   // Use ref to track currentListId for scanner
   const currentListIdRef = useRef(currentListId);
   useEffect(() => {
@@ -413,15 +477,17 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   }, [currentListId]);
 
   // Set up scanner and telemetry
+  // PERFORMANCE: Debounce telemetry to prevent tracking on every mutation
   useEffect(() => {
-    setTimeout(() => {
+    const telemetryTimer = setTimeout(() => {
       Telemetry.trackScreen('ShoppingListMain', {
         list_id: currentListId,
-        item_count: items.length,
-        purchased_count: items.filter(item => item.isPurchased).length,
+        item_count: itemsRef.current.length,
+        purchased_count: itemsRef.current.filter(item => item.isPurchased)
+          .length,
         has_lists: lists.length > 0,
       });
-    }, 0);
+    }, 500); // Debounce 500ms to batch rapid changes
 
     const handleScanPress = () => {
       Telemetry.trackEvent('barcode_scanner_opened', {
@@ -437,15 +503,18 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     setScannerProps(handleScanPress, true);
 
     return () => {
+      clearTimeout(telemetryTimer);
       setScannerProps(undefined, false);
     };
-  }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
+  }, [setScannerProps, navigateTo, currentListId, items.length, lists.length]);
 
   // Register add button action - open add to shopping list sheet
   useEffect(() => {
     if (isFocused) {
       setAddProps(() => {
-        Telemetry.trackEvent('add_item_from_tab_bar', { list_id: currentListId });
+        Telemetry.trackEvent('add_item_from_tab_bar', {
+          list_id: currentListId,
+        });
         setAddSheetVisible(true);
       }, true);
     }
@@ -510,110 +579,106 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   return (
     <View style={styles.container} testID="shopping-list-screen">
-        <ShoppingListHeader
-          listName={currentList?.name || 'Shopping List'}
-          avatarUrl={profile?.avatar}
-          notificationCount={unreadCount}
-          onAvatarPress={() => navigateTo.notificationList()}
-        />
-        <ListTemplate
-          items={sortableItems}
-          loading={isLoadingInitial}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          onItemPress={id =>
-            navigate('ItemDetail', { listId: currentListId, itemId: id })
-          }
-          onItemEdit={id =>
-            navigate('EditItem', { listId: currentListId, itemId: id })
-          }
-          onItemDelete={handleDeleteItem}
-          onRefresh={handleRefresh}
-          searchPlaceholder="Search shopping list..."
-          listName={currentList?.name || 'Shopping List'}
-          completedCount={sortableItems.filter(item => item.isPurchased).length}
-          showUserHeader={false}
-          showSearchBar={true}
-          searchBarActions={searchBarActions}
-          testIDPrefix="shopping-list-item"
-          emptyState={emptyStateConfig}
-          customListComponent={ShoppingListTabs}
-          customListProps={{
-            loading: isLoadingInitial,
-            onSortOrderUpdate: searchQuery.trim()
-              ? undefined
-              : handleSortOrderUpdate,
-            onTogglePurchase: handleTogglePurchase,
-            onMoveToPantry: handleMoveToPantry,
-            onQuantityPress: handleQuantityPress,
-            onRefresh: handleRefresh,
-            refreshing,
-            disabled: !!searchQuery.trim(),
-            onClearAllPurchased: handleClearAllPurchased,
-            onSwipeableWillOpen: handleSwipeableWillOpen,
-            onSwipeableClose: handleSwipeableClose,
-          }}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={footerComponent}
-        />
+      <ShoppingListHeader
+        listName={currentList?.name || 'Shopping List'}
+        avatarUrl={profile?.avatar}
+        notificationCount={unreadCount}
+        onAvatarPress={() => navigateTo.notificationList()}
+      />
+      <ListTemplate
+        items={sortableItems}
+        loading={isLoadingInitial}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onItemPress={id =>
+          navigate('ItemDetail', { listId: currentListId, itemId: id })
+        }
+        onItemEdit={id =>
+          navigate('EditItem', { listId: currentListId, itemId: id })
+        }
+        onItemDelete={handleDeleteItem}
+        onRefresh={handleRefresh}
+        searchPlaceholder="Search shopping list..."
+        listName={currentList?.name || 'Shopping List'}
+        completedCount={sortableItems.filter(item => item.isPurchased).length}
+        showUserHeader={false}
+        showSearchBar={true}
+        searchBarActions={searchBarActions}
+        testIDPrefix="shopping-list-item"
+        emptyState={emptyStateConfig}
+        customListComponent={ShoppingListTabs}
+        customListProps={customListProps}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={footerComponent}
+      />
 
-        <AnimatedItemSelector
-          ref={selectorRef}
-          config={listConfig}
-          maxHeight={600}
-          onOpen={handleOverlayOpen}
-          onClose={handleOverlayClose}
-        />
+      <AnimatedItemSelector
+        ref={selectorRef}
+        config={listConfig}
+        maxHeight={600}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
+      />
 
-        {/* Swipe gesture hint overlay */}
-        {swipeHint.isVisible && (
-          <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
-        )}
+      {/* Swipe gesture hint overlay */}
+      {swipeHint.isVisible && (
+        <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
+      )}
 
-        {/* Move to Pantry Modal */}
-        <MoveToPantryModal
-          visible={moveToPantryModalVisible}
-          shoppingListItem={selectedItemForMove}
-          pantries={pantries}
-          selectedPantryId={selectedPantryId}
-          onClose={handleCloseMoveToPantryModal}
-          onConfirm={handleConfirmMoveToPantry}
-        />
+      {/* Move to Pantry Modal */}
+      <MoveToPantryModal
+        visible={moveToPantryModalVisible}
+        shoppingListItem={selectedItemForMove}
+        pantries={pantries}
+        selectedPantryId={selectedPantryId}
+        onClose={handleCloseMoveToPantryModal}
+        onConfirm={handleConfirmMoveToPantry}
+      />
 
-        {/* Add to Shopping List Sheet */}
-        <AddToShoppingListSheet
-          visible={addSheetVisible}
-          shoppingListId={currentListId}
-          onClose={() => setAddSheetVisible(false)}
-          initialSearchQuery={searchQuery}
-          onItemAdded={() => setSearchQuery('')}
-        />
+      {/* Add to Shopping List Sheet */}
+      <AddToShoppingListSheet
+        visible={addSheetVisible}
+        shoppingListId={currentListId}
+        onClose={() => setAddSheetVisible(false)}
+        initialSearchQuery={searchQuery}
+        onItemAdded={() => setSearchQuery('')}
+      />
 
-        {/* Quantity Edit Sheet */}
-        <QuantityEditSheet
-          visible={quantitySheetVisible}
-          item={selectedItemForQuantity ? {
-            id: selectedItemForQuantity.id,
-            itemName: selectedItemForQuantity.itemName || 'Item',
-            quantity: selectedItemForQuantity.quantity ?? 0,
-            unitName: selectedItemForQuantity.unit?.symbol || selectedItemForQuantity.unitName || null,
-            unitId: selectedItemForQuantity.unit?.id || null,
-            category: selectedItemForQuantity.category || null,
-            version: selectedItemForQuantity.version,
-            itemUnits: selectedItemForQuantity.item?.units?.map(iu => ({
-              id: iu.unit?.id || iu.id,
-              symbol: iu.unit?.symbol || '',
-              name: iu.unit?.name || '',
-              isDefault: iu.isDefault,
-              isPreferred: iu.isPreferred,
-            })).filter(u => u.symbol) || [],
-          } : null}
-          onClose={handleCloseQuantitySheet}
-          onSave={handleQuantitySave}
-          loading={quantityUpdateLoading}
-        />
-      </View>
+      {/* Quantity Edit Sheet */}
+      <QuantityEditSheet
+        visible={quantitySheetVisible}
+        item={
+          selectedItemForQuantity
+            ? {
+                id: selectedItemForQuantity.id,
+                itemName: selectedItemForQuantity.itemName || 'Item',
+                quantity: selectedItemForQuantity.quantity ?? 0,
+                unitName:
+                  selectedItemForQuantity.unit?.symbol ||
+                  selectedItemForQuantity.unitName ||
+                  null,
+                unitId: selectedItemForQuantity.unit?.id || null,
+                category: selectedItemForQuantity.category || null,
+                version: selectedItemForQuantity.version,
+                itemUnits:
+                  selectedItemForQuantity.item?.units
+                    ?.map(iu => ({
+                      id: iu.unit?.id || iu.id,
+                      symbol: iu.unit?.symbol || '',
+                      name: iu.unit?.name || '',
+                      isDefault: iu.isDefault,
+                      isPreferred: iu.isPreferred,
+                    }))
+                    .filter(u => u.symbol) || [],
+              }
+            : null
+        }
+        onClose={handleCloseQuantitySheet}
+        onSave={handleQuantitySave}
+        loading={quantityUpdateLoading}
+      />
+    </View>
   );
 });
 

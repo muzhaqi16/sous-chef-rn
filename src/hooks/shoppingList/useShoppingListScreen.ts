@@ -2,13 +2,20 @@ import { useMemo, useEffect, startTransition, useRef } from 'react';
 import { useAppNavigation } from '#hooks';
 import { useGetShoppingListsQuery } from '#generated';
 import { useShoppingListManagement } from './useShoppingListManagement';
-import { useAppStore, selectShoppingListState, selectSelectedHomeId } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectShoppingListState,
+  selectSelectedHomeId,
+} from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { getItemImageUrl } from '#utils/imageUtils';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
-import type { QuantityElementConfig, ImageElementConfig } from '#components/organisms/SortableShoppingList/types';
+import type {
+  QuantityElementConfig,
+  ImageElementConfig,
+} from '#components/organisms/SortableShoppingList/types';
 
 /**
  * Shopping List Screen Controller Hook - Facade pattern
@@ -185,7 +192,6 @@ export function useShoppingListScreen() {
         subtitle: categoryName || undefined,
         sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
         isPurchased: item.isPurchased,
-        badge: undefined,
         rightElementConfig,
         leftElementConfig,
       };
@@ -200,9 +206,7 @@ export function useShoppingListScreen() {
     }
 
     return result;
-  }, [items]);
-
-  // Determine loading state - only show loading if we have no data at all
+  }, [items]); // Determine loading state - only show loading if we have no data at all
   const isLoadingInitial = loading && sortableItems.length === 0;
 
   return {
