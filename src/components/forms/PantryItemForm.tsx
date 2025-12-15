@@ -124,12 +124,20 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [_saving, setSaving] = useState(false);
 
   // Consolidated unit state using UnitSelection type
-  const [trackingUnit, setTrackingUnit] = useState<UnitSelection>(emptyUnitSelection);
-  const [weightUnit, setWeightUnit] = useState<UnitSelection>(emptyUnitSelection);
+  const [trackingUnit, setTrackingUnit] =
+    useState<UnitSelection>(emptyUnitSelection);
+  const [weightUnit, setWeightUnit] =
+    useState<UnitSelection>(emptyUnitSelection);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [suggestedBrands, setSuggestedBrands] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
+  const [suggestedBrands, setSuggestedBrands] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
@@ -177,13 +185,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const getInitialValues = useCallback((): PantryItemFormData => {
     if (mode === 'edit' && existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
-      // Use packageWeight if set, otherwise fall back to item.netWeight from catalog
-      const weight = item.packageWeight ?? item.item?.netWeight ?? undefined;
+      // In edit mode, only use explicitly set packageWeight (don't fall back to catalog item)
+      const weight = item.packageWeight ?? undefined;
       // Tracking unit (for counting items) - from item.unit or item.unitName
       const trackingUnitSymbol = item.unit?.symbol || item.unitName || '';
-      // Weight unit (for physical weight) - from item.packageWeightUnit or catalog displayUnit
-      const weightUnitSymbol =
-        item.packageWeightUnit?.symbol || item.item?.displayUnit?.symbol || '';
+      // Weight unit (for physical weight) - only use if explicitly set (don't fall back to catalog)
+      const weightUnitSymbol = item.packageWeightUnit?.symbol || '';
       return {
         quantityInput: item.currentQuantity?.toString() || '1',
         unit: trackingUnitSymbol, // Tracking unit
@@ -253,12 +260,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         type: item.unit?.type || null,
       });
       // Weight unit state (separate from tracking unit)
+      // In edit mode, only use explicitly set packageWeightUnit (don't fall back to catalog)
       const packageWeightUnit = item.packageWeightUnit;
-      const displayUnit = item.item?.displayUnit;
       setWeightUnit({
-        id: packageWeightUnit?.id || displayUnit?.id || null,
-        name: packageWeightUnit?.name || displayUnit?.name || null,
-        symbol: packageWeightUnit?.symbol || displayUnit?.symbol || null,
+        id: packageWeightUnit?.id || null,
+        name: packageWeightUnit?.name || null,
+        symbol: packageWeightUnit?.symbol || null,
         type: packageWeightUnit?.type || null,
       });
     }
@@ -366,7 +373,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     [],
   );
 
-
   const handleSave = async (data: PantryItemFormData) => {
     // Validate quantity input
     const quantityValue = parseQuantityInput(data.quantityInput || '');
@@ -421,7 +427,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       );
       Alert.alert(
         'Error',
-        `Failed to ${mode === 'add' ? 'add' : 'update'} pantry item. Please try again.`,
+        `Failed to ${
+          mode === 'add' ? 'add' : 'update'
+        } pantry item. Please try again.`,
       );
     } finally {
       setSaving(false);

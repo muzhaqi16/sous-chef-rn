@@ -118,7 +118,14 @@ export function BottomSheetAutocompleteInput<T>({
       bottomSheetRef.current?.present();
       onModalOpen?.();
     }
-  }, [data.length, searchTerm.length, minSearchLength, isOnline, showAutocomplete, onModalOpen]);
+  }, [
+    data.length,
+    searchTerm.length,
+    minSearchLength,
+    isOnline,
+    showAutocomplete,
+    onModalOpen,
+  ]);
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -141,6 +148,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   const handleSelectItem = (item: T) => {
     userDismissedRef.current = true; // Mark as user-dismissed
+    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
@@ -149,6 +157,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   const handleDismiss = useCallback(() => {
     userDismissedRef.current = true; // Mark as user-dismissed
+    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     onModalClose?.();
   }, [onModalClose]);
@@ -160,6 +169,7 @@ export function BottomSheetAutocompleteInput<T>({
     }
     // Dismiss the modal
     userDismissedRef.current = true; // Mark as user-dismissed
+    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onModalClose?.();
@@ -180,16 +190,18 @@ export function BottomSheetAutocompleteInput<T>({
   );
 
   const defaultEmptyComponent = () => (
-    <BottomSheetView style={[styles.messageContainer, { minHeight: height * 0.5 }]}>
+    <BottomSheetView
+      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+    >
       <Text style={styles.emptyText}>{emptyText}</Text>
-      {emptySubtext && (
-        <Text style={styles.emptySubtext}>{emptySubtext}</Text>
-      )}
+      {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
     </BottomSheetView>
   );
 
   const defaultLoadingComponent = () => (
-    <BottomSheetView style={[styles.messageContainer, { minHeight: height * 0.5 }]}>
+    <BottomSheetView
+      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+    >
       <Text style={styles.loadingText}>Loading...</Text>
     </BottomSheetView>
   );

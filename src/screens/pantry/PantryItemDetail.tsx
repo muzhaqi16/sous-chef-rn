@@ -64,7 +64,9 @@ const getDaysInPantry = (createdAt: string | null | undefined) => {
   if (!createdAt) return null;
   const created = new Date(createdAt);
   const now = new Date();
-  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor(
+    (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
+  );
 };
 
 // Format storage state for display
@@ -100,7 +102,7 @@ export const PantryItemDetail: React.FC<{
 
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
   });
 
   const [deleteItem] = useDeletePantryItemMutation();
@@ -332,8 +334,8 @@ export const PantryItemDetail: React.FC<{
                 ? daysInPantry === 0
                   ? 'Today'
                   : daysInPantry === 1
-                    ? '1 day'
-                    : `${daysInPantry} days`
+                  ? '1 day'
+                  : `${daysInPantry} days`
                 : '-'}
             </Text>
           </View>
@@ -353,7 +355,9 @@ export const PantryItemDetail: React.FC<{
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
               {item.packageWeight != null && item.packageWeight > 0
-                ? `${item.packageWeight} ${item.packageWeightUnit?.symbol || 'g'}`
+                ? `${item.packageWeight} ${
+                    item.packageWeightUnit?.symbol || 'g'
+                  }`
                 : `${item.currentQuantity} ${item.unit?.symbol || 'pcs'}`}
             </Text>
           </View>
@@ -371,7 +375,9 @@ export const PantryItemDetail: React.FC<{
                 library="Ionicons"
               />
             </View>
-            <Text style={[styles.infoValue, !brandName && styles.infoValueMuted]}>
+            <Text
+              style={[styles.infoValue, !brandName && styles.infoValueMuted]}
+            >
               {brandName || 'Unbranded'}
             </Text>
           </View>
@@ -474,7 +480,8 @@ export const PantryItemDetail: React.FC<{
               </View>
               <Text style={[styles.infoValue, styles.infoValueError]}>
                 {item.wasteAmount} wasted
-                {item.wasteReason && ` (${item.wasteReason.toLowerCase().replace('_', ' ')})`}
+                {item.wasteReason &&
+                  ` (${item.wasteReason.toLowerCase().replace('_', ' ')})`}
               </Text>
             </View>
           </View>
@@ -531,7 +538,9 @@ export const PantryItemDetail: React.FC<{
           <>
             <TouchableOpacity
               style={styles.sectionHeader}
-              onPress={() => setPurchaseHistoryExpanded(!purchaseHistoryExpanded)}
+              onPress={() =>
+                setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
+              }
               activeOpacity={0.7}
             >
               <Text style={styles.sectionTitle}>
@@ -554,7 +563,9 @@ export const PantryItemDetail: React.FC<{
                         {formatDate(usage.usedAt)}
                       </Text>
                       {usage.purpose && (
-                        <Text style={styles.purchaseStore}>{usage.purpose}</Text>
+                        <Text style={styles.purchaseStore}>
+                          {usage.purpose}
+                        </Text>
                       )}
                     </View>
                     <Text style={styles.purchasePrice}>

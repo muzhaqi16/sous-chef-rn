@@ -384,6 +384,7 @@ export function useShoppingListManagement() {
             ...fullItem,
             __typename: 'ShoppingListItem',
             isPurchased: variables.purchased,
+            version: (fullItem.version ?? 0) + 1, // Increment version for optimistic concurrency
             updatedAt: new Date().toISOString(),
           },
         };
@@ -402,6 +403,7 @@ export function useShoppingListManagement() {
             itemName: currentItem.itemName,
             quantity: currentItem.quantity,
             isPurchased: variables.purchased,
+            version: (currentItem.version ?? 0) + 1, // Increment version for optimistic concurrency
             updatedAt: new Date().toISOString(),
             category: currentItem.category,
             unitName: currentItem.unitName,
@@ -416,6 +418,7 @@ export function useShoppingListManagement() {
           __typename: 'ShoppingListItem',
           id: variables.id,
           isPurchased: variables.purchased,
+          version: (variables.version ?? 0) + 1, // Increment version for optimistic concurrency
           updatedAt: new Date().toISOString(),
         } as any,
       };

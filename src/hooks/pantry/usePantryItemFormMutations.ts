@@ -98,7 +98,9 @@ function buildOptimisticUnit(
   if (!newUnit.id) return null;
 
   // Cast type to UnitType if it's a string, fallback to COUNT
-  const unitType = (newUnit.type || currentUnit?.type || 'COUNT') as import('#generated').UnitType;
+  const unitType = (newUnit.type ||
+    currentUnit?.type ||
+    'COUNT') as import('#generated').UnitType;
 
   return {
     __typename: 'Unit',
@@ -122,8 +124,19 @@ function buildOptimisticUnit(
  */
 function buildOptimisticWeightUnit(
   newUnit: UnitSelection,
-  currentUnit?: { id?: string; name?: string; symbol?: string; type?: string } | null,
-): { __typename: 'Unit'; id: string; name: string; symbol: string; type: string | null } | null {
+  currentUnit?: {
+    id?: string;
+    name?: string;
+    symbol?: string;
+    type?: string;
+  } | null,
+): {
+  __typename: 'Unit';
+  id: string;
+  name: string;
+  symbol: string;
+  type: string | null;
+} | null {
   if (!newUnit.id) return null;
 
   return {
@@ -179,7 +192,9 @@ function buildDirtyUpdateInput(
   }
 
   if (dirtyFields.restockQuantity) {
-    input.restockQuantity = data.restockQuantity ? parseFloat(data.restockQuantity) : null;
+    input.restockQuantity = data.restockQuantity
+      ? parseFloat(data.restockQuantity)
+      : null;
   }
 
   return input;
@@ -246,13 +261,17 @@ export function usePantryItemFormMutations({
         cache.modify({
           id: pantryCacheId,
           fields: {
-            itemsConnection(existingConnection = {}, { readField, toReference }) {
+            itemsConnection(
+              existingConnection = {},
+              { readField, toReference },
+            ) {
               const newItemRef = toReference(mutationData.createPantryItem);
               const existingEdges = existingConnection?.edges || [];
 
               const exists = existingEdges.some(
                 (edge: any) =>
-                  readField('id', edge?.node) === mutationData.createPantryItem.id,
+                  readField('id', edge?.node) ===
+                  mutationData.createPantryItem.id,
               );
 
               if (exists) return existingConnection;
@@ -323,11 +342,16 @@ export function usePantryItemFormMutations({
    * Resolve unit ID from symbol if not already set
    */
   const resolveUnitId = useCallback(
-    async (currentUnitId: string | null, unitSymbol: string): Promise<string | null> => {
+    async (
+      currentUnitId: string | null,
+      unitSymbol: string,
+    ): Promise<string | null> => {
       if (currentUnitId) return currentUnitId;
       if (!unitSymbol.trim()) return null;
 
-      const result = await unitQuery({ variables: { symbol: unitSymbol.trim() } });
+      const result = await unitQuery({
+        variables: { symbol: unitSymbol.trim() },
+      });
       return result.data?.unitBySymbol?.id || null;
     },
     [unitQuery],
@@ -364,8 +388,12 @@ export function usePantryItemFormMutations({
         storageState: input.storageState,
         expiresAt: input.expirationDate?.toISOString() || null,
         storageNotes: input.notes.trim() || null,
-        minQuantity: input.minQuantity ? parseFloat(input.minQuantity) : undefined,
-        restockQuantity: input.restockQuantity ? parseFloat(input.restockQuantity) : undefined,
+        minQuantity: input.minQuantity
+          ? parseFloat(input.minQuantity)
+          : undefined,
+        restockQuantity: input.restockQuantity
+          ? parseFloat(input.restockQuantity)
+          : undefined,
         ...storageLocationInput,
       };
 
@@ -375,7 +403,10 @@ export function usePantryItemFormMutations({
         // Linking to existing catalog item
         const weightInput =
           input.itemWeight && selectedWeightUnitId
-            ? { packageWeight: input.itemWeight, packageWeightUnitId: selectedWeightUnitId }
+            ? {
+                packageWeight: input.itemWeight,
+                packageWeightUnitId: selectedWeightUnitId,
+              }
             : {};
 
         mutationInput = {
@@ -393,7 +424,10 @@ export function usePantryItemFormMutations({
 
         const weightInput =
           input.itemWeight && selectedWeightUnitId
-            ? { itemNetWeight: input.itemWeight, itemDisplayUnitId: selectedWeightUnitId }
+            ? {
+                itemNetWeight: input.itemWeight,
+                itemDisplayUnitId: selectedWeightUnitId,
+              }
             : {};
 
         mutationInput = {
@@ -406,7 +440,9 @@ export function usePantryItemFormMutations({
         };
       }
 
-      const result = await createMutation({ variables: { input: mutationInput } });
+      const result = await createMutation({
+        variables: { input: mutationInput },
+      });
 
       if (result.data?.createPantryItem) {
         onSuccess?.();
@@ -433,13 +469,17 @@ export function usePantryItemFormMutations({
       weightUnit,
       selectedLocationId,
     }: UpdatePantryItemParams): Promise<boolean> => {
-      const quantityOrUnitChanged = dirtyFields.quantityInput || dirtyFields.unit;
+      const quantityOrUnitChanged =
+        dirtyFields.quantityInput || dirtyFields.unit;
 
       // Handle quantity/unit changes with dedicated mutation
       if (quantityOrUnitChanged) {
-        const newQuantity = parseFloat(input.quantityInput || quantityValue.toString());
+        const newQuantity = parseFloat(
+          input.quantityInput || quantityValue.toString(),
+        );
 
-        await updateQuantityMutation({
+        // Fire mutation asynchronously - don't await to allow immediate navigation
+        updateQuantityMutation({
           variables: {
             pantryItemId: itemId,
             quantity: input.quantityInput || quantityValue.toString(),
@@ -455,6 +495,9 @@ export function usePantryItemFormMutations({
               unitName: input.unit || currentItem.unitName,
             }),
           },
+        }).catch(error => {
+          console.error('Quantity update failed:', error);
+          // Error already handled by mutation's onError
         });
       }
 
@@ -478,12 +521,19 @@ export function usePantryItemFormMutations({
           );
         }
 
-        await updateMutation({
+        // Fire mutation asynchronously - don't await to allow immediate navigation
+        updateMutation({
           variables: { id: itemId, input: updateInput },
           optimisticResponse: {
             __typename: 'Mutation',
-            updatePantryItem: enhanceWithVersion(currentItem as any, optimisticInput),
+            updatePantryItem: enhanceWithVersion(
+              currentItem as any,
+              optimisticInput,
+            ),
           },
+        }).catch(error => {
+          console.error('Pantry item update failed:', error);
+          // Error already handled by mutation's onError
         });
       }
 
