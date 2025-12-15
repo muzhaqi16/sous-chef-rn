@@ -306,6 +306,24 @@ export function makeCache(): InMemoryCache {
       Unit: {
         keyFields: ['id'],
       },
+      Item: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          imageUrl: {
+            // Preserve existing imageUrl if incoming mutation returns null
+            // This prevents partial responses from clearing cached images
+            merge(existing, incoming) {
+              // If incoming is null but we have an existing value, keep existing
+              if (incoming === null && existing) {
+                return existing;
+              }
+              // Otherwise use incoming (handles updates and initial loads)
+              return incoming;
+            },
+          },
+        },
+      },
       Recipe: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data

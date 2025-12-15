@@ -89,7 +89,7 @@ export function createAddToQueryFieldUpdater<T extends { id: string }>(
             existingItems: readonly Reference[] = [],
             { toReference, readField }: CacheFieldHelpers,
           ) {
-            const newItemRef = toReference(newItem);
+            const newItemRef = toReference(newItem, true);
 
             if (!newItemRef) return existingItems;
 
@@ -161,7 +161,7 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
               return existingItems;
             }
 
-            const newItemRef = toReference(newItem);
+            const newItemRef = toReference(newItem, true);
 
             if (!newItemRef) return existingItems;
 
@@ -381,7 +381,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
             existingConnection: any = {},
             { readField, toReference }: CacheFieldHelpers,
           ) {
-            const newItemRef = toReference(newItem);
+            const newItemRef = toReference(newItem, true);
 
             if (!newItemRef) return existingConnection;
 
@@ -477,7 +477,7 @@ export function createAddToParentArrayUpdater<T extends { id: string }>(
             existingItems: readonly Reference[] = [],
             { toReference, readField }: CacheFieldHelpers,
           ) {
-            const newItemRef = toReference(newItem);
+            const newItemRef = toReference(newItem, true);
 
             if (!newItemRef) return existingItems;
 

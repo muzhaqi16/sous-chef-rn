@@ -18,6 +18,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { Icon } from '#utils';
 import { useAppStore } from '#store/useAppStore';
+import { gql } from '@apollo/client';
 import {
   useGetRecentlyDeletedPantryItemsQuery,
   useCreatePantryItemMutation,
@@ -97,6 +98,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       update: (cache, { data }) => {
         if (!data?.createPantryItem || !pantryId) return;
 
+        // DEBUG: Check what backend returned
+        console.log('=== Backend Response ===');
+        console.log('PantryItem ID:', data.createPantryItem.id);
+        console.log('Item ID:', data.createPantryItem.item?.id);
+        console.log('Item name:', data.createPantryItem.item?.name);
+        console.log('Item imageUrl:', data.createPantryItem.item?.imageUrl);
+        console.log('Is imageUrl present?', !!data.createPantryItem.item?.imageUrl);
+
         try {
           const addToPantryCache = createAddToParentConnectionUpdater(
             'Pantry',
@@ -104,6 +113,26 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             'PantryItem',
           );
           addToPantryCache(cache, pantryId, data.createPantryItem);
+
+          // DEBUG: Check cache after update
+          if (data.createPantryItem.item?.id) {
+            console.log('=== Cache After Update ===');
+            try {
+              const itemInCache = cache.readFragment({
+                id: cache.identify({ __typename: 'Item', id: data.createPantryItem.item.id }),
+                fragment: gql`
+                  fragment CheckItem on Item {
+                    id
+                    name
+                    imageUrl
+                  }
+                `,
+              });
+              console.log('Item in cache:', itemInCache);
+            } catch (cacheError) {
+              console.warn('Could not read item from cache:', cacheError);
+            }
+          }
         } catch (error) {
           console.warn('Cache update failed for createPantryItem:', error);
         }
