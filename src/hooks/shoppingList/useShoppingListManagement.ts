@@ -618,15 +618,26 @@ export function useShoppingListManagement() {
     if (!selectedShoppingListId) return false;
 
     try {
-      // Find item to get current isPurchased state and version
-      const currentItem = items.find(item => item.id === itemId);
+      // Read fresh version from cache to handle rapid toggles correctly
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      });
 
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
+      const cachedItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+
+      if (!cachedItem) {
+        console.warn('Item not found in cache:', itemId);
         return false;
       }
 
-      const newStatus = !currentItem.isPurchased;
+      const newStatus = !cachedItem.isPurchased;
 
       // Use specialized toggle mutation with version for optimistic concurrency
       // Cache update is handled by cache.modify in the mutation's update function
@@ -634,7 +645,7 @@ export function useShoppingListManagement() {
         variables: {
           id: itemId,
           purchased: newStatus,
-          version: currentItem.version,
+          version: cachedItem.version,
         },
         // No optimisticResponse - cache.modify in update function handles instant UI
       });
