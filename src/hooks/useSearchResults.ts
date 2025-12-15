@@ -7,20 +7,31 @@ import {
   CreateItemMutation,
   UpcFormat,
 } from '#generated';
-import { useAppStore, selectSearchState, selectBottomSheetState } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectSearchState,
+  selectBottomSheetState,
+} from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
 import { storage } from '#/storage/mmkv';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum
-const mapVisionCameraFormatToUpcFormat = (format?: string): UpcFormat | undefined => {
+const mapVisionCameraFormatToUpcFormat = (
+  format?: string,
+): UpcFormat | undefined => {
   switch (format) {
-    case 'ean-13': return UpcFormat.Ean_13;
-    case 'ean-8': return UpcFormat.Ean_8;
-    case 'upc-a': return UpcFormat.UpcA;
-    case 'upc-e': return UpcFormat.UpcE;
-    default: return undefined; // Let API auto-detect
+    case 'ean-13':
+      return UpcFormat.Ean_13;
+    case 'ean-8':
+      return UpcFormat.Ean_8;
+    case 'upc-a':
+      return UpcFormat.UpcA;
+    case 'upc-e':
+      return UpcFormat.UpcE;
+    default:
+      return undefined; // Let API auto-detect
   }
 };
 
@@ -57,7 +68,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     setSearchError,
     setSearchResults,
   } = useAppStore(useShallow(selectSearchState));
-  const {showBottomSheet, hideBottomSheet} = useAppStore(
+  const { showBottomSheet, hideBottomSheet } = useAppStore(
     useShallow(selectBottomSheetState),
   );
 
@@ -95,7 +106,6 @@ export const useSearchResults = (barcode: string, format?: string) => {
         setSearchResults([newItem]);
         addToRecentlyScanned(newItem);
         hideBottomSheet();
-        Alert.alert('Success', 'Item added successfully!');
       }
     },
     onError: error => {

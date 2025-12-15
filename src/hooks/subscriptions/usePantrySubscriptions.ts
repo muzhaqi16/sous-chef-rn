@@ -18,7 +18,7 @@ import {
   usePantryUpdatedSubscription,
   usePantryLowStockAlertSubscription,
   usePantryExpiringItemsAlertSubscription,
-  PantryItemFragmentDoc,
+  PantryItemDisplayFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
@@ -51,7 +51,8 @@ const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
  */
 export function usePantrySubscriptions(userId?: string) {
   // Get selected pantry from global store
-  const selectedPantryId = useStore(state => state.selectedPantryId) || undefined;
+  const selectedPantryId =
+    useStore(state => state.selectedPantryId) || undefined;
 
   //
   // Pantry Items Changed Subscription
@@ -89,23 +90,32 @@ export function usePantrySubscriptions(userId?: string) {
         mutation === 'ITEM_REMOVED'
       ) {
         // Remove item from Pantry.itemsConnection
-        removeFromPantryItemsConnection(client.cache, selectedPantryId, item.id, {
-          evictItem: true,
-        });
+        removeFromPantryItemsConnection(
+          client.cache,
+          selectedPantryId,
+          item.id,
+          {
+            evictItem: true,
+          },
+        );
       } else if (
         mutation === MutationType.UPDATE ||
         mutation === 'UPDATED' ||
         mutation === 'ITEM_UPDATED'
       ) {
         // Check if item exists in cache
-        const cacheId = client.cache.identify({ __typename: 'PantryItem', id: item.id });
+        const cacheId = client.cache.identify({
+          __typename: 'PantryItem',
+          id: item.id,
+        });
 
         if (cacheId) {
           // Item exists in cache - update it with writeFragment
+          // Use PantryItemDisplay fragment to match subscription payload
           client.cache.writeFragment({
             id: cacheId,
-            fragment: PantryItemFragmentDoc,
-            fragmentName: 'PantryItemFragment',
+            fragment: PantryItemDisplayFragmentDoc,
+            fragmentName: 'PantryItemDisplay',
             data: item,
           });
         } else {
