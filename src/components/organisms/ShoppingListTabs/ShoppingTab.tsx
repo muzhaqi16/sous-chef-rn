@@ -69,18 +69,8 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
     );
   }
 
-  // After transition complete, show skeleton only during initial load with no cached data
-  if (loading && items.length === 0) {
-    return (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        {[1, 2, 3, 4, 5, 6].map(key => (
-          <ShoppingListItemSkeleton key={key} />
-        ))}
-      </ScrollView>
-    );
-  }
-
-  // Empty state for shopping tab
+  // Empty state for shopping tab - check this BEFORE rendering DraggableFlatList
+  // This prevents VirtualizedList key warnings during the transition from items -> empty
   if (items.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -94,7 +84,10 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
           All caught up!
         </Text>
         <Text
-          style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}
+          style={[
+            styles.emptyDescription,
+            { color: theme.colors.textSecondary },
+          ]}
         >
           Add items to your list or unmark purchased items to see them here
         </Text>

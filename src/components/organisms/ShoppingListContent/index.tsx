@@ -1,10 +1,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { EmptyState } from '#components/base/EmptyState';
-import {
-  SortableShoppingList,
-  CollapsiblePurchasedSection,
-} from '#components';
+import { SortableShoppingList, CollapsiblePurchasedSection } from '#components';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 
 interface ShoppingListContentProps {
@@ -94,6 +91,7 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
         ListFooterComponent={
           /* Collapsible Purchased Section */
           <CollapsiblePurchasedSection
+            key="purchased-section-footer"
             purchasedItems={purchasedItems}
             unpurchasedCount={unpurchasedItems.length}
             onItemPress={onItemPress}

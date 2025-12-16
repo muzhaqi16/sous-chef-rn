@@ -31,11 +31,12 @@ const addToShoppingListItemsCache = createAddToParentConnectionUpdater<any>(
   'ShoppingListItem',
 );
 
-const removeFromShoppingListItemsCache = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
+const removeFromShoppingListItemsCache =
+  createRemoveFromParentConnectionUpdater(
+    'ShoppingList',
+    'itemsConnection',
+    'ShoppingListItem',
+  );
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -195,7 +196,7 @@ export function useShoppingListMutations({
   // Remove mutation
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
-    optimisticResponse: (variables) => {
+    optimisticResponse: variables => {
       // Find the item being removed to return in optimistic response
       const item = items.find(i => i.id === variables.id);
       if (!item) {
@@ -221,11 +222,18 @@ export function useShoppingListMutations({
         const itemId = variables.id;
 
         // Save to optimistic persistence before removing
-        optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          '__deleted',
+          true,
+        );
 
         // Remove from cache using generic utility (handles filter + evict + gc)
         // Parent connection pattern: (cache, parentId, itemId, options)
-        removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
+        removeFromShoppingListItemsCache(cache, listId, itemId, {
+          evictItem: true,
+        });
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',
@@ -235,10 +243,14 @@ export function useShoppingListMutations({
         refetch();
       }
     },
-    onCompleted: (data) => {
+    onCompleted: data => {
       // Clear optimistic data after successful sync
       if (data?.removeItemFromShoppingList) {
-        optimisticDataPersistence.clear('ShoppingListItem', data.removeItemFromShoppingList.id, '__deleted');
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          data.removeItemFromShoppingList.id,
+          '__deleted',
+        );
       }
     },
     onError: error => {
@@ -274,10 +286,14 @@ export function useShoppingListMutations({
         },
       });
     },
-    onCompleted: (data) => {
+    onCompleted: data => {
       // Clear optimistic data after successful sync
       if (data?.toggleShoppingListItemPurchased) {
-        optimisticDataPersistence.clear('ShoppingListItem', data.toggleShoppingListItemPurchased.id, 'isPurchased');
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          data.toggleShoppingListItemPurchased.id,
+          'isPurchased',
+        );
       }
     },
     onError: error => {
@@ -306,140 +322,148 @@ export function useShoppingListMutations({
   });
 
   // Simplified update item
-  const updateItem = useCallback(async (
-    itemId: string,
-    updates: ShoppingListItemUpdate,
-  ) => {
-    if (!listId) return false;
+  const updateItem = useCallback(
+    async (itemId: string, updates: ShoppingListItemUpdate) => {
+      if (!listId) return false;
 
-    try {
-      // Read FRESH data from cache - use Full fragment (guaranteed to be cached)
-      const fullItem = client.readFragment<any>({
-        id: client.cache.identify({
+      try {
+        // Read FRESH data from cache - use Full fragment (guaranteed to be cached)
+        const fullItem = client.readFragment<any>({
+          id: client.cache.identify({
+            __typename: 'ShoppingListItem',
+            id: itemId,
+          }),
+          fragment: ShoppingListItemFragmentDoc,
+          fragmentName: 'ShoppingListItemFragment',
+        });
+
+        if (!fullItem) {
+          console.warn(
+            'Item not in cache, cannot update optimistically:',
+            itemId,
+          );
+          // Still attempt the mutation without optimistic response
+          const result = await updateItemMutation({
+            variables: {
+              id: itemId,
+              input: updates,
+            },
+          });
+          return result.data?.updateShoppingListItem ?? false;
+        }
+
+        // Extract core fields for optimistic response
+        const coreFields: ShoppingListItemCoreFragment = {
           __typename: 'ShoppingListItem',
-          id: itemId,
-        }),
-        fragment: ShoppingListItemFragmentDoc,
-        fragmentName: 'ShoppingListItemFragment',
-      });
+          id: fullItem.id,
+          itemName: fullItem.itemName,
+          quantity: fullItem.quantity,
+          quantityInput: fullItem.quantityInput,
+          displayFormat: fullItem.displayFormat,
+          isPurchased: fullItem.isPurchased,
+          version: fullItem.version,
+          updatedAt: fullItem.updatedAt,
+          category: fullItem.category,
+          notes: fullItem.notes,
+          unitName: fullItem.unitName,
+          unit: fullItem.unit
+            ? {
+                __typename: 'Unit',
+                id: fullItem.unit.id,
+                name: fullItem.unit.name,
+                symbol: fullItem.unit.symbol,
+                displayAsFraction: fullItem.unit.displayAsFraction,
+                minPrecision: fullItem.unit.minPrecision,
+                autoConvertThreshold: fullItem.unit.autoConvertThreshold,
+              }
+            : null,
+        };
 
-      if (!fullItem) {
-        console.warn(
-          'Item not in cache, cannot update optimistically:',
-          itemId,
-        );
-        // Still attempt the mutation without optimistic response
         const result = await updateItemMutation({
           variables: {
             id: itemId,
-            input: updates,
+            input: {
+              ...updates,
+              // Include version for server-side concurrency control
+              version: coreFields.version,
+            },
+          },
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItem: {
+              ...coreFields,
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            } as any,
           },
         });
+
         return result.data?.updateShoppingListItem ?? false;
-      }
+      } catch (error: any) {
+        // Handle version conflict errors
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetch() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return false;
+        }
 
-      // Extract core fields for optimistic response
-      const coreFields: ShoppingListItemCoreFragment = {
-        __typename: 'ShoppingListItem',
-        id: fullItem.id,
-        itemName: fullItem.itemName,
-        quantity: fullItem.quantity,
-        quantityInput: fullItem.quantityInput,
-        displayFormat: fullItem.displayFormat,
-        isPurchased: fullItem.isPurchased,
-        version: fullItem.version,
-        updatedAt: fullItem.updatedAt,
-        category: fullItem.category,
-        notes: fullItem.notes,
-        unitName: fullItem.unitName,
-        unit: fullItem.unit
-          ? {
-              __typename: 'Unit',
-              id: fullItem.unit.id,
-              name: fullItem.unit.name,
-              symbol: fullItem.unit.symbol,
-              displayAsFraction: fullItem.unit.displayAsFraction,
-              minPrecision: fullItem.unit.minPrecision,
-              autoConvertThreshold: fullItem.unit.autoConvertThreshold,
-            }
-          : null,
-      };
-
-      const result = await updateItemMutation({
-        variables: {
-          id: itemId,
-          input: {
-            ...updates,
-            // Include version for server-side concurrency control
-            version: coreFields.version,
-          },
-        },
-        optimisticResponse: {
-          __typename: 'Mutation',
-          updateShoppingListItem: {
-            ...coreFields,
-            ...updates,
-            updatedAt: new Date().toISOString(),
-          } as any,
-        },
-      });
-
-      return result.data?.updateShoppingListItem ?? false;
-    } catch (error: any) {
-      // Handle version conflict errors
-      if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
+        console.error('Update shopping list item error:', error);
         return false;
       }
-
-      console.error('Update shopping list item error:', error);
-      return false;
-    }
-  }, [client, listId, updateItemMutation, refetch]);
+    },
+    [client, listId, updateItemMutation, refetch],
+  );
 
   // Simplified remove item using CRUD utilities
-  const removeItem = useCallback(async (itemId: string) => {
-    const operation = createRemoveOperation({
-      mutation: removeItemMutation,
-      parentId: listId,
-      itemId,
-      operationName: 'Delete Shopping List Item',
-    });
-    return operation();
-  }, [createRemoveOperation, removeItemMutation, listId]);
+  const removeItem = useCallback(
+    async (itemId: string) => {
+      const operation = createRemoveOperation({
+        mutation: removeItemMutation,
+        parentId: listId,
+        itemId,
+        operationName: 'Delete Shopping List Item',
+      });
+      return operation();
+    },
+    [createRemoveOperation, removeItemMutation, listId],
+  );
 
   // Toggle item purchased status
-  const toggleItem = useCallback(async (itemId: string) => {
-    if (!listId) return false;
+  // Version parameter omitted for idempotent behavior - prevents conflicts on rapid toggles
+  // See: docs/api-improvements-version-conflicts.md
+  const toggleItem = useCallback(
+    async (itemId: string) => {
+      if (!listId) return false;
 
-    try {
-      // Find item to get current isPurchased state and version
-      const currentItem = items.find(item => item.id === itemId);
+      try {
+        // Find item to get current isPurchased state
+        const currentItem = items.find(item => item.id === itemId);
 
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
+        if (!currentItem) {
+          console.warn('Item not found:', itemId);
+          return false;
+        }
+
+        const newStatus = !currentItem.isPurchased;
+
+        const result = await togglePurchasedMutation({
+          variables: {
+            id: itemId,
+            purchased: newStatus,
+            // No version parameter - idempotent operation
+          },
+        });
+
+        return result.data?.toggleShoppingListItemPurchased ?? false;
+      } catch (error) {
+        console.error('Toggle shopping list item purchased error:', error);
         return false;
       }
-
-      const newStatus = !currentItem.isPurchased;
-
-      const result = await togglePurchasedMutation({
-        variables: {
-          id: itemId,
-          purchased: newStatus,
-          version: currentItem.version,
-        },
-      });
-
-      return result.data?.toggleShoppingListItemPurchased ?? false;
-    } catch (error) {
-      console.error('Toggle shopping list item purchased error:', error);
-      return false;
-    }
-  }, [listId, items, togglePurchasedMutation]);
+    },
+    [listId, items, togglePurchasedMutation],
+  );
 
   return {
     addItem,

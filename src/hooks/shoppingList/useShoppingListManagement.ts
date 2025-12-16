@@ -618,7 +618,7 @@ export function useShoppingListManagement() {
     if (!selectedShoppingListId) return false;
 
     try {
-      // Read fresh version from cache to handle rapid toggles correctly
+      // Read item from cache to get current isPurchased state
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
@@ -639,13 +639,15 @@ export function useShoppingListManagement() {
 
       const newStatus = !cachedItem.isPurchased;
 
-      // Use specialized toggle mutation with version for optimistic concurrency
+      // Toggle mutation WITHOUT version parameter for idempotent behavior
+      // This prevents version conflicts on rapid toggles and allows safe retries
+      // See: docs/api-improvements-version-conflicts.md
       // Cache update is handled by cache.modify in the mutation's update function
       const result = await togglePurchasedMutation({
         variables: {
           id: itemId,
           purchased: newStatus,
-          version: cachedItem.version,
+          // No version parameter - idempotent operation
         },
         // No optimisticResponse - cache.modify in update function handles instant UI
       });
