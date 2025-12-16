@@ -105,26 +105,19 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     };
   });
 
-  // PERFORMANCE: Store filtered arrays in refs to prevent renderScene recreation
-  // Refs are updated synchronously but don't trigger re-renders
-  const unpurchasedItemsRef = useRef<SortableShoppingListItem[]>([]);
-  const purchasedItemsRef = useRef<SortableShoppingListItem[]>([]);
-
   // Filter items by isPurchased value - works correctly with optimistic updates
   // Note: Can't use findIndex/slice because optimistic updates change isPurchased
   // in-place without re-sorting the array, breaking position-based assumptions
-  // PERFORMANCE: Update refs synchronously for immediate access in renderScene
-  const unpurchasedCount = useMemo(() => {
-    const filtered = items.filter(item => !item.isPurchased);
-    unpurchasedItemsRef.current = filtered;
-    return filtered.length;
+  const unpurchasedItems = useMemo(() => {
+    return items.filter(item => !item.isPurchased);
   }, [items]);
 
-  const purchasedCount = useMemo(() => {
-    const filtered = items.filter(item => item.isPurchased);
-    purchasedItemsRef.current = filtered;
-    return filtered.length;
+  const purchasedItems = useMemo(() => {
+    return items.filter(item => item.isPurchased);
   }, [items]);
+
+  const unpurchasedCount = unpurchasedItems.length;
+  const purchasedCount = purchasedItems.length;
 
   // Tab routes with badge counts
   // PERFORMANCE: Only recreate when badge counts actually change
@@ -187,10 +180,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
       switch (route.key) {
         case 'shopping':
-          // Access items from ref - ref is updated synchronously in useMemo above
           return (
             <MemoizedShoppingTab
-              items={unpurchasedItemsRef.current}
+              items={unpurchasedItems}
               onItemPress={callbacks.onItemPress}
               onItemEdit={callbacks.onItemEdit}
               isDragging={isDragging}
@@ -210,10 +202,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           );
 
         case 'purchased':
-          // Access items from ref - ref is updated synchronously in useMemo above
           return (
             <MemoizedPurchasedTab
-              items={purchasedItemsRef.current}
+              items={purchasedItems}
               onItemPress={callbacks.onItemPress}
               onItemEdit={callbacks.onItemEdit}
               onItemDelete={callbacks.onItemDelete}
@@ -236,10 +227,16 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           return null;
       }
     },
-    // PERFORMANCE: Only depend on stable handlers - NO state/data dependencies
-    // All dynamic data (items, loading, disabled, refreshing) accessed via refs
-    // isDragging kept as dependency since it's used for conditional logic
-    [isDragging, handleSwipeableWillOpen, handleDragBegin, handleDragRelease],
+    // PERFORMANCE: Include filtered arrays to ensure tabs update when items change
+    // The memoized filter functions ensure these only change when items actually change
+    [
+      unpurchasedItems,
+      purchasedItems,
+      isDragging,
+      handleSwipeableWillOpen,
+      handleDragBegin,
+      handleDragRelease,
+    ],
   );
 
   // If no items at all AND not loading, show empty state

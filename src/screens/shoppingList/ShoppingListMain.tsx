@@ -27,9 +27,7 @@ import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet';
 import {
-  useMoveShoppingItemToPantryMutation,
   useUpdateShoppingListItemQuantityMutation,
-  StorageState,
   ShoppingListItemDisplayFragment,
   BasicPantryFragment,
 } from '#generated';
@@ -37,15 +35,15 @@ import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { normalizeHome } from '#/utils/connectionUtils';
-import {
-  createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#/hooks/shoppingList/useShoppingListActions';
 import { useShoppingListSelectorModal } from '#/hooks/shoppingList/useShoppingListSelectorModal';
+import {
+  useMoveToPantry,
+  type MoveToPantryInput,
+} from '#/hooks/shoppingList/useMoveToPantry';
 
 /**
  * Shopping List Main Screen
@@ -176,50 +174,12 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     return (normalized?.pantries || []) as BasicPantryFragment[];
   }, [selectedHomeId, homes]);
 
-  // Ref to track the pantryId used in the mutation (for cache update)
-  const moveToPantryIdRef = useRef<string | null>(null);
-
-  // Move to pantry mutation
-  const [moveShoppingItemToPantry] = useMoveShoppingItemToPantryMutation({
-    update: (cache, { data }) => {
-      if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current) return;
-
-      try {
-        // Add to pantry items cache
-        const addToPantryCache = createAddToParentConnectionUpdater(
-          'Pantry',
-          'itemsConnection',
-          'PantryItem',
-        );
-        addToPantryCache(
-          cache,
-          moveToPantryIdRef.current,
-          data.moveShoppingItemToPantry,
-        );
-
-        // Remove from shopping list cache if removeFromList was true (default)
-        if (selectedItemForMove && currentListId) {
-          const removeFromShoppingListCache =
-            createRemoveFromParentConnectionUpdater(
-              'ShoppingList',
-              'itemsConnection',
-              'ShoppingListItem',
-            );
-          removeFromShoppingListCache(
-            cache,
-            currentListId,
-            selectedItemForMove.id,
-          );
-        }
-      } catch (error) {
-        console.warn(
-          'Cache update failed for moveShoppingItemToPantry:',
-          error,
-        );
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', error.message || 'Failed to move item to pantry');
+  // Move to pantry hook
+  const { moveToPantry } = useMoveToPantry({
+    currentListId,
+    onSuccess: () => {
+      setMoveToPantryModalVisible(false);
+      setSelectedItemForMove(null);
     },
   });
 
@@ -246,48 +206,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Handle confirm move to pantry
   const handleConfirmMoveToPantry = useCallback(
-    async (input: {
-      pantryId: string;
-      actualQuantity: number;
-      storageState?: StorageState;
-      expiresAt?: string;
-      removeFromList: boolean;
-      costPerUnit?: number;
-      totalCost?: number;
-      notes?: string;
-    }) => {
+    async (input: MoveToPantryInput) => {
       if (!selectedItemForMove) return;
-
-      // Set the ref for cache update
-      moveToPantryIdRef.current = input.pantryId;
-
-      try {
-        await moveShoppingItemToPantry({
-          variables: {
-            input: {
-              shoppingListItemId: selectedItemForMove.id,
-              pantryId: input.pantryId,
-              actualQuantity: input.actualQuantity,
-              storageState: input.storageState,
-              expiresAt: input.expiresAt,
-              removeFromList: input.removeFromList,
-              costPerUnit: input.costPerUnit,
-              totalCost: input.totalCost,
-              notes: input.notes,
-            },
-          },
-        });
-
-        Telemetry.trackEvent('shopping_item_moved_to_pantry', {
-          shopping_list_id: currentListId,
-          pantry_id: input.pantryId,
-          remove_from_list: input.removeFromList,
-        });
-      } catch (error) {
-        // Error handled by mutation onError
-      }
+      await moveToPantry(selectedItemForMove, input);
     },
-    [selectedItemForMove, currentListId, moveShoppingItemToPantry],
+    [selectedItemForMove, moveToPantry],
   );
 
   // Handle close move to pantry modal

@@ -97,18 +97,8 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
     );
   }
 
-  // After transition complete, show skeleton only during initial load with no cached data
-  if (loading && items.length === 0) {
-    return (
-      <ScrollView contentContainerStyle={styles.skeletonContainer}>
-        {[1, 2, 3, 4, 5, 6].map(key => (
-          <ShoppingListItemSkeleton key={key} />
-        ))}
-      </ScrollView>
-    );
-  }
-
-  // Empty state for purchased tab
+  // Empty state for purchased tab - check this BEFORE rendering DraggableFlatList
+  // This prevents VirtualizedList key warnings during the transition from items -> empty
   if (items.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -152,11 +142,8 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
       onDragRelease={onDragRelease}
       ListFooterComponent={
         onClearAll ? (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={clearButtonStyle}
-              onPress={handleClearAll}
-            >
+          <View key="purchased-footer" style={styles.footer}>
+            <TouchableOpacity style={clearButtonStyle} onPress={handleClearAll}>
               <Icon
                 name="delete-outline"
                 size={20}

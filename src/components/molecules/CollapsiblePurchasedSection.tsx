@@ -78,7 +78,8 @@ export const CollapsiblePurchasedSection: React.FC<
   useEffect(() => {
     // Only auto-expand when crossing the zero threshold (items remaining -> all done)
     // Don't trigger on every purchase, only when last item is marked purchased
-    const crossedZeroThreshold = prevUnpurchasedRef.current > 0 && unpurchasedCount === 0;
+    const crossedZeroThreshold =
+      prevUnpurchasedRef.current > 0 && unpurchasedCount === 0;
     if (crossedZeroThreshold && purchasedItems.length > 0 && !expanded) {
       setExpanded(true);
     }
@@ -127,7 +128,7 @@ export const CollapsiblePurchasedSection: React.FC<
   };
 
   return (
-    <View style={styles.container}>
+    <View key="collapsible-purchased-section" style={styles.container}>
       {/* Header */}
       <TouchableOpacity
         style={[

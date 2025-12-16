@@ -618,23 +618,36 @@ export function useShoppingListManagement() {
     if (!selectedShoppingListId) return false;
 
     try {
-      // Find item to get current isPurchased state and version
-      const currentItem = items.find(item => item.id === itemId);
+      // Read item from cache to get current isPurchased state
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      });
 
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
+      const cachedItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+
+      if (!cachedItem) {
+        console.warn('Item not found in cache:', itemId);
         return false;
       }
 
-      const newStatus = !currentItem.isPurchased;
+      const newStatus = !cachedItem.isPurchased;
 
-      // Use specialized toggle mutation with version for optimistic concurrency
+      // Toggle mutation WITHOUT version parameter for idempotent behavior
+      // This prevents version conflicts on rapid toggles and allows safe retries
+      // See: docs/api-improvements-version-conflicts.md
       // Cache update is handled by cache.modify in the mutation's update function
       const result = await togglePurchasedMutation({
         variables: {
           id: itemId,
           purchased: newStatus,
-          version: currentItem.version,
+          // No version parameter - idempotent operation
         },
         // No optimisticResponse - cache.modify in update function handles instant UI
       });
