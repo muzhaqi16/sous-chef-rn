@@ -5,7 +5,7 @@ import type { DocumentNode } from 'graphql';
 import type * as ApolloReactCommon from '@apollo/client';
 import * as ApolloReactHooks from '@apollo/client/react';
 export type Maybe<T> = T | null | undefined;
-export type InputMaybe<T> = T | undefined;
+export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
   [K in keyof T]: T[K];
 };
@@ -691,14 +691,17 @@ export type CreateDeviceInput = {
   buildNumber?: InputMaybe<Scalars['String']['input']>;
   bundleId?: InputMaybe<Scalars['String']['input']>;
   carrier?: InputMaybe<Scalars['String']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   hostNames?: InputMaybe<Scalars['JSON']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
@@ -716,6 +719,7 @@ export type CreateDeviceInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
   model?: InputMaybe<Scalars['String']['input']>;
@@ -726,6 +730,7 @@ export type CreateDeviceInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -1444,14 +1449,17 @@ export type DeviceRegistrationInput = {
   buildNumber?: InputMaybe<Scalars['String']['input']>;
   bundleId?: InputMaybe<Scalars['String']['input']>;
   carrier?: InputMaybe<Scalars['String']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   hostNames?: InputMaybe<Scalars['JSON']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
   isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1466,6 +1474,7 @@ export type DeviceRegistrationInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
   model?: InputMaybe<Scalars['String']['input']>;
@@ -1476,6 +1485,7 @@ export type DeviceRegistrationInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -2441,6 +2451,7 @@ export type ItemSuggestion = {
   images: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
+  type: ItemType;
 };
 
 export enum ItemType {
@@ -8157,8 +8168,10 @@ export type UpdateDeviceInput = {
   clearPushToken?: InputMaybe<Scalars['Boolean']['input']>;
   /** Soft delete the device (replaces deleteDevice mutation) */
   delete?: InputMaybe<Scalars['Boolean']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   /** Update hardware info using structured input */
   hardwareInfo?: InputMaybe<DeviceHardwareInfoInput>;
@@ -8168,6 +8181,7 @@ export type UpdateDeviceInput = {
   /** Increment the login count (replaces incrementDeviceLoginCount mutation) */
   incrementLoginCount?: InputMaybe<Scalars['Boolean']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8185,6 +8199,7 @@ export type UpdateDeviceInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   /** Update location using structured input */
   location?: InputMaybe<DeviceLocationInput>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
@@ -8199,6 +8214,7 @@ export type UpdateDeviceInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -10637,6 +10653,10 @@ export type PantryItemFragment = {
   wasteAmount: number;
   wasteDate: string | null | undefined;
   wasteReason: WasteReason | null | undefined;
+  condition: ItemCondition;
+  acquisitionMethod: AcquisitionMethod;
+  costPerUnit: number | null | undefined;
+  totalCost: number | null | undefined;
   item: { __typename?: 'Item' } & ItemFragment;
   unit:
     | {
@@ -10667,6 +10687,17 @@ export type PantryItemFragment = {
     | null
     | undefined;
   store: { __typename?: 'Store'; id: string; name: string } | null | undefined;
+  purchase:
+    | {
+        __typename?: 'Purchase';
+        id: string;
+        purchaseDate: string;
+        unitPrice: number;
+        totalPrice: number;
+        quantity: number;
+      }
+    | null
+    | undefined;
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
@@ -12066,6 +12097,7 @@ export type AutocompleteItemsQuery = {
           __typename?: 'ItemSuggestion';
           id: string;
           name: string;
+          type: ItemType;
           imageUrl: string | null | undefined;
           images: any | null | undefined;
           netWeight: number | null | undefined;
@@ -18167,6 +18199,27 @@ export const PantryItemFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -19144,6 +19197,27 @@ export const PantryFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -19960,6 +20034,27 @@ export const HomeFragmentDoc = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -25993,6 +26088,27 @@ export const GetHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -28465,6 +28581,27 @@ export const GetHomeByJoinCodeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -29641,6 +29778,27 @@ export const CreateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -30793,6 +30951,27 @@ export const UpdateHomeDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -33635,6 +33814,27 @@ export const GetDefaultHomeDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -38285,6 +38485,7 @@ export const AutocompleteItemsDocument = {
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'imageUrl' },
@@ -42127,6 +42328,27 @@ export const GetPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -44959,6 +45181,27 @@ export const DeletePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -45660,6 +45903,27 @@ export const CreatePantryItemUsageDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -46406,6 +46670,27 @@ export const RecordPantryItemWasteDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -47071,6 +47356,27 @@ export const RestockPantryItemDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -47950,6 +48256,27 @@ export const SyncPantryItemDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -61913,6 +62240,27 @@ export const MoveShoppingItemToPantryDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },

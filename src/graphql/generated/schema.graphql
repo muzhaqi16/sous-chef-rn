@@ -1083,14 +1083,17 @@ input CreateDeviceInput {
   buildNumber: String
   bundleId: String
   carrier: String
+  deviceFingerprint: String
   deviceId: String!
   deviceName: String
   deviceType: DeviceType = UNKNOWN
+  firstInstallTime: DateTime
   freeDiskStorage: String
   hasDynamicIsland: Boolean
   hasNotch: Boolean
   hostNames: JSON
   instanceId: String
+  iosVendorId: String
   isActive: Boolean = true
   isAirplaneMode: Boolean
   isBatteryCharging: Boolean
@@ -1108,6 +1111,7 @@ input CreateDeviceInput {
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  lastUpdateTime: DateTime
   manufacturer: String
   maxMemory: String
   model: String
@@ -1118,6 +1122,7 @@ input CreateDeviceInput {
   pushToken: String
   readableVersion: String
   screenResolution: String
+  securityPatch: String
   supportedAbis: JSON
   supportedMediaTypes: JSON
   systemVersion: String
@@ -1904,14 +1909,17 @@ input DeviceRegistrationInput {
   buildNumber: String
   bundleId: String
   carrier: String
+  deviceFingerprint: String
   deviceId: String!
   deviceName: String
   deviceType: DeviceType = UNKNOWN
+  firstInstallTime: DateTime
   freeDiskStorage: String
   hasDynamicIsland: Boolean
   hasNotch: Boolean
   hostNames: JSON
   instanceId: String
+  iosVendorId: String
   isAirplaneMode: Boolean
   isBatteryCharging: Boolean
   isBluetoothHeadphonesConnected: Boolean
@@ -1926,6 +1934,7 @@ input DeviceRegistrationInput {
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  lastUpdateTime: DateTime
   manufacturer: String
   maxMemory: String
   model: String
@@ -1936,6 +1945,7 @@ input DeviceRegistrationInput {
   pushToken: String
   readableVersion: String
   screenResolution: String
+  securityPatch: String
   supportedAbis: JSON
   supportedMediaTypes: JSON
   systemVersion: String
@@ -2875,6 +2885,7 @@ type ItemSuggestion {
   images: JSON
   name: String!
   netWeight: Float
+  type: ItemType!
 }
 
 enum ItemType {
@@ -7388,8 +7399,10 @@ input UpdateDeviceInput {
   Soft delete the device (replaces deleteDevice mutation)
   """
   delete: Boolean
+  deviceFingerprint: String
   deviceName: String
   deviceType: DeviceType
+  firstInstallTime: DateTime
   freeDiskStorage: String
   """
   Update hardware info using structured input
@@ -7403,6 +7416,7 @@ input UpdateDeviceInput {
   """
   incrementLoginCount: Boolean
   instanceId: String
+  iosVendorId: String
   isActive: Boolean
   isAirplaneMode: Boolean
   isBatteryCharging: Boolean
@@ -7420,6 +7434,7 @@ input UpdateDeviceInput {
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  lastUpdateTime: DateTime
   """
   Update location using structured input
   """
@@ -7438,6 +7453,7 @@ input UpdateDeviceInput {
   pushToken: String
   readableVersion: String
   screenResolution: String
+  securityPatch: String
   supportedAbis: JSON
   supportedMediaTypes: JSON
   systemVersion: String

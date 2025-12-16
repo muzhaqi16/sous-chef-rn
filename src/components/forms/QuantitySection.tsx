@@ -98,14 +98,12 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         <Controller
           control={control}
           name="itemWeight"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
+          render={({ field: { onChange, value } }) => (
+            <FractionInput
               label="Package Weight"
               value={value?.toString() || ''}
               onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="e.g., 300"
-              keyboardType="decimal-pad"
+              placeholder="e.g., 1/4, 300"
               error={errors.itemWeight?.message?.toString()}
             />
           )}

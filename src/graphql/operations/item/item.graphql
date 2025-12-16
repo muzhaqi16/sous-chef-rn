@@ -150,6 +150,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
     suggestions {
       id
       name
+      type
       imageUrl
       images
       netWeight

@@ -1,5 +1,9 @@
 import { useCallback, useState } from 'react';
-import { collectDeviceInformation, validateDeviceInformation, type DeviceInformation } from '#/utils/deviceInfo';
+import {
+  collectDeviceInformation,
+  validateDeviceInformation,
+  type DeviceInformation,
+} from '#/utils/deviceInfo';
 import { logger } from '#/utils/environment';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
@@ -82,6 +86,11 @@ export const useDeviceRegistration = () => {
         androidId: deviceInfo.androidId,
         instanceId: deviceInfo.instanceId,
         apiLevel: deviceInfo.apiLevel,
+        deviceFingerprint: deviceInfo.deviceFingerprint,
+        iosVendorId: deviceInfo.iosVendorId,
+        securityPatch: deviceInfo.securityPatch,
+        firstInstallTime: deviceInfo.firstInstallTime,
+        lastUpdateTime: deviceInfo.lastUpdateTime,
 
         // Hardware specifications
         totalMemory: deviceInfo.totalMemory,
@@ -103,7 +112,9 @@ export const useDeviceRegistration = () => {
         // Battery management
         batteryLevel: deviceInfo.batteryLevel,
         isBatteryCharging: deviceInfo.isBatteryCharging,
-        powerState: deviceInfo.powerState ? JSON.parse(deviceInfo.powerState) : undefined,
+        powerState: deviceInfo.powerState
+          ? JSON.parse(deviceInfo.powerState)
+          : undefined,
 
         // Peripheral detection (automation/bot detection)
         isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
@@ -116,22 +127,12 @@ export const useDeviceRegistration = () => {
 
       // Fields collected but NOT yet in API schema - add these to the backend:
       // - fontScale: number (display font scaling factor)
-      // - firstInstallTime: string (ISO date of first app install)
-      // - lastUpdateTime: string (ISO date of last app update)
       // - serialNumber: string (device serial number - Android)
-      // - deviceFingerprint: string (Android build fingerprint)
-      // - securityPatch: string (Android security patch level)
-      // - iosVendorId: string (iOS vendor identifier)
       // - currency: string (user's currency preference)
       if (__DEV__) {
         logger.debug('Device fields collected but not in API schema:', {
           fontScale: deviceInfo.fontScale,
-          firstInstallTime: deviceInfo.firstInstallTime,
-          lastUpdateTime: deviceInfo.lastUpdateTime,
           serialNumber: deviceInfo.serialNumber,
-          deviceFingerprint: deviceInfo.deviceFingerprint,
-          securityPatch: deviceInfo.securityPatch,
-          iosVendorId: deviceInfo.iosVendorId,
           currency: deviceInfo.currency,
         });
       }
@@ -182,29 +183,32 @@ export const useDeviceRegistration = () => {
   /**
    * Registers device with retry logic
    */
-  const registerDeviceWithRetry = useCallback(async (maxRetries: number = 2): Promise<boolean> => {
-    let attempts = 0;
+  const registerDeviceWithRetry = useCallback(
+    async (maxRetries: number = 2): Promise<boolean> => {
+      let attempts = 0;
 
-    while (attempts < maxRetries) {
-      attempts++;
-      logger.info(`Device registration attempt ${attempts}/${maxRetries}`);
+      while (attempts < maxRetries) {
+        attempts++;
+        logger.info(`Device registration attempt ${attempts}/${maxRetries}`);
 
-      const success = await registerDevice();
-      if (success) {
-        return true;
+        const success = await registerDevice();
+        if (success) {
+          return true;
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempts < maxRetries) {
+          const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s...
+          logger.info(`Device registration failed, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
 
-      // Wait before retry (exponential backoff)
-      if (attempts < maxRetries) {
-        const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s...
-        logger.info(`Device registration failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-
-    logger.warn(`Device registration failed after ${maxRetries} attempts`);
-    return false;
-  }, [registerDevice]);
+      logger.warn(`Device registration failed after ${maxRetries} attempts`);
+      return false;
+    },
+    [registerDevice],
+  );
 
   /**
    * Silently registers device in background (non-blocking)
@@ -217,7 +221,9 @@ export const useDeviceRegistration = () => {
         if (success) {
           logger.info('Background device registration completed successfully');
         } else {
-          logger.warn('Background device registration failed - will retry on next login');
+          logger.warn(
+            'Background device registration failed - will retry on next login',
+          );
         }
       })
       .catch(error => {
@@ -240,15 +246,16 @@ export const useDeviceRegistration = () => {
   /**
    * Gets collected device information without registering
    */
-  const getDeviceInformation = useCallback(async (): Promise<DeviceInformation | null> => {
-    try {
-      const deviceInfo = await collectDeviceInformation();
-      return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
-    } catch (error) {
-      logger.error('Error getting device information:', error);
-      return null;
-    }
-  }, []);
+  const getDeviceInformation =
+    useCallback(async (): Promise<DeviceInformation | null> => {
+      try {
+        const deviceInfo = await collectDeviceInformation();
+        return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
+      } catch (error) {
+        logger.error('Error getting device information:', error);
+        return null;
+      }
+    }, []);
 
   return {
     // State

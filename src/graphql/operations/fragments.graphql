@@ -631,6 +631,18 @@ fragment PantryItemFragment on PantryItem {
     id
     name
   }
+  # Additional detail fields
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
+  }
   usageRecords {
     id
     quantityUsed

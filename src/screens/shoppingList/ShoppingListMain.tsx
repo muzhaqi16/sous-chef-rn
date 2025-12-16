@@ -243,7 +243,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           variables: {
             itemId: selectedItemForQuantity.id,
             quantity: quantity.toString(),
-            unitId: unitId || undefined,
+            // null clears unit, undefined keeps current, string updates to new unit
+            unitId,
             version: selectedItemForQuantity.version,
           },
         });

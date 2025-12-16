@@ -80,6 +80,27 @@ const formatStorageState = (state?: string | null): string => {
   return mapping[state] || state;
 };
 
+// Format condition enum for display
+const formatCondition = (condition?: string | null): string | null => {
+  if (!condition || condition === 'GOOD') return null;
+  return condition.charAt(0) + condition.slice(1).toLowerCase();
+};
+
+// Format acquisition method enum for display
+const formatAcquisitionMethod = (method?: string | null): string | null => {
+  if (!method) return null;
+  return method
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Format currency
+const formatCurrency = (amount?: number | null): string | null => {
+  if (amount == null || amount <= 0) return null;
+  return `$${amount.toFixed(2)}`;
+};
+
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
 }> = ({ route }) => {
@@ -363,25 +384,41 @@ export const PantryItemDetail: React.FC<{
           </View>
         </View>
 
-        {/* Brand Row - always show, "Unbranded" if null */}
+        {/* Quantity Row */}
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Brand</Text>
+          <Text style={styles.infoLabel}>Quantity</Text>
           <View style={styles.infoValueContainer}>
             <View style={styles.infoIcon}>
               <Icon
-                name="pricetag-outline"
+                name="apps-outline"
                 size={16}
                 color={theme.colors.textSecondary}
                 library="Ionicons"
               />
             </View>
-            <Text
-              style={[styles.infoValue, !brandName && styles.infoValueMuted]}
-            >
-              {brandName || 'Unbranded'}
+            <Text style={styles.infoValue}>
+              {item.currentQuantity} {item.unit?.name || item.unitName || 'pcs'}
             </Text>
           </View>
         </View>
+
+        {/* Brand Row - only show if brand is set */}
+        {brandName && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Brand</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="pricetag-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{brandName}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Storage Location */}
         {item.storageLocation && (
@@ -439,6 +476,180 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>{item.store.name}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Condition Row - only show if not GOOD */}
+        {formatCondition(item.condition) && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Condition</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="fitness-outline"
+                  size={16}
+                  color={
+                    item.condition === 'SPOILED'
+                      ? theme.colors.error
+                      : theme.colors.warning
+                  }
+                  library="Ionicons"
+                />
+              </View>
+              <Text
+                style={[
+                  styles.infoValue,
+                  item.condition === 'SPOILED' && styles.infoValueError,
+                  item.condition === 'FAIR' && styles.infoValueWarning,
+                ]}
+              >
+                {formatCondition(item.condition)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Acquired Via Row */}
+        {formatAcquisitionMethod(item.acquisitionMethod) && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Acquired</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="bag-handle-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {formatAcquisitionMethod(item.acquisitionMethod)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Cost Per Unit Row */}
+        {formatCurrency(item.costPerUnit) && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Cost/Unit</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="cash-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {formatCurrency(item.costPerUnit)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Total Cost Row */}
+        {formatCurrency(item.totalCost) && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Total Cost</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="wallet-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {formatCurrency(item.totalCost)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Min Stock Row */}
+        {item.minQuantity != null && item.minQuantity > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Min Stock</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="alert-circle-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {item.minQuantity} {item.unit?.symbol || 'pcs'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Restock At Row */}
+        {item.restockQuantity != null && item.restockQuantity > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Restock At</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="refresh-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {item.restockQuantity} {item.unit?.symbol || 'pcs'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Started With Row - only show if different from current */}
+        {item.initialQuantity != null &&
+          item.initialQuantity !== item.currentQuantity && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Started With</Text>
+              <View style={styles.infoValueContainer}>
+                <View style={styles.infoIcon}>
+                  <Icon
+                    name="enter-outline"
+                    size={16}
+                    color={theme.colors.textSecondary}
+                    library="Ionicons"
+                  />
+                </View>
+                <Text style={styles.infoValue}>
+                  {item.initialQuantity} {item.unit?.symbol || 'pcs'}
+                </Text>
+              </View>
+            </View>
+          )}
+
+        {/* Purchase Date Row */}
+        {item.purchase?.purchaseDate && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Purchased</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="receipt-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {formatDate(item.purchase.purchaseDate)}
+                {item.purchase.unitPrice != null &&
+                  item.purchase.unitPrice > 0 &&
+                  ` @ ${formatCurrency(item.purchase.unitPrice)}`}
+              </Text>
             </View>
           </View>
         )}
@@ -766,6 +977,9 @@ const styles = StyleSheet.create(theme => ({
   },
   infoValueError: {
     color: theme.colors.error,
+  },
+  infoValueWarning: {
+    color: theme.colors.warning,
   },
   sectionHeader: {
     flexDirection: 'row',

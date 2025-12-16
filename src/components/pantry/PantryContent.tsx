@@ -71,7 +71,6 @@ interface PantryContentProps {
   // User info
   userName: string;
   householdName: string;
-  avatarInitial: string;
   avatarUrl?: string | null;
   notificationCount?: number;
 
@@ -122,7 +121,6 @@ interface PantryContentProps {
 export const PantryContent: React.FC<PantryContentProps> = ({
   userName,
   householdName,
-  avatarInitial,
   avatarUrl,
   notificationCount = 0,
   items: _items,
@@ -198,17 +196,19 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       const expiresIn = calculateExpiresIn(item.expiresAt);
       const expStatus = getExpirationStatus(expiresIn);
 
-      // FIX: Prioritize packageWeight over currentQuantity (matches detail view behavior)
+      // Show count first, weight as fallback
       let quantity: string;
-      if (item.packageWeight != null && item.packageWeight > 0) {
+      const unitSymbol = item.unit?.symbol || item.item?.displayUnit?.symbol || 'pcs';
+
+      if (item.currentQuantity > 0) {
+        quantity = formatQuantityDisplay(item.currentQuantity, unitSymbol);
+      } else if (item.packageWeight != null && item.packageWeight > 0) {
         quantity = formatQuantityDisplay(
           item.packageWeight,
           item.packageWeightUnit?.symbol || 'g',
         );
       } else {
-        const unitSymbol =
-          item.unit?.symbol || item.item?.displayUnit?.symbol || 'pcs';
-        quantity = formatQuantityDisplay(item.currentQuantity, unitSymbol);
+        quantity = formatQuantityDisplay(0, unitSymbol);
       }
 
       const location = getLocationString(item.storageState);
@@ -461,8 +461,13 @@ export const PantryContent: React.FC<PantryContentProps> = ({
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{avatarInitial}</Text>
+              <View style={styles.avatarPlaceholder}>
+                <Icon
+                  library="Ionicons"
+                  name="person"
+                  size={24}
+                  color={theme.colors.textSecondary}
+                />
               </View>
             )}
             {notificationCount > 0 && (
@@ -637,32 +642,30 @@ const styles = StyleSheet.create(theme => ({
   avatarContainer: {
     position: 'relative',
   },
-  avatar: {
-    width: theme.sizes.avatar.lg,
-    height: theme.sizes.avatar.lg,
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
     borderRadius: theme.radii.xl - 2,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignItems: 'center',
-    ...theme.shadows.md,
+    justifyContent: 'center',
   },
   avatarImage: {
-    width: theme.sizes.avatar.lg,
-    height: theme.sizes.avatar.lg,
+    width: 48,
+    height: 48,
     borderRadius: theme.radii.xl - 2,
-    ...theme.shadows.md,
-  },
-  avatarText: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.white,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
   },
   notificationBadge: {
     position: 'absolute',
     top: -theme.spacing.xs,
     right: -theme.spacing.xs,
-    width: theme.spacing['5'],
+    minWidth: theme.spacing['5'],
     height: theme.spacing['5'],
+    paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.error,
     justifyContent: 'center',

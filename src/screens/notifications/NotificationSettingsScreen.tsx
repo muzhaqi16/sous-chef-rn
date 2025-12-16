@@ -148,6 +148,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           title="Notifications Disabled"
           subtitle="Notification permissions are not enabled. Tap to enable in settings."
           icon="bell-off"
+          iconLibrary="Feather"
           variant="warning"
           onPress={() => {
             Alert.alert(

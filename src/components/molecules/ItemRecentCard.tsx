@@ -2,24 +2,35 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
-import { GetRecentlyDeletedShoppingListItemsQuery } from '#generated';
 import { formatDistanceToNow } from 'date-fns';
 
-type RecentShoppingListItem = NonNullable<
-  GetRecentlyDeletedShoppingListItemsQuery['recentlyDeletedShoppingListItems']
->[0];
-
-interface RecentItemCardProps {
-  item: RecentShoppingListItem;
-  onQuickAdd: (item: RecentShoppingListItem) => void;
-  disabled?: boolean;
+/**
+ * Generic interface for recently deleted items
+ * Works with both RecentPantryItem and RecentShoppingListItem
+ */
+export interface RecentItem {
+  id: string;
+  itemName?: string | null;
+  createdAt?: string | null;
+  item?: {
+    imageUrl?: string | null;
+  } | null;
 }
 
-export const RecentItemCard: React.FC<RecentItemCardProps> = ({
+interface ItemRecentCardProps<T extends RecentItem> {
+  item: T;
+  onQuickAdd: (item: T) => void;
+  disabled?: boolean;
+  /** Icon to show in placeholder when no image (default: 'inventory-2') */
+  placeholderIcon?: 'inventory-2' | 'shopping-cart';
+}
+
+export function ItemRecentCard<T extends RecentItem>({
   item,
   onQuickAdd,
   disabled,
-}) => {
+  placeholderIcon = 'inventory-2',
+}: ItemRecentCardProps<T>) {
   const { theme } = useUnistyles();
 
   // Format the time since the item was added
@@ -41,7 +52,7 @@ export const RecentItemCard: React.FC<RecentItemCardProps> = ({
         ) : (
           <View style={styles.imagePlaceholder}>
             <Icon
-              name="shopping-cart"
+              name={placeholderIcon}
               size={24}
               color={theme.colors.primary}
               library="MaterialIcons"
@@ -53,7 +64,7 @@ export const RecentItemCard: React.FC<RecentItemCardProps> = ({
       {/* Item Info */}
       <View style={styles.info}>
         <Text style={styles.itemName} numberOfLines={1}>
-          {item.itemName}
+          {item.itemName ?? 'Unknown Item'}
         </Text>
         <Text style={styles.timeAgo} numberOfLines={1}>
           {timeAgo}
@@ -76,7 +87,7 @@ export const RecentItemCard: React.FC<RecentItemCardProps> = ({
       </TouchableOpacity>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create(theme => ({
   container: {

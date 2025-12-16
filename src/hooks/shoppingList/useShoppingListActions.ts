@@ -431,7 +431,7 @@ export function useShoppingListActions({
 
   // Clear all purchased handler
   const handleClearAllPurchased = useCallback(async () => {
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.purchaseInfo?.isPurchased);
 
     if (purchasedItems.length === 0) return;
 

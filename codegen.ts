@@ -79,7 +79,7 @@ const config: CodegenConfig = {
 
         // Nullable handling - match server style
         maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | undefined', // Match server
+        inputMaybeValue: 'T | null | undefined', // Allows explicit null to clear fields
 
         // Error handling
         errorType: 'ApolloError',
@@ -162,7 +162,7 @@ const config: CodegenConfig = {
           IPv4: 'string', // IP addresses as strings
         },
         maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | undefined',
+        inputMaybeValue: 'T | null | undefined',
       },
     },
   },

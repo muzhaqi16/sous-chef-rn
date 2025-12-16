@@ -77,11 +77,16 @@ export const useNotificationSettings = () => {
     optimisticResponse: (variables, { IGNORE }) => {
       if (!preferences) return IGNORE;
 
+      // Filter out null/undefined values from input to prevent overriding non-nullable fields
+      const definedInputs = Object.fromEntries(
+        Object.entries(variables.input).filter(([, v]) => v != null),
+      );
+
       return {
         __typename: 'Mutation',
         updateNotificationPreferences: {
           ...preferences,
-          ...variables.input,
+          ...definedInputs,
           __typename: 'NotificationPreferences',
           updatedAt: new Date().toISOString(),
         },

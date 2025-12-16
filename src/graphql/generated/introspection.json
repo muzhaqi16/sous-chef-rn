@@ -4485,6 +4485,14 @@
             "deprecationReason": null
           },
           {
+            "name": "deviceFingerprint",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "deviceId",
             "description": null,
             "type": {
@@ -4509,6 +4517,14 @@
             "description": null,
             "type": { "kind": "ENUM", "name": "DeviceType", "ofType": null },
             "defaultValue": "UNKNOWN",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "firstInstallTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -4546,6 +4562,14 @@
           },
           {
             "name": "instanceId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "iosVendorId",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
@@ -4689,6 +4713,14 @@
             "deprecationReason": null
           },
           {
+            "name": "lastUpdateTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "manufacturer",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -4766,6 +4798,14 @@
           },
           {
             "name": "screenResolution",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "securityPatch",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
@@ -10121,6 +10161,14 @@
             "deprecationReason": null
           },
           {
+            "name": "deviceFingerprint",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "deviceId",
             "description": null,
             "type": {
@@ -10145,6 +10193,14 @@
             "description": null,
             "type": { "kind": "ENUM", "name": "DeviceType", "ofType": null },
             "defaultValue": "UNKNOWN",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "firstInstallTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -10182,6 +10238,14 @@
           },
           {
             "name": "instanceId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "iosVendorId",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
@@ -10301,6 +10365,14 @@
             "deprecationReason": null
           },
           {
+            "name": "lastUpdateTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "manufacturer",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -10378,6 +10450,14 @@
           },
           {
             "name": "screenResolution",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "securityPatch",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
@@ -17515,6 +17595,18 @@
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "type",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "ENUM", "name": "ItemType", "ofType": null }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -55912,6 +56004,14 @@
             "deprecationReason": null
           },
           {
+            "name": "deviceFingerprint",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "deviceName",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -55923,6 +56023,14 @@
             "name": "deviceType",
             "description": null,
             "type": { "kind": "ENUM", "name": "DeviceType", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "firstInstallTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -55981,6 +56089,14 @@
           },
           {
             "name": "instanceId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "iosVendorId",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
@@ -56124,6 +56240,14 @@
             "deprecationReason": null
           },
           {
+            "name": "lastUpdateTime",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "location",
             "description": "Update location using structured input",
             "type": {
@@ -56225,6 +56349,14 @@
           },
           {
             "name": "screenResolution",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "securityPatch",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
