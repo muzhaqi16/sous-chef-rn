@@ -8,6 +8,7 @@ import {
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemFragmentDoc,
+  ShoppingListItemDisplayFragmentDoc,
   DisplayFormat,
 } from '#generated';
 import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
@@ -134,7 +135,9 @@ export function useShoppingListManagement() {
   const stats = useMemo(() => {
     const total = items.length;
     // Filter out null items (defensive against cache corruption)
-    const completed = items.filter(item => item?.purchaseInfo?.isPurchased).length;
+    const completed = items.filter(
+      item => item?.purchaseInfo?.isPurchased,
+    ).length;
     const pending = total - completed;
 
     return {
@@ -213,7 +216,6 @@ export function useShoppingListManagement() {
                   updatedAt: null,
                 }
               : null,
-            // NEW: Nested purchaseInfo object
             purchaseInfo: {
               __typename: 'PurchaseInfo',
               isPurchased: false,
@@ -222,7 +224,6 @@ export function useShoppingListManagement() {
               purchaseDate: null,
               purchasedBy: null,
             },
-            // NEW: Nested priceEstimate object
             priceEstimate: {
               __typename: 'PriceEstimate',
               estimated: null,
@@ -232,21 +233,18 @@ export function useShoppingListManagement() {
               highest: null,
               lastUpdated: null,
             },
-            // NEW: Nested storeInfo object
             storeInfo: {
               __typename: 'StoreInfo',
               aisle: null,
               storeSection: null,
               preferredStore: null,
             },
-            // NEW: Nested purchaseHistory object
             purchaseHistory: {
               __typename: 'PurchaseHistory',
               previouslyPurchased: false,
               lastPurchaseDate: null,
               purchaseCount: 0,
             },
-            // NEW: Nested source object
             source: {
               __typename: 'Source',
               isAutoAdded: false,
@@ -642,60 +640,54 @@ export function useShoppingListManagement() {
   };
 
   // Toggle item purchased status
-  const toggleItem = async (itemId: string) => {
-    if (!selectedShoppingListId) return false;
+  // Wrapped in useCallback to prevent stale closures and ensure fresh items reference
+  const toggleItem = useCallback(
+    async (itemId: string) => {
+      if (!selectedShoppingListId) return false;
 
-    try {
-      // Try reading from cache first (full fragment)
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId,
-      });
+      try {
+        // Try reading Display fragment first (lighter, always present for rendered items)
+        const cacheId = client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        });
 
-      let cachedItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
+        let cachedItem = cacheId
+          ? client.readFragment<any>({
+              id: cacheId,
+              fragment: ShoppingListItemDisplayFragmentDoc,
+              fragmentName: 'ShoppingListItemDisplayFragment',
+            })
+          : null;
 
-      // FIX: Fallback to items array if not in cache with full fragment
-      // This ensures we can toggle even if full fragment isn't cached
-      // Matches the fallback pattern used in optimisticResponse (lines 422-440)
-      if (!cachedItem) {
-        console.warn('Item not found in cache, falling back to items array:', itemId);
-        const fallbackItem = items.find(item => item.id === itemId);
-
-        if (!fallbackItem) {
-          console.error('Item not found anywhere:', itemId);
-          return false;
+        // Fallback to items array if not in cache with display fragment
+        // Use unfiltered items to ensure we find all items regardless of search state
+        if (!cachedItem) {
+          const fallbackItem = items.find(item => item.id === itemId);
+          if (!fallbackItem) return false;
+          cachedItem = fallbackItem;
         }
 
-        // Use fallback item (which has display fragment fields at minimum)
-        cachedItem = fallbackItem;
+        const newStatus = !cachedItem.purchaseInfo?.isPurchased;
+
+        // Toggle mutation WITHOUT version parameter for idempotent behavior
+        // This prevents version conflicts on rapid toggles and allows safe retries
+        const result = await togglePurchasedMutation({
+          variables: {
+            id: itemId,
+            purchased: newStatus,
+            // No version parameter - idempotent operation
+          },
+        });
+
+        return result.data?.toggleShoppingListItemPurchased ?? false;
+      } catch (error) {
+        console.error('Toggle shopping list item purchased error:', error);
+        return false;
       }
-
-      const newStatus = !cachedItem.purchaseInfo?.isPurchased;
-
-      // Toggle mutation WITHOUT version parameter for idempotent behavior
-      // This prevents version conflicts on rapid toggles and allows safe retries
-      // See: docs/api-improvements-version-conflicts.md
-      // Optimistic response is defined at mutation level (lines 393-452)
-      const result = await togglePurchasedMutation({
-        variables: {
-          id: itemId,
-          purchased: newStatus,
-          // No version parameter - idempotent operation
-        },
-      });
-
-      return result.data?.toggleShoppingListItemPurchased ?? false;
-    } catch (error) {
-      console.error('Toggle shopping list item purchased error:', error);
-      return false;
-    }
-  };
+    },
+    [selectedShoppingListId, items, togglePurchasedMutation, client],
+  );
 
   return {
     // Data
@@ -723,8 +715,10 @@ export function useShoppingListManagement() {
 
     // Helper functions
     getItemById: (itemId: string) => items.find(item => item.id === itemId),
-    getCompletedItems: () => items.filter(item => item.purchaseInfo?.isPurchased),
-    getPendingItems: () => items.filter(item => !item.purchaseInfo?.isPurchased),
+    getCompletedItems: () =>
+      items.filter(item => item.purchaseInfo?.isPurchased),
+    getPendingItems: () =>
+      items.filter(item => !item.purchaseInfo?.isPurchased),
     getItemsByCategory: (category: string) =>
       items.filter(item => item.category === category),
   };
