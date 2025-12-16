@@ -19,5 +19,9 @@
 # CRITICAL: Without this, ProGuard renames BuildConfig and env vars are inaccessible
 -keep class dev.souschef.app.BuildConfig { *; }
 
-# React native skia 
+# React native skia
 -keep class com.shopify.reactnative.skia.** { *; }
+
+# React Native Device Info - Device information native module
+# Required to prevent obfuscation of device info methods
+-keep class com.learnium.RNDeviceInfo.** { *; }

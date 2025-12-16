@@ -43,9 +43,8 @@ export const useDeviceRegistration = () => {
 
       logger.info('Device information validated, registering with backend...');
 
-      // Map comprehensive device information to available GraphQL input fields
-      // Note: Additional fields (isEmulator, manufacturer, batteryLevel, etc.) will be available
-      // once the frontend GraphQL schema is updated to match the backend schema
+      // Map comprehensive device information to GraphQL input fields
+      // Note: Fields collected but not yet in API schema are logged below for future addition
       const deviceInput: DeviceRegistrationInput = {
         // Core device identification
         deviceId: deviceInfo.deviceId,
@@ -57,6 +56,10 @@ export const useDeviceRegistration = () => {
         osName: deviceInfo.osName,
         osVersion: deviceInfo.osVersion,
         appVersion: deviceInfo.appVersion,
+        systemVersion: deviceInfo.systemVersion,
+        readableVersion: deviceInfo.readableVersion,
+        buildNumber: deviceInfo.buildNumber,
+        bundleId: deviceInfo.bundleId,
 
         // Browser/web information
         userAgent: deviceInfo.userAgent,
@@ -67,39 +70,71 @@ export const useDeviceRegistration = () => {
         screenResolution: deviceInfo.screenResolution,
         timezone: deviceInfo.timezone,
         language: deviceInfo.language,
+        hasNotch: deviceInfo.hasNotch,
+        hasDynamicIsland: deviceInfo.hasDynamicIsland,
 
-        // Network information (map to available fields)
-        lastIpAddress: deviceInfo.deviceIpAddress,
-        lastCountry: deviceInfo.country,
-        // lastCity: deviceInfo.city, // Not available in current device info
-      };
-
-      // Log comprehensive device info that's being collected but not yet sent
-      // This will be useful for debugging and will be sent once schema is updated
-      logger.info('Additional device info collected (pending schema update):', {
-        // Security critical
-        isEmulator: deviceInfo.isEmulator,
-        isTablet: deviceInfo.isTablet,
+        // Device identification & security
         manufacturer: deviceInfo.manufacturer,
         model: deviceInfo.model,
-
-        // Hardware specs
-        totalMemory: deviceInfo.totalMemory,
-        batteryLevel: deviceInfo.batteryLevel,
-
-        // Security IDs
+        brand: deviceInfo.brand,
+        isEmulator: deviceInfo.isEmulator,
+        isTablet: deviceInfo.isTablet,
         androidId: deviceInfo.androidId,
-        serialNumber: deviceInfo.serialNumber,
+        instanceId: deviceInfo.instanceId,
+        apiLevel: deviceInfo.apiLevel,
 
-        // Peripheral detection (automation detection)
+        // Hardware specifications
+        totalMemory: deviceInfo.totalMemory,
+        usedMemory: deviceInfo.usedMemory,
+        maxMemory: deviceInfo.maxMemory,
+        totalDiskCapacity: deviceInfo.totalDiskCapacity,
+        freeDiskStorage: deviceInfo.freeDiskStorage,
+        supportedAbis: deviceInfo.supportedAbis,
+
+        // Network information
+        lastIpAddress: deviceInfo.deviceIpAddress,
+        lastCountry: deviceInfo.country,
+        carrier: deviceInfo.carrier,
+        isAirplaneMode: deviceInfo.isAirplaneMode,
+        isLocationEnabled: deviceInfo.isLocationEnabled,
+        availableLocationProviders: deviceInfo.availableLocationProviders,
+        hostNames: deviceInfo.hostNames,
+
+        // Battery management
+        batteryLevel: deviceInfo.batteryLevel,
+        isBatteryCharging: deviceInfo.isBatteryCharging,
+        powerState: deviceInfo.powerState ? JSON.parse(deviceInfo.powerState) : undefined,
+
+        // Peripheral detection (automation/bot detection)
         isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
         isKeyboardConnected: deviceInfo.isKeyboardConnected,
         isMouseConnected: deviceInfo.isMouseConnected,
 
-        // Network states
-        isAirplaneMode: deviceInfo.isAirplaneMode,
-        isLocationEnabled: deviceInfo.isLocationEnabled,
-      });
+        // Additional tracking
+        supportedMediaTypes: deviceInfo.supportedMediaTypes,
+      };
+
+      // Fields collected but NOT yet in API schema - add these to the backend:
+      // - fontScale: number (display font scaling factor)
+      // - firstInstallTime: string (ISO date of first app install)
+      // - lastUpdateTime: string (ISO date of last app update)
+      // - serialNumber: string (device serial number - Android)
+      // - deviceFingerprint: string (Android build fingerprint)
+      // - securityPatch: string (Android security patch level)
+      // - iosVendorId: string (iOS vendor identifier)
+      // - currency: string (user's currency preference)
+      if (__DEV__) {
+        logger.debug('Device fields collected but not in API schema:', {
+          fontScale: deviceInfo.fontScale,
+          firstInstallTime: deviceInfo.firstInstallTime,
+          lastUpdateTime: deviceInfo.lastUpdateTime,
+          serialNumber: deviceInfo.serialNumber,
+          deviceFingerprint: deviceInfo.deviceFingerprint,
+          securityPatch: deviceInfo.securityPatch,
+          iosVendorId: deviceInfo.iosVendorId,
+          currency: deviceInfo.currency,
+        });
+      }
 
       // Register device with backend
       const result = await registerDeviceMutation({
