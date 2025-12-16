@@ -121,8 +121,12 @@ mutation CreateShoppingListItemsFromRecipe(
         name
         symbol
       }
-      aisle
-      isPurchased
+      storeInfo {
+        aisle
+      }
+      purchaseInfo {
+        isPurchased
+      }
     }
     updatedItems {
       id
@@ -133,7 +137,9 @@ mutation CreateShoppingListItemsFromRecipe(
         name
         symbol
       }
-      isPurchased
+      purchaseInfo {
+        isPurchased
+      }
     }
     skippedItems {
       id

@@ -11,7 +11,14 @@ const createMockItem = (
     id: Math.random().toString(),
     itemName: 'Test Item',
     quantity: 1,
-    isPurchased: false,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      purchasedQuantity: null,
+      purchasedPrice: null,
+      purchaseDate: null,
+      purchasedBy: null,
+    },
     updatedAt: new Date().toISOString(),
     version: 1,
     // Add required fields from fragment
@@ -42,9 +49,24 @@ describe('useShoppingListStats', () => {
   describe('with all items pending', () => {
     it('returns correct stats', () => {
       const items = [
-        createMockItem({ isPurchased: false }),
-        createMockItem({ isPurchased: false }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -61,9 +83,24 @@ describe('useShoppingListStats', () => {
   describe('with all items completed', () => {
     it('returns 100% completion rate', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: true }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -80,10 +117,30 @@ describe('useShoppingListStats', () => {
   describe('with mixed items', () => {
     it('calculates correct completion rate for 50%', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: false }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -98,9 +155,24 @@ describe('useShoppingListStats', () => {
 
     it('rounds completion rate to nearest integer (33%)', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: false }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -115,9 +187,24 @@ describe('useShoppingListStats', () => {
 
     it('rounds completion rate to nearest integer (67%)', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -132,8 +219,18 @@ describe('useShoppingListStats', () => {
 
     it('calculates correct stats for large list', () => {
       const listItems = [
-        ...Array(70).fill(null).map(() => createMockItem({ isPurchased: true })),
-        ...Array(30).fill(null).map(() => createMockItem({ isPurchased: false })),
+        ...Array(70).fill(null).map(() => createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        })),
+        ...Array(30).fill(null).map(() => createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        })),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(listItems));
@@ -151,11 +248,26 @@ describe('useShoppingListStats', () => {
     it('handles null items gracefully', () => {
       // Type assertion to test defensive null handling
       const items = [
-        createMockItem({ isPurchased: true }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
         null as any,
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
         null as any,
-        createMockItem({ isPurchased: true }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -171,9 +283,24 @@ describe('useShoppingListStats', () => {
 
     it('handles undefined isPurchased property', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: undefined as any }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: undefined as any,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result } = renderHook(() => useShoppingListStats(items));
@@ -190,8 +317,18 @@ describe('useShoppingListStats', () => {
   describe('memoization', () => {
     it('returns same reference when items array reference unchanged', () => {
       const items = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result, rerender } = renderHook(
@@ -209,8 +346,18 @@ describe('useShoppingListStats', () => {
 
     it('recalculates when items array reference changes', () => {
       const items1 = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: false }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        }),
       ];
 
       const { result, rerender } = renderHook(
@@ -222,8 +369,18 @@ describe('useShoppingListStats', () => {
       const firstResult = result.current;
 
       const items2 = [
-        createMockItem({ isPurchased: true }),
-        createMockItem({ isPurchased: true }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
+        createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }),
       ];
       rerender({ items: items2 });
       const secondResult = result.current;
@@ -236,7 +393,12 @@ describe('useShoppingListStats', () => {
 
   describe('edge cases', () => {
     it('handles single item - completed', () => {
-      const items = [createMockItem({ isPurchased: true })];
+      const items = [createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        })];
 
       const { result } = renderHook(() => useShoppingListStats(items));
 
@@ -249,7 +411,12 @@ describe('useShoppingListStats', () => {
     });
 
     it('handles single item - pending', () => {
-      const items = [createMockItem({ isPurchased: false })];
+      const items = [createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+          },
+        })];
 
       const { result } = renderHook(() => useShoppingListStats(items));
 
@@ -264,7 +431,12 @@ describe('useShoppingListStats', () => {
     it('handles very large completion rates without overflow', () => {
       const items = Array(10000)
         .fill(null)
-        .map(() => createMockItem({ isPurchased: true }));
+        .map(() => createMockItem({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        }));
 
       const { result } = renderHook(() => useShoppingListStats(items));
 

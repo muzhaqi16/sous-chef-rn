@@ -159,18 +159,35 @@ export function makeCache(): InMemoryCache {
           },
           itemsConnection: {
             keyArgs: false,
-            merge(existing, incoming, { args, readField }) {
+            merge(existing, incoming, { readField }) {
+              // Always preserve existing data if incoming is missing
               if (!incoming) return existing;
-              if (!existing || !args?.itemsCursor) return incoming;
 
-              // Pagination - merge edges with deduplication
+              // If no existing data, return incoming (first load)
+              if (!existing) return incoming;
+
+              // CRITICAL FIX: Always merge edges, not just during pagination
+              // This preserves manually added items from mutations when queries refetch
+              // Previous logic: `if (!args?.itemsCursor) return incoming;`
+              // Problem: Refetches without cursor replaced manually updated cache
               const existingEdges = existing.edges || [];
               const incomingEdges = incoming.edges || [];
+
+              // Deduplicate by node ID - keep incoming version if duplicate
               const edgeMap = new Map();
 
-              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+              // First add existing edges (lower priority)
+              existingEdges.forEach((edge: any) => {
                 const id = readField('id', edge?.node);
-                if (id && !edgeMap.has(id)) {
+                if (id) {
+                  edgeMap.set(id, edge);
+                }
+              });
+
+              // Then add/overwrite with incoming edges (higher priority)
+              incomingEdges.forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) {
                   edgeMap.set(id, edge);
                 }
               });

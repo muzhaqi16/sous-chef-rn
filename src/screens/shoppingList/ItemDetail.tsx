@@ -94,7 +94,7 @@ export const ShoppingListItemDetail: React.FC<{
             </View>
           ) : null}
           {/* Status Badge */}
-          {item.isPurchased ? (
+          {item.purchaseInfo?.isPurchased ? (
             <View style={styles.statusBadge}>
               <Icon name="check-circle" size={20} color={theme.colors.success} />
               <Text style={styles.statusBadgeText}>Purchased</Text>
@@ -224,18 +224,18 @@ export const ShoppingListItemDetail: React.FC<{
           </View>
         ) : null}
 
-        {item.isAutoAdded ? (
+        {item.source?.isAutoAdded ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Auto-Added
             </Text>
             <Text style={styles.detailValue}>
-              {item.autoAddReason || 'Yes'}
+              {item.source?.autoAddReason || 'Yes'}
             </Text>
           </View>
         ) : null}
 
-        {item.isFromMealPlan ? (
+        {item.source?.isFromMealPlan ? (
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               From Meal Plan

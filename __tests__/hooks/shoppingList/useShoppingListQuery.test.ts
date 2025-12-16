@@ -40,7 +40,14 @@ const createMockItem = (
     id,
     itemName,
     quantity: 1,
-    isPurchased: false,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      purchasedQuantity: null,
+      purchasedPrice: null,
+      purchaseDate: null,
+      purchasedBy: null,
+    },
     sortOrder: 'a0',
     updatedAt: new Date().toISOString(),
     version: 1,
@@ -372,9 +379,39 @@ describe('useShoppingListQuery', () => {
   describe('sorting', () => {
     it('sorts items by isPurchased (unpurchased first) then sortOrder', () => {
       const mockItems = [
-        createMockItem('1', 'Purchased Item', { isPurchased: true, sortOrder: 'a0' }),
-        createMockItem('2', 'Unpurchased B', { isPurchased: false, sortOrder: 'b0' }),
-        createMockItem('3', 'Unpurchased A', { isPurchased: false, sortOrder: 'a0' }),
+        createMockItem('1', 'Purchased Item', {
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+            purchasedQuantity: null,
+            purchasedPrice: null,
+            purchaseDate: null,
+            purchasedBy: null,
+          },
+          sortOrder: 'a0',
+        }),
+        createMockItem('2', 'Unpurchased B', {
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+            purchasedQuantity: null,
+            purchasedPrice: null,
+            purchaseDate: null,
+            purchasedBy: null,
+          },
+          sortOrder: 'b0',
+        }),
+        createMockItem('3', 'Unpurchased A', {
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: false,
+            purchasedQuantity: null,
+            purchasedPrice: null,
+            purchaseDate: null,
+            purchasedBy: null,
+          },
+          sortOrder: 'a0',
+        }),
       ];
 
       mockUseGetShoppingListQuery.mockReturnValue({

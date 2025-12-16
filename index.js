@@ -28,6 +28,13 @@ configureReanimatedLogger({
 import './src/apollo/config';
 
 /**
+ * Setup notification handlers for Notifee
+ * Must be registered early to handle background notification events
+ */
+import { setupNotificationHandlers } from './src/utils/notifications/localNotificationHelper';
+setupNotificationHandlers();
+
+/**
  * @format
  */
 import { AppRegistry } from 'react-native';

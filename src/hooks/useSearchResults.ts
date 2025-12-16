@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useShallow } from 'zustand/shallow';
 import {
   useItemByUpcFilterQuery,
-  useItemBySkuQuery,
+  useItemBySkuFilterQuery,
   useCreateItemMutation,
   CreateItemMutation,
   UpcFormat,
@@ -125,14 +125,14 @@ export const useSearchResults = (barcode: string, format?: string) => {
   });
 
   // Get first item from UPC filter results
-  const upcItem = upcData?.items?.items?.[0];
+  const upcItem = upcData?.items?.edges?.[0]?.node;
 
   const {
     data: skuData,
     loading: skuLoading,
     error: skuError,
-  } = useItemBySkuQuery({
-    variables: { sku: barcode, storeId: undefined },
+  } = useItemBySkuFilterQuery({
+    variables: { sku: barcode, skuStoreId: undefined },
     skip: !!upcItem, // Skip SKU search if UPC search found a result
   });
 
@@ -156,16 +156,18 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   // Handle SKU query completion
   useEffect(() => {
+    const skuItem = skuData?.items?.edges?.[0]?.node;
+
     if (skuData) {
       console.log('SKU search completed:', {
         barcode,
-        foundItem: !!skuData.itemBySku,
-        itemData: skuData.itemBySku,
+        foundItem: !!skuItem,
+        itemData: skuItem,
       });
 
       setSearching(false);
-      if (skuData.itemBySku) {
-        const item = convertToScannedItem(skuData.itemBySku, barcode);
+      if (skuItem) {
+        const item = convertToScannedItem(skuItem, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
         hideBottomSheet();

@@ -5,114 +5,141 @@
 query GetItems(
   $filters: ItemFilters
   $sort: ItemSortInput
-  $pagination: PaginationInput
+  $first: Int
+  $after: String
 ) {
-  items(filters: $filters, sort: $sort, pagination: $pagination) {
-    items {
-      id
-      name
-      description
-      type
-      storageState
-      imageUrl
-      shelfLifeDays
-      tags
-      status
-      visibility
-      showInOnboarding
-      popularity
-      units {
+  items(filters: $filters, sort: $sort, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
         id
-        isDefault
+        name
+        description
+        type
+        storageState
+        imageUrl
+        shelfLifeDays
+        tags
+        status
+        visibility
+        showInOnboarding
+        popularity
+        units {
+          id
+          isDefault
+        }
+        brands {
+          id
+        }
+        categories {
+          id
+        }
+        nutritions
+        healthBenefits
+        metadata
+        createdAt
+        updatedAt
+        deletedAt
+        version
       }
-      brands {
-        id
-      }
-      categories {
-        id
-      }
-      nutritions
-      healthBenefits
-      metadata
-      createdAt
-      updatedAt
-      deletedAt
-      version
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
     }
     totalCount
-    hasMore
   }
 }
 
 query SearchItems($input: SearchItemsInput!) {
   searchItems(input: $input) {
-    items {
-      id
-      name
-      imageUrl
+    edges {
+      cursor
+      node {
+        id
+        name
+        imageUrl
+      }
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
     }
     totalCount
-    hasMore
-  }
-}
-
-query ItemByUpc($upc: String!) {
-  itemByUpc(upc: $upc) {
-    id
-    imageUrl
-    name
-    netWeight
-    primaryUpc
-    units {
-      isDefault
-      unitId
-    }
   }
 }
 
 query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
-  items(filters: { upc: $upc, upcFormat: $upcFormat }) {
-    items {
-      id
-      imageUrl
-      name
-      netWeight
-      primaryUpc
-      units {
-        isDefault
-        unitId
+  items(filters: { upc: $upc, upcFormat: $upcFormat }, first: 1) {
+    edges {
+      cursor
+      node {
+        id
+        imageUrl
+        name
+        netWeight
+        primaryUpc
+        units {
+          isDefault
+          unitId
+        }
       }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
     totalCount
   }
 }
 
-query ItemBySku($sku: String!, $storeId: String) {
-  itemBySku(sku: $sku, storeId: $storeId) {
-    id
-    imageUrl
-    name
-    netWeight
-    description
-    primaryUpc
-    units {
-      isDefault
-      unitId
+query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
+  items(filters: { sku: $sku, skuStoreId: $skuStoreId }, first: 1) {
+    edges {
+      cursor
+      node {
+        id
+        imageUrl
+        name
+        netWeight
+        description
+        primaryUpc
+        units {
+          isDefault
+          unitId
+        }
+      }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput, $pagination: PaginationInput) {
-  items(filters: $filters, sort: $sort, pagination: $pagination) {
-    items {
-      id
-      name
-      imageUrl
-      storageState
-      displayUnit {
+query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput, $first: Int, $after: String) {
+  items(filters: $filters, sort: $sort, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
         id
         name
+        imageUrl
+        storageState
+        displayUnit {
+          id
+          name
+        }
       }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
     totalCount
   }

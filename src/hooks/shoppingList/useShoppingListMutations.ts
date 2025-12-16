@@ -86,7 +86,6 @@ export function useShoppingListMutations({
             unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
-            isPurchased: false,
             // Nested shoppingList object with required fields
             shoppingList: {
               __typename: 'ShoppingList',
@@ -126,36 +125,63 @@ export function useShoppingListMutations({
                   updatedAt: null,
                 }
               : null,
-            // Price-related fields (null for new items)
-            estimatedPrice: null,
-            budgetPrice: null,
-            lastKnownPrice: null,
-            lowestPrice: null,
-            highestPrice: null,
-            priceLastUpdated: null,
-            // Purchase-related fields (null for unpurchased items)
-            purchasedQuantity: null,
-            purchasedPrice: null,
-            purchaseDate: null,
-            purchasedBy: null,
-            purchases: [],
-            // Store/location fields
-            aisle: null,
-            storeSection: null,
-            // History fields
-            previouslyPurchased: false,
-            lastPurchaseDate: null,
-            purchaseCount: 0,
+            // NEW: Nested purchaseInfo object
+            purchaseInfo: {
+              __typename: 'PurchaseInfo',
+              isPurchased: false,
+              purchasedQuantity: null,
+              purchasedPrice: null,
+              purchaseDate: null,
+              purchasedBy: null,
+            },
+            // NEW: Nested priceEstimate object
+            priceEstimate: {
+              __typename: 'PriceEstimate',
+              estimated: null,
+              budget: null,
+              lastKnown: null,
+              lowest: null,
+              highest: null,
+              lastUpdated: null,
+            },
+            // NEW: Nested storeInfo object
+            storeInfo: {
+              __typename: 'StoreInfo',
+              aisle: null,
+              storeSection: null,
+              preferredStore: null,
+            },
+            // NEW: Nested purchaseHistory object
+            purchaseHistory: {
+              __typename: 'PurchaseHistory',
+              previouslyPurchased: false,
+              lastPurchaseDate: null,
+              purchaseCount: 0,
+            },
+            // NEW: Nested source object
+            source: {
+              __typename: 'Source',
+              isAutoAdded: false,
+              autoAddReason: null,
+              isFromMealPlan: false,
+              mealPlan: null,
+            },
             // Metadata fields
             priority: null,
             sortOrder: null,
-            isAutoAdded: false,
-            autoAddReason: null,
-            isFromMealPlan: false,
-            mealPlanReference: null,
             createdAt: null,
             deletedAt: null,
             addedBy: null,
+            purchasesConnection: {
+              __typename: 'PurchaseConnection',
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+              totalCount: 0,
+            },
           }),
           __typename: 'ShoppingListItem',
         } as any,
@@ -277,8 +303,11 @@ export function useShoppingListMutations({
       cache.modify({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fields: {
-          isPurchased() {
-            return newStatus;
+          purchaseInfo(existing = {}) {
+            return {
+              ...existing,
+              isPurchased: newStatus,
+            };
           },
           updatedAt() {
             return new Date().toISOString();
@@ -360,7 +389,10 @@ export function useShoppingListMutations({
           quantity: fullItem.quantity,
           quantityInput: fullItem.quantityInput,
           displayFormat: fullItem.displayFormat,
-          isPurchased: fullItem.isPurchased,
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: fullItem.purchaseInfo?.isPurchased ?? false,
+          },
           version: fullItem.version,
           updatedAt: fullItem.updatedAt,
           category: fullItem.category,
@@ -446,7 +478,7 @@ export function useShoppingListMutations({
           return false;
         }
 
-        const newStatus = !currentItem.isPurchased;
+        const newStatus = !currentItem.purchaseInfo?.isPurchased;
 
         const result = await togglePurchasedMutation({
           variables: {

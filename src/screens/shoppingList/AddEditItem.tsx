@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useAddItemToShoppingListMutation,
@@ -18,6 +18,10 @@ import { useAppNavigation } from '#hooks';
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
 import { createAddToKeyedQueryFieldUpdater } from '#/apollo/utils';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 type RouteParams = ShoppingListStackParamList['AddItem' | 'EditItem'] & {
   itemId?: string;
@@ -42,6 +46,9 @@ export const AddEditItem: React.FC<{
     hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
+
+  // Store version for optimistic concurrency control (strict version checking)
+  const itemVersionRef = useRef<number | undefined>(undefined);
 
   const addToShoppingListItems = useMemo(
     () =>
@@ -81,6 +88,8 @@ export const AddEditItem: React.FC<{
   useEffect(() => {
     if (data?.shoppingListItem) {
       setFromItem(data.shoppingListItem);
+      // Store version for optimistic concurrency control
+      itemVersionRef.current = data.shoppingListItem.version;
     }
   }, [data, setFromItem]);
 
@@ -139,7 +148,14 @@ export const AddEditItem: React.FC<{
         // Only send changed fields
         const input = buildDirtyInput(quantityValue);
         result = await updateItem({
-          variables: { id: itemId, input },
+          variables: {
+            id: itemId,
+            input: {
+              ...input,
+              // Include version for strict version checking (optimistic concurrency control)
+              version: itemVersionRef.current,
+            },
+          },
         });
       } else {
         result = await addItem({
@@ -188,6 +204,26 @@ export const AddEditItem: React.FC<{
       }
     } catch (error: any) {
       console.error('Save error:', error);
+
+      // Handle version conflict errors with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert(
+          'Item Updated',
+          getVersionConflictMessage(error),
+          [
+            {
+              text: 'Refresh',
+              onPress: () => {
+                // Navigate back - the query will automatically refetch
+                // when returning to the list view
+                navigation.goBack();
+              },
+            },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return; // Don't show generic error alert
+      }
 
       // PERFORMANCE: Specific error messages based on error type
       let errorMessage = `Failed to ${isEdit ? 'update' : 'add'} item. `;

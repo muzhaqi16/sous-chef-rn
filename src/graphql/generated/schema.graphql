@@ -441,6 +441,15 @@ type AddIngredientResult {
 }
 
 """
+Result of adding an item to pantry
+"""
+union AddPantryItemResult =
+    NotFoundError
+  | PantryItem
+  | UnauthorizedError
+  | ValidationError
+
+"""
 Result of adding a pantry item to a shopping list
 """
 type AddPantryItemToShoppingListResult {
@@ -471,6 +480,16 @@ input AddRestrictionsInput {
   restrictions: [ModerationRestriction!]!
   userId: ID!
 }
+
+"""
+Result of adding an item to a shopping list
+"""
+union AddShoppingListItemResult =
+    DuplicateError
+  | NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError
+  | ValidationError
 
 input AddTemplateItemInput {
   customMealName: String
@@ -889,6 +908,22 @@ input ConfirmedIngredientConsumptionInput {
   unitId: ID!
 }
 
+"""
+Error when operation conflicts with existing data
+"""
+type ConflictError implements MutationError {
+  code: String!
+  """
+  The field causing the conflict
+  """
+  conflictingField: String
+  """
+  The existing value causing the conflict
+  """
+  existingValue: String
+  message: String!
+}
+
 interface Connection {
   edges: [Edge!]!
   pageInfo: PageInfo!
@@ -1150,6 +1185,15 @@ input CreateItemInput {
   units: [ItemUnitInput!]
   vendor: String
 }
+
+"""
+Result of creating an item - either success or specific error
+"""
+union CreateItemResult =
+    DuplicateError
+  | Item
+  | UnauthorizedError
+  | ValidationError
 
 input CreateLoginHistoryInput {
   apiClient: String
@@ -1640,6 +1684,25 @@ enum DeductionMethod {
 }
 
 """
+Result of deleting an item
+"""
+union DeleteItemResult = DeleteSuccess | NotFoundError | UnauthorizedError
+
+"""
+Success response for delete operations
+"""
+type DeleteSuccess {
+  """
+  ID of the deleted resource
+  """
+  id: ID!
+  """
+  Whether the deletion was successful
+  """
+  success: Boolean!
+}
+
+"""
 Input for deleted device cleanup
 """
 input DeletedDeviceCleanupInput {
@@ -2023,6 +2086,26 @@ enum DisplayFormat {
   DECIMAL
   FRACTION
   MIXED
+}
+
+"""
+Error when a duplicate resource already exists
+"""
+type DuplicateError implements MutationError {
+  code: String!
+  """
+  ID of the existing resource (if available)
+  """
+  existingId: ID
+  """
+  The field that has a duplicate value
+  """
+  field: String!
+  message: String!
+  """
+  The duplicate value
+  """
+  value: String
 }
 
 interface Edge {
@@ -2554,20 +2637,12 @@ type Item {
   categories: [ItemCategory!]
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
-  creations: [ItemCreation!]!
-    @deprecated(
-      reason: "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
-    )
   dataSource: DataSource!
   deletedAt: DateTime
   density: Float
   description: String
   displayUnit: Unit
   displayUnitId: String
-  edits: [ItemEdit!]!
-    @deprecated(
-      reason: "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
-    )
   externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
   id: ID!
@@ -2635,6 +2710,12 @@ enum ItemCondition {
   SPOILED
 }
 
+type ItemConnection {
+  edges: [ItemEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
 type ItemCreation {
   createdAt: DateTime!
   id: ID!
@@ -2643,6 +2724,14 @@ type ItemCreation {
   reason: String
   source: DataSource!
   user: User!
+}
+
+"""
+Item connection for pagination (Relay spec)
+"""
+type ItemEdge {
+  cursor: String!
+  node: Item!
 }
 
 type ItemEdit {
@@ -2673,6 +2762,14 @@ input ItemFilters {
   categoryIds: [String!]
   createdAfter: DateTime
   createdBefore: DateTime
+  """
+  External ID from a provider (e.g., Kroger product ID)
+  """
+  externalId: String
+  """
+  Provider type for external ID lookup
+  """
+  externalProvider: ProviderType
   hasAllergens: Boolean
   hasNutrition: Boolean
   hasOffers: Boolean
@@ -2687,6 +2784,14 @@ input ItemFilters {
   limit: Int
   priceRange: PriceRangeInput
   showInOnboarding: Boolean
+  """
+  SKU to search for
+  """
+  sku: String
+  """
+  Store ID for SKU lookup (optional, searches all stores if not provided)
+  """
+  skuStoreId: String
   status: ItemStatus
   statuses: [ItemStatus!]
   storageState: StorageState
@@ -4277,6 +4382,21 @@ type Mutation {
   verifyUserEmail(id: ID!): User!
 }
 
+"""
+Standard error interface for all mutation errors.
+All error types should implement this interface.
+"""
+interface MutationError {
+  """
+  Machine-readable error code for client handling
+  """
+  code: String!
+  """
+  Human-readable error message
+  """
+  message: String!
+}
+
 enum MutationType {
   COLLABORATOR_ADDED
   COLLABORATOR_REMOVED
@@ -4293,6 +4413,22 @@ enum MutationType {
 
 interface Node {
   id: ID!
+}
+
+"""
+Error when a requested resource is not found
+"""
+type NotFoundError implements MutationError {
+  code: String!
+  message: String!
+  """
+  ID that was searched for
+  """
+  resourceId: String
+  """
+  Type of resource that was not found
+  """
+  resourceType: String!
 }
 
 """
@@ -4663,6 +4799,9 @@ type PantryExpiringItemsAlertPayload {
   userId: String!
 }
 
+"""
+Real-time collaborative type - never cache
+"""
 type PantryItem {
   acquisitionMethod: AcquisitionMethod!
   addedAt: DateTime!
@@ -4912,6 +5051,40 @@ type PresignPayload {
   url: String!
 }
 
+"""
+Price estimate information for a shopping list item
+"""
+type PriceEstimate {
+  """
+  Average price from purchase history
+  """
+  average: Float
+  """
+  User-provided budget limit
+  """
+  budget: Float
+  """
+  User-provided estimated price
+  """
+  estimated: Float
+  """
+  Highest price seen
+  """
+  highest: Float
+  """
+  Last known actual price from purchase history
+  """
+  lastKnown: Float
+  """
+  When price data was last updated
+  """
+  lastUpdated: DateTime
+  """
+  Lowest price seen
+  """
+  lowest: Float
+}
+
 type PriceRangeFacet {
   count: Int!
   label: String!
@@ -5037,6 +5210,32 @@ Purchase connection for pagination
 type PurchaseEdge {
   cursor: String!
   node: Purchase!
+}
+
+input PurchaseFilterInput {
+  endDate: DateTime
+  itemId: ID
+  shoppingListItemId: ID
+  startDate: DateTime
+  storeId: ID
+}
+
+"""
+Summary of purchase history for a shopping list item
+"""
+type PurchaseHistorySummary {
+  """
+  Date of most recent purchase
+  """
+  lastPurchaseDate: DateTime
+  """
+  Whether this item has been purchased before
+  """
+  previouslyPurchased: Boolean!
+  """
+  Total number of times purchased
+  """
+  purchaseCount: Int!
 }
 
 """
@@ -5187,10 +5386,6 @@ type Query {
   devices(input: DevicesQueryInput!): DeviceConnection!
   dietaryProfile(userId: ID!): DietaryProfile
   expirationNotification(id: ID!): ExpirationNotification
-  failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
-    @deprecated(
-      reason: "Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead"
-    )
   frequentlyBoughtItems(limit: Int): [ShoppingListItem!]!
   """
   Get best display unit for a quantity
@@ -5218,39 +5413,29 @@ type Query {
   inviteStats(inviteId: String!): InviteStats!
   invitesSentByMe: [HomeInvite!]!
   item(id: ID!): Item
-  itemByExternalId(externalId: String!, provider: ProviderType!): Item
   itemByExternalSource(externalId: String!, source: ExternalSource!): Item
-  itemBySku(sku: String!, storeId: String): Item
-  """
-  Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.
-  """
-  itemByUpc(upc: String!): Item
-    @deprecated(
-      reason: "Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support"
-    )
   itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
+  """
+  List items with filtering and cursor-based pagination (Relay spec).
+  Use filters for UPC, SKU, or external ID lookups:
+  - items(filters: { upc, upcFormat }) - UPC/barcode lookup
+  - items(filters: { sku, skuStoreId }) - SKU lookup
+  - items(filters: { externalId, externalProvider }) - External ID lookup
+  """
   items(
+    after: String
+    before: String
     filters: ItemFilters
-    pagination: PaginationInput
+    first: Int
+    last: Int
     sort: ItemSortInput
-  ): ItemsResponse!
+  ): ItemConnection!
   itemsBySource(limit: Int, offset: Int, source: ExternalSource!): [Item!]!
   """
   Consolidated login history query with comprehensive filtering.
-  Replaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory
+  Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
   """
   loginHistories(input: LoginHistoriesInput!): LoginHistoryConnection!
-  loginHistory(id: ID!): LoginHistory
-  loginHistoryByIP(
-    filters: LoginHistoryByIPFiltersInput
-    ipAddress: String!
-  ): [LoginHistory!]!
-    @deprecated(reason: "Use loginHistories(input: { ipAddress: ... }) instead")
-  loginHistoryForUser(
-    filters: LoginHistoryFiltersInput
-    userId: ID!
-  ): [LoginHistory!]!
-    @deprecated(reason: "Use loginHistories(input: { userId: ... }) instead")
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   """
   Get all low stock items for a home's pantries.
@@ -5311,23 +5496,13 @@ type Query {
   ): NotificationConnection!
   myPendingCollaborationInvites: [ShoppingListCollaborator!]!
   myPendingInvites: [HomeInvite!]!
-  myPurchases: [Purchase!]!
+  myPurchases(filter: PurchaseFilterInput): [Purchase!]!
   mySavedRecipes(folder: String): [SavedRecipe!]!
   myShoppingListInvites: [ShoppingListCollaborator!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
   notification(id: ID!): Notification
   notificationPreferences(userId: ID!): NotificationPreferences!
   notificationStats(filter: NotificationFilterInput): NotificationStats!
-  notificationsByCategory(
-    after: String
-    category: String!
-    first: Int
-  ): NotificationConnection!
-  notificationsByType(
-    after: String
-    first: Int
-    type: NotificationType!
-  ): NotificationConnection!
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
@@ -5392,11 +5567,6 @@ type Query {
   popularTemplates(take: Int): [MealTemplate!]!
   purchase(id: ID!): Purchase
   purchaseStats(userId: ID): PurchaseStats!
-  purchasesByDateRange(dateRange: DateRangeInput!, userId: ID): [Purchase!]!
-  purchasesByItem(itemId: ID!, userId: ID): [Purchase!]!
-  purchasesByShoppingListItem(limit: Int, shoppingListItemId: ID!): [Purchase!]!
-  purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
-  recentNotifications(limit: Int = 10): [Notification!]!
   """
   Get recently deleted pantry items for quick re-adding suggestions.
   Returns soft-deleted items that are not currently in the pantry,
@@ -5438,12 +5608,10 @@ type Query {
   rootCategories(type: CategoryType): [Category!]!
   savedRecipe(recipeId: ID!): SavedRecipe
   savedRecipeFolders: [String!]!
-  searchItems(input: SearchItemsInput!): ItemsResponse
-  searchLoginHistory(
-    filters: LoginHistoryFiltersInput
-    query: String!
-  ): [LoginHistory!]!
-    @deprecated(reason: "Use loginHistories(input: { search: ... }) instead")
+  """
+  Search items with cursor-based pagination (Relay spec).
+  """
+  searchItems(input: SearchItemsInput!): ItemConnection
   searchRecipes(
     after: String
     before: String
@@ -5510,7 +5678,6 @@ type Query {
   user(id: ID!): User
   userModeration(userId: ID!): UserModeration
   userProfile: UserProfile
-  userPurchases(userId: ID!): [Purchase!]!
   userSettings(userId: String): UserSettings
   users(search: String, skip: Int, take: Int): [User!]!
   validateUpc(upc: String!): UpcValidation!
@@ -5528,6 +5695,22 @@ input QuietHoursInput {
 type RapidAttempt {
   count: Int!
   hour: String!
+}
+
+"""
+Error when rate limit is exceeded
+"""
+type RateLimitError implements MutationError {
+  code: String!
+  """
+  The limit that was exceeded
+  """
+  limit: Int!
+  message: String!
+  """
+  Seconds until the limit resets
+  """
+  retryAfter: Int!
 }
 
 """
@@ -6174,51 +6357,31 @@ input ShoppingListFilters {
   tags: [String!]
 }
 
+"""
+Real-time collaborative type - never cache
+Shopping list item with focused sub-types for better organization
+"""
 type ShoppingListItem {
   addedBy: User
   addedById: String
-  addedContext: String
-  aisle: String
-  autoAddReason: String
-  averagePrice: Float
-  budgetPrice: Float
   category: String
   createdAt: DateTime!
   deletedAt: DateTime
   displayFormat: DisplayFormat!
-  estimatedPrice: Float
-  highestPrice: Float
   id: ID!
-  isAutoAdded: Boolean!
-  isFromMealPlan: Boolean!
-  isPurchased: Boolean!
   item: Item
   itemBarcode: String
   itemName: String
   lastEditedBy: User
   lastEditedById: String
-  lastKnownPrice: Float
-  lastPurchaseDate: DateTime
-  lowestPrice: Float
-  mealPlan: MealPlan
-  mealPlanId: String
-  mealPlanItem: MealPlanItem
-  mealPlanItemId: String
-  mealPlanReference: String
   normalizedQuantity: Float
   normalizedUnit: Unit
   normalizedUnitId: String
   notes: String
-  preferredStore: Store
-  previouslyPurchased: Boolean!
-  priceLastUpdated: DateTime
+  priceEstimate: PriceEstimate!
   priority: Int!
-  purchaseCount: Int!
-  purchaseDate: DateTime
-  purchasedBy: User
-  purchasedById: String
-  purchasedPrice: Float
-  purchasedQuantity: Float
+  purchaseHistory: PurchaseHistorySummary!
+  purchaseInfo: ShoppingListItemPurchaseInfo!
   purchasesConnection(
     after: String
     before: String
@@ -6228,12 +6391,10 @@ type ShoppingListItem {
   ): PurchaseConnection!
   quantity: Float
   quantityInput: String
-  recipe: Recipe
-  recipeIngredient: RecipeIngredient
   shoppingList: ShoppingList!
   sortOrder: String!
-  storageLocation: String
-  storeSection: String
+  source: ShoppingListItemSource!
+  storeInfo: ShoppingListItemStoreInfo!
   unit: Unit
   unitName: String
   updatedAt: DateTime!
@@ -6271,6 +6432,102 @@ input ShoppingListItemOrderBy {
   priority: SortOrder
   sortOrder: SortOrder
   updatedAt: SortOrder
+}
+
+"""
+Purchase state for a shopping list item
+"""
+type ShoppingListItemPurchaseInfo {
+  """
+  Whether the item has been purchased
+  """
+  isPurchased: Boolean!
+  """
+  When the item was purchased
+  """
+  purchaseDate: DateTime
+  """
+  Who purchased the item
+  """
+  purchasedBy: User
+  """
+  ID of user who purchased
+  """
+  purchasedById: String
+  """
+  Actual price paid
+  """
+  purchasedPrice: Float
+  """
+  Actual quantity purchased (may differ from requested)
+  """
+  purchasedQuantity: Float
+}
+
+"""
+Source information for how a shopping list item was added
+"""
+type ShoppingListItemSource {
+  """
+  Context about why item was added
+  """
+  addedContext: String
+  """
+  Reason for auto-add (e.g., 'low_stock', 'meal_plan')
+  """
+  autoAddReason: String
+  """
+  Whether item was auto-added (e.g., from low stock)
+  """
+  isAutoAdded: Boolean!
+  """
+  Whether item came from meal planning
+  """
+  isFromMealPlan: Boolean!
+  """
+  Associated meal plan
+  """
+  mealPlan: MealPlan
+  mealPlanId: String
+  """
+  Specific meal plan item
+  """
+  mealPlanItem: MealPlanItem
+  mealPlanItemId: String
+  """
+  Reference to meal plan (legacy)
+  """
+  mealPlanReference: String
+  """
+  Associated recipe
+  """
+  recipe: Recipe
+  """
+  Specific recipe ingredient
+  """
+  recipeIngredient: RecipeIngredient
+}
+
+"""
+Store and location preferences for a shopping list item
+"""
+type ShoppingListItemStoreInfo {
+  """
+  Aisle location in store
+  """
+  aisle: String
+  """
+  Preferred store for this item
+  """
+  preferredStore: Store
+  """
+  Storage location after purchase
+  """
+  storageLocation: String
+  """
+  Section within store
+  """
+  storeSection: String
 }
 
 type ShoppingListOwnership {
@@ -6920,6 +7177,14 @@ interface Timestamped {
   createdAt: DateTime!
 }
 
+"""
+Result of toggling purchased status
+"""
+union TogglePurchasedResult =
+    NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError
+
 enum TrustLevel {
   ADMIN
   BASIC
@@ -6927,6 +7192,22 @@ enum TrustLevel {
   NEW_USER
   TRUSTED
   VERIFIED
+}
+
+"""
+Error when user lacks permission for the operation
+"""
+type UnauthorizedError implements MutationError {
+  code: String!
+  message: String!
+  """
+  The permission that was required
+  """
+  requiredPermission: String
+  """
+  The resource being accessed
+  """
+  resource: String
 }
 
 """
@@ -7290,6 +7571,16 @@ input UpdateItemPriceInput {
   storeId: String
 }
 
+"""
+Result of updating an item
+"""
+union UpdateItemResult =
+    Item
+  | NotFoundError
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError
+
 input UpdateLoginHistoryInput {
   apiClient: String
   browserName: String
@@ -7459,6 +7750,16 @@ input UpdatePantryItemInput {
   wasteReason: WasteReason
 }
 
+"""
+Result of updating a pantry item
+"""
+union UpdatePantryItemResult =
+    NotFoundError
+  | PantryItem
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError
+
 input UpdatePurchaseInput {
   discountAmount: Float
   expirationDate: DateTime
@@ -7552,6 +7853,16 @@ input UpdateShoppingListItemInput {
   unitName: String
   version: Int
 }
+
+"""
+Result of updating a shopping list item
+"""
+union UpdateShoppingListItemResult =
+    NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError
 
 """
 Input for updating an existing storage location
@@ -7692,6 +8003,15 @@ input UpdateUserProfileInput {
   website: String
 }
 
+"""
+Result of updating user profile
+"""
+union UpdateUserResult =
+    NotFoundError
+  | UnauthorizedError
+  | User
+  | ValidationError
+
 input UpdateUserSettingsInput {
   autoSync: Boolean
   betaFeatures: [String!]
@@ -7713,6 +8033,15 @@ input UpdateUserSettingsInput {
   theme: AppTheme
   weeklyDigest: Boolean
 }
+
+"""
+Result of updating user settings
+"""
+union UpdateUserSettingsResult =
+    NotFoundError
+  | UnauthorizedError
+  | UserSettings
+  | ValidationError
 
 scalar Upload
 
@@ -8058,8 +8387,18 @@ type ValidateTokenResponse {
   valid: Boolean!
 }
 
-type ValidationError {
+"""
+Generic validation error for invalid input data
+"""
+type ValidationError implements MutationError {
   code: String!
+  """
+  Validation constraint that was violated
+  """
+  constraint: String
+  """
+  The field that failed validation (if applicable)
+  """
   field: String!
   message: String!
 }
@@ -8093,6 +8432,26 @@ type VariationImage {
   size: String
   source: String
   url: String!
+}
+
+"""
+Error when optimistic locking version mismatch occurs
+"""
+type VersionMismatchError implements MutationError {
+  """
+  Actual current version on server
+  """
+  actualVersion: Int!
+  code: String!
+  """
+  Expected version from client
+  """
+  expectedVersion: Int!
+  message: String!
+  """
+  The resource that had the version mismatch
+  """
+  resourceId: ID!
 }
 
 enum Visibility {

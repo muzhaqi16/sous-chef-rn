@@ -1,8 +1,75 @@
 {
   "possibleTypes": {
+    "AddPantryItemResult": [
+      "NotFoundError",
+      "PantryItem",
+      "UnauthorizedError",
+      "ValidationError"
+    ],
+    "AddShoppingListItemResult": [
+      "DuplicateError",
+      "NotFoundError",
+      "ShoppingListItem",
+      "UnauthorizedError",
+      "ValidationError"
+    ],
     "Connection": ["NotificationConnection"],
+    "CreateItemResult": [
+      "DuplicateError",
+      "Item",
+      "UnauthorizedError",
+      "ValidationError"
+    ],
+    "DeleteItemResult": ["DeleteSuccess", "NotFoundError", "UnauthorizedError"],
     "Edge": ["NotificationEdge"],
+    "MutationError": [
+      "ConflictError",
+      "DuplicateError",
+      "NotFoundError",
+      "RateLimitError",
+      "UnauthorizedError",
+      "ValidationError",
+      "VersionMismatchError"
+    ],
     "Node": ["Notification"],
-    "Timestamped": ["Notification"]
+    "Timestamped": ["Notification"],
+    "TogglePurchasedResult": [
+      "NotFoundError",
+      "ShoppingListItem",
+      "UnauthorizedError"
+    ],
+    "UpdateItemResult": [
+      "Item",
+      "NotFoundError",
+      "UnauthorizedError",
+      "ValidationError",
+      "VersionMismatchError"
+    ],
+    "UpdatePantryItemResult": [
+      "NotFoundError",
+      "PantryItem",
+      "UnauthorizedError",
+      "ValidationError",
+      "VersionMismatchError"
+    ],
+    "UpdateShoppingListItemResult": [
+      "NotFoundError",
+      "ShoppingListItem",
+      "UnauthorizedError",
+      "ValidationError",
+      "VersionMismatchError"
+    ],
+    "UpdateUserResult": [
+      "NotFoundError",
+      "UnauthorizedError",
+      "User",
+      "ValidationError"
+    ],
+    "UpdateUserSettingsResult": [
+      "NotFoundError",
+      "UnauthorizedError",
+      "UserSettings",
+      "ValidationError"
+    ]
   }
 }

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -25,6 +26,7 @@ import {
   ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { useErrorHandler } from '#/utils/errorHandling';
 import { RecentItemCard } from './RecentItemCard';
 
 interface AddToShoppingListSheetProps {
@@ -53,6 +55,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Online status for autocomplete
   const isOnline = useAppStore(state => state.isOnline);
 
+  // Error handler for Apollo mutations
+  const { handleApolloError } = useErrorHandler();
+
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -67,21 +72,21 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
   // Fetch recently deleted items
   // PERFORMANCE: Only fetch when sheet is visible to avoid unnecessary queries on screen mount
-  const {
-    data: recentData,
-    loading: loadingRecent,
-    refetch: refetchRecent,
-  } = useGetRecentlyDeletedShoppingListItemsQuery({
-    variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
-    skip: !shoppingListId || !visible,
-    fetchPolicy: 'cache-and-network',
-  });
+  // NOTE: Subscription handles updates automatically, no manual refetch needed
+  const { data: recentData, loading: loadingRecent } =
+    useGetRecentlyDeletedShoppingListItemsQuery({
+      variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
+      skip: !shoppingListId || !visible,
+      fetchPolicy: 'cache-and-network',
+    });
 
   const recentItems = recentData?.recentlyDeletedShoppingListItems ?? [];
 
-  // Add shopping list item mutation for quick add
+  // Add shopping list item mutation with error handling and debug logging
   const [addItemMutation, { loading: adding }] =
     useAddItemToShoppingListMutation({
+      errorPolicy: 'all', // Return partial data + errors for debugging
+
       update: (cache, { data }) => {
         if (!data?.addItemToShoppingList || !shoppingListId) return;
 
@@ -97,8 +102,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             data.addItemToShoppingList,
           );
         } catch (error) {
-          console.warn('Cache update failed for addItemToShoppingList:', error);
+          console.error('Cache update failed:', error);
         }
+      },
+
+      onError: error => {
+        console.error('AddItem mutation error:', error);
+        const { message } = handleApolloError(error, {
+          operation: 'Add Shopping List Item',
+        });
+        Alert.alert('Error Adding Item', message);
       },
     });
 
@@ -183,12 +196,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         toastService.success(`Added ${item.name}`);
         setSearchQuery(''); // Clear search after adding
         onItemAdded?.(); // Notify parent to clear main search
-        refetchRecent();
+        // NOTE: Removed refetchRecent() - subscription handles updates
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
+    [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
   // Handle quick add from recent items
@@ -219,12 +232,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         toastService.success(`Added ${itemName}`);
         onItemAdded?.(); // Notify parent to clear main search
-        refetchRecent();
+        // NOTE: Removed refetchRecent() - subscription handles updates
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
+    [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
   // Determine if we should show search results

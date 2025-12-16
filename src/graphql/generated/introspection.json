@@ -207,6 +207,22 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "AddPantryItemResult",
+        "description": "Result of adding an item to pantry",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "PantryItem", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null }
+        ]
+      },
+      {
         "kind": "OBJECT",
         "name": "AddPantryItemToShoppingListResult",
         "description": "Result of adding a pantry item to a shopping list",
@@ -485,6 +501,23 @@
         "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
+      },
+      {
+        "kind": "UNION",
+        "name": "AddShoppingListItemResult",
+        "description": "Result of adding an item to a shopping list",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "DuplicateError", "ofType": null },
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "ShoppingListItem", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null }
+        ]
       },
       {
         "kind": "INPUT_OBJECT",
@@ -3265,6 +3298,60 @@
         "possibleTypes": null
       },
       {
+        "kind": "OBJECT",
+        "name": "ConflictError",
+        "description": "Error when operation conflicts with existing data",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "conflictingField",
+            "description": "The field causing the conflict",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "existingValue",
+            "description": "The existing value causing the conflict",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "INTERFACE",
         "name": "Connection",
         "description": null,
@@ -5269,6 +5356,22 @@
         "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
+      },
+      {
+        "kind": "UNION",
+        "name": "CreateItemResult",
+        "description": "Result of creating an item - either success or specific error",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "DuplicateError", "ofType": null },
+          { "kind": "OBJECT", "name": "Item", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null }
+        ]
       },
       {
         "kind": "INPUT_OBJECT",
@@ -8542,6 +8645,57 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "DeleteItemResult",
+        "description": "Result of deleting an item",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "DeleteSuccess", "ofType": null },
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null }
+        ]
+      },
+      {
+        "kind": "OBJECT",
+        "name": "DeleteSuccess",
+        "description": "Success response for delete operations",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": "ID of the deleted resource",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "success",
+            "description": "Whether the deletion was successful",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "DeletedDeviceCleanupInput",
         "description": "Input for deleted device cleanup",
@@ -11345,6 +11499,72 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "DuplicateError",
+        "description": "Error when a duplicate resource already exists",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "existingId",
+            "description": "ID of the existing resource (if available)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "field",
+            "description": "The field that has a duplicate value",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "value",
+            "description": "The duplicate value",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -15363,30 +15583,6 @@
             "deprecationReason": null
           },
           {
-            "name": "creations",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemCreation",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
-          },
-          {
             "name": "dataSource",
             "description": null,
             "args": [],
@@ -15437,30 +15633,6 @@
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "edits",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemEdit",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field."
           },
           {
             "name": "externalSources",
@@ -16144,6 +16316,66 @@
       },
       {
         "kind": "OBJECT",
+        "name": "ItemConnection",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "edges",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ItemEdge",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pageInfo",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "PageInfo", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "totalCount",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "ItemCreation",
         "description": null,
         "isOneOf": null,
@@ -16220,6 +16452,42 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "OBJECT", "name": "User", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ItemEdge",
+        "description": "Item connection for pagination (Relay spec)",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "cursor",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "node",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Item", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -16498,6 +16766,22 @@
             "deprecationReason": null
           },
           {
+            "name": "externalId",
+            "description": "External ID from a provider (e.g., Kroger product ID)",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "externalProvider",
+            "description": "Provider type for external ID lookup",
+            "type": { "kind": "ENUM", "name": "ProviderType", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "hasAllergens",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
@@ -16609,6 +16893,22 @@
             "name": "showInOnboarding",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sku",
+            "description": "SKU to search for",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "skuStoreId",
+            "description": "Store ID for SKU lookup (optional, searches all stores if not provided)",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -32340,6 +32640,50 @@
         "possibleTypes": null
       },
       {
+        "kind": "INTERFACE",
+        "name": "MutationError",
+        "description": "Standard error interface for all mutation errors.\nAll error types should implement this interface.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": "Machine-readable error code for client handling",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": "Human-readable error message",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "ConflictError", "ofType": null },
+          { "kind": "OBJECT", "name": "DuplicateError", "ofType": null },
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "RateLimitError", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null },
+          { "kind": "OBJECT", "name": "VersionMismatchError", "ofType": null }
+        ]
+      },
+      {
         "kind": "ENUM",
         "name": "MutationType",
         "description": null,
@@ -32442,6 +32786,64 @@
         "possibleTypes": [
           { "kind": "OBJECT", "name": "Notification", "ofType": null }
         ]
+      },
+      {
+        "kind": "OBJECT",
+        "name": "NotFoundError",
+        "description": "Error when a requested resource is not found",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "resourceId",
+            "description": "ID that was searched for",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "resourceType",
+            "description": "Type of resource that was not found",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
+        "enumValues": null,
+        "possibleTypes": null
       },
       {
         "kind": "OBJECT",
@@ -35183,7 +35585,7 @@
       {
         "kind": "OBJECT",
         "name": "PantryItem",
-        "description": null,
+        "description": "Real-time collaborative type - never cache",
         "isOneOf": null,
         "fields": [
           {
@@ -37306,6 +37708,74 @@
       },
       {
         "kind": "OBJECT",
+        "name": "PriceEstimate",
+        "description": "Price estimate information for a shopping list item",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "average",
+            "description": "Average price from purchase history",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "budget",
+            "description": "User-provided budget limit",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "estimated",
+            "description": "User-provided estimated price",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "highest",
+            "description": "Highest price seen",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastKnown",
+            "description": "Last known actual price from purchase history",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastUpdated",
+            "description": "When price data was last updated",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lowest",
+            "description": "Lowest price seen",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "PriceRangeFacet",
         "description": null,
         "isOneOf": null,
@@ -38242,6 +38712,102 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "OBJECT", "name": "Purchase", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "PurchaseFilterInput",
+        "description": null,
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "endDate",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "shoppingListItemId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "startDate",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storeId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "PurchaseHistorySummary",
+        "description": "Summary of purchase history for a shopping list item",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "lastPurchaseDate",
+            "description": "Date of most recent purchase",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "previouslyPurchased",
+            "description": "Whether this item has been purchased before",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchaseCount",
+            "description": "Total number of times purchased",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -39644,51 +40210,6 @@
             "deprecationReason": null
           },
           {
-            "name": "failedLoginAttempts",
-            "description": null,
-            "args": [
-              {
-                "name": "hours",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": "24",
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "userId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "LoginHistory",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead"
-          },
-          {
             "name": "frequentlyBoughtItems",
             "description": null,
             "args": [
@@ -40177,47 +40698,6 @@
             "deprecationReason": null
           },
           {
-            "name": "itemByExternalId",
-            "description": null,
-            "args": [
-              {
-                "name": "externalId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "provider",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "ENUM",
-                    "name": "ProviderType",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": { "kind": "OBJECT", "name": "Item", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "itemByExternalSource",
             "description": null,
             "args": [
@@ -40257,64 +40737,6 @@
             "type": { "kind": "OBJECT", "name": "Item", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "itemBySku",
-            "description": null,
-            "args": [
-              {
-                "name": "sku",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "storeId",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": { "kind": "OBJECT", "name": "Item", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "itemByUpc",
-            "description": "Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.",
-            "args": [
-              {
-                "name": "upc",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": { "kind": "OBJECT", "name": "Item", "ofType": null },
-            "isDeprecated": true,
-            "deprecationReason": "Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support"
           },
           {
             "name": "itemPriceHistory",
@@ -40367,8 +40789,24 @@
           },
           {
             "name": "items",
-            "description": null,
+            "description": "List items with filtering and cursor-based pagination (Relay spec).\nUse filters for UPC, SKU, or external ID lookups:\n- items(filters: { upc, upcFormat }) - UPC/barcode lookup\n- items(filters: { sku, skuStoreId }) - SKU lookup\n- items(filters: { externalId, externalProvider }) - External ID lookup",
             "args": [
+              {
+                "name": "after",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "before",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
               {
                 "name": "filters",
                 "description": null,
@@ -40382,13 +40820,17 @@
                 "deprecationReason": null
               },
               {
-                "name": "pagination",
+                "name": "first",
                 "description": null,
-                "type": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "PaginationInput",
-                  "ofType": null
-                },
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "last",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
                 "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
@@ -40411,7 +40853,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "ItemsResponse",
+                "name": "ItemConnection",
                 "ofType": null
               }
             },
@@ -40473,7 +40915,7 @@
           },
           {
             "name": "loginHistories",
-            "description": "Consolidated login history query with comprehensive filtering.\nReplaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory",
+            "description": "Consolidated login history query with comprehensive filtering.\nSupports filtering by userId, ipAddress, date range, device, success/failure, and search.",
             "args": [
               {
                 "name": "input",
@@ -40503,133 +40945,6 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "loginHistory",
-            "description": null,
-            "args": [
-              {
-                "name": "id",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "OBJECT",
-              "name": "LoginHistory",
-              "ofType": null
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "loginHistoryByIP",
-            "description": null,
-            "args": [
-              {
-                "name": "filters",
-                "description": null,
-                "type": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "LoginHistoryByIPFiltersInput",
-                  "ofType": null
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "ipAddress",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "LoginHistory",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use loginHistories(input: { ipAddress: ... }) instead"
-          },
-          {
-            "name": "loginHistoryForUser",
-            "description": null,
-            "args": [
-              {
-                "name": "filters",
-                "description": null,
-                "type": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "LoginHistoryFiltersInput",
-                  "ofType": null
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "userId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "LoginHistory",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use loginHistories(input: { userId: ... }) instead"
           },
           {
             "name": "loginHistoryStats",
@@ -41373,7 +41688,20 @@
           {
             "name": "myPurchases",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "filter",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "PurchaseFilterInput",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -41593,104 +41921,6 @@
               "ofType": {
                 "kind": "OBJECT",
                 "name": "NotificationStats",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "notificationsByCategory",
-            "description": null,
-            "args": [
-              {
-                "name": "after",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "category",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "first",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "NotificationConnection",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "notificationsByType",
-            "description": null,
-            "args": [
-              {
-                "name": "after",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "first",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "type",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "ENUM",
-                    "name": "NotificationType",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "NotificationConnection",
                 "ofType": null
               }
             },
@@ -42331,223 +42561,6 @@
             "deprecationReason": null
           },
           {
-            "name": "purchasesByDateRange",
-            "description": null,
-            "args": [
-              {
-                "name": "dateRange",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "DateRangeInput",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "userId",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasesByItem",
-            "description": null,
-            "args": [
-              {
-                "name": "itemId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "userId",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasesByShoppingListItem",
-            "description": null,
-            "args": [
-              {
-                "name": "limit",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "shoppingListItemId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasesByStore",
-            "description": null,
-            "args": [
-              {
-                "name": "storeId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "userId",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "recentNotifications",
-            "description": null,
-            "args": [
-              {
-                "name": "limit",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": "10",
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Notification",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "recentlyDeletedPantryItems",
             "description": "Get recently deleted pantry items for quick re-adding suggestions.\nReturns soft-deleted items that are not currently in the pantry,\ndeduplicated by itemId (only shows most recent entry per item).\nUseful for \"Add to Pantry\" UI to show items user previously had.",
             "args": [
@@ -43035,7 +43048,7 @@
           },
           {
             "name": "searchItems",
-            "description": null,
+            "description": "Search items with cursor-based pagination (Relay spec).",
             "args": [
               {
                 "name": "input",
@@ -43056,64 +43069,11 @@
             ],
             "type": {
               "kind": "OBJECT",
-              "name": "ItemsResponse",
+              "name": "ItemConnection",
               "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "searchLoginHistory",
-            "description": null,
-            "args": [
-              {
-                "name": "filters",
-                "description": null,
-                "type": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "LoginHistoryFiltersInput",
-                  "ofType": null
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "query",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "LoginHistory",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use loginHistories(input: { search: ... }) instead"
           },
           {
             "name": "searchRecipes",
@@ -44026,43 +43986,6 @@
             "deprecationReason": null
           },
           {
-            "name": "userPurchases",
-            "description": null,
-            "args": [
-              {
-                "name": "userId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "userSettings",
             "description": null,
             "args": [
@@ -44260,6 +44183,68 @@
         ],
         "inputFields": null,
         "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "RateLimitError",
+        "description": "Error when rate limit is exceeded",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "limit",
+            "description": "The limit that was exceeded",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "retryAfter",
+            "description": "Seconds until the limit resets",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
         "enumValues": null,
         "possibleTypes": null
       },
@@ -49683,7 +49668,7 @@
       {
         "kind": "OBJECT",
         "name": "ShoppingListItem",
-        "description": null,
+        "description": "Real-time collaborative type - never cache\nShopping list item with focused sub-types for better organization",
         "isOneOf": null,
         "fields": [
           {
@@ -49699,46 +49684,6 @@
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "addedContext",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "aisle",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "autoAddReason",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "averagePrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "budgetPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -49787,22 +49732,6 @@
             "deprecationReason": null
           },
           {
-            "name": "estimatedPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "highestPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "id",
             "description": null,
             "args": [],
@@ -49810,42 +49739,6 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isAutoAdded",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isFromMealPlan",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isPurchased",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -49891,74 +49784,6 @@
             "deprecationReason": null
           },
           {
-            "name": "lastKnownPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "lastPurchaseDate",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "lowestPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "mealPlan",
-            "description": null,
-            "args": [],
-            "type": { "kind": "OBJECT", "name": "MealPlan", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "mealPlanId",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "mealPlanItem",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "OBJECT",
-              "name": "MealPlanItem",
-              "ofType": null
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "mealPlanItemId",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "mealPlanReference",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "normalizedQuantity",
             "description": null,
             "args": [],
@@ -49991,30 +49816,18 @@
             "deprecationReason": null
           },
           {
-            "name": "preferredStore",
-            "description": null,
-            "args": [],
-            "type": { "kind": "OBJECT", "name": "Store", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "previouslyPurchased",
+            "name": "priceEstimate",
             "description": null,
             "args": [],
             "type": {
               "kind": "NON_NULL",
               "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PriceEstimate",
+                "ofType": null
+              }
             },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "priceLastUpdated",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -50031,54 +49844,34 @@
             "deprecationReason": null
           },
           {
-            "name": "purchaseCount",
+            "name": "purchaseHistory",
             "description": null,
             "args": [],
             "type": {
               "kind": "NON_NULL",
               "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PurchaseHistorySummary",
+                "ofType": null
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "purchaseDate",
+            "name": "purchaseInfo",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasedBy",
-            "description": null,
-            "args": [],
-            "type": { "kind": "OBJECT", "name": "User", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasedById",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasedPrice",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "purchasedQuantity",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListItemPurchaseInfo",
+                "ofType": null
+              }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -50160,26 +49953,6 @@
             "deprecationReason": null
           },
           {
-            "name": "recipe",
-            "description": null,
-            "args": [],
-            "type": { "kind": "OBJECT", "name": "Recipe", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "recipeIngredient",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "OBJECT",
-              "name": "RecipeIngredient",
-              "ofType": null
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "shoppingList",
             "description": null,
             "args": [],
@@ -50208,18 +49981,34 @@
             "deprecationReason": null
           },
           {
-            "name": "storageLocation",
+            "name": "source",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListItemSource",
+                "ofType": null
+              }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
-            "name": "storeSection",
+            "name": "storeInfo",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListItemStoreInfo",
+                "ofType": null
+              }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -50502,6 +50291,230 @@
           }
         ],
         "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ShoppingListItemPurchaseInfo",
+        "description": "Purchase state for a shopping list item",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "isPurchased",
+            "description": "Whether the item has been purchased",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchaseDate",
+            "description": "When the item was purchased",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchasedBy",
+            "description": "Who purchased the item",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "User", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchasedById",
+            "description": "ID of user who purchased",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchasedPrice",
+            "description": "Actual price paid",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "purchasedQuantity",
+            "description": "Actual quantity purchased (may differ from requested)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ShoppingListItemSource",
+        "description": "Source information for how a shopping list item was added",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "addedContext",
+            "description": "Context about why item was added",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "autoAddReason",
+            "description": "Reason for auto-add (e.g., 'low_stock', 'meal_plan')",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "isAutoAdded",
+            "description": "Whether item was auto-added (e.g., from low stock)",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "isFromMealPlan",
+            "description": "Whether item came from meal planning",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mealPlan",
+            "description": "Associated meal plan",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "MealPlan", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mealPlanId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mealPlanItem",
+            "description": "Specific meal plan item",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "MealPlanItem",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mealPlanItemId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mealPlanReference",
+            "description": "Reference to meal plan (legacy)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "recipe",
+            "description": "Associated recipe",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Recipe", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "recipeIngredient",
+            "description": "Specific recipe ingredient",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "RecipeIngredient",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ShoppingListItemStoreInfo",
+        "description": "Store and location preferences for a shopping list item",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "aisle",
+            "description": "Aisle location in store",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "preferredStore",
+            "description": "Preferred store for this item",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Store", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storageLocation",
+            "description": "Storage location after purchase",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storeSection",
+            "description": "Section within store",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
         "enumValues": null,
         "possibleTypes": null
       },
@@ -54783,6 +54796,21 @@
         ]
       },
       {
+        "kind": "UNION",
+        "name": "TogglePurchasedResult",
+        "description": "Result of toggling purchased status",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "ShoppingListItem", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null }
+        ]
+      },
+      {
         "kind": "ENUM",
         "name": "TrustLevel",
         "description": null,
@@ -54828,6 +54856,60 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "UnauthorizedError",
+        "description": "Error when user lacks permission for the operation",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "requiredPermission",
+            "description": "The permission that was required",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "resource",
+            "description": "The resource being accessed",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -57135,6 +57217,23 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "UpdateItemResult",
+        "description": "Result of updating an item",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "Item", "ofType": null },
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null },
+          { "kind": "OBJECT", "name": "VersionMismatchError", "ofType": null }
+        ]
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "UpdateLoginHistoryInput",
         "description": null,
@@ -58391,6 +58490,23 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "UpdatePantryItemResult",
+        "description": "Result of updating a pantry item",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "PantryItem", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null },
+          { "kind": "OBJECT", "name": "VersionMismatchError", "ofType": null }
+        ]
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "UpdatePurchaseInput",
         "description": null,
@@ -59159,6 +59275,23 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "UpdateShoppingListItemResult",
+        "description": "Result of updating a shopping list item",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "ShoppingListItem", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null },
+          { "kind": "OBJECT", "name": "VersionMismatchError", "ofType": null }
+        ]
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "UpdateStorageLocationInput",
         "description": "Input for updating an existing storage location\nAll fields are optional",
@@ -59855,6 +59988,22 @@
         "possibleTypes": null
       },
       {
+        "kind": "UNION",
+        "name": "UpdateUserResult",
+        "description": "Result of updating user profile",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "User", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null }
+        ]
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "UpdateUserSettingsInput",
         "description": null,
@@ -60033,6 +60182,22 @@
         "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
+      },
+      {
+        "kind": "UNION",
+        "name": "UpdateUserSettingsResult",
+        "description": "Result of updating user settings",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": [
+          { "kind": "OBJECT", "name": "NotFoundError", "ofType": null },
+          { "kind": "OBJECT", "name": "UnauthorizedError", "ofType": null },
+          { "kind": "OBJECT", "name": "UserSettings", "ofType": null },
+          { "kind": "OBJECT", "name": "ValidationError", "ofType": null }
+        ]
       },
       {
         "kind": "SCALAR",
@@ -62908,7 +63073,7 @@
       {
         "kind": "OBJECT",
         "name": "ValidationError",
-        "description": null,
+        "description": "Generic validation error for invalid input data",
         "isOneOf": null,
         "fields": [
           {
@@ -62924,8 +63089,16 @@
             "deprecationReason": null
           },
           {
+            "name": "constraint",
+            "description": "Validation constraint that was violated",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "field",
-            "description": null,
+            "description": "The field that failed validation (if applicable)",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -62949,7 +63122,9 @@
           }
         ],
         "inputFields": null,
-        "interfaces": [],
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
         "enumValues": null,
         "possibleTypes": null
       },
@@ -63154,6 +63329,80 @@
         ],
         "inputFields": null,
         "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "VersionMismatchError",
+        "description": "Error when optimistic locking version mismatch occurs",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "actualVersion",
+            "description": "Actual current version on server",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "code",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "expectedVersion",
+            "description": "Expected version from client",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "message",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "resourceId",
+            "description": "The resource that had the version mismatch",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [
+          { "kind": "INTERFACE", "name": "MutationError", "ofType": null }
+        ],
         "enumValues": null,
         "possibleTypes": null
       },
