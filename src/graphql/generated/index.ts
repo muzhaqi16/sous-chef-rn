@@ -14462,12 +14462,18 @@ export type ToggleShoppingListItemPurchasedMutation = {
     id: string;
     itemName: string | null | undefined;
     quantity: number | null | undefined;
+    quantityInput: string | null | undefined;
+    normalizedQuantity: number | null | undefined;
     updatedAt: string;
+    version: number;
     category: string | null | undefined;
     unitName: string | null | undefined;
     purchaseInfo: {
       __typename?: 'ShoppingListItemPurchaseInfo';
       isPurchased: boolean;
+      purchasedQuantity: number | null | undefined;
+      purchasedPrice: number | null | undefined;
+      purchaseDate: string | null | undefined;
     };
     unit:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -59719,6 +59725,14 @@ export const ToggleShoppingListItemPurchasedDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
                 {
                   kind: 'Field',
+                  name: { kind: 'Name', value: 'quantityInput' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'normalizedQuantity' },
+                },
+                {
+                  kind: 'Field',
                   name: { kind: 'Name', value: 'purchaseInfo' },
                   selectionSet: {
                     kind: 'SelectionSet',
@@ -59727,10 +59741,23 @@ export const ToggleShoppingListItemPurchasedDocument = {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'isPurchased' },
                       },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'purchasedQuantity' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'purchasedPrice' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'purchaseDate' },
+                      },
                     ],
                   },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'category' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
                 {

@@ -206,8 +206,91 @@ export function useShoppingListScreen() {
     }
 
     return result;
-  }, [items]); // Determine loading state - only show loading if we have no data at all
-  const isLoadingInitial = loading && sortableItems.length === 0;
+  }, [items]);
+
+  // PERFORMANCE: Stable reference for sortableItems - only update when content changes
+  // This prevents re-renders when Apollo cache updates but items haven't changed
+  const sortableItemsRef = useRef<SortableShoppingListItem[]>([]);
+  const stableSortableItems = useMemo(() => {
+    const prev = sortableItemsRef.current;
+    const next = sortableItems;
+
+    // Fast path: same length check
+    if (prev.length !== next.length) {
+      sortableItemsRef.current = next;
+      return next;
+    }
+
+    // Check if any item has changed (by id, title, subtitle, isPurchased, sortOrder)
+    // Config objects are already cached with stable references
+    let hasChanged = false;
+    for (let i = 0; i < next.length; i++) {
+      const prevItem = prev[i];
+      const nextItem = next[i];
+      if (
+        prevItem.id !== nextItem.id ||
+        prevItem.title !== nextItem.title ||
+        prevItem.subtitle !== nextItem.subtitle ||
+        prevItem.isPurchased !== nextItem.isPurchased ||
+        prevItem.sortOrder !== nextItem.sortOrder ||
+        prevItem.rightElementConfig !== nextItem.rightElementConfig ||
+        prevItem.leftElementConfig !== nextItem.leftElementConfig
+      ) {
+        hasChanged = true;
+        break;
+      }
+    }
+
+    if (hasChanged) {
+      sortableItemsRef.current = next;
+      return next;
+    }
+
+    // Return previous reference if nothing changed
+    return prev;
+  }, [sortableItems]);
+
+  // PERFORMANCE: Pre-filter items with stable references
+  // This prevents ShoppingListTabs from creating new array references on every render
+  const unpurchasedItemsRef = useRef<SortableShoppingListItem[]>([]);
+  const purchasedItemsRef = useRef<SortableShoppingListItem[]>([]);
+
+  const { unpurchasedItems, purchasedItems } = useMemo(() => {
+    const newUnpurchased = stableSortableItems.filter(item => !item.isPurchased);
+    const newPurchased = stableSortableItems.filter(item => item.isPurchased);
+
+    // Check if unpurchased items changed
+    const prevUnpurchased = unpurchasedItemsRef.current;
+    let unpurchasedChanged =
+      prevUnpurchased.length !== newUnpurchased.length ||
+      newUnpurchased.some((item, i) => item !== prevUnpurchased[i]);
+
+    // Check if purchased items changed
+    const prevPurchased = purchasedItemsRef.current;
+    let purchasedChanged =
+      prevPurchased.length !== newPurchased.length ||
+      newPurchased.some((item, i) => item !== prevPurchased[i]);
+
+    // Update refs only if changed
+    if (unpurchasedChanged) {
+      unpurchasedItemsRef.current = newUnpurchased;
+    }
+    if (purchasedChanged) {
+      purchasedItemsRef.current = newPurchased;
+    }
+
+    return {
+      unpurchasedItems: unpurchasedChanged
+        ? newUnpurchased
+        : unpurchasedItemsRef.current,
+      purchasedItems: purchasedChanged
+        ? newPurchased
+        : purchasedItemsRef.current,
+    };
+  }, [stableSortableItems]);
+
+  // Determine loading state - only show loading if we have no data at all
+  const isLoadingInitial = loading && stableSortableItems.length === 0;
 
   return {
     // Management hook passthrough (spread first, then override)
@@ -226,7 +309,9 @@ export function useShoppingListScreen() {
 
     // Transformed items data (overrides shoppingListManagement.items)
     items, // Re-export filtered items from management hook
-    sortableItems, // Transformed for UI
+    sortableItems: stableSortableItems, // Transformed for UI (stable reference)
+    unpurchasedItems, // Pre-filtered with stable reference
+    purchasedItems, // Pre-filtered with stable reference
     isLoadingInitial, // Derived loading state
 
     // Focus state

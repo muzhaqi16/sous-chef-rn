@@ -6,6 +6,7 @@ import {
   useGetShoppingListItemQuery,
   ItemSuggestion,
   ShoppingListItemFragment,
+  ShoppingListItemFragmentDoc,
   CategoryType,
 } from '#generated';
 import { FormModal } from '#components/organisms/FormModal';
@@ -79,6 +80,18 @@ export const AddEditItem: React.FC<{
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
+    // Update cache to ensure UI reflects changes immediately
+    update(cache, { data }) {
+      if (data?.updateShoppingListItem) {
+        const updatedItem = data.updateShoppingListItem;
+        cache.writeFragment({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: updatedItem.id }),
+          fragment: ShoppingListItemFragmentDoc,
+          fragmentName: 'ShoppingListItemFragment',
+          data: updatedItem,
+        });
+      }
+    },
     onError: error => {
       console.error('Update item error:', error);
     },

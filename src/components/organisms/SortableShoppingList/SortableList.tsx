@@ -1,5 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, LayoutAnimation, Platform, UIManager } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -22,7 +30,7 @@ import { SubscriptionService } from '#/services/subscriptions/SubscriptionServic
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
 
-export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
+const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,
   onItemEdit,
@@ -55,6 +63,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     initialBatch: 6, // Show 6 items immediately (fills viewport)
     batchSize: 3, // Add 3 items per batch after initial
     batchDelay: 32, // ~2 frames at 60fps - gives time for animations
+    enabled: false, // Disabled: getItemLayout + DraggableFlatList batching handles performance
   });
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
@@ -71,14 +80,33 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     itemsRef.current = items;
   }, [items]);
 
+  // Track previous items length for layout animation
+  const prevItemsLengthRef = useRef(items.length);
+  // Track if we recently finished dragging to prevent LayoutAnimation flicker
+  const recentDragRef = useRef(false);
+
   // PERFORMANCE: Simplified sync - just check reference change
   // Apollo's normalized cache provides stable item references
   // When items truly change (add/remove/edit/reorder), Apollo returns new array reference
-  // During drag operations, isUpdatingRef prevents overwriting our optimistic update
+  // During drag operations, both refs prevent overwriting our optimistic update
   useEffect(() => {
-    if (!isUpdatingRef.current) {
-      setLocalItems(items);
+    // Skip sync during drag operations OR while updating sort order
+    // This prevents the items prop from overwriting our optimistic drag reorder
+    if (isUpdatingRef.current || recentDragRef.current) {
+      return;
     }
+
+    // Animate layout when items are added or removed
+    if (items.length !== prevItemsLengthRef.current) {
+      LayoutAnimation.configureNext({
+        duration: 200,
+        update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+        },
+      });
+    }
+    prevItemsLengthRef.current = items.length;
+    setLocalItems(items);
   }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
@@ -88,11 +116,17 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Manual setNativeProps can leave scroll stuck if drag aborts - let library handle it
   const handleDragBegin = useCallback(() => {
     if (__DEV__) console.log('📱 DraggableFlatList: Drag BEGIN');
+    recentDragRef.current = true;
     externalOnDragBegin?.();
   }, [externalOnDragBegin]);
 
   const handleDragRelease = useCallback(() => {
     if (__DEV__) console.log('📱 DraggableFlatList: Drag RELEASE');
+    // Keep recentDragRef true briefly to prevent LayoutAnimation flicker
+    // Reset after cache updates have settled
+    setTimeout(() => {
+      recentDragRef.current = false;
+    }, 500);
     externalOnDragRelease?.();
   }, [externalOnDragRelease]);
 
@@ -123,8 +157,14 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
     async (data: SortableShoppingListItem[]) => {
-      if (disabled || !onSortOrderUpdate) {
+      // Delay state update by one animation frame to allow library's heldTranslate
+      // mechanism to clear. The library holds the last transform value until onLayout,
+      // but our immediate state update was causing a timing conflict.
+      requestAnimationFrame(() => {
         setLocalItems(data);
+      });
+
+      if (disabled || !onSortOrderUpdate) {
         return;
       }
 
@@ -139,8 +179,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         return;
       }
 
-      // Update local state optimistically
-      setLocalItems(data);
+      // Lock to prevent items prop from overwriting our update
       isUpdatingRef.current = true;
 
       try {
@@ -211,35 +250,29 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate],
   );
 
-  // Number of items to render initially (fills viewport)
-  const INITIAL_NUM_TO_RENDER = 6;
-
   // Render item with ScaleDecorator for drag feedback
-  // PERFORMANCE: Only wrap in ScaleDecorator when actively dragging
-  // This reduces Reanimated shared value creation from 300+ to ~18 on initial render
+  // ALWAYS wrap in ScaleDecorator to maintain consistent component tree
+  // This prevents flicker when isActive changes (component tree stays the same)
+  // activeScale=1 when not dragging means no visual effect but stable tree
   const renderItem = useCallback(
     ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
-      const itemComponent = (
-        <SimpleDraggableItem
-          item={item}
-          onItemPress={onItemPress}
-          onItemEdit={onItemEdit}
-          onItemDelete={onItemDelete}
-          onTogglePurchase={onTogglePurchase}
-          onMoveToPantry={onMoveToPantry}
-          onQuantityPress={onQuantityPress}
-          drag={disabled ? undefined : drag}
-          isActive={isActive}
-          onSwipeableWillOpen={handleSwipeableWillOpen}
-          onSwipeableClose={handleSwipeableClose}
-        />
+      return (
+        <ScaleDecorator activeScale={isActive ? 1.03 : 1}>
+          <SimpleDraggableItem
+            item={item}
+            onItemPress={onItemPress}
+            onItemEdit={onItemEdit}
+            onItemDelete={onItemDelete}
+            onTogglePurchase={onTogglePurchase}
+            onMoveToPantry={onMoveToPantry}
+            onQuantityPress={onQuantityPress}
+            drag={disabled ? undefined : drag}
+            isActive={isActive}
+            onSwipeableWillOpen={handleSwipeableWillOpen}
+            onSwipeableClose={handleSwipeableClose}
+          />
+        </ScaleDecorator>
       );
-
-      // Only apply ScaleDecorator when actively dragging to reduce Reanimated overhead
-      if (isActive) {
-        return <ScaleDecorator>{itemComponent}</ScaleDecorator>;
-      }
-      return itemComponent;
     },
     [
       onItemPress,
@@ -310,6 +343,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           offset: 103 * index,
           index,
         })}
+        // Very fast spring animation to minimize flicker on drop
+        // High stiffness + high damping = nearly instant transition
+        animationConfig={{
+          damping: 50,
+          stiffness: 500,
+        }}
         activationDistance={isDragging ? 1 : 20}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {
@@ -321,6 +360,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           flatListProps.showsVerticalScrollIndicator ?? true
         }
         contentContainerStyle={{
+          paddingTop: 8, // Match item's marginVertical for consistent spacing from tabs
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
         ListFooterComponent={ListFooterComponent}
@@ -328,12 +368,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
-        // PERFORMANCE: Render enough items to fill viewport above fold
-        // Each item creates ~5 Reanimated shared values + gesture handlers
-        initialNumToRender={INITIAL_NUM_TO_RENDER} // Fill viewport to avoid visible pop-in
-        maxToRenderPerBatch={2} // Smaller batches to avoid blocking JS thread
-        windowSize={3} // Tighter window (3 viewports) to reduce off-screen rendering
-        updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
+        // PERFORMANCE: Optimized for smooth scrolling
+        // Trade-off: Higher memory usage for smoother scroll experience
+        initialNumToRender={12} // Fill viewport on larger screens
+        maxToRenderPerBatch={8} // Larger batches = faster scroll item rendering
+        windowSize={7} // 7 viewports (3 above + current + 3 below) for smooth scrolling
+        updateCellsBatchingPeriod={100} // Longer batching period to reduce jank
         removeClippedSubviews={true} // Reduce memory on large lists
       />
     </View>
@@ -345,3 +385,56 @@ const styles = StyleSheet.create(() => ({
     flex: 1,
   },
 }));
+
+// PERFORMANCE: Custom comparator for React.memo
+// Only re-render when items actually change or essential props change
+// Callbacks should be stable (from useCallback/refs) so don't compare them
+const arePropsEqual = (
+  prev: SortableShoppingListProps,
+  next: SortableShoppingListProps,
+): boolean => {
+  // Fast path: same items reference = definitely equal for items
+  if (
+    prev.items === next.items &&
+    prev.disabled === next.disabled &&
+    prev.isDragging === next.isDragging
+  ) {
+    return true;
+  }
+
+  // If items reference changed, check if content actually changed
+  if (prev.items !== next.items) {
+    // Different length = definitely changed
+    if (prev.items.length !== next.items.length) {
+      return false;
+    }
+
+    // Check each item by id and key properties
+    for (let i = 0; i < prev.items.length; i++) {
+      const prevItem = prev.items[i];
+      const nextItem = next.items[i];
+      if (
+        prevItem.id !== nextItem.id ||
+        prevItem.isPurchased !== nextItem.isPurchased ||
+        prevItem.sortOrder !== nextItem.sortOrder ||
+        prevItem.title !== nextItem.title ||
+        prevItem.rightElementConfig !== nextItem.rightElementConfig ||
+        prevItem.leftElementConfig !== nextItem.leftElementConfig
+      ) {
+        return false;
+      }
+    }
+  }
+
+  // Check scalar props
+  return (
+    prev.disabled === next.disabled &&
+    prev.isDragging === next.isDragging
+  );
+};
+
+// Export memoized component
+export const SortableShoppingList = React.memo(
+  SortableShoppingListComponent,
+  arePropsEqual,
+);

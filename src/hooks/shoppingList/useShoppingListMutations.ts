@@ -288,22 +288,43 @@ export function useShoppingListMutations({
   });
 
   // Toggle purchased mutation
-  // Uses cache.modify() for instant UI updates (Pattern 5 from apollo-client-patterns.md)
-  // This avoids "Missing field" warnings from partial optimistic responses
+  // Uses cache.modify() for optimistic UI updates, then Apollo normalizes server response
+  // Server resets quantity fields when unmarking: quantity=1, quantityInput=null, normalizedQuantity=null
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    // No optimisticResponse - cache.modify in update handles instant UI
-    update(cache, { data }, { variables }) {
-      if (!data?.toggleShoppingListItemPurchased || !variables) return;
+    // Optimistic cache.modify for instant UI feedback before server responds
+    update(cache, _result, { variables }) {
+      if (!variables) return;
 
       const itemId = variables.id;
       const newStatus = variables.purchased;
+      const isUnmarking = newStatus === false;
 
-      // Directly modify the cached item's fields for instant UI feedback
+      // Directly modify cached fields for instant UI feedback
+      // When unmarking (purchased: false), also reset quantity fields optimistically
       cache.modify({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fields: {
-          purchaseInfo(existing = {}) {
+          // Reset quantity to default (1) when unmarking
+          quantity(existing) {
+            return isUnmarking ? 1 : existing;
+          },
+          quantityInput(existing) {
+            return isUnmarking ? null : existing;
+          },
+          normalizedQuantity(existing) {
+            return isUnmarking ? null : existing;
+          },
+          purchaseInfo(existing: any = {}) {
+            if (isUnmarking) {
+              return {
+                ...existing,
+                isPurchased: false,
+                purchasedQuantity: null,
+                purchasedPrice: null,
+                purchaseDate: null,
+              };
+            }
             return {
               ...existing,
               isPurchased: newStatus,

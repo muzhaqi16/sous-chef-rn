@@ -16,6 +16,7 @@ import {
   useShoppingListItemsChangedSubscription,
   useShoppingListUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
+  ShoppingListItemFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
@@ -82,9 +83,17 @@ export function useShoppingListSubscriptions(userId?: string) {
         removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
           evictItem: true,
         });
+      } else if (mutation === 'ITEM_UPDATED') {
+        // Write updated item data to cache using fragment
+        // Apollo does NOT auto-normalize subscription data when using onData callback
+        // This handles quantity, sortOrder, purchaseInfo, and all other field updates
+        client.cache.writeFragment({
+          id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
+          fragment: ShoppingListItemFragmentDoc,
+          fragmentName: 'ShoppingListItemFragment',
+          data: item,
+        });
       }
-      // UPDATE mutations are handled by Apollo's automatic normalization
-      // since the subscription returns the full item fragment with id and __typename
     },
   });
 

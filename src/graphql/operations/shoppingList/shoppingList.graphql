@@ -409,14 +409,21 @@ mutation ToggleShoppingListItemPurchased(
     purchased: $purchased
     version: $version
   ) {
-    # Use minimal fields matching server response to avoid cache warnings
+    # Request all quantity-related fields to ensure cache is updated correctly
+    # when unmarking items as purchased (server resets purchasedQuantity, etc.)
     id
     itemName
     quantity
+    quantityInput
+    normalizedQuantity
     purchaseInfo {
       isPurchased
+      purchasedQuantity
+      purchasedPrice
+      purchaseDate
     }
     updatedAt
+    version
     category
     unitName
     unit {

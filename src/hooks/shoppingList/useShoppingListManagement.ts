@@ -111,14 +111,22 @@ export function useShoppingListManagement() {
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  // OPTIMIZATION: Extract items from itemsConnection edges
-  // Use previousData as fallback to prevent UI flash during refetch
+  // OPTIMIZATION: Extract items from itemsConnection edges and sort by sortOrder
+  // Sorting client-side ensures subscription updates to sortOrder are reflected in UI
+  // Apollo's cached Connection order doesn't change when item fields are updated
   const items = useMemo(() => {
     const edges =
       data?.shoppingList?.itemsConnection?.edges ??
       previousData?.shoppingList?.itemsConnection?.edges ??
       [];
-    return edges.map(edge => edge.node);
+    return edges
+      .map(edge => edge.node)
+      .sort((a, b) => {
+        // Sort by sortOrder (string comparison for fractional indexing)
+        const sortA = a.sortOrder ?? 'zzz';
+        const sortB = b.sortOrder ?? 'zzz';
+        return sortA.localeCompare(sortB);
+      });
   }, [
     data?.shoppingList?.itemsConnection?.edges,
     previousData?.shoppingList?.itemsConnection?.edges,

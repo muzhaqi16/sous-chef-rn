@@ -2,12 +2,9 @@ import { useCallback, useRef, useLayoutEffect } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
-  ShoppingListItemFragmentDoc,
   ShoppingListItemDisplayFragmentDoc,
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
-  GetShoppingListDocument,
-  GetShoppingListQuery,
 } from '#generated';
 import { toastService } from '#/services/toastService';
 import {
@@ -53,94 +50,36 @@ export function useShoppingListActions({
   const haptic = useHaptic();
 
   // Mutations
+  // Move item mutation - uses cache.modify pattern for simple field update
+  // NO optimisticResponse needed: SortableList.tsx handles instant UI via local state
+  // cache.modify updates only sortOrder field, avoiding "Missing field" warnings
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
-    // Optimistic response for instant UI feedback
-    optimisticResponse: variables => {
-      // Read full item from Apollo cache to get all fragment fields
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: variables.input.itemId,
-      });
+    // Use cache.modify for instant UI update without fragment validation warnings
+    // Per docs/apollo-client-patterns.md Pattern 5
+    update(cache, { data }, { variables }) {
+      if (!data?.moveShoppingListItem || !variables) return;
 
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
+      const itemId = variables.input.itemId;
+      const newSortOrder = data.moveShoppingListItem.sortOrder;
 
-      if (!fullItem) {
-        // Fallback - return minimal item, real mutation will handle errors
-        return {
-          __typename: 'Mutation',
-          moveShoppingListItem: {
-            __typename: 'ShoppingListItem',
-            id: variables.input.itemId,
-            sortOrder: 'a0',
+      // Directly modify the cached item's sortOrder field
+      // This bypasses fragment validation - no "Missing field" warnings
+      // IMPORTANT: Also update version to prevent stale subscription data from overwriting
+      cache.modify({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        fields: {
+          sortOrder() {
+            return newSortOrder;
           },
-        };
-      }
-
-      // Calculate optimistic sortOrder based on afterItemId
-      const afterItem = variables.input.afterItemId
-        ? items.find(item => item.id === variables.input.afterItemId)
-        : null;
-
-      // Use fractional indexing for sortOrder
-      const optimisticSortOrder = afterItem?.sortOrder || fullItem.sortOrder;
-
-      // Return updated item with new sortOrder
-      return {
-        __typename: 'Mutation',
-        moveShoppingListItem: {
-          ...fullItem,
-          sortOrder: optimisticSortOrder,
-          updatedAt: new Date().toISOString(),
-          __typename: 'ShoppingListItem',
+          updatedAt() {
+            return new Date().toISOString();
+          },
+          version() {
+            return data.moveShoppingListItem.version;
+          },
         },
-      };
-    },
-    // Update cache to reflect new order
-    // Uses GetShoppingList.itemsConnection as the cache location
-    update(cache, { data }) {
-      if (!data?.moveShoppingListItem || !currentListId) return;
-
-      try {
-        // Read the current shopping list query with itemsConnection
-        const queryResult = cache.readQuery<GetShoppingListQuery>({
-          query: GetShoppingListDocument,
-          variables: { id: currentListId },
-        });
-
-        if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
-
-        // Update single item with new sortOrder
-        const updatedEdges = queryResult.shoppingList.itemsConnection.edges.map(
-          (edge: any) =>
-            edge.node.id === data.moveShoppingListItem.id
-              ? { ...edge, node: { ...edge.node, sortOrder: data.moveShoppingListItem.sortOrder } }
-              : edge,
-        );
-
-        // Write back to cache
-        cache.writeQuery({
-          query: GetShoppingListDocument,
-          variables: { id: currentListId },
-          data: {
-            shoppingList: {
-              ...queryResult.shoppingList,
-              itemsConnection: {
-                ...queryResult.shoppingList.itemsConnection,
-                edges: updatedEdges,
-              },
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Cache update failed for moveItem:', error);
-      }
+      });
     },
     onError: error => {
       console.error('Move item error:', error);

@@ -88,8 +88,7 @@ export const ShoppingListItemDetail: React.FC<{
                 quantityInput={item.quantityInput}
                 displayFormat={item.displayFormat}
                 displayAsFraction={item.unit?.displayAsFraction}
-                netWeight={item.item?.netWeight}
-                unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
               />
             </View>
           ) : null}
@@ -117,8 +116,7 @@ export const ShoppingListItemDetail: React.FC<{
                 quantityInput={item.quantityInput}
                 displayFormat={item.displayFormat}
                 displayAsFraction={item.unit?.displayAsFraction}
-                netWeight={item.item?.netWeight}
-                unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+                unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
               />
             </View>
           </View>

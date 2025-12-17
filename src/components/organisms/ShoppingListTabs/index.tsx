@@ -15,6 +15,10 @@ import type { SortableShoppingListItem } from '../SortableShoppingList';
 
 interface ShoppingListTabsProps {
   items: SortableShoppingListItem[];
+  // PERFORMANCE: Pre-filtered items with stable references from useShoppingListScreen
+  // When provided, skip internal filtering to prevent new array references
+  unpurchasedItems?: SortableShoppingListItem[];
+  purchasedItems?: SortableShoppingListItem[];
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -40,6 +44,8 @@ interface ShoppingListTabsProps {
 
 const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
+  unpurchasedItems: preFilteredUnpurchased,
+  purchasedItems: preFilteredPurchased,
   onItemPress,
   onItemEdit,
   onItemDelete,
@@ -105,16 +111,17 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     };
   });
 
-  // Filter items by isPurchased value - works correctly with optimistic updates
-  // Note: Can't use findIndex/slice because optimistic updates change isPurchased
-  // in-place without re-sorting the array, breaking position-based assumptions
+  // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
+  // Fall back to internal filtering for backwards compatibility
   const unpurchasedItems = useMemo(() => {
+    if (preFilteredUnpurchased) return preFilteredUnpurchased;
     return items.filter(item => !item.isPurchased);
-  }, [items]);
+  }, [preFilteredUnpurchased, items]);
 
   const purchasedItems = useMemo(() => {
+    if (preFilteredPurchased) return preFilteredPurchased;
     return items.filter(item => item.isPurchased);
-  }, [items]);
+  }, [preFilteredPurchased, items]);
 
   const unpurchasedCount = unpurchasedItems.length;
   const purchasedCount = purchasedItems.length;

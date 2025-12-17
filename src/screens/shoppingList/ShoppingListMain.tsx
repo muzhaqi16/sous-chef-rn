@@ -85,6 +85,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     currentListId,
     items,
     sortableItems,
+    unpurchasedItems,
+    purchasedItems,
     loading,
     isLoadingInitial,
     searchQuery,
@@ -279,10 +281,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // PERFORMANCE: Only depend on items.length to avoid re-running on every items change
   useEffect(() => {
     if (items.length > 0 && !swipeHint.hasBeenShown) {
-      const unpurchasedItems = itemsRef.current.filter(
+      const unpurchasedForHint = itemsRef.current.filter(
         (item: any) => !item.purchaseInfo?.isPurchased,
       );
-      if (unpurchasedItems.length > 0) {
+      if (unpurchasedForHint.length > 0) {
         const timer = setTimeout(() => {
           swipeHint.show();
         }, 1500);
@@ -365,6 +367,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   );
 
   // PERFORMANCE: Memoize customListProps to prevent ShoppingListTabs re-renders
+  // Pre-filtered items have stable references from useShoppingListScreen
   const customListProps = useMemo(
     () => ({
       loading: isLoadingInitial,
@@ -378,6 +381,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       onClearAllPurchased: handleClearAllPurchased,
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
+      // Pre-filtered items with stable references (no filtering needed in ShoppingListTabs)
+      unpurchasedItems,
+      purchasedItems,
     }),
     [
       isLoadingInitial,
@@ -391,6 +397,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       handleClearAllPurchased,
       handleSwipeableWillOpen,
       handleSwipeableClose,
+      unpurchasedItems,
+      purchasedItems,
     ],
   );
 
