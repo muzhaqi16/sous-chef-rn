@@ -233,6 +233,18 @@ export function useHomeDetailManagement(homeId: string) {
     [revokeInviteMutation, createRemoveOperation],
   );
 
+  const toggleJoinCode = useCallback(
+    async (enabled: boolean) => {
+      await updateHomeMutation({
+        variables: {
+          id: homeId,
+          input: { allowJoinCode: enabled },
+        },
+      });
+    },
+    [homeId, updateHomeMutation],
+  );
+
   return {
     // Data
     home,
@@ -244,5 +256,6 @@ export function useHomeDetailManagement(homeId: string) {
     changeRole,
     removeMember,
     revokeInvite,
+    toggleJoinCode,
   };
 }

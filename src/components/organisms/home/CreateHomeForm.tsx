@@ -4,11 +4,14 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 
 interface CreateHomeFormProps {
   isVisible: boolean;
   homeName: string;
   onHomeNameChange: (name: string) => void;
+  allowJoinCode: boolean;
+  onAllowJoinCodeChange: (value: boolean) => void;
   onSubmit: () => void;
   onCancel: () => void;
   isCreating: boolean;
@@ -18,6 +21,8 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   isVisible,
   homeName,
   onHomeNameChange,
+  allowJoinCode,
+  onAllowJoinCodeChange,
   onSubmit,
   onCancel,
   isCreating,
@@ -32,6 +37,11 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         placeholder="Enter home name"
         autoFocus
         autoCapitalize="words"
+      />
+      <FormCheckbox
+        label="Allow others to join with a code"
+        checked={allowJoinCode}
+        onPress={() => onAllowJoinCodeChange(!allowJoinCode)}
       />
       <View style={styles.formActions}>
         <Button

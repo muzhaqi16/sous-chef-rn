@@ -176,6 +176,21 @@ export function normalizeConnection<T = any>(
 // =============================================================================
 
 type HomeLike = {
+  id?: string;
+  name?: string;
+  type?: string;
+  description?: string | null;
+  timezone?: string | null;
+  currency?: string | null;
+  isPublic?: boolean;
+  joinCode?: string | null;
+  allowJoinCode?: boolean | null;
+  maxMembers?: number | null;
+  tags?: string[] | null;
+  metadata?: Record<string, any> | null;
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
   membersConnection?: {
     edges?: Array<Edge<any>> | null;
     pageInfo?: PageInfo | null;

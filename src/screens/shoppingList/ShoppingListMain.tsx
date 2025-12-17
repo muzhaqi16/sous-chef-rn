@@ -594,7 +594,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
                       isDefault: iu.isDefault,
                       isPreferred: iu.isPreferred,
                     }))
-                    .filter(u => u.symbol) || [],
+                    .filter(
+                      u =>
+                        u.symbol &&
+                        u.symbol.toLowerCase() !== 'undetermined',
+                    ) || [],
               }
             : null
         }

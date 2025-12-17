@@ -407,9 +407,10 @@ export function useHomeManagement() {
   // Helper functions using CRUD utilities
   const createHomeOperation = createAddOperation({
     mutation: createHomeMutation,
-    transformInput: (input: { name: string; createDefaultPantry?: boolean }) => ({
+    transformInput: (input: { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean }) => ({
       name: input.name.trim(),
       createDefaultPantry: input.createDefaultPantry ?? true,
+      allowJoinCode: input.allowJoinCode ?? true,
     }),
     validateInput: (input: { name: string }) => {
       if (!input.name?.trim()) {
@@ -423,11 +424,11 @@ export function useHomeManagement() {
 
   // Wrapper to support both string and object signatures
   const createHome = async (
-    nameOrInput: string | { name: string; createDefaultPantry?: boolean },
+    nameOrInput: string | { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean },
   ) => {
     const input =
       typeof nameOrInput === 'string'
-        ? { name: nameOrInput, createDefaultPantry: true }
+        ? { name: nameOrInput, createDefaultPantry: true, allowJoinCode: true }
         : nameOrInput;
     return createHomeOperation(input);
   };

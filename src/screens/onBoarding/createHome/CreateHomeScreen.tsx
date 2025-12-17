@@ -224,6 +224,7 @@ const CreateHomeScreenComponent = () => {
     defaultValues: {
       homeName: '',
       pantryName: 'Kitchen Pantry',
+      allowJoinCode: true,
     },
   });
 
@@ -287,7 +288,7 @@ const CreateHomeScreenComponent = () => {
                 description: 'Created during onboarding',
                 type: HomeType.Household,
                 isPublic: false,
-                allowJoinCode: true,
+                allowJoinCode: data.allowJoinCode ?? true,
                 tags: ['onboarding'],
               },
             },

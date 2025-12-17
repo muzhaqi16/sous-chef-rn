@@ -83,8 +83,29 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   useEffect(() => {
     if (visible && item) {
       setQuantity(item.quantity ?? 0);
-      setUnitName(item.unitName ?? null);
-      setUnitId(item.unitId ?? null);
+
+      // Sync unit with available item units (case-insensitive match)
+      // This ensures consistent display (e.g., "Tbsps" -> "tbsp" if chip exists)
+      const storedUnit = item.unitName;
+      if (storedUnit && item.itemUnits && item.itemUnits.length > 0) {
+        const matchingUnit = item.itemUnits.find(
+          u =>
+            u.symbol.toLowerCase() === storedUnit.toLowerCase() ||
+            u.name.toLowerCase() === storedUnit.toLowerCase(),
+        );
+        if (matchingUnit) {
+          setUnitName(matchingUnit.symbol);
+          setUnitId(matchingUnit.id);
+        } else {
+          // No matching chip - use lowercase of stored value
+          setUnitName(storedUnit.toLowerCase());
+          setUnitId(item.unitId ?? null);
+        }
+      } else {
+        // No item units available - use lowercase of stored value
+        setUnitName(storedUnit ? storedUnit.toLowerCase() : null);
+        setUnitId(item.unitId ?? null);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally skip item prop changes to prevent flash-back
   }, [visible, item?.id]);
