@@ -1,15 +1,11 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {Platform, PermissionsAndroid} from 'react-native';
 import notifee, {AuthorizationStatus} from '@notifee/react-native';
 
 export const useNotificationPermissions = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    checkPermissions();
-  }, []);
-
-  const checkPermissions = async () => {
+  const checkPermissions = useCallback(async () => {
     if (Platform.OS === 'ios') {
       const settings = await notifee.getNotificationSettings();
       setHasPermission(
@@ -21,9 +17,9 @@ export const useNotificationPermissions = () => {
       );
       setHasPermission(granted);
     }
-  };
+  }, []);
 
-  const requestPermissions = async (): Promise<boolean> => {
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'ios') {
       const settings = await notifee.requestPermission();
       const granted =
@@ -39,7 +35,11 @@ export const useNotificationPermissions = () => {
       return isGranted;
     }
     return true;
-  };
+  }, []);
+
+  useEffect(() => {
+    checkPermissions();
+  }, [checkPermissions]);
 
   return {
     hasPermission,

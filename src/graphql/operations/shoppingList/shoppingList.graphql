@@ -139,7 +139,9 @@ query GetDefaultShoppingList {
           id
           itemName
           quantity
-          isPurchased
+          purchaseInfo {
+            isPurchased
+          }
           item {
             id
             name
@@ -221,7 +223,9 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
       edges {
         node {
           id
-          isPurchased
+          purchaseInfo {
+            isPurchased
+          }
         }
         cursor
       }
@@ -271,7 +275,9 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       edges {
         node {
           id
-          isPurchased
+          purchaseInfo {
+            isPurchased
+          }
         }
         cursor
       }
@@ -407,7 +413,9 @@ mutation ToggleShoppingListItemPurchased(
     id
     itemName
     quantity
-    isPurchased
+    purchaseInfo {
+      isPurchased
+    }
     updatedAt
     category
     unitName
@@ -576,8 +584,12 @@ subscription ShoppingListUpdated($listId: ID!) {
             id
             itemName
             quantity
-            isPurchased
-            estimatedPrice
+            purchaseInfo {
+              isPurchased
+            }
+            priceEstimate {
+              estimated
+            }
           }
           cursor
         }

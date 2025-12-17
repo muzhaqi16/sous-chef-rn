@@ -49,3 +49,5 @@ export * from './DatePickerField';
 export * from './SegmentedControl';
 export * from './ShoppingListHeader';
 export * from './RecipesHeader';
+export * from './ItemRecentCard';
+export * from './ItemSuggestionsList';

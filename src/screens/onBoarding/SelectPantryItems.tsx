@@ -37,9 +37,7 @@ export const SelectPantryItems = () => {
         field: ItemSortField.Popularity,
         order: SortOrder.Asc,
       },
-      pagination: {
-        take: 150,
-      },
+      first: 150,
     },
     fetchPolicy: 'cache-and-network',
   });
@@ -52,11 +50,11 @@ export const SelectPantryItems = () => {
   // Transform onboarding items into selectable items with id and selected properties
   const selectableItems = useMemo(
     () =>
-      (data?.items?.items || []).map((item: any) => ({
+      (data?.items?.edges?.map(edge => edge.node) || []).map((item: any) => ({
         ...item,
         selected: false,
       })),
-    [data?.items],
+    [data?.items?.edges],
   );
 
   // Use the custom hook for managing selection state

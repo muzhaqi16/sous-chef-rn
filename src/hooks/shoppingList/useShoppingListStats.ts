@@ -9,7 +9,7 @@ export function useShoppingListStats(items: ShoppingListItemCoreFragment[]) {
   const stats = useMemo(() => {
     const total = items.length;
     // Filter out null items (defensive against cache corruption)
-    const completed = items.filter(item => item?.isPurchased).length;
+    const completed = items.filter(item => item?.purchaseInfo?.isPurchased).length;
     const pending = total - completed;
 
     return {

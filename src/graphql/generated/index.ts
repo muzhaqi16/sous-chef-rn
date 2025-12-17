@@ -5,7 +5,7 @@ import type { DocumentNode } from 'graphql';
 import type * as ApolloReactCommon from '@apollo/client';
 import * as ApolloReactHooks from '@apollo/client/react';
 export type Maybe<T> = T | null | undefined;
-export type InputMaybe<T> = T | undefined;
+export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
   [K in keyof T]: T[K];
 };
@@ -75,6 +75,13 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
+/** Result of adding an item to pantry */
+export type AddPantryItemResult =
+  | NotFoundError
+  | PantryItem
+  | UnauthorizedError
+  | ValidationError;
+
 /** Result of adding a pantry item to a shopping list */
 export type AddPantryItemToShoppingListResult = {
   __typename?: 'AddPantryItemToShoppingListResult';
@@ -106,6 +113,14 @@ export type AddRestrictionsInput = {
   restrictions: Array<ModerationRestriction>;
   userId: Scalars['ID']['input'];
 };
+
+/** Result of adding an item to a shopping list */
+export type AddShoppingListItemResult =
+  | DuplicateError
+  | NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError
+  | ValidationError;
 
 export type AddTemplateItemInput = {
   customMealName?: InputMaybe<Scalars['String']['input']>;
@@ -511,6 +526,17 @@ export type ConfirmedIngredientConsumptionInput = {
   unitId: Scalars['ID']['input'];
 };
 
+/** Error when operation conflicts with existing data */
+export type ConflictError = MutationError & {
+  __typename?: 'ConflictError';
+  code: Scalars['String']['output'];
+  /** The field causing the conflict */
+  conflictingField: Maybe<Scalars['String']['output']>;
+  /** The existing value causing the conflict */
+  existingValue: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
+};
+
 export type Connection = {
   edges: Array<Edge>;
   pageInfo: PageInfo;
@@ -665,14 +691,17 @@ export type CreateDeviceInput = {
   buildNumber?: InputMaybe<Scalars['String']['input']>;
   bundleId?: InputMaybe<Scalars['String']['input']>;
   carrier?: InputMaybe<Scalars['String']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   hostNames?: InputMaybe<Scalars['JSON']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
@@ -690,6 +719,7 @@ export type CreateDeviceInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
   model?: InputMaybe<Scalars['String']['input']>;
@@ -700,6 +730,7 @@ export type CreateDeviceInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -767,6 +798,13 @@ export type CreateItemInput = {
   units?: InputMaybe<Array<ItemUnitInput>>;
   vendor?: InputMaybe<Scalars['String']['input']>;
 };
+
+/** Result of creating an item - either success or specific error */
+export type CreateItemResult =
+  | DuplicateError
+  | Item
+  | UnauthorizedError
+  | ValidationError;
 
 export type CreateLoginHistoryInput = {
   apiClient?: InputMaybe<Scalars['String']['input']>;
@@ -1205,6 +1243,21 @@ export enum DeductionMethod {
   RecipeBased = 'RECIPE_BASED',
 }
 
+/** Result of deleting an item */
+export type DeleteItemResult =
+  | DeleteSuccess
+  | NotFoundError
+  | UnauthorizedError;
+
+/** Success response for delete operations */
+export type DeleteSuccess = {
+  __typename?: 'DeleteSuccess';
+  /** ID of the deleted resource */
+  id: Scalars['ID']['output'];
+  /** Whether the deletion was successful */
+  success: Scalars['Boolean']['output'];
+};
+
 /** Input for deleted device cleanup */
 export type DeletedDeviceCleanupInput = {
   olderThanDays?: InputMaybe<Scalars['Int']['input']>;
@@ -1396,14 +1449,17 @@ export type DeviceRegistrationInput = {
   buildNumber?: InputMaybe<Scalars['String']['input']>;
   bundleId?: InputMaybe<Scalars['String']['input']>;
   carrier?: InputMaybe<Scalars['String']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   hostNames?: InputMaybe<Scalars['JSON']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
   isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1418,6 +1474,7 @@ export type DeviceRegistrationInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
   model?: InputMaybe<Scalars['String']['input']>;
@@ -1428,6 +1485,7 @@ export type DeviceRegistrationInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -1581,6 +1639,19 @@ export enum DisplayFormat {
   Fraction = 'FRACTION',
   Mixed = 'MIXED',
 }
+
+/** Error when a duplicate resource already exists */
+export type DuplicateError = MutationError & {
+  __typename?: 'DuplicateError';
+  code: Scalars['String']['output'];
+  /** ID of the existing resource (if available) */
+  existingId: Maybe<Scalars['ID']['output']>;
+  /** The field that has a duplicate value */
+  field: Scalars['String']['output'];
+  message: Scalars['String']['output'];
+  /** The duplicate value */
+  value: Maybe<Scalars['String']['output']>;
+};
 
 export type Edge = {
   cursor: Scalars['String']['output'];
@@ -2147,16 +2218,12 @@ export type Item = {
   categories: Maybe<Array<ItemCategory>>;
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
-  /** @deprecated Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field. */
-  creations: Array<ItemCreation>;
   dataSource: DataSource;
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   density: Maybe<Scalars['Float']['output']>;
   description: Maybe<Scalars['String']['output']>;
   displayUnit: Maybe<Unit>;
   displayUnitId: Maybe<Scalars['String']['output']>;
-  /** @deprecated Expensive audit query (100+ records with joins). Admin access only. Regular clients should not use this field. */
-  edits: Array<ItemEdit>;
   externalSources: Array<ExternalSourceMapping>;
   healthBenefits: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
@@ -2227,6 +2294,13 @@ export enum ItemCondition {
   Spoiled = 'SPOILED',
 }
 
+export type ItemConnection = {
+  __typename?: 'ItemConnection';
+  edges: Array<ItemEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type ItemCreation = {
   __typename?: 'ItemCreation';
   createdAt: Scalars['DateTime']['output'];
@@ -2236,6 +2310,13 @@ export type ItemCreation = {
   reason: Maybe<Scalars['String']['output']>;
   source: DataSource;
   user: User;
+};
+
+/** Item connection for pagination (Relay spec) */
+export type ItemEdge = {
+  __typename?: 'ItemEdge';
+  cursor: Scalars['String']['output'];
+  node: Item;
 };
 
 export type ItemEdit = {
@@ -2268,6 +2349,10 @@ export type ItemFilters = {
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   createdAfter?: InputMaybe<Scalars['DateTime']['input']>;
   createdBefore?: InputMaybe<Scalars['DateTime']['input']>;
+  /** External ID from a provider (e.g., Kroger product ID) */
+  externalId?: InputMaybe<Scalars['String']['input']>;
+  /** Provider type for external ID lookup */
+  externalProvider?: InputMaybe<ProviderType>;
   hasAllergens?: InputMaybe<Scalars['Boolean']['input']>;
   hasNutrition?: InputMaybe<Scalars['Boolean']['input']>;
   hasOffers?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2282,6 +2367,10 @@ export type ItemFilters = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   priceRange?: InputMaybe<PriceRangeInput>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
+  /** SKU to search for */
+  sku?: InputMaybe<Scalars['String']['input']>;
+  /** Store ID for SKU lookup (optional, searches all stores if not provided) */
+  skuStoreId?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ItemStatus>;
   statuses?: InputMaybe<Array<ItemStatus>>;
   storageState?: InputMaybe<StorageState>;
@@ -2362,6 +2451,7 @@ export type ItemSuggestion = {
   images: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
+  type: ItemType;
 };
 
 export enum ItemType {
@@ -4626,6 +4716,17 @@ export type MutationVerifyUserEmailArgs = {
   id: Scalars['ID']['input'];
 };
 
+/**
+ * Standard error interface for all mutation errors.
+ * All error types should implement this interface.
+ */
+export type MutationError = {
+  /** Machine-readable error code for client handling */
+  code: Scalars['String']['output'];
+  /** Human-readable error message */
+  message: Scalars['String']['output'];
+};
+
 export enum MutationType {
   CollaboratorAdded = 'COLLABORATOR_ADDED',
   CollaboratorRemoved = 'COLLABORATOR_REMOVED',
@@ -4642,6 +4743,17 @@ export enum MutationType {
 
 export type Node = {
   id: Scalars['ID']['output'];
+};
+
+/** Error when a requested resource is not found */
+export type NotFoundError = MutationError & {
+  __typename?: 'NotFoundError';
+  code: Scalars['String']['output'];
+  message: Scalars['String']['output'];
+  /** ID that was searched for */
+  resourceId: Maybe<Scalars['String']['output']>;
+  /** Type of resource that was not found */
+  resourceType: Scalars['String']['output'];
 };
 
 /**
@@ -5029,6 +5141,7 @@ export type PantryExpiringItemsAlertPayload = {
   userId: Scalars['String']['output'];
 };
 
+/** Real-time collaborative type - never cache */
 export type PantryItem = {
   __typename?: 'PantryItem';
   acquisitionMethod: AcquisitionMethod;
@@ -5283,6 +5396,25 @@ export type PresignPayload = {
   url: Scalars['String']['output'];
 };
 
+/** Price estimate information for a shopping list item */
+export type PriceEstimate = {
+  __typename?: 'PriceEstimate';
+  /** Average price from purchase history */
+  average: Maybe<Scalars['Float']['output']>;
+  /** User-provided budget limit */
+  budget: Maybe<Scalars['Float']['output']>;
+  /** User-provided estimated price */
+  estimated: Maybe<Scalars['Float']['output']>;
+  /** Highest price seen */
+  highest: Maybe<Scalars['Float']['output']>;
+  /** Last known actual price from purchase history */
+  lastKnown: Maybe<Scalars['Float']['output']>;
+  /** When price data was last updated */
+  lastUpdated: Maybe<Scalars['DateTime']['output']>;
+  /** Lowest price seen */
+  lowest: Maybe<Scalars['Float']['output']>;
+};
+
 export type PriceRangeFacet = {
   __typename?: 'PriceRangeFacet';
   count: Scalars['Int']['output'];
@@ -5411,6 +5543,25 @@ export type PurchaseEdge = {
   node: Purchase;
 };
 
+export type PurchaseFilterInput = {
+  endDate?: InputMaybe<Scalars['DateTime']['input']>;
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  shoppingListItemId?: InputMaybe<Scalars['ID']['input']>;
+  startDate?: InputMaybe<Scalars['DateTime']['input']>;
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+/** Summary of purchase history for a shopping list item */
+export type PurchaseHistorySummary = {
+  __typename?: 'PurchaseHistorySummary';
+  /** Date of most recent purchase */
+  lastPurchaseDate: Maybe<Scalars['DateTime']['output']>;
+  /** Whether this item has been purchased before */
+  previouslyPurchased: Scalars['Boolean']['output'];
+  /** Total number of times purchased */
+  purchaseCount: Scalars['Int']['output'];
+};
+
 /** Order by options for purchases */
 export type PurchaseOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
@@ -5525,8 +5676,6 @@ export type Query = {
   devices: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   expirationNotification: Maybe<ExpirationNotification>;
-  /** @deprecated Use loginHistories(input: { userId: ..., failuresOnly: true, hours: ... }) instead */
-  failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
   /**
    * Get best display unit for a quantity
@@ -5551,27 +5700,22 @@ export type Query = {
   inviteStats: InviteStats;
   invitesSentByMe: Array<HomeInvite>;
   item: Maybe<Item>;
-  itemByExternalId: Maybe<Item>;
   itemByExternalSource: Maybe<Item>;
-  itemBySku: Maybe<Item>;
-  /**
-   * Find item by UPC. Use items(filters: { upc, upcFormat }) for composable filtering.
-   * @deprecated Use items(filters: { upc, upcFormat }) for composable filtering and UPC format support
-   */
-  itemByUpc: Maybe<Item>;
   itemPriceHistory: Maybe<Array<ItemPriceHistory>>;
-  items: ItemsResponse;
+  /**
+   * List items with filtering and cursor-based pagination (Relay spec).
+   * Use filters for UPC, SKU, or external ID lookups:
+   * - items(filters: { upc, upcFormat }) - UPC/barcode lookup
+   * - items(filters: { sku, skuStoreId }) - SKU lookup
+   * - items(filters: { externalId, externalProvider }) - External ID lookup
+   */
+  items: ItemConnection;
   itemsBySource: Array<Item>;
   /**
    * Consolidated login history query with comprehensive filtering.
-   * Replaces: loginHistoryForUser, loginHistoryByIP, failedLoginAttempts, searchLoginHistory
+   * Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
    */
   loginHistories: LoginHistoryConnection;
-  loginHistory: Maybe<LoginHistory>;
-  /** @deprecated Use loginHistories(input: { ipAddress: ... }) instead */
-  loginHistoryByIP: Array<LoginHistory>;
-  /** @deprecated Use loginHistories(input: { userId: ... }) instead */
-  loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   /**
    * Get all low stock items for a home's pantries.
@@ -5611,8 +5755,6 @@ export type Query = {
   notification: Maybe<Notification>;
   notificationPreferences: NotificationPreferences;
   notificationStats: NotificationStats;
-  notificationsByCategory: NotificationConnection;
-  notificationsByType: NotificationConnection;
   pantries: Array<Pantry>;
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
@@ -5655,11 +5797,6 @@ export type Query = {
   popularTemplates: Array<MealTemplate>;
   purchase: Maybe<Purchase>;
   purchaseStats: PurchaseStats;
-  purchasesByDateRange: Array<Purchase>;
-  purchasesByItem: Array<Purchase>;
-  purchasesByShoppingListItem: Array<Purchase>;
-  purchasesByStore: Array<Purchase>;
-  recentNotifications: Array<Notification>;
   /**
    * Get recently deleted pantry items for quick re-adding suggestions.
    * Returns soft-deleted items that are not currently in the pantry,
@@ -5685,9 +5822,8 @@ export type Query = {
   rootCategories: Array<Category>;
   savedRecipe: Maybe<SavedRecipe>;
   savedRecipeFolders: Array<Scalars['String']['output']>;
-  searchItems: Maybe<ItemsResponse>;
-  /** @deprecated Use loginHistories(input: { search: ... }) instead */
-  searchLoginHistory: Array<LoginHistory>;
+  /** Search items with cursor-based pagination (Relay spec). */
+  searchItems: Maybe<ItemConnection>;
   searchRecipes: RecipeConnection;
   searchShoppingLists: Array<ShoppingList>;
   searchStores: Array<Store>;
@@ -5744,7 +5880,6 @@ export type Query = {
   user: Maybe<User>;
   userModeration: Maybe<UserModeration>;
   userProfile: Maybe<UserProfile>;
-  userPurchases: Array<Purchase>;
   userSettings: Maybe<UserSettings>;
   users: Array<User>;
   validateUpc: UpcValidation;
@@ -5885,11 +6020,6 @@ export type QueryExpirationNotificationArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type QueryFailedLoginAttemptsArgs = {
-  hours?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
 export type QueryFrequentlyBoughtItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -5943,23 +6073,9 @@ export type QueryItemArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type QueryItemByExternalIdArgs = {
-  externalId: Scalars['String']['input'];
-  provider: ProviderType;
-};
-
 export type QueryItemByExternalSourceArgs = {
   externalId: Scalars['String']['input'];
   source: ExternalSource;
-};
-
-export type QueryItemBySkuArgs = {
-  sku: Scalars['String']['input'];
-  storeId?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type QueryItemByUpcArgs = {
-  upc: Scalars['String']['input'];
 };
 
 export type QueryItemPriceHistoryArgs = {
@@ -5969,8 +6085,11 @@ export type QueryItemPriceHistoryArgs = {
 };
 
 export type QueryItemsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   filters?: InputMaybe<ItemFilters>;
-  pagination?: InputMaybe<PaginationInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   sort?: InputMaybe<ItemSortInput>;
 };
 
@@ -5982,20 +6101,6 @@ export type QueryItemsBySourceArgs = {
 
 export type QueryLoginHistoriesArgs = {
   input: LoginHistoriesInput;
-};
-
-export type QueryLoginHistoryArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type QueryLoginHistoryByIpArgs = {
-  filters?: InputMaybe<LoginHistoryByIpFiltersInput>;
-  ipAddress: Scalars['String']['input'];
-};
-
-export type QueryLoginHistoryForUserArgs = {
-  filters?: InputMaybe<LoginHistoryFiltersInput>;
-  userId: Scalars['ID']['input'];
 };
 
 export type QueryLoginHistoryStatsArgs = {
@@ -6072,6 +6177,10 @@ export type QueryMyNotificationsArgs = {
   orderBy?: InputMaybe<NotificationOrderBy>;
 };
 
+export type QueryMyPurchasesArgs = {
+  filter?: InputMaybe<PurchaseFilterInput>;
+};
+
 export type QueryMySavedRecipesArgs = {
   folder?: InputMaybe<Scalars['String']['input']>;
 };
@@ -6092,18 +6201,6 @@ export type QueryNotificationPreferencesArgs = {
 
 export type QueryNotificationStatsArgs = {
   filter?: InputMaybe<NotificationFilterInput>;
-};
-
-export type QueryNotificationsByCategoryArgs = {
-  after?: InputMaybe<Scalars['String']['input']>;
-  category: Scalars['String']['input'];
-  first?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type QueryNotificationsByTypeArgs = {
-  after?: InputMaybe<Scalars['String']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  type: NotificationType;
 };
 
 export type QueryPantriesArgs = {
@@ -6186,30 +6283,6 @@ export type QueryPurchaseStatsArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type QueryPurchasesByDateRangeArgs = {
-  dateRange: DateRangeInput;
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type QueryPurchasesByItemArgs = {
-  itemId: Scalars['ID']['input'];
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type QueryPurchasesByShoppingListItemArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  shoppingListItemId: Scalars['ID']['input'];
-};
-
-export type QueryPurchasesByStoreArgs = {
-  storeId: Scalars['ID']['input'];
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type QueryRecentNotificationsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-};
-
 export type QueryRecentlyDeletedPantryItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   pantryId: Scalars['ID']['input'];
@@ -6266,11 +6339,6 @@ export type QuerySavedRecipeArgs = {
 
 export type QuerySearchItemsArgs = {
   input: SearchItemsInput;
-};
-
-export type QuerySearchLoginHistoryArgs = {
-  filters?: InputMaybe<LoginHistoryFiltersInput>;
-  query: Scalars['String']['input'];
 };
 
 export type QuerySearchRecipesArgs = {
@@ -6389,10 +6457,6 @@ export type QueryUserModerationArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryUserPurchasesArgs = {
-  userId: Scalars['ID']['input'];
-};
-
 export type QueryUserSettingsArgs = {
   userId?: InputMaybe<Scalars['String']['input']>;
 };
@@ -6418,6 +6482,17 @@ export type RapidAttempt = {
   __typename?: 'RapidAttempt';
   count: Scalars['Int']['output'];
   hour: Scalars['String']['output'];
+};
+
+/** Error when rate limit is exceeded */
+export type RateLimitError = MutationError & {
+  __typename?: 'RateLimitError';
+  code: Scalars['String']['output'];
+  /** The limit that was exceeded */
+  limit: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  /** Seconds until the limit resets */
+  retryAfter: Scalars['Int']['output'];
 };
 
 /**
@@ -7083,67 +7158,49 @@ export type ShoppingListFilters = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+/**
+ * Real-time collaborative type - never cache
+ * Shopping list item with focused sub-types for better organization
+ */
 export type ShoppingListItem = {
   __typename?: 'ShoppingListItem';
   addedBy: Maybe<User>;
   addedById: Maybe<Scalars['String']['output']>;
-  addedContext: Maybe<Scalars['String']['output']>;
-  aisle: Maybe<Scalars['String']['output']>;
-  autoAddReason: Maybe<Scalars['String']['output']>;
-  averagePrice: Maybe<Scalars['Float']['output']>;
-  budgetPrice: Maybe<Scalars['Float']['output']>;
   category: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   displayFormat: DisplayFormat;
-  estimatedPrice: Maybe<Scalars['Float']['output']>;
-  highestPrice: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
-  isAutoAdded: Scalars['Boolean']['output'];
-  isFromMealPlan: Scalars['Boolean']['output'];
-  isPurchased: Scalars['Boolean']['output'];
   item: Maybe<Item>;
   itemBarcode: Maybe<Scalars['String']['output']>;
   itemName: Maybe<Scalars['String']['output']>;
   lastEditedBy: Maybe<User>;
   lastEditedById: Maybe<Scalars['String']['output']>;
-  lastKnownPrice: Maybe<Scalars['Float']['output']>;
-  lastPurchaseDate: Maybe<Scalars['DateTime']['output']>;
-  lowestPrice: Maybe<Scalars['Float']['output']>;
-  mealPlan: Maybe<MealPlan>;
-  mealPlanId: Maybe<Scalars['String']['output']>;
-  mealPlanItem: Maybe<MealPlanItem>;
-  mealPlanItemId: Maybe<Scalars['String']['output']>;
-  mealPlanReference: Maybe<Scalars['String']['output']>;
   normalizedQuantity: Maybe<Scalars['Float']['output']>;
   normalizedUnit: Maybe<Unit>;
   normalizedUnitId: Maybe<Scalars['String']['output']>;
   notes: Maybe<Scalars['String']['output']>;
-  preferredStore: Maybe<Store>;
-  previouslyPurchased: Scalars['Boolean']['output'];
-  priceLastUpdated: Maybe<Scalars['DateTime']['output']>;
+  priceEstimate: PriceEstimate;
   priority: Scalars['Int']['output'];
-  purchaseCount: Scalars['Int']['output'];
-  purchaseDate: Maybe<Scalars['DateTime']['output']>;
-  purchasedBy: Maybe<User>;
-  purchasedById: Maybe<Scalars['String']['output']>;
-  purchasedPrice: Maybe<Scalars['Float']['output']>;
-  purchasedQuantity: Maybe<Scalars['Float']['output']>;
+  purchaseHistory: PurchaseHistorySummary;
+  purchaseInfo: ShoppingListItemPurchaseInfo;
   purchasesConnection: PurchaseConnection;
   quantity: Maybe<Scalars['Float']['output']>;
   quantityInput: Maybe<Scalars['String']['output']>;
-  recipe: Maybe<Recipe>;
-  recipeIngredient: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
   sortOrder: Scalars['String']['output'];
-  storageLocation: Maybe<Scalars['String']['output']>;
-  storeSection: Maybe<Scalars['String']['output']>;
+  source: ShoppingListItemSource;
+  storeInfo: ShoppingListItemStoreInfo;
   unit: Maybe<Unit>;
   unitName: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Real-time collaborative type - never cache
+ * Shopping list item with focused sub-types for better organization
+ */
 export type ShoppingListItemPurchasesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -7182,6 +7239,61 @@ export type ShoppingListItemOrderBy = {
   priority?: InputMaybe<SortOrder>;
   sortOrder?: InputMaybe<SortOrder>;
   updatedAt?: InputMaybe<SortOrder>;
+};
+
+/** Purchase state for a shopping list item */
+export type ShoppingListItemPurchaseInfo = {
+  __typename?: 'ShoppingListItemPurchaseInfo';
+  /** Whether the item has been purchased */
+  isPurchased: Scalars['Boolean']['output'];
+  /** When the item was purchased */
+  purchaseDate: Maybe<Scalars['DateTime']['output']>;
+  /** Who purchased the item */
+  purchasedBy: Maybe<User>;
+  /** ID of user who purchased */
+  purchasedById: Maybe<Scalars['String']['output']>;
+  /** Actual price paid */
+  purchasedPrice: Maybe<Scalars['Float']['output']>;
+  /** Actual quantity purchased (may differ from requested) */
+  purchasedQuantity: Maybe<Scalars['Float']['output']>;
+};
+
+/** Source information for how a shopping list item was added */
+export type ShoppingListItemSource = {
+  __typename?: 'ShoppingListItemSource';
+  /** Context about why item was added */
+  addedContext: Maybe<Scalars['String']['output']>;
+  /** Reason for auto-add (e.g., 'low_stock', 'meal_plan') */
+  autoAddReason: Maybe<Scalars['String']['output']>;
+  /** Whether item was auto-added (e.g., from low stock) */
+  isAutoAdded: Scalars['Boolean']['output'];
+  /** Whether item came from meal planning */
+  isFromMealPlan: Scalars['Boolean']['output'];
+  /** Associated meal plan */
+  mealPlan: Maybe<MealPlan>;
+  mealPlanId: Maybe<Scalars['String']['output']>;
+  /** Specific meal plan item */
+  mealPlanItem: Maybe<MealPlanItem>;
+  mealPlanItemId: Maybe<Scalars['String']['output']>;
+  /** Reference to meal plan (legacy) */
+  mealPlanReference: Maybe<Scalars['String']['output']>;
+  /** Associated recipe */
+  recipe: Maybe<Recipe>;
+  /** Specific recipe ingredient */
+  recipeIngredient: Maybe<RecipeIngredient>;
+};
+
+/** Store and location preferences for a shopping list item */
+export type ShoppingListItemStoreInfo = {
+  __typename?: 'ShoppingListItemStoreInfo';
+  /** Aisle location in store */
+  aisle: Maybe<Scalars['String']['output']>;
+  /** Preferred store for this item */
+  preferredStore: Maybe<Store>;
+  /** Storage location after purchase */
+  storageLocation: Maybe<Scalars['String']['output']>;
+  /** Section within store */
+  storeSection: Maybe<Scalars['String']['output']>;
 };
 
 export type ShoppingListOwnership = {
@@ -7866,6 +7978,12 @@ export type Timestamped = {
   createdAt: Scalars['DateTime']['output'];
 };
 
+/** Result of toggling purchased status */
+export type TogglePurchasedResult =
+  | NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError;
+
 export enum TrustLevel {
   Admin = 'ADMIN',
   Basic = 'BASIC',
@@ -7874,6 +7992,17 @@ export enum TrustLevel {
   Trusted = 'TRUSTED',
   Verified = 'VERIFIED',
 }
+
+/** Error when user lacks permission for the operation */
+export type UnauthorizedError = MutationError & {
+  __typename?: 'UnauthorizedError';
+  code: Scalars['String']['output'];
+  message: Scalars['String']['output'];
+  /** The permission that was required */
+  requiredPermission: Maybe<Scalars['String']['output']>;
+  /** The resource being accessed */
+  resource: Maybe<Scalars['String']['output']>;
+};
 
 /**
  * Unit of measurement type
@@ -8039,8 +8168,10 @@ export type UpdateDeviceInput = {
   clearPushToken?: InputMaybe<Scalars['Boolean']['input']>;
   /** Soft delete the device (replaces deleteDevice mutation) */
   delete?: InputMaybe<Scalars['Boolean']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   /** Update hardware info using structured input */
   hardwareInfo?: InputMaybe<DeviceHardwareInfoInput>;
@@ -8050,6 +8181,7 @@ export type UpdateDeviceInput = {
   /** Increment the login count (replaces incrementDeviceLoginCount mutation) */
   incrementLoginCount?: InputMaybe<Scalars['Boolean']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8067,6 +8199,7 @@ export type UpdateDeviceInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
   /** Update location using structured input */
   location?: InputMaybe<DeviceLocationInput>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
@@ -8081,6 +8214,7 @@ export type UpdateDeviceInput = {
   pushToken?: InputMaybe<Scalars['String']['input']>;
   readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
   supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
   systemVersion?: InputMaybe<Scalars['String']['input']>;
@@ -8199,6 +8333,14 @@ export type UpdateItemPriceInput = {
   source?: InputMaybe<Scalars['String']['input']>;
   storeId?: InputMaybe<Scalars['String']['input']>;
 };
+
+/** Result of updating an item */
+export type UpdateItemResult =
+  | Item
+  | NotFoundError
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError;
 
 export type UpdateLoginHistoryInput = {
   apiClient?: InputMaybe<Scalars['String']['input']>;
@@ -8365,6 +8507,14 @@ export type UpdatePantryItemInput = {
   wasteReason?: InputMaybe<WasteReason>;
 };
 
+/** Result of updating a pantry item */
+export type UpdatePantryItemResult =
+  | NotFoundError
+  | PantryItem
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError;
+
 export type UpdatePurchaseInput = {
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
   expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -8458,6 +8608,14 @@ export type UpdateShoppingListItemInput = {
   unitName?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
+
+/** Result of updating a shopping list item */
+export type UpdateShoppingListItemResult =
+  | NotFoundError
+  | ShoppingListItem
+  | UnauthorizedError
+  | ValidationError
+  | VersionMismatchError;
 
 /**
  * Input for updating an existing storage location
@@ -8572,6 +8730,13 @@ export type UpdateUserProfileInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Result of updating user profile */
+export type UpdateUserResult =
+  | NotFoundError
+  | UnauthorizedError
+  | User
+  | ValidationError;
+
 export type UpdateUserSettingsInput = {
   autoSync?: InputMaybe<Scalars['Boolean']['input']>;
   betaFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -8593,6 +8758,13 @@ export type UpdateUserSettingsInput = {
   theme?: InputMaybe<AppTheme>;
   weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
 };
+
+/** Result of updating user settings */
+export type UpdateUserSettingsResult =
+  | NotFoundError
+  | UnauthorizedError
+  | UserSettings
+  | ValidationError;
 
 export type UpsertItemResult = {
   __typename?: 'UpsertItemResult';
@@ -8944,9 +9116,13 @@ export type ValidateTokenResponse = {
   valid: Scalars['Boolean']['output'];
 };
 
-export type ValidationError = {
+/** Generic validation error for invalid input data */
+export type ValidationError = MutationError & {
   __typename?: 'ValidationError';
   code: Scalars['String']['output'];
+  /** Validation constraint that was violated */
+  constraint: Maybe<Scalars['String']['output']>;
+  /** The field that failed validation (if applicable) */
   field: Scalars['String']['output'];
   message: Scalars['String']['output'];
 };
@@ -8980,6 +9156,19 @@ export type VariationImage = {
   size: Maybe<Scalars['String']['output']>;
   source: Maybe<Scalars['String']['output']>;
   url: Scalars['String']['output'];
+};
+
+/** Error when optimistic locking version mismatch occurs */
+export type VersionMismatchError = MutationError & {
+  __typename?: 'VersionMismatchError';
+  /** Actual current version on server */
+  actualVersion: Scalars['Int']['output'];
+  code: Scalars['String']['output'];
+  /** Expected version from client */
+  expectedVersion: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  /** The resource that had the version mismatch */
+  resourceId: Scalars['ID']['output'];
 };
 
 export enum Visibility {
@@ -9864,12 +10053,15 @@ export type ShoppingListItemCoreFragment = {
   quantity: number | null | undefined;
   quantityInput: string | null | undefined;
   displayFormat: DisplayFormat;
-  isPurchased: boolean;
   version: number;
   updatedAt: string;
   category: string | null | undefined;
   notes: string | null | undefined;
   unitName: string | null | undefined;
+  purchaseInfo: {
+    __typename?: 'ShoppingListItemPurchaseInfo';
+    isPurchased: boolean;
+  };
   unit:
     | {
         __typename?: 'Unit';
@@ -9889,11 +10081,14 @@ export type ShoppingListItemDisplayFragment = {
   id: string;
   itemName: string | null | undefined;
   quantity: number | null | undefined;
-  isPurchased: boolean;
   sortOrder: string;
   unitName: string | null | undefined;
   category: string | null | undefined;
   version: number;
+  purchaseInfo: {
+    __typename?: 'ShoppingListItemPurchaseInfo';
+    isPurchased: boolean;
+  };
   unit:
     | { __typename?: 'Unit'; id: string; name: string; symbol: string }
     | null
@@ -9929,26 +10124,8 @@ export type ShoppingListItemDisplayFragment = {
 
 export type ShoppingListItemFragment = {
   __typename?: 'ShoppingListItem';
-  estimatedPrice: number | null | undefined;
-  budgetPrice: number | null | undefined;
-  lastKnownPrice: number | null | undefined;
-  lowestPrice: number | null | undefined;
-  highestPrice: number | null | undefined;
-  priceLastUpdated: string | null | undefined;
-  purchasedQuantity: number | null | undefined;
-  purchasedPrice: number | null | undefined;
-  purchaseDate: string | null | undefined;
-  aisle: string | null | undefined;
-  storeSection: string | null | undefined;
-  previouslyPurchased: boolean;
-  lastPurchaseDate: string | null | undefined;
-  purchaseCount: number;
   priority: number;
   sortOrder: string;
-  isAutoAdded: boolean;
-  autoAddReason: string | null | undefined;
-  isFromMealPlan: boolean;
-  mealPlanReference: string | null | undefined;
   createdAt: string;
   deletedAt: string | null | undefined;
   shoppingList: {
@@ -10000,11 +10177,52 @@ export type ShoppingListItemFragment = {
       }
     | null
     | undefined;
+  priceEstimate: {
+    __typename?: 'PriceEstimate';
+    estimated: number | null | undefined;
+    budget: number | null | undefined;
+    lastKnown: number | null | undefined;
+    lowest: number | null | undefined;
+    highest: number | null | undefined;
+    lastUpdated: string | null | undefined;
+  };
+  purchaseInfo: {
+    __typename?: 'ShoppingListItemPurchaseInfo';
+    isPurchased: boolean;
+    purchasedQuantity: number | null | undefined;
+    purchasedPrice: number | null | undefined;
+    purchaseDate: string | null | undefined;
+    purchasedBy:
+      | ({ __typename?: 'User' } & PartialUserFragment)
+      | null
+      | undefined;
+  };
+  source: {
+    __typename?: 'ShoppingListItemSource';
+    isAutoAdded: boolean;
+    autoAddReason: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlan:
+      | { __typename?: 'MealPlan'; id: string; name: string }
+      | null
+      | undefined;
+  };
+  storeInfo: {
+    __typename?: 'ShoppingListItemStoreInfo';
+    aisle: string | null | undefined;
+    storeSection: string | null | undefined;
+    preferredStore:
+      | { __typename?: 'Store'; id: string; name: string }
+      | null
+      | undefined;
+  };
+  purchaseHistory: {
+    __typename?: 'PurchaseHistorySummary';
+    previouslyPurchased: boolean;
+    lastPurchaseDate: string | null | undefined;
+    purchaseCount: number;
+  };
   addedBy: ({ __typename?: 'User' } & PartialUserFragment) | null | undefined;
-  purchasedBy:
-    | ({ __typename?: 'User' } & PartialUserFragment)
-    | null
-    | undefined;
   purchasesConnection: {
     __typename?: 'PurchaseConnection';
     totalCount: number;
@@ -10435,6 +10653,10 @@ export type PantryItemFragment = {
   wasteAmount: number;
   wasteDate: string | null | undefined;
   wasteReason: WasteReason | null | undefined;
+  condition: ItemCondition;
+  acquisitionMethod: AcquisitionMethod;
+  costPerUnit: number | null | undefined;
+  totalCost: number | null | undefined;
   item: { __typename?: 'Item' } & ItemFragment;
   unit:
     | {
@@ -10465,6 +10687,17 @@ export type PantryItemFragment = {
     | null
     | undefined;
   store: { __typename?: 'Store'; id: string; name: string } | null | undefined;
+  purchase:
+    | {
+        __typename?: 'Purchase';
+        id: string;
+        purchaseDate: string;
+        unitPrice: number;
+        totalPrice: number;
+        quantity: number;
+      }
+    | null
+    | undefined;
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
@@ -11657,50 +11890,58 @@ export type UpsertItemUnitConversionMutation = {
 export type GetItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
-  pagination?: InputMaybe<PaginationInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 export type GetItemsQuery = {
   __typename?: 'Query';
   items: {
-    __typename?: 'ItemsResponse';
+    __typename?: 'ItemConnection';
     totalCount: number;
-    hasMore: boolean;
-    items:
-      | Array<{
-          __typename?: 'Item';
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        description: string | null | undefined;
+        type: ItemType;
+        storageState: StorageState;
+        imageUrl: string | null | undefined;
+        shelfLifeDays: number | null | undefined;
+        tags: Array<string>;
+        status: ItemStatus;
+        visibility: Visibility;
+        showInOnboarding: boolean;
+        popularity: number;
+        nutritions: any | null | undefined;
+        healthBenefits: any | null | undefined;
+        metadata: any | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        deletedAt: string | null | undefined;
+        version: number;
+        units: Array<{
+          __typename?: 'ItemUnit';
           id: string;
-          name: string;
-          description: string | null | undefined;
-          type: ItemType;
-          storageState: StorageState;
-          imageUrl: string | null | undefined;
-          shelfLifeDays: number | null | undefined;
-          tags: Array<string>;
-          status: ItemStatus;
-          visibility: Visibility;
-          showInOnboarding: boolean;
-          popularity: number;
-          nutritions: any | null | undefined;
-          healthBenefits: any | null | undefined;
-          metadata: any | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          deletedAt: string | null | undefined;
-          version: number;
-          units: Array<{
-            __typename?: 'ItemUnit';
-            id: string;
-            isDefault: boolean;
-          }>;
-          brands: Array<{ __typename?: 'ItemBrand'; id: string }>;
-          categories:
-            | Array<{ __typename?: 'ItemCategory'; id: string }>
-            | null
-            | undefined;
-        }>
-      | null
-      | undefined;
+          isDefault: boolean;
+        }>;
+        brands: Array<{ __typename?: 'ItemBrand'; id: string }>;
+        categories:
+          | Array<{ __typename?: 'ItemCategory'; id: string }>
+          | null
+          | undefined;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string | null | undefined;
+      endCursor: string | null | undefined;
+    };
   };
 };
 
@@ -11712,42 +11953,25 @@ export type SearchItemsQuery = {
   __typename?: 'Query';
   searchItems:
     | {
-        __typename?: 'ItemsResponse';
+        __typename?: 'ItemConnection';
         totalCount: number;
-        hasMore: boolean;
-        items:
-          | Array<{
-              __typename?: 'Item';
-              id: string;
-              name: string;
-              imageUrl: string | null | undefined;
-            }>
-          | null
-          | undefined;
-      }
-    | null
-    | undefined;
-};
-
-export type ItemByUpcQueryVariables = Exact<{
-  upc: Scalars['String']['input'];
-}>;
-
-export type ItemByUpcQuery = {
-  __typename?: 'Query';
-  itemByUpc:
-    | {
-        __typename?: 'Item';
-        id: string;
-        imageUrl: string | null | undefined;
-        name: string;
-        netWeight: number | null | undefined;
-        primaryUpc: string | null | undefined;
-        units: Array<{
-          __typename?: 'ItemUnit';
-          isDefault: boolean;
-          unitId: string;
+        edges: Array<{
+          __typename?: 'ItemEdge';
+          cursor: string;
+          node: {
+            __typename?: 'Item';
+            id: string;
+            name: string;
+            imageUrl: string | null | undefined;
+          };
         }>;
+        pageInfo: {
+          __typename?: 'PageInfo';
+          hasNextPage: boolean;
+          hasPreviousPage: boolean;
+          startCursor: string | null | undefined;
+          endCursor: string | null | undefined;
+        };
       }
     | null
     | undefined;
@@ -11761,36 +11985,47 @@ export type ItemByUpcFilterQueryVariables = Exact<{
 export type ItemByUpcFilterQuery = {
   __typename?: 'Query';
   items: {
-    __typename?: 'ItemsResponse';
+    __typename?: 'ItemConnection';
     totalCount: number;
-    items:
-      | Array<{
-          __typename?: 'Item';
-          id: string;
-          imageUrl: string | null | undefined;
-          name: string;
-          netWeight: number | null | undefined;
-          primaryUpc: string | null | undefined;
-          units: Array<{
-            __typename?: 'ItemUnit';
-            isDefault: boolean;
-            unitId: string;
-          }>;
-        }>
-      | null
-      | undefined;
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Item';
+        id: string;
+        imageUrl: string | null | undefined;
+        name: string;
+        netWeight: number | null | undefined;
+        primaryUpc: string | null | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          isDefault: boolean;
+          unitId: string;
+        }>;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null | undefined;
+    };
   };
 };
 
-export type ItemBySkuQueryVariables = Exact<{
+export type ItemBySkuFilterQueryVariables = Exact<{
   sku: Scalars['String']['input'];
-  storeId?: InputMaybe<Scalars['String']['input']>;
+  skuStoreId?: InputMaybe<Scalars['String']['input']>;
 }>;
 
-export type ItemBySkuQuery = {
+export type ItemBySkuFilterQuery = {
   __typename?: 'Query';
-  itemBySku:
-    | {
+  items: {
+    __typename?: 'ItemConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      cursor: string;
+      node: {
         __typename?: 'Item';
         id: string;
         imageUrl: string | null | undefined;
@@ -11803,36 +12038,48 @@ export type ItemBySkuQuery = {
           isDefault: boolean;
           unitId: string;
         }>;
-      }
-    | null
-    | undefined;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null | undefined;
+    };
+  };
 };
 
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
-  pagination?: InputMaybe<PaginationInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   items: {
-    __typename?: 'ItemsResponse';
+    __typename?: 'ItemConnection';
     totalCount: number;
-    items:
-      | Array<{
-          __typename?: 'Item';
-          id: string;
-          name: string;
-          imageUrl: string | null | undefined;
-          storageState: StorageState;
-          displayUnit:
-            | { __typename?: 'Unit'; id: string; name: string }
-            | null
-            | undefined;
-        }>
-      | null
-      | undefined;
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl: string | null | undefined;
+        storageState: StorageState;
+        displayUnit:
+          | { __typename?: 'Unit'; id: string; name: string }
+          | null
+          | undefined;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null | undefined;
+    };
   };
 };
 
@@ -11850,6 +12097,7 @@ export type AutocompleteItemsQuery = {
           __typename?: 'ItemSuggestion';
           id: string;
           name: string;
+          type: ItemType;
           imageUrl: string | null | undefined;
           images: any | null | undefined;
           netWeight: number | null | undefined;
@@ -13182,23 +13430,32 @@ export type CreateShoppingListItemsFromRecipeMutation = {
       id: string;
       itemName: string | null | undefined;
       quantity: number | null | undefined;
-      aisle: string | null | undefined;
-      isPurchased: boolean;
       unit:
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
         | undefined;
+      storeInfo: {
+        __typename?: 'ShoppingListItemStoreInfo';
+        aisle: string | null | undefined;
+      };
+      purchaseInfo: {
+        __typename?: 'ShoppingListItemPurchaseInfo';
+        isPurchased: boolean;
+      };
     }>;
     updatedItems: Array<{
       __typename?: 'ShoppingListItem';
       id: string;
       itemName: string | null | undefined;
       quantity: number | null | undefined;
-      isPurchased: boolean;
       unit:
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
         | undefined;
+      purchaseInfo: {
+        __typename?: 'ShoppingListItemPurchaseInfo';
+        isPurchased: boolean;
+      };
     }>;
     skippedItems: Array<{
       __typename?: 'RecipeIngredient';
@@ -13825,7 +14082,10 @@ export type GetDefaultShoppingListQuery = {
               id: string;
               itemName: string | null | undefined;
               quantity: number | null | undefined;
-              isPurchased: boolean;
+              purchaseInfo: {
+                __typename?: 'ShoppingListItemPurchaseInfo';
+                isPurchased: boolean;
+              };
               item:
                 | {
                     __typename?: 'Item';
@@ -13941,7 +14201,10 @@ export type CreateShoppingListMutation = {
         node: {
           __typename?: 'ShoppingListItem';
           id: string;
-          isPurchased: boolean;
+          purchaseInfo: {
+            __typename?: 'ShoppingListItemPurchaseInfo';
+            isPurchased: boolean;
+          };
         };
       }>;
       pageInfo: {
@@ -14010,7 +14273,10 @@ export type UpdateShoppingListMutation = {
         node: {
           __typename?: 'ShoppingListItem';
           id: string;
-          isPurchased: boolean;
+          purchaseInfo: {
+            __typename?: 'ShoppingListItemPurchaseInfo';
+            isPurchased: boolean;
+          };
         };
       }>;
       pageInfo: {
@@ -14196,10 +14462,13 @@ export type ToggleShoppingListItemPurchasedMutation = {
     id: string;
     itemName: string | null | undefined;
     quantity: number | null | undefined;
-    isPurchased: boolean;
     updatedAt: string;
     category: string | null | undefined;
     unitName: string | null | undefined;
+    purchaseInfo: {
+      __typename?: 'ShoppingListItemPurchaseInfo';
+      isPurchased: boolean;
+    };
     unit:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -14409,8 +14678,14 @@ export type ShoppingListUpdatedSubscription = {
                     id: string;
                     itemName: string | null | undefined;
                     quantity: number | null | undefined;
-                    isPurchased: boolean;
-                    estimatedPrice: number | null | undefined;
+                    purchaseInfo: {
+                      __typename?: 'ShoppingListItemPurchaseInfo';
+                      isPurchased: boolean;
+                    };
+                    priceEstimate: {
+                      __typename?: 'PriceEstimate';
+                      estimated: number | null | undefined;
+                    };
                   };
                 }>;
                 pageInfo: {
@@ -14977,7 +15252,16 @@ export const ShoppingListItemDisplayFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'id' } },
           { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -15098,7 +15382,16 @@ export const ShoppingListItemCoreFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -15348,47 +15641,138 @@ export const ShoppingListItemFragmentDoc = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -15477,7 +15861,16 @@ export const ShoppingListItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -17806,6 +18199,27 @@ export const PantryItemFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -18783,6 +19197,27 @@ export const PantryFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -19599,6 +20034,27 @@ export const HomeFragmentDoc = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -25632,6 +26088,27 @@ export const GetHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -28104,6 +28581,27 @@ export const GetHomeByJoinCodeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -29280,6 +29778,27 @@ export const CreateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -30432,6 +30951,27 @@ export const UpdateHomeDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -33274,6 +33814,27 @@ export const GetDefaultHomeDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -36658,12 +37219,17 @@ export const GetItemsDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
-            name: { kind: 'Name', value: 'pagination' },
+            name: { kind: 'Name', value: 'first' },
           },
-          type: {
-            kind: 'NamedType',
-            name: { kind: 'Name', value: 'PaginationInput' },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'after' },
           },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
         },
       ],
       selectionSet: {
@@ -36691,10 +37257,18 @@ export const GetItemsDocument = {
               },
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'pagination' },
+                name: { kind: 'Name', value: 'first' },
                 value: {
                   kind: 'Variable',
-                  name: { kind: 'Name', value: 'pagination' },
+                  name: { kind: 'Name', value: 'first' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'after' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'after' },
                 },
               },
             ],
@@ -36703,49 +37277,17 @@ export const GetItemsDocument = {
               selections: [
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'items' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'description' },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'storageState' },
+                        name: { kind: 'Name', value: 'cursor' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'imageUrl' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'shelfLifeDays' },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'status' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'visibility' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'showInOnboarding' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'popularity' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'units' },
+                        name: { kind: 'Name', value: 'node' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -36755,70 +37297,151 @@ export const GetItemsDocument = {
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'isDefault' },
+                              name: { kind: 'Name', value: 'name' },
                             },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'brands' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
+                              name: { kind: 'Name', value: 'description' },
                             },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'categories' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
+                              name: { kind: 'Name', value: 'type' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'storageState' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'shelfLifeDays' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'tags' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'status' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'visibility' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'showInOnboarding' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'popularity' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'units' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'isDefault' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'categories' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'nutritions' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'healthBenefits' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'metadata' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'deletedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'version' },
                             },
                           ],
                         },
                       },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'nutritions' },
+                        name: { kind: 'Name', value: 'hasNextPage' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'healthBenefits' },
+                        name: { kind: 'Name', value: 'hasPreviousPage' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'metadata' },
+                        name: { kind: 'Name', value: 'startCursor' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'createdAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'updatedAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'deletedAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'version' },
+                        name: { kind: 'Name', value: 'endCursor' },
                       },
                     ],
                   },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasMore' } },
               ],
             },
           },
@@ -36842,7 +37465,8 @@ export const GetItemsDocument = {
  *   variables: {
  *      filters: // value for 'filters'
  *      sort: // value for 'sort'
- *      pagination: // value for 'pagination'
+ *      first: // value for 'first'
+ *      after: // value for 'after'
  *   },
  * });
  */
@@ -36945,21 +37569,64 @@ export const SearchItemsDocument = {
               selections: [
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'items' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'imageUrl' },
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasPreviousPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'startCursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
                       },
                     ],
                   },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'hasMore' } },
               ],
             },
           },
@@ -37044,151 +37711,6 @@ export type SearchItemsQueryResult = ApolloReactCommon.QueryResult<
 export function refetchSearchItemsQuery(variables: SearchItemsQueryVariables) {
   return { query: SearchItemsDocument, variables: variables };
 }
-export const ItemByUpcDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'query',
-      name: { kind: 'Name', value: 'ItemByUpc' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'upc' } },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: { kind: 'Name', value: 'String' },
-            },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'itemByUpc' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'upc' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'upc' },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'units' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'isDefault' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'unitId' },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-
-/**
- * __useItemByUpcQuery__
- *
- * To run a query within a React component, call `useItemByUpcQuery` and pass it any options that fit your needs.
- * When your component renders, `useItemByUpcQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useItemByUpcQuery({
- *   variables: {
- *      upc: // value for 'upc'
- *   },
- * });
- */
-export function useItemByUpcQuery(
-  baseOptions: ApolloReactHooks.QueryHookOptions<
-    ItemByUpcQuery,
-    ItemByUpcQueryVariables
-  > &
-    (
-      | { variables: ItemByUpcQueryVariables; skip?: boolean }
-      | { skip: boolean }
-    ),
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useQuery<ItemByUpcQuery, ItemByUpcQueryVariables>(
-    ItemByUpcDocument,
-    options,
-  );
-}
-export function useItemByUpcLazyQuery(
-  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
-    ItemByUpcQuery,
-    ItemByUpcQueryVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useLazyQuery<ItemByUpcQuery, ItemByUpcQueryVariables>(
-    ItemByUpcDocument,
-    options,
-  );
-}
-export function useItemByUpcSuspenseQuery(
-  baseOptions?:
-    | ApolloReactHooks.SkipToken
-    | ApolloReactHooks.SuspenseQueryHookOptions<
-        ItemByUpcQuery,
-        ItemByUpcQueryVariables
-      >,
-) {
-  const options =
-    baseOptions === ApolloReactHooks.skipToken
-      ? baseOptions
-      : { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useSuspenseQuery<
-    ItemByUpcQuery,
-    ItemByUpcQueryVariables
-  >(ItemByUpcDocument, options);
-}
-export type ItemByUpcQueryHookResult = ReturnType<typeof useItemByUpcQuery>;
-export type ItemByUpcLazyQueryHookResult = ReturnType<
-  typeof useItemByUpcLazyQuery
->;
-export type ItemByUpcSuspenseQueryHookResult = ReturnType<
-  typeof useItemByUpcSuspenseQuery
->;
-export type ItemByUpcQueryResult = ApolloReactCommon.QueryResult<
-  ItemByUpcQuery,
-  ItemByUpcQueryVariables
->;
-export function refetchItemByUpcQuery(variables: ItemByUpcQueryVariables) {
-  return { query: ItemByUpcDocument, variables: variables };
-}
 export const ItemByUpcFilterDocument = {
   kind: 'Document',
   definitions: [
@@ -37252,46 +37774,87 @@ export const ItemByUpcFilterDocument = {
                   ],
                 },
               },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '1' },
+              },
             ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'items' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'imageUrl' },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'netWeight' },
+                        name: { kind: 'Name', value: 'cursor' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'primaryUpc' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'units' },
+                        name: { kind: 'Name', value: 'node' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'isDefault' },
+                              name: { kind: 'Name', value: 'id' },
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'unitId' },
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'netWeight' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'primaryUpc' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'units' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'isDefault' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'unitId' },
+                                  },
+                                ],
+                              },
                             },
                           ],
                         },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
                       },
                     ],
                   },
@@ -37386,13 +37949,13 @@ export function refetchItemByUpcFilterQuery(
 ) {
   return { query: ItemByUpcFilterDocument, variables: variables };
 }
-export const ItemBySkuDocument = {
+export const ItemBySkuFilterDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'query',
-      name: { kind: 'Name', value: 'ItemBySku' },
+      name: { kind: 'Name', value: 'ItemBySkuFilter' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -37409,7 +37972,7 @@ export const ItemBySkuDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
-            name: { kind: 'Name', value: 'storeId' },
+            name: { kind: 'Name', value: 'skuStoreId' },
           },
           type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
         },
@@ -37419,51 +37982,123 @@ export const ItemBySkuDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'itemBySku' },
+            name: { kind: 'Name', value: 'items' },
             arguments: [
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'sku' },
+                name: { kind: 'Name', value: 'filters' },
                 value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'sku' },
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'sku' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'sku' },
+                      },
+                    },
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'skuStoreId' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'skuStoreId' },
+                      },
+                    },
+                  ],
                 },
               },
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'storeId' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'storeId' },
-                },
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '1' },
               },
             ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'units' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'isDefault' },
+                        name: { kind: 'Name', value: 'cursor' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'unitId' },
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'netWeight' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'description' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'primaryUpc' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'units' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'isDefault' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'unitId' },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
+                        },
                       },
                     ],
                   },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -37474,56 +38109,56 @@ export const ItemBySkuDocument = {
 } as unknown as DocumentNode;
 
 /**
- * __useItemBySkuQuery__
+ * __useItemBySkuFilterQuery__
  *
- * To run a query within a React component, call `useItemBySkuQuery` and pass it any options that fit your needs.
- * When your component renders, `useItemBySkuQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useItemBySkuFilterQuery` and pass it any options that fit your needs.
+ * When your component renders, `useItemBySkuFilterQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useItemBySkuQuery({
+ * const { data, loading, error } = useItemBySkuFilterQuery({
  *   variables: {
  *      sku: // value for 'sku'
- *      storeId: // value for 'storeId'
+ *      skuStoreId: // value for 'skuStoreId'
  *   },
  * });
  */
-export function useItemBySkuQuery(
+export function useItemBySkuFilterQuery(
   baseOptions: ApolloReactHooks.QueryHookOptions<
-    ItemBySkuQuery,
-    ItemBySkuQueryVariables
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
   > &
     (
-      | { variables: ItemBySkuQueryVariables; skip?: boolean }
+      | { variables: ItemBySkuFilterQueryVariables; skip?: boolean }
       | { skip: boolean }
     ),
 ) {
   const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useQuery<ItemBySkuQuery, ItemBySkuQueryVariables>(
-    ItemBySkuDocument,
-    options,
-  );
+  return ApolloReactHooks.useQuery<
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
+  >(ItemBySkuFilterDocument, options);
 }
-export function useItemBySkuLazyQuery(
+export function useItemBySkuFilterLazyQuery(
   baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
-    ItemBySkuQuery,
-    ItemBySkuQueryVariables
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useLazyQuery<ItemBySkuQuery, ItemBySkuQueryVariables>(
-    ItemBySkuDocument,
-    options,
-  );
+  return ApolloReactHooks.useLazyQuery<
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
+  >(ItemBySkuFilterDocument, options);
 }
-export function useItemBySkuSuspenseQuery(
+export function useItemBySkuFilterSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
     | ApolloReactHooks.SuspenseQueryHookOptions<
-        ItemBySkuQuery,
-        ItemBySkuQueryVariables
+        ItemBySkuFilterQuery,
+        ItemBySkuFilterQueryVariables
       >,
 ) {
   const options =
@@ -37531,23 +38166,27 @@ export function useItemBySkuSuspenseQuery(
       ? baseOptions
       : { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useSuspenseQuery<
-    ItemBySkuQuery,
-    ItemBySkuQueryVariables
-  >(ItemBySkuDocument, options);
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
+  >(ItemBySkuFilterDocument, options);
 }
-export type ItemBySkuQueryHookResult = ReturnType<typeof useItemBySkuQuery>;
-export type ItemBySkuLazyQueryHookResult = ReturnType<
-  typeof useItemBySkuLazyQuery
+export type ItemBySkuFilterQueryHookResult = ReturnType<
+  typeof useItemBySkuFilterQuery
 >;
-export type ItemBySkuSuspenseQueryHookResult = ReturnType<
-  typeof useItemBySkuSuspenseQuery
+export type ItemBySkuFilterLazyQueryHookResult = ReturnType<
+  typeof useItemBySkuFilterLazyQuery
 >;
-export type ItemBySkuQueryResult = ApolloReactCommon.QueryResult<
-  ItemBySkuQuery,
-  ItemBySkuQueryVariables
+export type ItemBySkuFilterSuspenseQueryHookResult = ReturnType<
+  typeof useItemBySkuFilterSuspenseQuery
 >;
-export function refetchItemBySkuQuery(variables: ItemBySkuQueryVariables) {
-  return { query: ItemBySkuDocument, variables: variables };
+export type ItemBySkuFilterQueryResult = ApolloReactCommon.QueryResult<
+  ItemBySkuFilterQuery,
+  ItemBySkuFilterQueryVariables
+>;
+export function refetchItemBySkuFilterQuery(
+  variables: ItemBySkuFilterQueryVariables,
+) {
+  return { query: ItemBySkuFilterDocument, variables: variables };
 }
 export const GetOnboardingItemsDocument = {
   kind: 'Document',
@@ -37580,12 +38219,17 @@ export const GetOnboardingItemsDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
-            name: { kind: 'Name', value: 'pagination' },
+            name: { kind: 'Name', value: 'first' },
           },
-          type: {
-            kind: 'NamedType',
-            name: { kind: 'Name', value: 'PaginationInput' },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'after' },
           },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
         },
       ],
       selectionSet: {
@@ -37613,10 +38257,18 @@ export const GetOnboardingItemsDocument = {
               },
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'pagination' },
+                name: { kind: 'Name', value: 'first' },
                 value: {
                   kind: 'Variable',
-                  name: { kind: 'Name', value: 'pagination' },
+                  name: { kind: 'Name', value: 'first' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'after' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'after' },
                 },
               },
             ],
@@ -37625,23 +38277,17 @@ export const GetOnboardingItemsDocument = {
               selections: [
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'items' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'imageUrl' },
+                        name: { kind: 'Name', value: 'cursor' },
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'storageState' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'displayUnit' },
+                        name: { kind: 'Name', value: 'node' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -37653,8 +38299,50 @@ export const GetOnboardingItemsDocument = {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'name' },
                             },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'storageState' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                ],
+                              },
+                            },
                           ],
                         },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
                       },
                     ],
                   },
@@ -37683,7 +38371,8 @@ export const GetOnboardingItemsDocument = {
  *   variables: {
  *      filters: // value for 'filters'
  *      sort: // value for 'sort'
- *      pagination: // value for 'pagination'
+ *      first: // value for 'first'
+ *      after: // value for 'after'
  *   },
  * });
  */
@@ -37796,6 +38485,7 @@ export const AutocompleteItemsDocument = {
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'imageUrl' },
@@ -41638,6 +42328,27 @@ export const GetPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -44470,6 +45181,27 @@ export const DeletePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -45171,6 +45903,27 @@ export const CreatePantryItemUsageDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -45917,6 +46670,27 @@ export const RecordPantryItemWasteDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -46582,6 +47356,27 @@ export const RestockPantryItemDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -47461,6 +48256,27 @@ export const SyncPantryItemDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
               ],
             },
           },
@@ -50501,10 +51317,31 @@ export const CreateShoppingListItemsFromRecipeDocument = {
                           ],
                         },
                       },
-                      { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'isPurchased' },
+                        name: { kind: 'Name', value: 'storeInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'aisle' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'purchaseInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isPurchased' },
+                            },
+                          ],
+                        },
                       },
                     ],
                   },
@@ -50547,7 +51384,16 @@ export const CreateShoppingListItemsFromRecipeDocument = {
                       },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'isPurchased' },
+                        name: { kind: 'Name', value: 'purchaseInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isPurchased' },
+                            },
+                          ],
+                        },
                       },
                     ],
                   },
@@ -50970,7 +51816,16 @@ export const AddRecipeToShoppingListDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -53145,7 +54000,16 @@ export const GetShoppingListDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'id' } },
           { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -53673,7 +54537,16 @@ export const GetShoppingListsDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'id' } },
           { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -53932,7 +54805,19 @@ export const GetDefaultShoppingListDocument = {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'isPurchased',
+                                      value: 'purchaseInfo',
+                                    },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'isPurchased',
+                                          },
+                                        },
+                                      ],
                                     },
                                   },
                                   {
@@ -54336,7 +55221,16 @@ export const GetShoppingListItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -54495,47 +55389,138 @@ export const GetShoppingListItemDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -55032,7 +56017,19 @@ export const CreateShoppingListDocument = {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'isPurchased',
+                                      value: 'purchaseInfo',
+                                    },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'isPurchased',
+                                          },
+                                        },
+                                      ],
                                     },
                                   },
                                 ],
@@ -55432,7 +56429,19 @@ export const UpdateShoppingListDocument = {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'isPurchased',
+                                      value: 'purchaseInfo',
+                                    },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'isPurchased',
+                                          },
+                                        },
+                                      ],
                                     },
                                   },
                                 ],
@@ -56324,7 +57333,16 @@ export const AddItemToShoppingListDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -56483,47 +57501,138 @@ export const AddItemToShoppingListDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -56803,7 +57912,16 @@ export const UpdateShoppingListItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -56962,47 +58080,138 @@ export const UpdateShoppingListItemDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -57373,7 +58582,16 @@ export const MarkItemPurchasedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -57532,47 +58750,138 @@ export const MarkItemPurchasedDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -57836,7 +59145,16 @@ export const MoveShoppingListItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -57995,47 +59313,138 @@ export const MoveShoppingListItemDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -58308,7 +59717,19 @@ export const ToggleShoppingListItemPurchasedDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPurchased' },
+                      },
+                    ],
+                  },
+                },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'category' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
@@ -58500,7 +59921,16 @@ export const UpdateShoppingListItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -58659,47 +60089,138 @@ export const UpdateShoppingListItemQuantityDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -58992,7 +60513,16 @@ export const UpdateShoppingListItemNotesDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -59151,47 +60681,138 @@ export const UpdateShoppingListItemNotesDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -59486,7 +61107,16 @@ export const UpdateShoppingListItemPriorityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -59645,47 +61275,138 @@ export const UpdateShoppingListItemPriorityDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -60522,6 +62243,27 @@ export const MoveShoppingItemToPantryDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchase' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+              ],
+            },
+          },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'usageRecords' },
@@ -60783,7 +62525,16 @@ export const SyncShoppingListItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -60942,47 +62693,138 @@ export const SyncShoppingListItemDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -61497,7 +63339,16 @@ export const SyncMoveShoppingListItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -61656,47 +63507,138 @@ export const SyncMoveShoppingListItemDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -62023,14 +63965,38 @@ export const ShoppingListUpdatedDocument = {
                                           kind: 'Field',
                                           name: {
                                             kind: 'Name',
-                                            value: 'isPurchased',
+                                            value: 'purchaseInfo',
+                                          },
+                                          selectionSet: {
+                                            kind: 'SelectionSet',
+                                            selections: [
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'isPurchased',
+                                                },
+                                              },
+                                            ],
                                           },
                                         },
                                         {
                                           kind: 'Field',
                                           name: {
                                             kind: 'Name',
-                                            value: 'estimatedPrice',
+                                            value: 'priceEstimate',
+                                          },
+                                          selectionSet: {
+                                            kind: 'SelectionSet',
+                                            selections: [
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'estimated',
+                                                },
+                                              },
+                                            ],
                                           },
                                         },
                                       ],
@@ -62304,7 +64270,16 @@ export const ShoppingListItemsChangedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -62463,47 +64438,138 @@ export const ShoppingListItemsChangedDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -63055,7 +65121,16 @@ export const ShoppingListItemAddedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -63214,47 +65289,138 @@ export const ShoppingListItemAddedDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -63511,7 +65677,16 @@ export const ShoppingListItemUpdatedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'category' } },
@@ -63670,47 +65845,138 @@ export const ShoppingListItemUpdatedDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'estimatedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'budgetPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastKnownPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'highestPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceLastUpdated' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchasedPrice' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storeSection' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'previouslyPurchased' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPurchaseDate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'purchaseCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoAddReason' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isFromMealPlan' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'mealPlanReference' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addedBy' },
+            name: { kind: 'Name', value: 'priceEstimate' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'estimated' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'budget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastKnown' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lowest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'highest' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUpdated' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isPurchased' } },
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PartialUser' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedPrice' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchasedBy' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'PartialUser' },
+                      },
+                    ],
+                  },
                 },
               ],
             },
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchasedBy' },
+            name: { kind: 'Name', value: 'source' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'isAutoAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'autoAddReason' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isFromMealPlan' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlan' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storeInfo' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storeSection' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredStore' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'purchaseHistory' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previouslyPurchased' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastPurchaseDate' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'purchaseCount' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addedBy' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [

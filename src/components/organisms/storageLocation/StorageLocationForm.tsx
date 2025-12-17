@@ -69,14 +69,11 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
       return;
     }
 
-    // Auto-set icon if not provided
+    // Only include icon if user explicitly set one, allow clearing in edit mode
     const finalData = {
       ...formData,
       name: formData.name.trim(),
-      icon:
-        formData.icon ||
-        STORAGE_TYPES.find(t => t.value === formData.type)?.icon ||
-        '📦',
+      icon: formData.icon || null,
     };
 
     onSubmit(finalData);
@@ -135,7 +132,7 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
           maxLength={2}
         />
         <Text style={styles.hint}>
-          Leave empty to use default icon for selected type
+          Leave empty for no icon
         </Text>
       </View>
 

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -27,7 +26,7 @@ import {
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
-import { RecentItemCard } from './RecentItemCard';
+import { ItemRecentCard, ItemSuggestionsList } from '#components/molecules';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
 interface AddToPantrySheetProps {
@@ -67,13 +66,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
 
   // Fetch recently deleted items
+  // PERFORMANCE: Only fetch when sheet is visible to avoid stale cache data
   const {
     data: recentData,
     loading: loadingRecent,
     refetch: refetchRecent,
   } = useGetRecentlyDeletedPantryItemsQuery({
     variables: { pantryId: pantryId ?? '', limit: 10 },
-    skip: !pantryId,
+    skip: !pantryId || !visible,
     fetchPolicy: 'cache-and-network',
   });
 
@@ -231,7 +231,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Determine if we should show search results
   const showSearchResults = searchQuery.length >= 2;
-  const hasResults = suggestions.length > 0;
 
   return (
     <>
@@ -312,91 +311,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
           {/* Search Results */}
           {showSearchResults && (
-            <View style={styles.searchResultsContainer}>
-              {searchLoading ? (
-                <View style={styles.searchLoadingContainer}>
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-                  <Text style={styles.searchLoadingText}>Searching...</Text>
-                </View>
-              ) : (
-                <>
-                  {/* Add manually option - shown first */}
-                  <TouchableOpacity
-                    style={styles.addManuallyOption}
-                    onPress={handleAddManually}
-                  >
-                    <Icon
-                      name="add-circle-outline"
-                      size={20}
-                      color={theme.colors.primary}
-                      library="MaterialIcons"
-                    />
-                    <Text style={styles.addManuallyText}>
-                      {hasResults
-                        ? `Add "${searchQuery}" manually`
-                        : `No matches. Add "${searchQuery}" manually`}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Autocomplete suggestions */}
-                  {suggestions.map((item: ItemSuggestion) => {
-                    const imageUrl = item.imageUrl || null;
-                    return (
-                      <View key={item.id} style={styles.suggestionItem}>
-                        <View style={styles.suggestionImageContainer}>
-                          {imageUrl ? (
-                            <Image
-                              source={{ uri: imageUrl }}
-                              style={styles.suggestionImage}
-                            />
-                          ) : (
-                            <View style={styles.suggestionImagePlaceholder}>
-                              <Icon
-                                name="inventory-2"
-                                size={20}
-                                color={theme.colors.primary}
-                                library="MaterialIcons"
-                              />
-                            </View>
-                          )}
-                        </View>
-                        <View style={styles.suggestionInfo}>
-                          <Text style={styles.suggestionName} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          {item.brands && item.brands.length > 0 && (
-                            <Text
-                              style={styles.suggestionBrands}
-                              numberOfLines={1}
-                            >
-                              {item.brands[0].name}
-                            </Text>
-                          )}
-                        </View>
-                        <TouchableOpacity
-                          style={[
-                            styles.quickAddButton,
-                            creating && styles.quickAddButtonDisabled,
-                          ]}
-                          onPress={() => handleQuickAddSuggestion(item)}
-                          disabled={creating}
-                        >
-                          <Icon
-                            name="add"
-                            size={20}
-                            color={theme.colors.primary}
-                            library="MaterialIcons"
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </>
-              )}
-            </View>
+            <ItemSuggestionsList
+              searchQuery={searchQuery}
+              suggestions={suggestions}
+              loading={searchLoading}
+              addManuallyPosition="top"
+              onAddManually={handleAddManually}
+              onSelectSuggestion={handleQuickAddSuggestion}
+              quickAddDisabled={creating}
+              placeholderIcon="inventory-2"
+            />
           )}
 
           {/* Action Buttons */}
@@ -450,11 +374,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             ) : (
               <View style={styles.recentList}>
                 {recentItems.map(item => (
-                  <RecentItemCard
+                  <ItemRecentCard
                     key={item.id}
                     item={item}
                     onQuickAdd={handleQuickAddRecent}
                     disabled={creating}
+                    placeholderIcon="inventory-2"
                   />
                 ))}
               </View>
@@ -511,89 +436,6 @@ const styles = StyleSheet.create(theme => ({
   scanIconButton: {
     padding: theme.spacing.xs,
     marginLeft: theme.spacing.xs,
-  },
-  searchResultsContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  searchLoadingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  suggestionImageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  suggestionImage: {
-    width: 40,
-    height: 40,
-    resizeMode: 'cover',
-  },
-  suggestionImagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionInfo: {
-    flex: 1,
-    marginRight: theme.spacing.md,
-  },
-  suggestionName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  suggestionBrands: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickAddButtonDisabled: {
-    opacity: 0.5,
-  },
-  addManuallyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  addManuallyText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   actionButtons: {
     flexDirection: 'row',

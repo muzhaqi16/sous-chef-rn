@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Alert, Platform, Linking } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch, SettingSection } from '#components/settings';
 import { ProfileScreenWrapper } from '#components/templates';
-import { useNotificationSettings } from '#hooks';
+import { useNotificationSettings, useNotificationPermissions } from '#hooks';
 import { ExpirationFrequency } from '#generated';
 import { Picker } from '@react-native-picker/picker';
+import { AlertBanner } from '#components/molecules/AlertBanner';
 
 export const NotificationSettingsScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [updating, setUpdating] = useState<string | null>(null);
+  const { hasPermission, requestPermissions, checkPermissions } = useNotificationPermissions();
 
   const {
     settings,
@@ -18,7 +22,66 @@ export const NotificationSettingsScreen: React.FC = () => {
     isQuietTime,
   } = useNotificationSettings();
 
-  const handleSettingChange = async (key: string, value: boolean | string | number | ExpirationFrequency) => {
+  // Check permission status when screen comes into focus
+  useEffect(() => {
+    const checkPermsOnFocus = navigation.addListener('focus', () => {
+      checkPermissions();
+    });
+
+    return checkPermsOnFocus;
+  }, [navigation, checkPermissions]);
+
+  const handleSettingChange = async (
+    key: string,
+    value: boolean | string | number | ExpirationFrequency
+  ) => {
+    // Special handling for push notification toggle
+    if (key === 'pushEnabled' && value === true) {
+      setUpdating(key);
+      try {
+        const granted = await requestPermissions();
+
+        if (!granted) {
+          // Permission denied or blocked
+          Alert.alert(
+            'Notification Permission Required',
+            'To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open Settings',
+                onPress: () => {
+                  if (Platform.OS === 'ios') {
+                    Linking.openURL('app-settings:');
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ],
+          );
+          setUpdating(null);
+          return; // Don't update setting if permission denied
+        }
+
+        // Permission granted, proceed with update
+        const success = await updateNotificationSetting(key as any, value);
+        if (!success) {
+          Alert.alert('Error', 'Failed to update settings. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+        Alert.alert(
+          'Permission Error',
+          'Failed to request notification permission. Please try again or check your device settings.',
+        );
+      } finally {
+        setUpdating(null);
+      }
+      return;
+    }
+
+    // Default handling for all other settings
     setUpdating(key);
     try {
       const success = await updateNotificationSetting(key as any, value);
@@ -77,6 +140,37 @@ export const NotificationSettingsScreen: React.FC = () => {
             🌙 Quiet hours are active - notifications are muted
           </Text>
         </View>
+      )}
+
+      {/* Permission Status Banner */}
+      {hasPermission === false && settings.pushEnabled && (
+        <AlertBanner
+          title="Notifications Disabled"
+          subtitle="Notification permissions are not enabled. Tap to enable in settings."
+          icon="bell-off"
+          iconLibrary="Feather"
+          variant="warning"
+          onPress={() => {
+            Alert.alert(
+              'Enable Notifications',
+              'Notification permissions are required to receive push notifications. Would you like to open settings?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Open Settings',
+                  onPress: () => {
+                    if (Platform.OS === 'ios') {
+                      Linking.openURL('app-settings:');
+                    } else {
+                      Linking.openSettings();
+                    }
+                  },
+                },
+              ],
+            );
+          }}
+          showChevron
+        />
       )}
 
       <SettingSection title="General Notifications">
@@ -320,6 +414,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.info,
     textAlign: 'center',
+  },
+  permissionBanner: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   indentedSetting: {
     marginLeft: theme.spacing.xl,

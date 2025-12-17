@@ -12,7 +12,6 @@ module.exports = {
       'react-native-svg|' +
       '@gorhom/bottom-sheet|' +
       'react-native-draggable-flatlist|' +
-      'react-native-keyboard-aware-scroll-view|' +
       'react-native-permissions|' +
       'react-native-vision-camera|' +
       'react-native-image-picker|' +

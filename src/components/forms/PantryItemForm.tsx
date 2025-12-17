@@ -31,6 +31,7 @@ import {
   type UnitSelection,
 } from '#hooks/pantry';
 import { normalizePantry } from '#/utils/connectionUtils';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -79,7 +80,10 @@ const addItemSchema = yup.object({
     .number()
     .positive('Item weight must be positive')
     .nullable()
-    .transform((value, originalValue) => (originalValue === '' ? null : value)),
+    .transform((_value, originalValue) => {
+      if (originalValue === '' || originalValue === null) return null;
+      return parseFractionalInput(String(originalValue));
+    }),
   weightUnit: yup.string(), // Weight unit (separate from tracking unit)
   minQuantity: yup.string(),
   restockQuantity: yup.string(),
@@ -98,7 +102,10 @@ const editItemSchema = yup.object({
     .number()
     .positive('Item weight must be positive')
     .nullable()
-    .transform((value, originalValue) => (originalValue === '' ? null : value)),
+    .transform((_value, originalValue) => {
+      if (originalValue === '' || originalValue === null) return null;
+      return parseFractionalInput(String(originalValue));
+    }),
   weightUnit: yup.string(), // Weight unit (separate from tracking unit)
   minQuantity: yup.string(),
   restockQuantity: yup.string(),

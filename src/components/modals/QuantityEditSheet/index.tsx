@@ -250,7 +250,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           <InlineUnitsAutocomplete
             value={unitName || ''}
             onChangeText={(text) => {
-              setUnitName(text);
+              // Convert empty string to null to properly clear the unit
+              setUnitName(text || null);
               // Clear unitId when user types custom text
               setUnitId(null);
             }}

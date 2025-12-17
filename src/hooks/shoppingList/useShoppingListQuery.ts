@@ -64,8 +64,8 @@ export function useShoppingListQuery(listId: string | undefined) {
     // Sort by: isPurchased ASC -> sortOrder ASC
     return [...rawItems].sort((a, b) => {
       // First by purchased status (unpurchased items first)
-      if (a.isPurchased !== b.isPurchased) {
-        return a.isPurchased ? 1 : -1;
+      if (a.purchaseInfo?.isPurchased !== b.purchaseInfo?.isPurchased) {
+        return a.purchaseInfo?.isPurchased ? 1 : -1;
       }
 
       // Then by sortOrder (fractional indexing strings)

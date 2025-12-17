@@ -243,7 +243,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Get user display name and avatar
   const userName =
     profile?.displayName || profile?.firstName || profile?.lastName || 'there';
-  const avatarInitial = userName.charAt(0).toUpperCase();
   const householdName = currentHome?.name || 'Your Home';
 
   // Sectioned items for redesigned content - filter based on location (using shared utility)
@@ -263,7 +262,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
       <PantryContent
         userName={userName}
         householdName={householdName}
-        avatarInitial={avatarInitial}
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
         items={locationFilteredItems}

@@ -6,9 +6,11 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils';
 import { IconButton } from '#components/atoms/IconButton';
@@ -107,7 +109,7 @@ export const DeleteAccountScreen: React.FC = () => {
   );
 
   const renderBlockedState = () => (
-    <KeyboardAwareScrollView
+    <ScrollView
       style={styles.content}
       contentContainerStyle={styles.contentContainer}
     >
@@ -155,122 +157,124 @@ export const DeleteAccountScreen: React.FC = () => {
       <TouchableOpacity style={styles.goBackButton} onPress={goBack}>
         <Text style={styles.goBackButtonText}>Go Back</Text>
       </TouchableOpacity>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 
   const renderDeleteForm = () => (
-    <KeyboardAwareScrollView
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.content}
-      contentContainerStyle={styles.contentContainer}
-      keyboardShouldPersistTaps="handled"
-      enableOnAndroid={true}
-      extraScrollHeight={20}
     >
-      <View style={styles.warningContainer}>
-        <Icon
-          library="Feather"
-          name="alert-triangle"
-          size={48}
-          color={theme.colors.error}
-        />
-        <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>What will be deleted:</Text>
-        <View style={styles.bulletPoint}>
-          <Icon
-            library="Feather"
-            name="x-circle"
-            size={20}
-            color={theme.colors.error}
-          />
-          <Text style={styles.bulletText}>
-            Your profile and account information
-          </Text>
-        </View>
-        <View style={styles.bulletPoint}>
-          <Icon
-            library="Feather"
-            name="x-circle"
-            size={20}
-            color={theme.colors.error}
-          />
-          <Text style={styles.bulletText}>
-            All your pantry items and inventory
-          </Text>
-        </View>
-        <View style={styles.bulletPoint}>
-          <Icon
-            library="Feather"
-            name="x-circle"
-            size={20}
-            color={theme.colors.error}
-          />
-          <Text style={styles.bulletText}>Your shopping lists</Text>
-        </View>
-        <View style={styles.bulletPoint}>
-          <Icon
-            library="Feather"
-            name="x-circle"
-            size={20}
-            color={theme.colors.error}
-          />
-          <Text style={styles.bulletText}>
-            All associated data and preferences
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Before you proceed:</Text>
-        <Text style={styles.text}>
-          • This action is <Text style={styles.bold}>irreversible</Text>
-        </Text>
-        <Text style={styles.text}>• You will be immediately logged out</Text>
-        <Text style={styles.text}>
-          • You cannot recover your account or data after deletion
-        </Text>
-      </View>
-
-      <View style={styles.confirmationSection}>
-        <Text style={styles.confirmationLabel}>
-          Type <Text style={styles.bold}>DELETE</Text> to confirm:
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={confirmText}
-          onChangeText={setConfirmText}
-          placeholder="Type DELETE"
-          placeholderTextColor={theme.colors.textSecondary}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          editable={!isDeleting}
-        />
-      </View>
-
-      <TouchableOpacity
-        style={[
-          styles.deleteButton,
-          (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
-            styles.deleteButtonDisabled,
-        ]}
-        onPress={handleDeleteAccount}
-        disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.deleteButtonText}>
-          {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.warningContainer}>
+          <Icon
+            library="Feather"
+            name="alert-triangle"
+            size={48}
+            color={theme.colors.error}
+          />
+          <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
+        </View>
 
-      <TouchableOpacity
-        style={styles.cancelButton}
-        onPress={goBack}
-        disabled={isDeleting}
-      >
-        <Text style={styles.cancelButtonText}>Cancel</Text>
-      </TouchableOpacity>
-    </KeyboardAwareScrollView>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What will be deleted:</Text>
+          <View style={styles.bulletPoint}>
+            <Icon
+              library="Feather"
+              name="x-circle"
+              size={20}
+              color={theme.colors.error}
+            />
+            <Text style={styles.bulletText}>
+              Your profile and account information
+            </Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon
+              library="Feather"
+              name="x-circle"
+              size={20}
+              color={theme.colors.error}
+            />
+            <Text style={styles.bulletText}>
+              All your pantry items and inventory
+            </Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon
+              library="Feather"
+              name="x-circle"
+              size={20}
+              color={theme.colors.error}
+            />
+            <Text style={styles.bulletText}>Your shopping lists</Text>
+          </View>
+          <View style={styles.bulletPoint}>
+            <Icon
+              library="Feather"
+              name="x-circle"
+              size={20}
+              color={theme.colors.error}
+            />
+            <Text style={styles.bulletText}>
+              All associated data and preferences
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Before you proceed:</Text>
+          <Text style={styles.text}>
+            • This action is <Text style={styles.bold}>irreversible</Text>
+          </Text>
+          <Text style={styles.text}>• You will be immediately logged out</Text>
+          <Text style={styles.text}>
+            • You cannot recover your account or data after deletion
+          </Text>
+        </View>
+
+        <View style={styles.confirmationSection}>
+          <Text style={styles.confirmationLabel}>
+            Type <Text style={styles.bold}>DELETE</Text> to confirm:
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={confirmText}
+            onChangeText={setConfirmText}
+            placeholder="Type DELETE"
+            placeholderTextColor={theme.colors.textSecondary}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!isDeleting}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.deleteButton,
+            (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
+              styles.deleteButtonDisabled,
+          ]}
+          onPress={handleDeleteAccount}
+          disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+        >
+          <Text style={styles.deleteButtonText}>
+            {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={goBack}
+          disabled={isDeleting}
+        >
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const renderContent = () => {

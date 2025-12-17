@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon, IconLibrary } from '#utils';
 
 export type AlertBannerVariant = 'error' | 'warning' | 'info' | 'success';
 
@@ -10,8 +10,10 @@ export interface AlertBannerProps {
   title: string;
   /** Optional subtitle text */
   subtitle?: string;
-  /** Emoji icon to display */
+  /** Icon to display (emoji string or icon name if iconLibrary is specified) */
   icon?: string;
+  /** Icon library to use for vector icons (Feather, MaterialIcons, etc.) */
+  iconLibrary?: IconLibrary;
   /** Visual variant affecting colors */
   variant?: AlertBannerVariant;
   /** Callback when banner is pressed */
@@ -46,6 +48,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
   title,
   subtitle,
   icon = '⚠️',
+  iconLibrary,
   variant = 'error',
   onPress,
   showChevron,
@@ -73,7 +76,11 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
           { backgroundColor: variantColors.iconBg },
         ]}
       >
-        <Text style={styles.icon}>{icon}</Text>
+        {iconLibrary ? (
+          <Icon name={icon} size={20} color={variantColors.text} library={iconLibrary} />
+        ) : (
+          <Text style={styles.icon}>{icon}</Text>
+        )}
       </View>
 
       <View style={styles.content}>
@@ -107,6 +114,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     paddingRight: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
     borderWidth: 1,

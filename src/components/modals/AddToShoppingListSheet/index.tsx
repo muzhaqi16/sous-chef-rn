@@ -4,7 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
+  Alert,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -25,7 +25,8 @@ import {
   ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
-import { RecentItemCard } from './RecentItemCard';
+import { useErrorHandler } from '#/utils/errorHandling';
+import { ItemRecentCard, ItemSuggestionsList } from '#components/molecules';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -53,6 +54,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Online status for autocomplete
   const isOnline = useAppStore(state => state.isOnline);
 
+  // Error handler for Apollo mutations
+  const { handleApolloError } = useErrorHandler();
+
   // Debounce timer ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -67,21 +71,21 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
   // Fetch recently deleted items
   // PERFORMANCE: Only fetch when sheet is visible to avoid unnecessary queries on screen mount
-  const {
-    data: recentData,
-    loading: loadingRecent,
-    refetch: refetchRecent,
-  } = useGetRecentlyDeletedShoppingListItemsQuery({
-    variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
-    skip: !shoppingListId || !visible,
-    fetchPolicy: 'cache-and-network',
-  });
+  // NOTE: Subscription handles updates automatically, no manual refetch needed
+  const { data: recentData, loading: loadingRecent } =
+    useGetRecentlyDeletedShoppingListItemsQuery({
+      variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
+      skip: !shoppingListId || !visible,
+      fetchPolicy: 'cache-and-network',
+    });
 
   const recentItems = recentData?.recentlyDeletedShoppingListItems ?? [];
 
-  // Add shopping list item mutation for quick add
+  // Add shopping list item mutation with error handling and debug logging
   const [addItemMutation, { loading: adding }] =
     useAddItemToShoppingListMutation({
+      errorPolicy: 'all', // Return partial data + errors for debugging
+
       update: (cache, { data }) => {
         if (!data?.addItemToShoppingList || !shoppingListId) return;
 
@@ -97,8 +101,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             data.addItemToShoppingList,
           );
         } catch (error) {
-          console.warn('Cache update failed for addItemToShoppingList:', error);
+          console.error('Cache update failed:', error);
         }
+      },
+
+      onError: error => {
+        console.error('AddItem mutation error:', error);
+        const { message } = handleApolloError(error, {
+          operation: 'Add Shopping List Item',
+        });
+        Alert.alert('Error Adding Item', message);
       },
     });
 
@@ -183,12 +195,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         toastService.success(`Added ${item.name}`);
         setSearchQuery(''); // Clear search after adding
         onItemAdded?.(); // Notify parent to clear main search
-        refetchRecent();
+        // NOTE: Removed refetchRecent() - subscription handles updates
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
+    [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
   // Handle quick add from recent items
@@ -219,17 +231,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         toastService.success(`Added ${itemName}`);
         onItemAdded?.(); // Notify parent to clear main search
-        refetchRecent();
+        // NOTE: Removed refetchRecent() - subscription handles updates
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [shoppingListId, adding, addItemMutation, refetchRecent, onItemAdded],
+    [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
   // Determine if we should show search results
   const showSearchResults = searchQuery.length >= 2;
-  const hasResults = suggestions.length > 0;
 
   return (
     <BottomSheetModal
@@ -311,88 +322,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         {/* Search Results */}
         {showSearchResults && (
-          <View style={styles.searchResultsContainer}>
-            {searchLoading ? (
-              <View style={styles.searchLoadingContainer}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={styles.searchLoadingText}>Searching...</Text>
-              </View>
-            ) : (
-              <>
-                {/* Autocomplete suggestions */}
-                {suggestions.map((item: ItemSuggestion) => {
-                  const imageUrl = item.imageUrl || null;
-                  return (
-                    <View key={item.id} style={styles.suggestionItem}>
-                      <View style={styles.suggestionImageContainer}>
-                        {imageUrl ? (
-                          <Image
-                            source={{ uri: imageUrl }}
-                            style={styles.suggestionImage}
-                          />
-                        ) : (
-                          <View style={styles.suggestionImagePlaceholder}>
-                            <Icon
-                              name="shopping-cart"
-                              size={20}
-                              color={theme.colors.primary}
-                              library="MaterialIcons"
-                            />
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.suggestionInfo}>
-                        <Text style={styles.suggestionName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        {item.brands && item.brands.length > 0 && (
-                          <Text
-                            style={styles.suggestionBrands}
-                            numberOfLines={1}
-                          >
-                            {item.brands[0].name}
-                          </Text>
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={[
-                          styles.quickAddButton,
-                          adding && styles.quickAddButtonDisabled,
-                        ]}
-                        onPress={() => handleQuickAddSuggestion(item)}
-                        disabled={adding}
-                      >
-                        <Icon
-                          name="add"
-                          size={20}
-                          color={theme.colors.primary}
-                          library="MaterialIcons"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-
-                {/* Add manually option */}
-                <TouchableOpacity
-                  style={styles.addManuallyOption}
-                  onPress={handleAddManually}
-                >
-                  <Icon
-                    name="add-circle-outline"
-                    size={20}
-                    color={theme.colors.primary}
-                    library="MaterialIcons"
-                  />
-                  <Text style={styles.addManuallyText}>
-                    {hasResults
-                      ? `Add "${searchQuery}" manually`
-                      : `No matches. Add "${searchQuery}" manually`}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          <ItemSuggestionsList
+            searchQuery={searchQuery}
+            suggestions={suggestions}
+            loading={searchLoading}
+            addManuallyPosition="bottom"
+            onAddManually={handleAddManually}
+            onSelectSuggestion={handleQuickAddSuggestion}
+            quickAddDisabled={adding}
+            placeholderIcon="shopping-cart"
+          />
         )}
 
         {/* Action Buttons */}
@@ -446,11 +385,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           ) : (
             <View style={styles.recentList}>
               {recentItems.map(item => (
-                <RecentItemCard
+                <ItemRecentCard
                   key={item.id}
                   item={item}
                   onQuickAdd={handleQuickAddRecent}
                   disabled={adding}
+                  placeholderIcon="shopping-cart"
                 />
               ))}
             </View>
@@ -496,87 +436,6 @@ const styles = StyleSheet.create(theme => ({
   scanIconButton: {
     padding: theme.spacing.xs,
     marginLeft: theme.spacing.xs,
-  },
-  searchResultsContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  searchLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  searchLoadingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  suggestionImageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  suggestionImage: {
-    width: 40,
-    height: 40,
-    resizeMode: 'cover',
-  },
-  suggestionImagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionInfo: {
-    flex: 1,
-    marginRight: theme.spacing.md,
-  },
-  suggestionName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  suggestionBrands: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickAddButtonDisabled: {
-    opacity: 0.5,
-  },
-  addManuallyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  addManuallyText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
   actionButtons: {
     flexDirection: 'row',

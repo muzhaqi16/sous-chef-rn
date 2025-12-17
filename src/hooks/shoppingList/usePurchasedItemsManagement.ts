@@ -3,7 +3,9 @@ import { Alert } from 'react-native';
 
 interface PurchasedItem {
   id: string;
-  isPurchased: boolean;
+  purchaseInfo?: {
+    isPurchased?: boolean;
+  };
 }
 
 interface UsePurchasedItemsManagementOptions<T extends PurchasedItem> {
@@ -86,7 +88,7 @@ export function usePurchasedItemsManagement<T extends PurchasedItem>(
    * Returns early if there are no purchased items.
    */
   const handleClearAllPurchased = useCallback(async () => {
-    const purchasedItems = items.filter(item => item.isPurchased);
+    const purchasedItems = items.filter(item => item.purchaseInfo?.isPurchased);
 
     if (purchasedItems.length === 0) return;
 

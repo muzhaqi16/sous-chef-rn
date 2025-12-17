@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
-import { matchFont } from '@shopify/react-native-skia';
+import { matchFont, Circle } from '@shopify/react-native-skia';
 import type { TimeSeriesDataPoint } from '#generated';
 
 const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });
@@ -32,7 +32,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
     if (!data || data.length === 0) return [];
     return data.map((point, index) => ({
       x: index,
-      y: point.value,
+      y: point.count,
     }));
   }, [data]);
 
@@ -82,12 +82,12 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
             lineWidth: 1,
           }}
         >
-          {({ points }) => (
+          {({ points, chartBounds }) => (
             <>
               {showArea && (
                 <Area
                   points={points.y}
-                  y0={height - 40}
+                  y0={chartBounds.bottom}
                   color={lineColor}
                   opacity={0.15}
                   animate={{ type: 'timing', duration: 300 }}
@@ -99,6 +99,14 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 strokeWidth={2}
                 animate={{ type: 'timing', duration: 300 }}
               />
+              {chartData.length === 1 && points.y[0] && points.y[0].y != null && (
+                <Circle
+                  cx={points.y[0].x}
+                  cy={points.y[0].y}
+                  r={4}
+                  color={lineColor}
+                />
+              )}
             </>
           )}
         </CartesianChart>

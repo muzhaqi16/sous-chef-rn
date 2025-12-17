@@ -1,5 +1,9 @@
 import { useCallback, useState } from 'react';
-import { collectDeviceInformation, validateDeviceInformation, type DeviceInformation } from '#/utils/deviceInfo';
+import {
+  collectDeviceInformation,
+  validateDeviceInformation,
+  type DeviceInformation,
+} from '#/utils/deviceInfo';
 import { logger } from '#/utils/environment';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
@@ -43,9 +47,8 @@ export const useDeviceRegistration = () => {
 
       logger.info('Device information validated, registering with backend...');
 
-      // Map comprehensive device information to available GraphQL input fields
-      // Note: Additional fields (isEmulator, manufacturer, batteryLevel, etc.) will be available
-      // once the frontend GraphQL schema is updated to match the backend schema
+      // Map comprehensive device information to GraphQL input fields
+      // Note: Fields collected but not yet in API schema are logged below for future addition
       const deviceInput: DeviceRegistrationInput = {
         // Core device identification
         deviceId: deviceInfo.deviceId,
@@ -57,6 +60,10 @@ export const useDeviceRegistration = () => {
         osName: deviceInfo.osName,
         osVersion: deviceInfo.osVersion,
         appVersion: deviceInfo.appVersion,
+        systemVersion: deviceInfo.systemVersion,
+        readableVersion: deviceInfo.readableVersion,
+        buildNumber: deviceInfo.buildNumber,
+        bundleId: deviceInfo.bundleId,
 
         // Browser/web information
         userAgent: deviceInfo.userAgent,
@@ -67,39 +74,68 @@ export const useDeviceRegistration = () => {
         screenResolution: deviceInfo.screenResolution,
         timezone: deviceInfo.timezone,
         language: deviceInfo.language,
+        hasNotch: deviceInfo.hasNotch,
+        hasDynamicIsland: deviceInfo.hasDynamicIsland,
 
-        // Network information (map to available fields)
-        lastIpAddress: deviceInfo.deviceIpAddress,
-        lastCountry: deviceInfo.country,
-        // lastCity: deviceInfo.city, // Not available in current device info
-      };
-
-      // Log comprehensive device info that's being collected but not yet sent
-      // This will be useful for debugging and will be sent once schema is updated
-      logger.info('Additional device info collected (pending schema update):', {
-        // Security critical
-        isEmulator: deviceInfo.isEmulator,
-        isTablet: deviceInfo.isTablet,
+        // Device identification & security
         manufacturer: deviceInfo.manufacturer,
         model: deviceInfo.model,
-
-        // Hardware specs
-        totalMemory: deviceInfo.totalMemory,
-        batteryLevel: deviceInfo.batteryLevel,
-
-        // Security IDs
+        brand: deviceInfo.brand,
+        isEmulator: deviceInfo.isEmulator,
+        isTablet: deviceInfo.isTablet,
         androidId: deviceInfo.androidId,
-        serialNumber: deviceInfo.serialNumber,
+        instanceId: deviceInfo.instanceId,
+        apiLevel: deviceInfo.apiLevel,
+        deviceFingerprint: deviceInfo.deviceFingerprint,
+        iosVendorId: deviceInfo.iosVendorId,
+        securityPatch: deviceInfo.securityPatch,
+        firstInstallTime: deviceInfo.firstInstallTime,
+        lastUpdateTime: deviceInfo.lastUpdateTime,
 
-        // Peripheral detection (automation detection)
+        // Hardware specifications
+        totalMemory: deviceInfo.totalMemory,
+        usedMemory: deviceInfo.usedMemory,
+        maxMemory: deviceInfo.maxMemory,
+        totalDiskCapacity: deviceInfo.totalDiskCapacity,
+        freeDiskStorage: deviceInfo.freeDiskStorage,
+        supportedAbis: deviceInfo.supportedAbis,
+
+        // Network information
+        lastIpAddress: deviceInfo.deviceIpAddress,
+        lastCountry: deviceInfo.country,
+        carrier: deviceInfo.carrier,
+        isAirplaneMode: deviceInfo.isAirplaneMode,
+        isLocationEnabled: deviceInfo.isLocationEnabled,
+        availableLocationProviders: deviceInfo.availableLocationProviders,
+        hostNames: deviceInfo.hostNames,
+
+        // Battery management
+        batteryLevel: deviceInfo.batteryLevel,
+        isBatteryCharging: deviceInfo.isBatteryCharging,
+        powerState: deviceInfo.powerState
+          ? JSON.parse(deviceInfo.powerState)
+          : undefined,
+
+        // Peripheral detection (automation/bot detection)
         isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
         isKeyboardConnected: deviceInfo.isKeyboardConnected,
         isMouseConnected: deviceInfo.isMouseConnected,
 
-        // Network states
-        isAirplaneMode: deviceInfo.isAirplaneMode,
-        isLocationEnabled: deviceInfo.isLocationEnabled,
-      });
+        // Additional tracking
+        supportedMediaTypes: deviceInfo.supportedMediaTypes,
+      };
+
+      // Fields collected but NOT yet in API schema - add these to the backend:
+      // - fontScale: number (display font scaling factor)
+      // - serialNumber: string (device serial number - Android)
+      // - currency: string (user's currency preference)
+      if (__DEV__) {
+        logger.debug('Device fields collected but not in API schema:', {
+          fontScale: deviceInfo.fontScale,
+          serialNumber: deviceInfo.serialNumber,
+          currency: deviceInfo.currency,
+        });
+      }
 
       // Register device with backend
       const result = await registerDeviceMutation({
@@ -147,29 +183,32 @@ export const useDeviceRegistration = () => {
   /**
    * Registers device with retry logic
    */
-  const registerDeviceWithRetry = useCallback(async (maxRetries: number = 2): Promise<boolean> => {
-    let attempts = 0;
+  const registerDeviceWithRetry = useCallback(
+    async (maxRetries: number = 2): Promise<boolean> => {
+      let attempts = 0;
 
-    while (attempts < maxRetries) {
-      attempts++;
-      logger.info(`Device registration attempt ${attempts}/${maxRetries}`);
+      while (attempts < maxRetries) {
+        attempts++;
+        logger.info(`Device registration attempt ${attempts}/${maxRetries}`);
 
-      const success = await registerDevice();
-      if (success) {
-        return true;
+        const success = await registerDevice();
+        if (success) {
+          return true;
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempts < maxRetries) {
+          const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s...
+          logger.info(`Device registration failed, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
 
-      // Wait before retry (exponential backoff)
-      if (attempts < maxRetries) {
-        const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s...
-        logger.info(`Device registration failed, retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-
-    logger.warn(`Device registration failed after ${maxRetries} attempts`);
-    return false;
-  }, [registerDevice]);
+      logger.warn(`Device registration failed after ${maxRetries} attempts`);
+      return false;
+    },
+    [registerDevice],
+  );
 
   /**
    * Silently registers device in background (non-blocking)
@@ -182,7 +221,9 @@ export const useDeviceRegistration = () => {
         if (success) {
           logger.info('Background device registration completed successfully');
         } else {
-          logger.warn('Background device registration failed - will retry on next login');
+          logger.warn(
+            'Background device registration failed - will retry on next login',
+          );
         }
       })
       .catch(error => {
@@ -205,15 +246,16 @@ export const useDeviceRegistration = () => {
   /**
    * Gets collected device information without registering
    */
-  const getDeviceInformation = useCallback(async (): Promise<DeviceInformation | null> => {
-    try {
-      const deviceInfo = await collectDeviceInformation();
-      return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
-    } catch (error) {
-      logger.error('Error getting device information:', error);
-      return null;
-    }
-  }, []);
+  const getDeviceInformation =
+    useCallback(async (): Promise<DeviceInformation | null> => {
+      try {
+        const deviceInfo = await collectDeviceInformation();
+        return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
+      } catch (error) {
+        logger.error('Error getting device information:', error);
+        return null;
+      }
+    }, []);
 
   return {
     // State

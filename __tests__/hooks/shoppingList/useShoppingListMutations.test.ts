@@ -92,7 +92,14 @@ const createMockItem = (
     id,
     itemName,
     quantity: 1,
-    isPurchased: false,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      purchasedQuantity: null,
+      purchasedPrice: null,
+      purchaseDate: null,
+      purchasedBy: null,
+    },
     updatedAt: new Date().toISOString(),
     version: 1,
     displayFormat: 'DECIMAL',
@@ -598,7 +605,14 @@ describe('useShoppingListMutations', () => {
       mockTogglePurchasedMutation.mockResolvedValue({
         data: {
           toggleShoppingListItemPurchased: createMockItem('item-1', 'Milk', {
-            isPurchased: true,
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              purchasedQuantity: null,
+              purchasedPrice: null,
+              purchaseDate: null,
+              purchasedBy: null,
+            },
           }),
         },
       });

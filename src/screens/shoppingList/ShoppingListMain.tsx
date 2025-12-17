@@ -243,7 +243,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           variables: {
             itemId: selectedItemForQuantity.id,
             quantity: quantity.toString(),
-            unitId: unitId || undefined,
+            // null clears unit, undefined keeps current, string updates to new unit
+            unitId,
             version: selectedItemForQuantity.version,
           },
         });
@@ -279,7 +280,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   useEffect(() => {
     if (items.length > 0 && !swipeHint.hasBeenShown) {
       const unpurchasedItems = itemsRef.current.filter(
-        (item: any) => !item.isPurchased,
+        (item: any) => !item.purchaseInfo?.isPurchased,
       );
       if (unpurchasedItems.length > 0) {
         const timer = setTimeout(() => {
@@ -406,7 +407,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       Telemetry.trackScreen('ShoppingListMain', {
         list_id: currentListId,
         item_count: itemsRef.current.length,
-        purchased_count: itemsRef.current.filter(item => item.isPurchased)
+        purchased_count: itemsRef.current.filter(item => item.purchaseInfo?.isPurchased)
           .length,
         has_lists: lists.length > 0,
       });

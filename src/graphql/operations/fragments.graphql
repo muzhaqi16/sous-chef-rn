@@ -10,7 +10,9 @@ fragment ShoppingListItemCore on ShoppingListItem {
   quantity
   quantityInput
   displayFormat
-  isPurchased
+  purchaseInfo {
+    isPurchased
+  }
   version
   updatedAt
   category
@@ -33,7 +35,9 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
   itemName
   quantity
-  isPurchased
+  purchaseInfo {
+    isPurchased
+  }
   sortOrder
   unitName
   category
@@ -113,38 +117,57 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     createdAt
     updatedAt
   }
-  # Price fields
-  estimatedPrice
-  budgetPrice
-  lastKnownPrice
-  lowestPrice
-  highestPrice
-  priceLastUpdated
-  # Purchase fields
-  purchasedQuantity
-  purchasedPrice
-  purchaseDate
-  # Location fields
-  aisle
-  storeSection
-  # History fields
-  previouslyPurchased
-  lastPurchaseDate
-  purchaseCount
-  # Metadata fields
+  # NEW: Price fields in nested object
+  priceEstimate {
+    estimated
+    budget
+    lastKnown
+    lowest
+    highest
+    lastUpdated
+  }
+  # NEW: Purchase fields in nested object
+  purchaseInfo {
+    isPurchased # Already in Core
+    purchasedQuantity
+    purchasedPrice
+    purchaseDate
+    purchasedBy {
+      ...PartialUser
+    }
+  }
+  # NEW: Source fields in nested object
+  source {
+    isAutoAdded
+    autoAddReason
+    isFromMealPlan
+    mealPlan {
+      id
+      name
+    }
+  }
+  # NEW: Store/location fields in nested object
+  storeInfo {
+    aisle
+    storeSection
+    preferredStore {
+      id
+      name
+    }
+  }
+  # NEW: Purchase history fields in nested object
+  purchaseHistory {
+    previouslyPurchased
+    lastPurchaseDate
+    purchaseCount
+  }
+  # Metadata fields (unchanged)
   priority
   sortOrder
-  isAutoAdded
-  autoAddReason
-  isFromMealPlan
-  mealPlanReference
   createdAt
   deletedAt
-  # User references
+  # User reference
   addedBy {
-    ...PartialUser
-  }
-  purchasedBy {
     ...PartialUser
   }
   # Purchase history (paginated connection for performance)
@@ -607,6 +630,18 @@ fragment PantryItemFragment on PantryItem {
   store {
     id
     name
+  }
+  # Additional detail fields
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
   }
   usageRecords {
     id

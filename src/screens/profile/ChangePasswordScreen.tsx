@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -93,77 +92,79 @@ export const ChangePasswordScreen: React.FC = () => {
         <View style={styles.headerPlaceholder} />
       </View>
 
-      <KeyboardAwareScrollView
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid={true}
-        extraScrollHeight={20}
       >
-        <View style={styles.iconContainer}>
-          <Icon name="lock" size={64} color={theme.colors.primary} />
-        </View>
-
-        <Text style={styles.subtitle}>
-          Enter your current password and choose a new secure password.
-        </Text>
-
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Current Password</Text>
-            <PasswordInput
-              value={form.watch('currentPassword')}
-              onChangeText={text =>
-                form.setValue('currentPassword', text, { shouldValidate: true })
-              }
-              placeholder="Enter your current password"
-              errorMessage={form.formState.errors.currentPassword?.message}
-              editable={!isSubmitting}
-            />
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.iconContainer}>
+            <Icon name="lock" size={64} color={theme.colors.primary} />
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>New Password</Text>
-            <PasswordInput
-              value={form.watch('newPassword')}
-              onChangeText={text =>
-                form.setValue('newPassword', text, { shouldValidate: true })
-              }
-              placeholder="Enter your new password"
-              errorMessage={form.formState.errors.newPassword?.message}
-              editable={!isSubmitting}
-            />
-          </View>
+          <Text style={styles.subtitle}>
+            Enter your current password and choose a new secure password.
+          </Text>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Confirm New Password</Text>
-            <PasswordInput
-              value={form.watch('confirmPassword')}
-              onChangeText={text =>
-                form.setValue('confirmPassword', text, { shouldValidate: true })
-              }
-              placeholder="Confirm your new password"
-              errorMessage={form.formState.errors.confirmPassword?.message}
-              editable={!isSubmitting}
-            />
-          </View>
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Current Password</Text>
+              <PasswordInput
+                value={form.watch('currentPassword')}
+                onChangeText={text =>
+                  form.setValue('currentPassword', text, { shouldValidate: true })
+                }
+                placeholder="Enter your current password"
+                errorMessage={form.formState.errors.currentPassword?.message}
+                editable={!isSubmitting}
+              />
+            </View>
 
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
-            ]}
-            onPress={form.handleSubmit(onSubmit)}
-            disabled={!isFormValid || isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={theme.colors.white} />
-            ) : (
-              <Text style={styles.submitButtonText}>Change Password</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAwareScrollView>
+            <View style={styles.field}>
+              <Text style={styles.label}>New Password</Text>
+              <PasswordInput
+                value={form.watch('newPassword')}
+                onChangeText={text =>
+                  form.setValue('newPassword', text, { shouldValidate: true })
+                }
+                placeholder="Enter your new password"
+                errorMessage={form.formState.errors.newPassword?.message}
+                editable={!isSubmitting}
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirm New Password</Text>
+              <PasswordInput
+                value={form.watch('confirmPassword')}
+                onChangeText={text =>
+                  form.setValue('confirmPassword', text, { shouldValidate: true })
+                }
+                placeholder="Confirm your new password"
+                errorMessage={form.formState.errors.confirmPassword?.message}
+                editable={!isSubmitting}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
+              ]}
+              onPress={form.handleSubmit(onSubmit)}
+              disabled={!isFormValid || isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={theme.colors.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>Change Password</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

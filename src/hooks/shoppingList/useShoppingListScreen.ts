@@ -134,7 +134,7 @@ export function useShoppingListScreen() {
       const cachedRight = rightCache.get(item.id);
       const newQuantity = item.quantity || 0;
       const newUnit = item.unit?.symbol || item.unitName || undefined;
-      const newDisabled = item.isPurchased;
+      const newDisabled = item.purchaseInfo?.isPurchased;
 
       let rightElementConfig: QuantityElementConfig;
       if (
@@ -165,7 +165,7 @@ export function useShoppingListScreen() {
         if (
           cachedLeft &&
           cachedLeft.url === imageUrl &&
-          cachedLeft.isPurchased === item.isPurchased
+          cachedLeft.isPurchased === item.purchaseInfo?.isPurchased
         ) {
           // Reuse existing config - stable reference
           leftElementConfig = cachedLeft;
@@ -174,7 +174,7 @@ export function useShoppingListScreen() {
           leftElementConfig = {
             type: 'image' as const,
             url: imageUrl,
-            isPurchased: item.isPurchased,
+            isPurchased: item.purchaseInfo?.isPurchased,
           };
           leftCache.set(item.id, leftElementConfig);
         }
@@ -191,7 +191,7 @@ export function useShoppingListScreen() {
         title: item.itemName || '',
         subtitle: categoryName || undefined,
         sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
-        isPurchased: item.isPurchased,
+        isPurchased: item.purchaseInfo?.isPurchased,
         rightElementConfig,
         leftElementConfig,
       };
