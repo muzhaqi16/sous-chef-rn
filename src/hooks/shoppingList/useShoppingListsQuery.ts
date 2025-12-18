@@ -9,28 +9,28 @@ export type ShoppingListFromQuery = GetShoppingListsQuery['shoppingLists'][numbe
  * useShoppingListsQuery - Query shopping lists with smart caching
  *
  * Single responsibility:
- * - Fetch shopping lists for a given home
+ * - Fetch all user's shopping lists (independent of home)
  * - Use cache-first policy (fetches only if cache empty, no re-fetch on list switch)
  * - Provide fetchLists() for manual refresh (e.g., when selector opens)
  * - Provide stable lists array with fallback to previous data
  *
  * PERFORMANCE: Uses cache-first to prevent re-fetching when switching between lists.
- * The query only depends on homeId, not the selected list, so switching lists
- * within the same home uses cached data.
+ * Shopping lists are independent of homes - no homeId dependency prevents cascade.
  *
  * Note: This is different from useShoppingListQuery which fetches items for a single list.
  * This hook fetches the list of shopping lists.
  */
-export function useShoppingListsQuery(homeId: string | null) {
+export function useShoppingListsQuery() {
   const { isFocused } = useAppNavigation();
 
   // PERFORMANCE: cache-first fetches only if cache is empty
   // - First visit: fetches from network (cache empty)
   // - Subsequent visits/list switches: uses cache (no network request)
   // - nextFetchPolicy maintains cache-first after initial fetch
+  // - No homeId: shopping lists are independent of homes
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListsQuery({
-      variables: { homeId: homeId || undefined },
+      variables: {},
       fetchPolicy: 'cache-first',
       nextFetchPolicy: 'cache-first', // Prevent Apollo from switching policies
       errorPolicy: 'all',

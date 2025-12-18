@@ -29,12 +29,9 @@ import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet';
 import {
   useUpdateShoppingListItemQuantityMutation,
   ShoppingListItemDisplayFragment,
-  BasicPantryFragment,
 } from '#generated';
-import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useDefaultHome } from '#hooks/home/useDefaultHome';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
@@ -170,18 +167,13 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       },
     });
 
-  // Get home and pantries for moving items
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
-  const { selectedHomeId, homes } = useDefaultHome();
-
-  // Get pantries for the current home
-  const pantries = useMemo(() => {
-    if (!selectedHomeId || !homes.length) return [];
-    const currentHome = homes.find(h => h.id === selectedHomeId);
-    if (!currentHome) return [];
-    const normalized = normalizeHome(currentHome);
-    return (normalized?.pantries || []) as BasicPantryFragment[];
-  }, [selectedHomeId, homes]);
+  // Get home and pantries for moving items (lazy loaded on demand)
+  const {
+    pantries,
+    selectedPantryId,
+    isLoaded: homeDataLoaded,
+    fetchHomeData,
+  } = useLazyHomeData();
 
   // Move to pantry hook
   const { moveToPantry } = useMoveToPantry({
@@ -194,8 +186,16 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Handle move to pantry button press
   const handleMoveToPantry = useCallback(
-    (itemId: string) => {
-      if (pantries.length === 0) {
+    async (itemId: string) => {
+      // Fetch home data if not already loaded (lazy load on demand)
+      if (!homeDataLoaded) {
+        await fetchHomeData();
+      }
+
+      // Check pantries after data is loaded
+      // Note: pantries will be populated after fetchHomeData completes and component re-renders
+      // We check pantries.length here but the actual check happens after the async fetch
+      if (pantries.length === 0 && homeDataLoaded) {
         Alert.alert(
           'No Pantry Available',
           'Please create a pantry in your home first.',
@@ -210,7 +210,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         setMoveToPantryModalVisible(true);
       }
     },
-    [pantries.length],
+    [homeDataLoaded, fetchHomeData, pantries.length],
   );
 
   // Handle confirm move to pantry

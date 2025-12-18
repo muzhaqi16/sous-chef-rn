@@ -118,10 +118,10 @@ export const selectPantryState = (state: RootState) => ({
 });
 
 // PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
+// Note: selectedHomeId removed - shopping lists are independent of homes
 export const selectShoppingListState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
   setSelectedShoppingListId: state.setSelectedShoppingListId,
-  selectedHomeId: state.selectedHomeId,
 });
 
 // PERFORMANCE: Home state selector - reduces multiple subscriptions to 1

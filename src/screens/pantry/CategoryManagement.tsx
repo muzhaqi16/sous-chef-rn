@@ -1,21 +1,32 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useCallback} from 'react';
 import {View, Text, FlatList, TouchableOpacity} from 'react-native';
 import {Icon} from '#utils';
 import {useNavigation} from '@react-navigation/native';
-import {usePantryManagement, useDefaultHome} from '#hooks';
+import {usePantryManagement} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 import {commonStyles} from '#styles';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useAppStore, selectSelectedHomeId} from '#store/useAppStore';
+import {normalizeHome} from '#/utils/connectionUtils';
 
 export const CategoryManagement: React.FC = () => {
   const navigation = useNavigation();
   const {theme} = useUnistyles();
 
-  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
+  // Get selectedHomeId from Zustand (no GraphQL query triggered)
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
   });
+
+  // Helper to get default pantry (inline to avoid useDefaultHome dependency)
+  const getDefaultPantry = useCallback((data: any) => {
+    const normalized = normalizeHome(data?.home ?? data);
+    if (!normalized?.pantries?.length) return null;
+    return normalized.pantries.find((p: any) => p.isDefault) || normalized.pantries[0] || null;
+  }, []);
 
   const pantry = getDefaultPantry(homeData);
   const {items} = usePantryManagement(pantry?.id);

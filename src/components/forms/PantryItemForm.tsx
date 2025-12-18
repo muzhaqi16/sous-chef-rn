@@ -15,8 +15,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 
 import { commonStyles } from '#/styles/commonStyles';
-import { useDefaultHome } from '#hooks';
-import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
+import { useAppStore, selectSelectedPantryId, selectSelectedHomeId } from '#store/useAppStore';
+import { normalizeHome } from '#/utils/connectionUtils';
 import {
   StorageState,
   useGetPantryItemQuery,
@@ -147,7 +147,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   >([]);
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
-  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
+  // Get selectedHomeId from Zustand (no GraphQL query triggered)
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+
+  // Helper to get default pantry (inline to avoid useDefaultHome dependency)
+  const getDefaultPantry = useCallback((data: any) => {
+    const normalized = normalizeHome(data?.home ?? data);
+    if (!normalized?.pantries?.length) return null;
+    return normalized.pantries.find((p: any) => p.isDefault) || normalized.pantries[0] || null;
+  }, []);
 
   const { data: homeData } = useGetHomeQuery({
     variables: { homeId: selectedHomeId ?? '' },

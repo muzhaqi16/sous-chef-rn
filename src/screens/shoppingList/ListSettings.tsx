@@ -21,7 +21,7 @@ import {
   ShoppingList,
 } from '#generated';
 import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
@@ -43,8 +43,6 @@ export const ListSettings: React.FC<{
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  // Get store's selectedHomeId for cache write (must match what screen reads)
-  const storeSelectedHomeId = useAppStore(selectSelectedHomeId);
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
@@ -58,8 +56,8 @@ export const ListSettings: React.FC<{
   const { user } = useAuth();
   const { homes } = useHomeManagement();
 
-  // Get lists for finding default list after delete (use store's homeId to read correct cache)
-  const { lists } = useShoppingListsQuery(storeSelectedHomeId);
+  // Get lists for finding default list after delete
+  const { lists } = useShoppingListsQuery();
 
   // Check if current user is the owner
   const isOwner =
@@ -103,23 +101,19 @@ export const ListSettings: React.FC<{
     update(cache, { data }) {
       if (data?.createShoppingList) {
         try {
-          // Use STORE's selectedHomeId for cache write (must match what screen reads)
-          // Note: The list's actual homeId is set by mutation input, not this cache key
-          const cacheHomeId = storeSelectedHomeId || undefined;
-
-          // Read with variables to match the query
+          // Read with empty variables (shopping lists are independent of homes)
           const existingData = cache.readQuery<{
             shoppingLists: ShoppingList[];
           }>({
             query: GetShoppingListsDocument,
-            variables: { homeId: cacheHomeId },
+            variables: {},
           });
 
           if (existingData) {
-            // Write with same variables to update the correct cache entry
+            // Write with same empty variables to update the cache
             cache.writeQuery({
               query: GetShoppingListsDocument,
-              variables: { homeId: cacheHomeId },
+              variables: {},
               data: {
                 ...existingData,
                 shoppingLists: [
