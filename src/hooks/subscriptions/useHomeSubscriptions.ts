@@ -14,7 +14,6 @@
 import { useStore } from '#store';
 import {
   useMembershipUpdatedSubscription,
-  useMyMembershipUpdatedSubscription,
   useMemberJoinedSubscription,
   useMemberLeftSubscription,
 } from '#generated';
@@ -53,25 +52,6 @@ export function useHomeSubscriptions(userId?: string) {
     variables: { homeId: selectedHomeId },
     skip: !selectedHomeId,
     ...membershipHandlers,
-  });
-
-  //
-  // My Membership Updated Subscription
-  // Handles changes to the current user's memberships across all homes
-  // This is user-scoped (not home-scoped)
-  //
-  const myMembershipHandlers = subscriptionService.register({
-    subscriptionName: 'MyMembershipUpdated',
-    entityType: 'Membership',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
-    enableLogging: true,
-  });
-
-  useMyMembershipUpdatedSubscription({
-    skip: !userId,
-    ...myMembershipHandlers,
   });
 
   //

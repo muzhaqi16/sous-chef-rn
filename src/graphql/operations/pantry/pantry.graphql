@@ -509,29 +509,6 @@ subscription PantryUpdated($pantryId: ID!) {
   }
 }
 
-subscription PantryActivityAdded($pantryId: ID!) {
-  pantryActivityAdded(pantryId: $pantryId) {
-    id
-    pantryId
-    userId
-    action
-    description
-    itemName
-    quantity
-    oldValue
-    newValue
-    metadata
-    createdAt
-    user {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-  }
-}
-
 subscription PantryLowStockAlert($pantryId: ID!) {
   pantryLowStockAlert(pantryId: $pantryId) {
     pantryId

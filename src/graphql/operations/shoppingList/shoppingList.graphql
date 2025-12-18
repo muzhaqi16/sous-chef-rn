@@ -692,22 +692,3 @@ subscription ShoppingListStatusChanged($listId: ID!) {
     timestamp
   }
 }
-
-subscription ShoppingListItemAdded($shoppingListId: ID!) {
-  shoppingListItemAdded(shoppingListId: $shoppingListId) {
-    ...ShoppingListItemFragment
-  }
-}
-
-subscription ShoppingListItemUpdated($shoppingListId: ID!) {
-  shoppingListItemUpdated(shoppingListId: $shoppingListId) {
-    ...ShoppingListItemFragment
-  }
-}
-
-subscription ShoppingListItemRemoved($shoppingListId: ID!) {
-  shoppingListItemRemoved(shoppingListId: $shoppingListId) {
-    id
-    itemName
-  }
-}

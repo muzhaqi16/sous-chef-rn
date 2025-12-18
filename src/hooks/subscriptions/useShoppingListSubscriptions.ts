@@ -17,6 +17,8 @@ import {
   useShoppingListUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   ShoppingListItemFragmentDoc,
+  GetShoppingListDocument,
+  GetShoppingListQuery,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
@@ -75,15 +77,24 @@ export function useShoppingListSubscriptions(userId?: string) {
 
       if (!item) return;
 
-      if (mutation === MutationType.CREATE) {
+      if (mutation === MutationType.CREATE || mutation === MutationType.ITEM_ADDED) {
         // Add new item to ShoppingList.itemsConnection
         addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
-      } else if (mutation === MutationType.DELETE) {
+      } else if (mutation === MutationType.DELETE || mutation === MutationType.ITEM_REMOVED) {
         // Remove item from ShoppingList.itemsConnection
         removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
           evictItem: true,
         });
       } else if (mutation === 'ITEM_UPDATED') {
+        // Read old item from cache BEFORE writing to detect sortOrder change
+        const oldItem = client.cache.readFragment({
+          id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
+          fragment: ShoppingListItemFragmentDoc,
+          fragmentName: 'ShoppingListItemFragment',
+        }) as { sortOrder?: string | null } | null;
+
+        const sortOrderChanged = oldItem?.sortOrder !== item.sortOrder;
+
         // Write updated item data to cache using fragment
         // Apollo does NOT auto-normalize subscription data when using onData callback
         // This handles quantity, sortOrder, purchaseInfo, and all other field updates
@@ -93,6 +104,41 @@ export function useShoppingListSubscriptions(userId?: string) {
           fragmentName: 'ShoppingListItemFragment',
           data: item,
         });
+
+        // Re-sort itemsConnection edges if sortOrder changed
+        // This ensures multi-client sync: when one client reorders, others see the new order
+        if (sortOrderChanged) {
+          try {
+            const queryResult = client.cache.readQuery({
+              query: GetShoppingListDocument,
+              variables: { id: selectedShoppingListId },
+            }) as GetShoppingListQuery | null;
+
+            if (queryResult?.shoppingList?.itemsConnection?.edges) {
+              // Sort edges by sortOrder (localeCompare matches base62 ordering)
+              const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
+                (a, b) =>
+                  (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
+              );
+
+              client.cache.writeQuery({
+                query: GetShoppingListDocument,
+                variables: { id: selectedShoppingListId },
+                data: {
+                  shoppingList: {
+                    ...queryResult.shoppingList,
+                    itemsConnection: {
+                      ...queryResult.shoppingList.itemsConnection,
+                      edges: sortedEdges,
+                    },
+                  },
+                },
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to re-sort edges after subscription update:', error);
+          }
+        }
       }
     },
   });

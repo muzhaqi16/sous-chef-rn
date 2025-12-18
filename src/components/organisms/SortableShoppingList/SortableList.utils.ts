@@ -41,6 +41,11 @@ export function hasOrderChanged(
 
 /**
  * Find which item was moved by comparing original and reordered arrays
+ *
+ * Uses "max distance" algorithm: The dragged item is the one that moved
+ * the farthest from its original position. When you drag one item, only
+ * that item makes a big jump - the others just shift by 1 position.
+ *
  * @param originalItems - Original order before drag
  * @param reorderedItems - New order after drag
  * @returns Object with moved item's ID and new index, or null if not found
@@ -49,24 +54,34 @@ export function findMovedItem(
   originalItems: SortableShoppingListItem[],
   reorderedItems: SortableShoppingListItem[],
 ): { itemId: string; newIndex: number } | null {
-  // Search from start
-  for (let i = 0; i < reorderedItems.length; i++) {
-    if (originalItems[i]?.id !== reorderedItems[i]?.id) {
-      return {
-        itemId: reorderedItems[i].id,
-        newIndex: i,
-      };
+  // Build a map of original positions
+  const originalIndexMap = new Map<string, number>();
+  originalItems.forEach((item, index) => {
+    originalIndexMap.set(item.id, index);
+  });
+
+  // Find the item whose position changed the most (the dragged item)
+  // When dragging, only ONE item moves - the rest shift by 1
+  let movedItemId: string | null = null;
+  let movedNewIndex = -1;
+  let maxDistance = 0;
+
+  for (let newIndex = 0; newIndex < reorderedItems.length; newIndex++) {
+    const item = reorderedItems[newIndex];
+    const originalIndex = originalIndexMap.get(item.id);
+
+    if (originalIndex === undefined) continue;
+
+    const distance = Math.abs(newIndex - originalIndex);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      movedItemId = item.id;
+      movedNewIndex = newIndex;
     }
   }
 
-  // Search from end (fallback)
-  for (let i = reorderedItems.length - 1; i >= 0; i--) {
-    if (originalItems[i]?.id !== reorderedItems[i]?.id) {
-      return {
-        itemId: reorderedItems[i].id,
-        newIndex: i,
-      };
-    }
+  if (movedItemId && movedNewIndex >= 0) {
+    return { itemId: movedItemId, newIndex: movedNewIndex };
   }
 
   return null;

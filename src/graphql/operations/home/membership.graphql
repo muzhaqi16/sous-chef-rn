@@ -39,34 +39,6 @@ subscription MembershipUpdated($homeId: ID) {
   }
 }
 
-subscription MyMembershipUpdated {
-  myMembershipUpdated {
-    mutation
-    node {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-      home {
-        id
-        name
-        type
-        joinCode
-      }
-    }
-    updatedFields
-    userId
-  }
-}
-
 subscription MemberJoined($homeId: ID!) {
   memberJoined(homeId: $homeId) {
     mutation

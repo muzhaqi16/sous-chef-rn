@@ -44,6 +44,7 @@ import {
   useMoveToPantry,
   type MoveToPantryInput,
 } from '#/hooks/shoppingList/useMoveToPantry';
+import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
 
 /**
  * Shopping List Main Screen
@@ -101,9 +102,15 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     setSelectedShoppingListId,
   } = useShoppingListScreen();
 
+  // --- Reordering Hook (optimistic UI with fractional indexing) ---
+  const { handleSortOrderUpdate } = useItemReordering({
+    listId: currentListId,
+    items,
+    refetch: refetchItems,
+  });
+
   // --- Actions Hook ---
   const {
-    handleSortOrderUpdate,
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,

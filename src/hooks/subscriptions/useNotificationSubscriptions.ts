@@ -13,7 +13,6 @@
  */
 
 import {
-  useUrgentNotificationReceivedSubscription,
   useNotificationUpdatedSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
@@ -52,24 +51,6 @@ export function useNotificationSubscriptions(userId?: string) {
   // - Handles push notification permissions
   // - Processes COLLABORATION_INVITE and HOME_INVITATION types
   //
-
-  //
-  // Urgent Notification Received Subscription
-  // High-priority notifications that need immediate attention
-  //
-  const urgentHandlers = subscriptionService.register({
-    subscriptionName: 'UrgentNotificationReceived',
-    entityType: 'Notification',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE,
-    enableLogging: true,
-  });
-
-  useUrgentNotificationReceivedSubscription({
-    skip: !userId,
-    ...urgentHandlers,
-  });
 
   //
   // Notification Updated Subscription

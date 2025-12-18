@@ -166,35 +166,30 @@ export function makeCache(): InMemoryCache {
               // If no existing data, return incoming (first load)
               if (!existing) return incoming;
 
-              // CRITICAL FIX: Always merge edges, not just during pagination
-              // This preserves manually added items from mutations when queries refetch
-              // Previous logic: `if (!args?.itemsCursor) return incoming;`
-              // Problem: Refetches without cursor replaced manually updated cache
               const existingEdges = existing.edges || [];
               const incomingEdges = incoming.edges || [];
 
-              // Deduplicate by node ID - keep incoming version if duplicate
-              const edgeMap = new Map();
-
-              // First add existing edges (lower priority)
-              existingEdges.forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) {
-                  edgeMap.set(id, edge);
-                }
-              });
-
-              // Then add/overwrite with incoming edges (higher priority)
+              // Create set of incoming IDs for quick lookup
+              const incomingIds = new Set<string>();
               incomingEdges.forEach((edge: any) => {
                 const id = readField('id', edge?.node);
-                if (id) {
-                  edgeMap.set(id, edge);
-                }
+                if (id) incomingIds.add(id as string);
               });
+
+              // CRITICAL: Start with incoming edges to preserve their order
+              // This is essential for sortOrder sync across clients
+              // Then append any existing edges not in incoming (preserves pagination data)
+              const mergedEdges = [
+                ...incomingEdges,
+                ...existingEdges.filter((edge: any) => {
+                  const id = readField('id', edge?.node);
+                  return id && !incomingIds.has(id as string);
+                }),
+              ];
 
               return {
                 ...incoming,
-                edges: Array.from(edgeMap.values()),
+                edges: mergedEdges,
               };
             },
           },
