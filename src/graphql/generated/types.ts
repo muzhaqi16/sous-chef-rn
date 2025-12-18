@@ -19773,6 +19773,8 @@ export type CreateShoppingListMutation = {
     metadata?: any | null | undefined;
     createdAt: string;
     updatedAt: string;
+    homeId?: string | null | undefined;
+    home?: { __typename?: 'Home'; id: string; name: string } | null | undefined;
     itemsConnection: {
       __typename?: 'ShoppingListItemConnection';
       totalCount: number;

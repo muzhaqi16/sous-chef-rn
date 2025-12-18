@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useAppStore, selectPantryState } from '#store/useAppStore';
@@ -12,11 +12,16 @@ export const useDefaultHome = () => {
     useAppStore(useShallow(selectPantryState));
   const { canAttemptQueries } = useAuth();
 
+  // Track if we've already initialized defaults to prevent cascading re-renders
+  const hasInitializedHomeRef = useRef(false);
+  const hasInitializedPantryRef = useRef(false);
+
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
   const shouldSkip = !canAttemptQueries;
 
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Use cache-first for homes data (rarely changes during session)
+  // This prevents duplicate network requests when navigating between screens
+  const fetchPolicy = useOfflinePresetPolicy('CRITICAL');
 
   const {
     data: homes,
@@ -42,33 +47,50 @@ export const useDefaultHome = () => {
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // Sync remote default home and pantry to local store
-  // This ensures backend's defaults are auto-selected on new device login
+  // PERFORMANCE: Extract default pantry ID with stable reference to prevent infinite loops
+  // Using useMemo ensures we only recalculate when the underlying data changes
+  const defaultPantryId = useMemo(() => {
+    const normalizedHome = normalizeHome(defaultHomeData?.getDefaultHome);
+    if (!normalizedHome?.pantries?.length) return null;
+    const defaultPantry =
+      normalizedHome.pantries.find((p: any) => p.isDefault) ||
+      normalizedHome.pantries[0];
+    return defaultPantry?.id || null;
+  }, [defaultHomeData?.getDefaultHome]);
+
+  // Sync remote default home to local store (one-time initialization)
+  // Uses ref to prevent cascading re-renders when state is set
   useEffect(() => {
+    // Skip if already initialized or no remote data
+    if (hasInitializedHomeRef.current || !remoteDefaultHomeId) return;
+
     // Only sync remote → local when no local selection exists
-    // This prevents interference with user-initiated setDefaultHome actions
-    if (!selectedHomeId && remoteDefaultHomeId) {
+    if (!selectedHomeId) {
+      hasInitializedHomeRef.current = true;
       setSelectedHomeId(remoteDefaultHomeId);
       console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
+    } else {
+      // Already have a selection, mark as initialized
+      hasInitializedHomeRef.current = true;
     }
+  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
-    // Auto-select default pantry when home data loads (for returning users on new devices)
-    // This ensures users see their pantry immediately after login, matching onboarding behavior
-    if (remoteDefaultHomeId && !selectedPantryId) {
-      const defaultPantry = getDefaultPantry(defaultHomeData);
-      if (defaultPantry?.id) {
-        setSelectedPantryId(defaultPantry.id);
-        console.log('🏠 Auto-selected default pantry:', defaultPantry.id);
-      }
+  // Sync remote default pantry to local store (one-time initialization)
+  // Separate effect to avoid coupling home and pantry initialization
+  useEffect(() => {
+    // Skip if already initialized or missing required data
+    if (hasInitializedPantryRef.current || !remoteDefaultHomeId || !defaultPantryId) return;
+
+    // Only sync remote → local when no local selection exists
+    if (!selectedPantryId) {
+      hasInitializedPantryRef.current = true;
+      setSelectedPantryId(defaultPantryId);
+      console.log('🏠 Auto-selected default pantry:', defaultPantryId);
+    } else {
+      // Already have a selection, mark as initialized
+      hasInitializedPantryRef.current = true;
     }
-  }, [
-    remoteDefaultHomeId,
-    selectedHomeId,
-    setSelectedHomeId,
-    selectedPantryId,
-    defaultHomeData,
-    setSelectedPantryId,
-  ]);
+  }, [remoteDefaultHomeId, defaultPantryId, selectedPantryId, setSelectedPantryId]);
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {

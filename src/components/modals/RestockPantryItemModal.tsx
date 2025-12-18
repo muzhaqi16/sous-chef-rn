@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
+import {
+  Button,
+  FractionInput,
+  FormInput,
+  FormattedItemSubtitle,
+} from '#components';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -8,9 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { parseFractionalInput } from '#/utils';
 import { PantryItemFragment } from '#generated';
 
@@ -253,18 +256,18 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 
             {/* Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+              <Button
+                title="Cancel"
+                variant="secondary"
                 onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
+                fullWidth
+              />
+              <Button
+                title="Restock"
+                variant="primary"
                 onPress={handleConfirm}
-              >
-                <Text style={styles.confirmButtonText}>Restock</Text>
-              </TouchableOpacity>
+                fullWidth
+              />
             </View>
           </>
         )}
@@ -330,7 +333,7 @@ const styles = StyleSheet.create(theme => ({
   },
   newQuantityText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.success,
+    color: theme.colors.primary,
     marginTop: theme.spacing.xs,
     fontWeight: theme.fonts.weight.medium,
   },
@@ -338,30 +341,5 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     marginTop: theme.spacing.lg,
     gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.success,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
   },
 }));

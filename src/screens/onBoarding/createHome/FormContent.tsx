@@ -1,12 +1,10 @@
 import React from 'react';
 import { BaseInput } from '#components';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import { FormCheckbox } from '#components/molecules/FormCheckbox';
 
 export type FormValues = {
   homeName: string;
   pantryName: string;
-  allowJoinCode?: boolean;
 };
 
 export const FormContent = ({
@@ -27,12 +25,6 @@ export const FormContent = ({
                 label: 'Home Name',
                 placeholder: 'e.g. Smith Family Home',
                 component: BaseInput,
-              },
-              {
-                name: 'allowJoinCode' as const,
-                label: 'Allow others to join with a code',
-                component: FormCheckbox,
-                props: { componentType: 'checkbox' },
               },
             ]
           : []),

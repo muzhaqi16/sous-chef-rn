@@ -13987,6 +13987,8 @@ export type CreateShoppingListMutation = {
     metadata: any | null | undefined;
     createdAt: string;
     updatedAt: string;
+    homeId: string | null | undefined;
+    home: { __typename?: 'Home'; id: string; name: string } | null | undefined;
     itemsConnection: {
       __typename?: 'ShoppingListItemConnection';
       totalCount: number;
@@ -54971,6 +54973,18 @@ export const CreateShoppingListDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'home' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'itemsConnection' },

@@ -219,6 +219,11 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     metadata
     createdAt
     updatedAt
+    homeId
+    home {
+      id
+      name
+    }
     itemsConnection(first: 25) {
       edges {
         node {

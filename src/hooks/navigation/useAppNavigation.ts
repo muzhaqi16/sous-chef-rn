@@ -67,11 +67,23 @@ export function useAppNavigation() {
       inviteMembers: () => navigate('InviteMembers'),
       onboardingComplete: () => navigate('OnboardingComplete'),
 
-      // Main tab screens (direct navigation to tabs)
-      pantryMain: () => navigate('PantryMain'),
+      // Main tab screens (nested navigation through HomeTabs)
+      pantryMain: () =>
+        navigate('Home', {
+          screen: 'Pantry',
+          params: {
+            screen: 'PantryMain',
+          },
+        }),
       pantryItem: (params: any) => navigate('PantryItem', params),
       pantryItemDetail: (params: any) => navigate('PantryItemDetail', params),
-      shoppingListMain: () => navigate('ShoppingListMain'),
+      shoppingListMain: () =>
+        navigate('Home', {
+          screen: 'ShoppingList',
+          params: {
+            screen: 'ShoppingListMain',
+          },
+        }),
       profile: () => navigate('Profile'),
 
       // Root level screens

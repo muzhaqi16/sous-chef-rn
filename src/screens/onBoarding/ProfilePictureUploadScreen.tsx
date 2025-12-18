@@ -6,6 +6,7 @@ import {
   Image,
   Alert,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { Button } from '#components';
@@ -190,7 +191,11 @@ export const ProfilePictureUploadScreen = () => {
       onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
       onSkip={() => skipToStep('InviteMembers')}
     >
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.avatarPreview}>
           {croppedImage || selectedImage ? (
             <>
@@ -391,16 +396,12 @@ export const ProfilePictureUploadScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       <Button
         title={isUploading ? 'Uploading...' : 'Upload & Continue'}
         onPress={croppedImage || selectedImage ? handleUpload : () => {}}
-        btnStyle={[
-          styles.nextButton,
-          { backgroundColor: theme.colors.primary },
-        ]}
-        txtStyle={[styles.nextText, { color: theme.colors.white }]}
+        variant="primary"
         disabled={!(selectedImage || croppedImage) || isUploading}
       />
     </OnBoardingWrapper>
@@ -411,11 +412,14 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   avatarPreview: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    marginTop: theme.spacing.xl,
-    marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
     position: 'relative',
     alignSelf: 'center',
   },
@@ -462,7 +466,7 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   formAction: {
-    marginVertical: theme.spacing.xl,
+    marginVertical: theme.spacing.sm,
     gap: theme.spacing['3'],
   },
   uploadOption: {
@@ -526,12 +530,6 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.tight,
     textDecorationLine: 'underline',
     textDecorationStyle: 'solid',
-  },
-  nextButton: {
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
   },
   nextText: {
     fontSize: theme.typography.fontSize.md,

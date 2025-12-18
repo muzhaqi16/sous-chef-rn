@@ -144,9 +144,7 @@ export const ShareList: React.FC = () => {
               </Text>
             </View>
             <View style={styles.memberDetails}>
-              <Text style={styles.memberName}>
-                {member.email || 'Unknown'}
-              </Text>
+              <Text style={styles.memberName}>{member.email || 'Unknown'}</Text>
               <Text style={styles.memberEmail}>{member.email || ''}</Text>
               <View style={styles.statusContainer}>
                 <View
@@ -158,23 +156,20 @@ export const ShareList: React.FC = () => {
                     },
                   ]}
                 >
-                  <Text
-                    style={[styles.statusText, { color: statusColor }]}
-                  >
+                  <Text style={[styles.statusText, { color: statusColor }]}>
                     {statusText}
                   </Text>
                 </View>
                 {member.invitedAt && (
                   <Text style={styles.invitedText}>
-                    Invited{' '}
-                    {new Date(member.invitedAt).toLocaleDateString()}
+                    Invited {new Date(member.invitedAt).toLocaleDateString()}
                   </Text>
                 )}
               </View>
             </View>
           </View>
           <TouchableOpacity
-            onPress={(e) => {
+            onPress={e => {
               e?.stopPropagation?.();
               if (member.email) {
                 handleRemoveMember(member.email);
@@ -231,15 +226,17 @@ export const ShareList: React.FC = () => {
           </TouchableOpacity>
         </View>
       </View>
-
-      <View style={styles.membersSection}>
-        <Text style={styles.sectionTitle}>Current Members</Text>
-        <FlatList
-          data={collaborators}
-          keyExtractor={(member) => member.id}
-          renderItem={renderMemberItem}
-        />
-      </View>
+      {/* Only show if there are any members */}
+      {collaborators.length > 0 && (
+        <View style={styles.membersSection}>
+          <Text style={styles.sectionTitle}>Current Members</Text>
+          <FlatList
+            data={collaborators}
+            keyExtractor={member => member.id}
+            renderItem={renderMemberItem}
+          />
+        </View>
+      )}
 
       <CollaboratorPermissionsBottomSheet
         ref={permissionsBottomSheetRef}

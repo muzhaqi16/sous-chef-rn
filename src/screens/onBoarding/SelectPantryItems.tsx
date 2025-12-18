@@ -14,8 +14,7 @@ import {
   ItemType,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { Button } from '#components';
-import { AnimatedChip } from '#components/atoms/AnimatedChip';
+import { Button, AnimatedChip, AnimatedButton } from '#components';
 
 export const SelectPantryItems = () => {
   const { navigateToNextStep, navigateToPreviousStep } =
@@ -27,6 +26,7 @@ export const SelectPantryItems = () => {
     data,
     loading,
     error: queryError,
+    refetch,
   } = useGetOnboardingItemsQuery({
     variables: {
       filters: {
@@ -37,7 +37,7 @@ export const SelectPantryItems = () => {
         field: ItemSortField.Popularity,
         order: SortOrder.Asc,
       },
-      first: 150,
+      first: 50,
     },
     fetchPolicy: 'cache-and-network',
   });
@@ -90,9 +90,14 @@ export const SelectPantryItems = () => {
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
-        <Text style={styles.errorText}>
-          Unable to load items. Please try again.
-        </Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            Unable to load items. Please try again.
+          </Text>
+          <AnimatedButton onPress={() => refetch()} variant="primary">
+            Try Again
+          </AnimatedButton>
+        </View>
       </OnBoardingWrapper>
     );
   }
@@ -110,7 +115,8 @@ export const SelectPantryItems = () => {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  unitId: item.displayUnit?.id || '',
+                  // Only pass unitId if displayUnit exists, otherwise let backend use its fallback chain
+                  ...(item.displayUnit?.id && { unitId: item.displayUnit.id }),
                   initialQuantity: 1,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,
@@ -168,8 +174,7 @@ export const SelectPantryItems = () => {
               } Item${selectedItems.length === 1 ? '' : 's'}`
         }
         onPress={onNext}
-        btnStyle={styles.nextButton}
-        txtStyle={styles.nextText}
+        variant="primary"
         disabled={isAddingItems || selectedItems.length === 0}
       />
     </OnBoardingWrapper>
@@ -197,22 +202,16 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.xs,
   },
-  nextButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  nextText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
+    paddingHorizontal: theme.spacing.lg,
   },
   errorText: {
     color: theme.colors.error,
     textAlign: 'center',
-    marginVertical: theme.spacing['3'],
+    marginBottom: theme.spacing.lg,
   },
   loader: {
     marginVertical: theme.spacing.xl,

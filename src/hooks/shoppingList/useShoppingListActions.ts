@@ -3,7 +3,6 @@ import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   ShoppingListItemDisplayFragmentDoc,
-  useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
 } from '#generated';
 import { toastService } from '#/services/toastService';
@@ -34,8 +33,9 @@ interface UseShoppingListActionsOptions {
  * - Toggle purchase status
  * - Delete item
  * - Clear all purchased
- * - Sort order updates
  * - Add item from search
+ *
+ * Note: Sort order updates are handled by useItemReordering (canonical handler)
  */
 export function useShoppingListActions({
   currentListId,
@@ -48,46 +48,6 @@ export function useShoppingListActions({
 }: UseShoppingListActionsOptions) {
   const client = useApolloClient();
   const haptic = useHaptic();
-
-  // Mutations
-  // Move item mutation - uses cache.modify pattern for simple field update
-  // NO optimisticResponse needed: SortableList.tsx handles instant UI via local state
-  // cache.modify updates only sortOrder field, avoiding "Missing field" warnings
-  const [moveItem] = useMoveShoppingListItemMutation({
-    errorPolicy: 'all',
-    // Use cache.modify for instant UI update without fragment validation warnings
-    // Per docs/apollo-client-patterns.md Pattern 5
-    update(cache, { data }, { variables }) {
-      if (!data?.moveShoppingListItem || !variables) return;
-
-      const itemId = variables.input.itemId;
-      const newSortOrder = data.moveShoppingListItem.sortOrder;
-
-      // Directly modify the cached item's sortOrder field
-      // This bypasses fragment validation - no "Missing field" warnings
-      // IMPORTANT: Also update version to prevent stale subscription data from overwriting
-      cache.modify({
-        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-        fields: {
-          sortOrder() {
-            return newSortOrder;
-          },
-          updatedAt() {
-            return new Date().toISOString();
-          },
-          version() {
-            return data.moveShoppingListItem.version;
-          },
-        },
-      });
-    },
-    onError: error => {
-      console.error('Move item error:', error);
-      const errorMessage =
-        error.message || 'Failed to reorder item. Please try again.';
-      Alert.alert('Error', `Could not reorder item: ${errorMessage}`);
-    },
-  });
 
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
@@ -102,56 +62,6 @@ export function useShoppingListActions({
     updateQuantityRef.current = updateQuantity;
     refetchItemsRef.current = refetchItems;
   }, [updateQuantity, refetchItems]);
-
-  // Sort order update handler
-  const handleSortOrderUpdate = useCallback(
-    async (
-      itemId: string,
-      afterItemId: string | null,
-      beforeItemId: string | null,
-      afterSortOrder: string | null,
-      beforeSortOrder: string | null,
-    ) => {
-      if (!currentListId) return;
-
-      try {
-        // DEFENSIVE CHECK: Detect duplicate sortOrder values
-        if (
-          afterSortOrder !== null &&
-          beforeSortOrder !== null &&
-          afterSortOrder === beforeSortOrder
-        ) {
-          console.error('❌ Duplicate sortOrder detected:', {
-            afterItemId,
-            afterSortOrder,
-            beforeItemId,
-            beforeSortOrder,
-          });
-
-          Alert.alert(
-            'Error',
-            'Item positions are out of sync. Refreshing list...',
-          );
-          await refetchItems();
-          return;
-        }
-
-        await moveItem({
-          variables: {
-            input: {
-              itemId,
-              afterItemId: afterItemId ?? undefined,
-              beforeItemId: beforeItemId ?? undefined,
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Failed to move item:', error);
-        toastService.error('Failed to reorder items');
-      }
-    },
-    [currentListId, moveItem, refetchItems],
-  );
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
@@ -428,9 +338,6 @@ export function useShoppingListActions({
   );
 
   return {
-    // Sort order
-    handleSortOrderUpdate,
-
     // Quantity
     handleIncrementQuantity,
     handleDecrementQuantity,

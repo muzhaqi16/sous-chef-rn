@@ -1,6 +1,5 @@
 import React from 'react';
 import {Button} from '#components';
-import {StyleSheet} from 'react-native-unistyles';
 
 export const SubmitButton = ({
   isCreating,
@@ -20,23 +19,7 @@ export const SubmitButton = ({
         : 'Next'
     }
     onPress={onPress}
-    btnStyle={styles.nextButton}
-    txtStyle={styles.nextText}
+    variant="primary"
     disabled={isCreating}
   />
 );
-
-const styles = StyleSheet.create(theme => ({
-  nextButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  nextText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
-  },
-}));

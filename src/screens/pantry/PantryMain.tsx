@@ -62,7 +62,10 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   // Callback to persist sort changes to store (defensive - check functions exist)
   const handleSortChange = useCallback(
-    (option: 'name' | 'expiry' | 'quantity' | 'recent', direction: 'asc' | 'desc') => {
+    (
+      option: 'name' | 'expiry' | 'quantity' | 'recent',
+      direction: 'asc' | 'desc',
+    ) => {
       setPantrySortOption?.(option);
       setPantrySortDirection?.(direction);
     },
@@ -85,13 +88,8 @@ const PantryMainScreen: React.FC = React.memo(() => {
     });
 
   // Centralized pantry selection with fallback chain
-  const {
-    pantry,
-    pantries,
-    currentHome,
-    selectedHomeId,
-    setSelectedPantryId,
-  } = useCurrentPantry();
+  const { pantry, pantries, currentHome, selectedHomeId, setSelectedPantryId } =
+    useCurrentPantry();
 
   // Keep query for pull-to-refresh
   const { refetch: refetchHome } = useGetHomeBasicQuery({
@@ -201,7 +199,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
       item_count: locationFilteredItems.length,
       has_pantries: pantries.length > 0,
     });
-  }, [selectedHomeId, pantry?.id, locationFilteredItems.length, pantries.length]);
+  }, [
+    selectedHomeId,
+    pantry?.id,
+    locationFilteredItems.length,
+    pantries.length,
+  ]);
 
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
@@ -234,7 +237,10 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner
   const isLoadingInitial =
-    loading && !pantryError && locationFilteredItems.length === 0 && !allItems?.length;
+    loading &&
+    !pantryError &&
+    locationFilteredItems.length === 0 &&
+    !allItems?.length;
 
   // Only show refreshing indicator during explicit user-initiated pull-to-refresh
   // Background fetches from cache-and-network are silent to avoid loading flash on navigation
@@ -356,6 +362,7 @@ export const PantryMain: React.FC = () => (
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    paddingTop: theme.spacing.sm,
     backgroundColor: theme.colors.background,
   },
 }));

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, ActivityIndicator, View } from 'react-native';
+import { Text, View, ActivityIndicator } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
@@ -54,7 +54,7 @@ export const CreateShoppingListScreen = () => {
     },
   });
 
-  // Check existing lists without auto-navigation
+  // Check existing lists
   useEffect(() => {
     let isMounted = true;
 
@@ -62,12 +62,11 @@ export const CreateShoppingListScreen = () => {
       if (listsLoading || !user?.id) return;
 
       try {
-        // Small delay to ensure smooth transition
         await new Promise(resolve => setTimeout(resolve, 100));
 
         if (!isMounted) return;
 
-        // If list exists, set it as selected but don't auto-navigate
+        // If list exists, set it as selected
         if (existingList) {
           setSelectedShoppingListId(existingList.id);
         }
@@ -100,7 +99,7 @@ export const CreateShoppingListScreen = () => {
           input: {
             name: data.shoppingListName.trim(),
             description: 'Created during onboarding',
-            isDefault: !existingList, // Only set as default if no existing list
+            isDefault: true,
             tags: ['onboarding', 'groceries'],
             homeId: selectedHomeId || undefined,
           },
@@ -146,94 +145,72 @@ export const CreateShoppingListScreen = () => {
     );
   }
 
+  // If list exists, show summary and continue button
+  if (existingList) {
+    return (
+      <OnBoardingWrapper
+        title="You're all set!"
+        subtitle="Your shopping list is already configured"
+        step={2}
+        totalSteps={7}
+        onSkip={() => skipToStep('SelectPantryItems')}
+        testID="onboarding-create-shopping-list-screen"
+      >
+        <View style={styles.existingResourcesContainer}>
+          <View style={styles.resourceCard}>
+            <Text style={styles.resourceLabel}>Shopping List</Text>
+            <Text style={styles.resourceName}>{existingList.name}</Text>
+            {existingList.isDefault && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.infoText}>
+            This was already set up. You can continue to the next step or
+            create additional ones later in settings.
+          </Text>
+        </View>
+
+        <Button
+          title="Continue"
+          onPress={() => navigateToNextStep('CreateShoppingList')}
+          variant="primary"
+        />
+      </OnBoardingWrapper>
+    );
+  }
+
+  // No existing list - show create form
   return (
     <OnBoardingWrapper
-      title={existingList ? "You're all set!" : 'Create your shopping list'}
-      subtitle={
-        existingList
-          ? `You already have "${existingList.name}"`
-          : 'You can add items to it later'
-      }
+      title="Create your shopping list"
+      subtitle="You can add items to it later"
       step={2}
       totalSteps={7}
       onSkip={() => skipToStep('SelectPantryItems')}
       testID="onboarding-create-shopping-list-screen"
     >
-      {existingList ? (
-        <>
-          {/* Show existing list info */}
-          <View style={styles.existingListContainer}>
-            <View style={styles.existingListCard}>
-              <Text style={styles.existingListTitle}>Current List</Text>
-              <Text style={styles.existingListName}>{existingList.name}</Text>
-              {existingList.isDefault && (
-                <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultBadgeText}>Default</Text>
-                </View>
-              )}
-            </View>
+      <DynamicFormFields<FormValues>
+        fields={[
+          {
+            name: 'shoppingListName',
+            label: 'Shopping List Name',
+            placeholder: 'e.g. Weekly Groceries',
+            component: BaseInput,
+          },
+        ]}
+        control={form.control}
+        errors={form.formState.errors}
+      />
 
-            <Text style={styles.orText}>— OR —</Text>
-
-            <Text style={styles.createNewText}>Create an additional list:</Text>
-          </View>
-
-          {/* Form to create additional list */}
-          <DynamicFormFields<FormValues>
-            fields={[
-              {
-                name: 'shoppingListName',
-                label: 'New List Name',
-                placeholder: 'e.g. Party Supplies',
-                component: BaseInput,
-              },
-            ]}
-            control={form.control}
-            errors={form.formState.errors}
-          />
-
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Continue with existing"
-              onPress={() => skipToStep('SelectPantryItems')}
-              btnStyle={styles.skipButton}
-              txtStyle={styles.skipText}
-            />
-
-            <Button
-              title={isCreating ? 'Creating...' : 'Create New List'}
-              onPress={form.handleSubmit(onSubmit)}
-              btnStyle={styles.createButton}
-              txtStyle={styles.createText}
-              disabled={isCreating}
-            />
-          </View>
-        </>
-      ) : (
-        <>
-          {/* No existing list - show create form */}
-          <DynamicFormFields<FormValues>
-            fields={[
-              {
-                name: 'shoppingListName',
-                label: 'Shopping List Name',
-                placeholder: 'e.g. Weekly Groceries',
-                component: BaseInput,
-              },
-            ]}
-            control={form.control}
-            errors={form.formState.errors}
-          />
-
-          <Button
-            title={isCreating ? 'Creating List...' : 'Create List'}
-            onPress={form.handleSubmit(onSubmit)}
-            btnStyle={styles.nextButton}
-            txtStyle={styles.nextText}
-            disabled={isCreating}
-          />
-        </>
-      )}
+      <Button
+        title={isCreating ? 'Creating List...' : 'Create List'}
+        onPress={form.handleSubmit(onSubmit)}
+        variant="primary"
+        disabled={isCreating}
+      />
 
       {graphqlError && <Text style={styles.errorText}>{graphqlError}</Text>}
     </OnBoardingWrapper>
@@ -241,18 +218,6 @@ export const CreateShoppingListScreen = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  nextButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  nextText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
-  },
   errorText: {
     color: theme.colors.error,
     marginTop: theme.spacing['3'],
@@ -271,36 +236,38 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
-  existingListContainer: {
-    marginBottom: theme.spacing.lg,
+  existingResourcesContainer: {
+    marginVertical: theme.spacing.lg,
   },
-  existingListCard: {
+  resourceCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
-  existingListTitle: {
+  resourceLabel: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  existingListName: {
+  resourceName: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
   },
   defaultBadge: {
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.xs,
+    borderRadius: theme.radii.sm,
     alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
   defaultBadgeText: {
     fontSize: theme.typography.fontSize.xs,
@@ -308,43 +275,11 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  orText: {
-    textAlign: 'center',
-    color: theme.colors.textSecondary,
+  infoText: {
     fontSize: theme.typography.fontSize.sm,
-    marginVertical: theme.spacing.md,
-  },
-  createNewText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
-  buttonContainer: {
-    gap: theme.spacing['3'],
-    marginTop: theme.spacing.lg,
-  },
-  skipButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
-  skipText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
-  },
-  createButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
-  createText: {
-    color: theme.colors.primary,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+    lineHeight: theme.typography.lineHeight.normal,
   },
 }));
