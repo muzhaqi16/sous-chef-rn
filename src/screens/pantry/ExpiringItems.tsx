@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, RefreshControl } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -7,32 +7,18 @@ import { SwipeableItem } from '#components';
 import { Header } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton';
 import { usePantryManagement, useAppNavigation } from '#hooks';
-import { useGetHomeQuery } from '#generated';
+import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { commonStyles } from '#styles';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
-import { normalizeHome } from '#/utils/connectionUtils';
 
 export const ExpiringItems: React.FC = () => {
   const { goBack, navigateTo } = useAppNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const { theme } = useUnistyles();
 
-  // Get selectedHomeId from Zustand (no GraphQL query triggered)
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  // Use cache-only hook for pantry resolution (no network requests)
+  // This prevents query cascade when switching between pantry screens
+  const { pantry } = useCurrentPantry();
 
-  const { data: homeData } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId,
-  });
-
-  // Helper to get default pantry (inline to avoid useDefaultHome dependency)
-  const getDefaultPantry = useCallback((data: any) => {
-    const normalized = normalizeHome(data?.home ?? data);
-    if (!normalized?.pantries?.length) return null;
-    return normalized.pantries.find((p: any) => p.isDefault) || normalized.pantries[0] || null;
-  }, []);
-
-  const pantry = getDefaultPantry(homeData);
   const { items, loading, refetch } = usePantryManagement(pantry?.id);
 
   const expiringItems = useMemo(() => {

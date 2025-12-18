@@ -19276,7 +19276,37 @@ export type GetShoppingListsQuery = {
     createdAt: string;
     updatedAt: string;
     homeId?: string | null | undefined;
-    home?: { __typename?: 'Home'; id: string; name: string } | null | undefined;
+    home?:
+      | {
+          __typename?: 'Home';
+          id: string;
+          name: string;
+          membersConnection: {
+            __typename?: 'MembershipConnection';
+            edges: Array<{
+              __typename?: 'MembershipEdge';
+              node: {
+                __typename?: 'Membership';
+                role: MembershipRole;
+                user: {
+                  __typename?: 'User';
+                  id: string;
+                  email: string;
+                  profile?:
+                    | {
+                        __typename?: 'UserProfile';
+                        displayName?: string | null | undefined;
+                        avatar?: string | null | undefined;
+                      }
+                    | null
+                    | undefined;
+                };
+              };
+            }>;
+          };
+        }
+      | null
+      | undefined;
     ownerships?:
       | Array<{
           __typename?: 'ShoppingListOwnership';

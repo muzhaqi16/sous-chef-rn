@@ -50,7 +50,7 @@ import { extractNodes } from '#/utils/connectionUtils';
 interface HomeMember {
   userId?: string;
   role: string;
-  status: string;
+  status?: string;
   user?: {
     id: string;
     email?: string;
@@ -107,6 +107,32 @@ export function getShoppingListOwnerInfo(
     displayName: ownership.user.profile?.displayName,
     avatar: ownership.user.profile?.avatar,
   };
+}
+
+/**
+ * Shopping list with optional home for display avatar resolution
+ */
+interface ShoppingListWithHome extends ShoppingListWithOwnership {
+  home?: HomeWithMembers | null;
+}
+
+/**
+ * Get display avatar info for a shopping list.
+ * Priority: Home owner (if list belongs to a home) > List owner
+ */
+export function getShoppingListDisplayAvatarInfo(
+  list: ShoppingListWithHome,
+): OwnerInfo | null {
+  // If list has a home, show home owner's avatar
+  if (list.home) {
+    const homeOwnerInfo = getHomeOwnerInfo(list.home);
+    if (homeOwnerInfo) {
+      return homeOwnerInfo;
+    }
+  }
+
+  // Fall back to list owner
+  return getShoppingListOwnerInfo(list);
 }
 
 /**

@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useGetHomesLazyQuery, useGetDefaultHomeLazyQuery } from '#generated';
-import { useAppStore, selectPantryState } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectPantryState,
+  selectHasInitializedHomeData,
+  selectSetHasInitializedHomeData,
+} from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 export const useDefaultHome = () => {
   const {selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId} =
@@ -14,36 +18,40 @@ export const useDefaultHome = () => {
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
-  // Track if we've already fetched data to prevent duplicate queries
-  const hasFetchedRef = useRef(false);
 
-  // Use DETAIL preset (cache-first) for initialization
-  const fetchPolicy = useOfflinePresetPolicy('DETAIL');
+  // PERFORMANCE: Use Zustand to track if data has been fetched
+  // This survives component remounts (unlike refs) and prevents duplicate queries
+  const hasInitializedHomeData = useAppStore(selectHasInitializedHomeData);
+  const setHasInitializedHomeData = useAppStore(selectSetHasInitializedHomeData);
 
-  // PERFORMANCE: Use lazy queries to control when they execute
-  // This prevents queries from firing on every re-render of AuthenticatedDataProvider
+  // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
+  // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
+  // on network status changes which caused query cascades
   const [getHomes, { data: homes, loading, error }] = useGetHomesLazyQuery({
-    fetchPolicy,
+    fetchPolicy: 'cache-first',
     nextFetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
   });
 
   const [getDefaultHome, { data: defaultHomeData, loading: loadingDefaultHome }] =
     useGetDefaultHomeLazyQuery({
-      fetchPolicy,
+      fetchPolicy: 'cache-first',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'ignore',
     });
 
   // Execute queries ONCE when authenticated and no home is selected
   // This prevents the query cascade issue where re-renders trigger new queries
+  // Uses Zustand flag (survives remounts) instead of ref, and omits getHomes/getDefaultHome
+  // from deps since they only need to be called once (not re-called when they change)
   useEffect(() => {
-    if (canAttemptQueries && !hasFetchedRef.current && !selectedHomeId) {
-      hasFetchedRef.current = true;
+    if (canAttemptQueries && !hasInitializedHomeData && !selectedHomeId) {
+      setHasInitializedHomeData(true);
       getHomes();
       getDefaultHome();
     }
-  }, [canAttemptQueries, selectedHomeId, getHomes, getDefaultHome]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAttemptQueries, selectedHomeId, hasInitializedHomeData]);
 
   // Preserve homes data even when query fails - prevents cascade failures
   const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));

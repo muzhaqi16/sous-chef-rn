@@ -93,6 +93,21 @@ query GetShoppingLists($homeId: String) {
     home {
       id
       name
+      membersConnection(first: 10) {
+        edges {
+          node {
+            role
+            user {
+              id
+              email
+              profile {
+                displayName
+                avatar
+              }
+            }
+          }
+        }
+      }
     }
     ownerships {
       id

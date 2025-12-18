@@ -13810,7 +13810,37 @@ export type GetShoppingListsQuery = {
     createdAt: string;
     updatedAt: string;
     homeId: string | null | undefined;
-    home: { __typename?: 'Home'; id: string; name: string } | null | undefined;
+    home:
+      | {
+          __typename?: 'Home';
+          id: string;
+          name: string;
+          membersConnection: {
+            __typename?: 'MembershipConnection';
+            edges: Array<{
+              __typename?: 'MembershipEdge';
+              node: {
+                __typename?: 'Membership';
+                role: MembershipRole;
+                user: {
+                  __typename?: 'User';
+                  id: string;
+                  email: string;
+                  profile:
+                    | {
+                        __typename?: 'UserProfile';
+                        displayName: string | null | undefined;
+                        avatar: string | null | undefined;
+                      }
+                    | null
+                    | undefined;
+                };
+              };
+            }>;
+          };
+        }
+      | null
+      | undefined;
     ownerships:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -53373,6 +53403,93 @@ export const GetShoppingListsDocument = {
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'membersConnection' },
+                        arguments: [
+                          {
+                            kind: 'Argument',
+                            name: { kind: 'Name', value: 'first' },
+                            value: { kind: 'IntValue', value: '10' },
+                          },
+                        ],
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'edges' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'node' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'role' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'user' },
+                                          selectionSet: {
+                                            kind: 'SelectionSet',
+                                            selections: [
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'id',
+                                                },
+                                              },
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'email',
+                                                },
+                                              },
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'profile',
+                                                },
+                                                selectionSet: {
+                                                  kind: 'SelectionSet',
+                                                  selections: [
+                                                    {
+                                                      kind: 'Field',
+                                                      name: {
+                                                        kind: 'Name',
+                                                        value: 'displayName',
+                                                      },
+                                                    },
+                                                    {
+                                                      kind: 'Field',
+                                                      name: {
+                                                        kind: 'Name',
+                                                        value: 'avatar',
+                                                      },
+                                                    },
+                                                  ],
+                                                },
+                                              },
+                                            ],
+                                          },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },

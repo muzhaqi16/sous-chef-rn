@@ -130,6 +130,10 @@ export const selectHomeState = (state: RootState) => ({
   setSelectedHomeId: state.setSelectedHomeId,
 });
 
+// Home initialization flag selector (for useDefaultHome)
+export const selectHasInitializedHomeData = (state: RootState) => state.hasInitializedHomeData;
+export const selectSetHasInitializedHomeData = (state: RootState) => state.setHasInitializedHomeData;
+
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({
   theme: state.theme,
