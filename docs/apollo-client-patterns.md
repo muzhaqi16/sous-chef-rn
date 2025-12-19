@@ -596,38 +596,49 @@ usePantryItemsChangedSubscription({
 
 ## Fetch Policies
 
-### Use Presets for Consistency
+### Use Hardcoded Policies for Stability
+
+**IMPORTANT:** Do NOT use dynamic fetch policies like `useOfflinePresetPolicy()`. They subscribe to store state (`store.isOnline`) and cause query cascade when network status changes during app initialization.
+
+#### Recommended Pattern
 
 ```typescript
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
-
-// For lists/collections
-const fetchPolicy = useOfflinePresetPolicy('LIST');
-// Online: cache-and-network, Offline: cache-only
-
-// For detail views
-const fetchPolicy = useOfflinePresetPolicy('DETAIL');
-// Online: cache-first, Offline: cache-only
-
-// For critical data
-const fetchPolicy = useOfflinePresetPolicy('CRITICAL');
-// Online: cache-first, Offline: cache-only
-
-// For real-time data (use sparingly!)
-const fetchPolicy = useOfflinePresetPolicy('REALTIME');
-// Online: network-only, Offline: cache-only
-
-const { data } = useQuery(QUERY, { fetchPolicy });
+// ✅ CORRECT - Hardcoded policies prevent query cascade
+const { data } = useGetItemsQuery({
+  fetchPolicy: 'cache-and-network',  // Shows cache immediately, fetches fresh in background
+  nextFetchPolicy: 'cache-first',     // Prevents re-fetch on re-render/tab switch
+  errorPolicy: 'all',                 // Returns cached data on network errors
+});
 ```
 
-### When to Use Each Preset
+#### Policy Guidelines
 
-| Preset | Use Case | Examples |
-|--------|----------|----------|
-| `LIST` | Collections that need fresh data | Shopping lists, pantry items, recipes |
-| `DETAIL` | Detail views with stable data | Recipe details, item details, profiles |
-| `CRITICAL` | Must-work-offline essential data | User session, app config |
-| `REALTIME` | Always needs fresh data | Payments, real-time prices (rare!) |
+| Query Type | fetchPolicy | nextFetchPolicy | Why |
+|------------|-------------|-----------------|-----|
+| **Lists** | `'cache-and-network'` | `'cache-first'` | Fresh data + no cascade |
+| **Details** | `'cache-and-network'` | `'cache-first'` | Fresh data after mutations |
+| **Selectors** | `'cache-and-network'` | `'cache-first'` | Fresh options when opened |
+
+#### Why NOT useOfflinePresetPolicy
+
+```typescript
+// ❌ BROKEN - causes query cascade
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
+const fetchPolicy = useOfflinePresetPolicy('LIST');
+
+// This subscribes to store.isOnline:
+// 1. Network status changes during app init
+// 2. fetchPolicy value changes ('cache-and-network' → 'cache-only')
+// 3. Apollo sees "options changed"
+// 4. Query re-fires (3x GetHomes, 3x GetShoppingLists)
+```
+
+#### Offline Handling
+
+Instead of dynamic policies, handle offline gracefully via:
+- `errorPolicy: 'all'` or `'ignore'` - Returns cached data when network fails
+- `usePreservedArrayData()` - Preserves last successful data across renders
+- `nextFetchPolicy: 'cache-first'` - Prevents re-fetches on subsequent renders
 
 ---
 
@@ -907,18 +918,17 @@ START
 START
   │
   ├─ Is this a list/collection?
-  │   └─ YES → useOfflinePresetPolicy('LIST')
+  │   └─ YES → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
   │
   ├─ Is this a detail view?
-  │   └─ YES → useOfflinePresetPolicy('DETAIL')
+  │   └─ YES → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
   │
-  ├─ Is this critical data that MUST work offline?
-  │   └─ YES → useOfflinePresetPolicy('CRITICAL')
+  ├─ Is this a selector/picker?
+  │   └─ YES → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
   │
-  ├─ Does this need fresh data EVERY TIME? (payments, etc.)
-  │   └─ YES → useOfflinePresetPolicy('REALTIME')
-  │
-  └─ DEFAULT → useOfflinePresetPolicy('LIST')
+  └─ DEFAULT → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
+
+NOTE: Always use hardcoded policies. Do NOT use useOfflinePresetPolicy() - it causes query cascade.
 ```
 
 ---
@@ -951,8 +961,8 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 
-// Fetch policies
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
+// Fetch policies - use hardcoded values, NOT useOfflinePresetPolicy
+// fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first', errorPolicy: 'all'
 
 // Subscriptions
 import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription';
@@ -969,8 +979,8 @@ import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription'
 ❌ **Don't**: Forget `cache.gc()` after `cache.evict()`
 ✅ **Do**: Always call `cache.gc()` after eviction
 
-❌ **Don't**: Hardcode fetch policies like `'cache-and-network'`
-✅ **Do**: Use `useOfflinePresetPolicy('LIST')`
+❌ **Don't**: Use dynamic fetch policies like `useOfflinePresetPolicy()` (causes query cascade)
+✅ **Do**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
 
 ❌ **Don't**: Skip optimistic responses on frequently-used mutations
 ✅ **Do**: Add optimistic responses for instant UI feedback

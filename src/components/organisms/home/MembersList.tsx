@@ -40,8 +40,13 @@ export const MembersList: React.FC<MembersListProps> = ({
   const currentUser = useStore(state => state.user);
   const { theme } = useUnistyles();
 
-  // Filter out accepted invites since they are now members
-  const pendingInvites = invites.filter(invite => invite.status !== 'ACCEPTED');
+  // Filter out accepted invites and invites for users who are already members
+  const memberUserIds = new Set(
+    members.map(m => m.user?.id).filter((id): id is string => !!id)
+  );
+  const pendingInvites = invites.filter(
+    invite => invite.status !== 'ACCEPTED' && !memberUserIds.has(invite.invitedUserId ?? '')
+  );
 
   if (
     (!members || members.length === 0) &&
