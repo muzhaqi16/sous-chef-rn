@@ -1,14 +1,15 @@
 import { useGetShoppingListQuery } from '#generated';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 export function useShoppingListDetails(listId: string | undefined) {
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('DETAIL');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-first: Uses cache if available for detail views
+  // - errorPolicy: 'ignore' returns cached data when network fails
 
   const { data, loading, error, refetch } = useGetShoppingListQuery({
     variables: { id: listId ?? '' },
     skip: !listId,
-    fetchPolicy,
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   // Real-time updates via subscription are now handled by SubscriptionProvider

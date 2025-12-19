@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
-import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
-import { useAppStore, selectPantryState } from '#store/useAppStore';
+import { useGetHomesLazyQuery, useGetDefaultHomeLazyQuery } from '#generated';
+import {
+  useAppStore,
+  selectPantryState,
+  selectHasInitializedHomeData,
+  selectSetHasInitializedHomeData,
+} from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 export const useDefaultHome = () => {
   const {selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId} =
@@ -13,37 +17,44 @@ export const useDefaultHome = () => {
   const { canAttemptQueries } = useAuth();
 
   // Track if we've already initialized defaults to prevent cascading re-renders
-  const hasInitializedHomeRef = useRef(false);
-  const hasInitializedPantryRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
-  // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
-  const shouldSkip = !canAttemptQueries;
+  // PERFORMANCE: Use Zustand to track if data has been fetched
+  // This survives component remounts (unlike refs) and prevents duplicate queries
+  const hasInitializedHomeData = useAppStore(selectHasInitializedHomeData);
+  const setHasInitializedHomeData = useAppStore(selectSetHasInitializedHomeData);
 
-  // PERFORMANCE: Use cache-first for homes data (rarely changes during session)
-  // This prevents duplicate network requests when navigating between screens
-  const fetchPolicy = useOfflinePresetPolicy('CRITICAL');
-
-  const {
-    data: homes,
-    loading,
-    error,
-  } = useGetHomesQuery({
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    skip: shouldSkip,
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+  // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
+  // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
+  // on network status changes which caused query cascades
+  const [getHomes, { data: homes, loading, error }] = useGetHomesLazyQuery({
+    fetchPolicy: 'cache-first',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
+
+  const [getDefaultHome, { data: defaultHomeData, loading: loadingDefaultHome }] =
+    useGetDefaultHomeLazyQuery({
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'ignore',
+    });
+
+  // Execute queries ONCE when authenticated and no home is selected
+  // This prevents the query cascade issue where re-renders trigger new queries
+  // Uses Zustand flag (survives remounts) instead of ref, and omits getHomes/getDefaultHome
+  // from deps since they only need to be called once (not re-called when they change)
+  useEffect(() => {
+    if (canAttemptQueries && !hasInitializedHomeData && !selectedHomeId) {
+      setHasInitializedHomeData(true);
+      getHomes();
+      getDefaultHome();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAttemptQueries, selectedHomeId, hasInitializedHomeData]);
 
   // Preserve homes data even when query fails - prevents cascade failures
   const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));
-
-  const { data: defaultHomeData, loading: loadingDefaultHome } =
-    useGetDefaultHomeQuery({
-      fetchPolicy,
-      nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-      skip: !canAttemptQueries,
-      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
-    });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
@@ -58,39 +69,38 @@ export const useDefaultHome = () => {
     return defaultPantry?.id || null;
   }, [defaultHomeData?.getDefaultHome]);
 
-  // Sync remote default home to local store (one-time initialization)
-  // Uses ref to prevent cascading re-renders when state is set
+  // Sync remote defaults to local store (one-time initialization)
+  // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
+  // cascading re-renders that cause duplicate queries
   useEffect(() => {
-    // Skip if already initialized or no remote data
-    if (hasInitializedHomeRef.current || !remoteDefaultHomeId) return;
+    // Skip if already initialized
+    if (hasInitializedRef.current) return;
 
-    // Only sync remote → local when no local selection exists
+    // Wait for remote data to be available
+    if (!remoteDefaultHomeId) return;
+
+    let didUpdate = false;
+
+    // Set home if not already selected
     if (!selectedHomeId) {
-      hasInitializedHomeRef.current = true;
       setSelectedHomeId(remoteDefaultHomeId);
+      didUpdate = true;
       console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
-    } else {
-      // Already have a selection, mark as initialized
-      hasInitializedHomeRef.current = true;
     }
-  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
-  // Sync remote default pantry to local store (one-time initialization)
-  // Separate effect to avoid coupling home and pantry initialization
-  useEffect(() => {
-    // Skip if already initialized or missing required data
-    if (hasInitializedPantryRef.current || !remoteDefaultHomeId || !defaultPantryId) return;
-
-    // Only sync remote → local when no local selection exists
-    if (!selectedPantryId) {
-      hasInitializedPantryRef.current = true;
+    // Set pantry if not already selected AND we have the data
+    if (!selectedPantryId && defaultPantryId) {
       setSelectedPantryId(defaultPantryId);
+      didUpdate = true;
       console.log('🏠 Auto-selected default pantry:', defaultPantryId);
-    } else {
-      // Already have a selection, mark as initialized
-      hasInitializedPantryRef.current = true;
     }
-  }, [remoteDefaultHomeId, defaultPantryId, selectedPantryId, setSelectedPantryId]);
+
+    // Mark as initialized once we've processed
+    // Either we made updates, or selections already exist
+    if (didUpdate || (selectedHomeId && (selectedPantryId || !defaultPantryId))) {
+      hasInitializedRef.current = true;
+    }
+  }, [remoteDefaultHomeId, defaultPantryId, selectedHomeId, selectedPantryId, setSelectedHomeId, setSelectedPantryId]);
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {

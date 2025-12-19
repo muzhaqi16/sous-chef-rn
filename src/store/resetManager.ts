@@ -61,6 +61,8 @@ export const createResetManager = (
         selectedHomeId: null,
         selectedPantryId: null,
         selectedShoppingListId: null,
+        // Reset home data initialization flag to allow re-fetch on next login
+        hasInitializedHomeData: false,
       });
     }
 
@@ -194,6 +196,8 @@ const clearAuthFromStorage = async () => {
         delete parsedData.state.selectedHomeId;
         delete parsedData.state.selectedPantryId;
         delete parsedData.state.selectedShoppingListId;
+        // Reset home data initialization flag
+        delete parsedData.state.hasInitializedHomeData;
 
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
       }

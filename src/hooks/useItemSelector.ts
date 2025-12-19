@@ -5,6 +5,7 @@ import {
   useGetHomesQuery,
 } from '../graphql/generated';
 import {usePreservedArrayData} from './apollo';
+import {useAppStore, selectSelectedHomeId} from '#store/useAppStore';
 
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
@@ -13,8 +14,6 @@ interface UseItemSelectorConfig {
   onSelect?: (id: string, item: any) => void;
   initialSelected?: string;
 }
-
-import {useDefaultHome} from './home/useDefaultHome';
 
 export const useItemSelector = ({
   type,
@@ -31,7 +30,15 @@ export const useItemSelector = ({
   useEffect(() => {
     setSelectedId(initialSelected);
   }, [initialSelected]);
-  const {selectedHomeId} = useDefaultHome();
+
+  // Get selectedHomeId from Zustand store directly (without triggering GraphQL queries)
+  // This prevents cascade: useDefaultHome uses cache-and-network which always fires network requests
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
+
   // Query data based on type
   const {data: shoppingListData, loading: shoppingListLoading} =
     useGetShoppingListsQuery({

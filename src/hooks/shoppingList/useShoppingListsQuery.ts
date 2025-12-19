@@ -9,30 +9,32 @@ export type ShoppingListFromQuery = GetShoppingListsQuery['shoppingLists'][numbe
  * useShoppingListsQuery - Query shopping lists with smart caching
  *
  * Single responsibility:
- * - Fetch shopping lists for a given home
- * - Use cache-first policy (fetches only if cache empty, no re-fetch on list switch)
+ * - Fetch all user's shopping lists (independent of home)
+ * - Use cache-and-network for best UX (instant cache display + fresh data)
  * - Provide fetchLists() for manual refresh (e.g., when selector opens)
  * - Provide stable lists array with fallback to previous data
  *
- * PERFORMANCE: Uses cache-first to prevent re-fetching when switching between lists.
- * The query only depends on homeId, not the selected list, so switching lists
- * within the same home uses cached data.
+ * PERFORMANCE: Uses hardcoded fetchPolicy to prevent query cascade.
+ * - cache-and-network: Shows cached data immediately, fetches fresh in background
+ * - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
+ * - No homeId: shopping lists are independent of homes
+ * - Offline: errorPolicy returns cached data when network fails
  *
  * Note: This is different from useShoppingListQuery which fetches items for a single list.
  * This hook fetches the list of shopping lists.
  */
-export function useShoppingListsQuery(homeId: string | null) {
+export function useShoppingListsQuery() {
   const { isFocused } = useAppNavigation();
 
-  // PERFORMANCE: cache-first fetches only if cache is empty
-  // - First visit: fetches from network (cache empty)
-  // - Subsequent visits/list switches: uses cache (no network request)
-  // - nextFetchPolicy maintains cache-first after initial fetch
+  // PERFORMANCE: Hardcoded policy prevents cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - nextFetchPolicy: Prevents re-fetches on subsequent renders/list switches
+  // - No homeId: shopping lists are independent of homes
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListsQuery({
-      variables: { homeId: homeId || undefined },
-      fetchPolicy: 'cache-first',
-      nextFetchPolicy: 'cache-first', // Prevent Apollo from switching policies
+      variables: {},
+      fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
 

@@ -6,8 +6,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from '#components';
 import { Header } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton';
-import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
-import { useGetHomeQuery } from '#generated';
+import { usePantryManagement, useAppNavigation } from '#hooks';
+import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { commonStyles } from '#styles';
 
 export const ExpiringItems: React.FC = () => {
@@ -15,13 +15,10 @@ export const ExpiringItems: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { theme } = useUnistyles();
 
-  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const { data: homeData } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId,
-  });
+  // Use cache-only hook for pantry resolution (no network requests)
+  // This prevents query cascade when switching between pantry screens
+  const { pantry } = useCurrentPantry();
 
-  const pantry = getDefaultPantry(homeData);
   const { items, loading, refetch } = usePantryManagement(pantry?.id);
 
   const expiringItems = useMemo(() => {

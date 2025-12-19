@@ -2,7 +2,6 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useGetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
-import { useOfflineAwareFetchPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 /**
  * useShoppingListItemsQuery - Query shopping list items with focus-aware fetching
@@ -20,28 +19,24 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   const shouldSkip = !listId || isLoggedOut;
 
-  // Dynamic fetch policy based on network status
-  // Online: cache-first (use cache if available, prevents duplicate fetches on navigation)
-  // Offline: cache-only (stops network thrashing and loading flickers)
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-first: Uses cache if available, prevents duplicate fetches on navigation
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders/tab switches
+  // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
   // Note: Pull-to-refresh uses explicit refetch() for fresh data
-  const fetchPolicy = useOfflineAwareFetchPolicy(
-    'cache-first',
-    'cache-only',
-  );
 
   // Watch cache for updates from mutations and subscriptions
   // Uses GetShoppingList with itemsConnection as single source of truth
   // PERFORMANCE: Include previousData to prevent UI flash during refetch
-  // Note: notifyOnNetworkStatusChange removed - offline handled by useOfflineAwareFetchPolicy
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListQuery({
       variables: {
         id: listId ?? '',
       },
       skip: shouldSkip,
-      fetchPolicy,
-      nextFetchPolicy: 'cache-first', // After first fetch, use cache-first to prevent refetch on tab switch
-      errorPolicy: 'all', // Return both data and errors for better debugging
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'all',
     });
 
   // Track previous listId to detect list switches

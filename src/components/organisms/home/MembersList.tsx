@@ -40,8 +40,8 @@ export const MembersList: React.FC<MembersListProps> = ({
   const currentUser = useStore(state => state.user);
   const { theme } = useUnistyles();
 
-  // Filter out accepted invites since they are now members
-  const pendingInvites = invites.filter(invite => invite.status !== 'ACCEPTED');
+  // API now only returns pending invites, so no client-side filtering needed
+  const pendingInvites = invites;
 
   if (
     (!members || members.length === 0) &&

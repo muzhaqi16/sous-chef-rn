@@ -26,7 +26,6 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import { subscriptionService } from '#/services/subscriptions';
 
 // Cache updater utilities for pantry items
@@ -73,8 +72,10 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Explicit validation - only execute query when pantryId is genuinely valid
   const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut;
 
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
+  // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Single source of truth: Apollo cache - now using Connection-based query
   const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
@@ -84,7 +85,8 @@ export function usePantryManagement(pantryId: string | undefined) {
       storageLocationsFirst: 50,
     } : undefined as any,
     skip: !hasValidPantryId, // Query only executes when pantryId is valid
-    fetchPolicy,
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });

@@ -80,9 +80,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const recentItems = recentData?.recentlyDeletedPantryItems ?? [];
 
   // Fetch pantry to get storage locations
+  // PERFORMANCE: Only query when sheet is visible to prevent query from Shopping List screen
   const { data: pantryData } = useGetPantryQuery({
     variables: { id: pantryId ?? '' },
-    skip: !pantryId,
+    skip: !pantryId || !visible,
     fetchPolicy: 'cache-first',
   });
 

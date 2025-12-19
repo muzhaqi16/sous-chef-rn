@@ -12,10 +12,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { SwipeableItem, ScreenHeader } from '#components';
 import { PantryItemSkeleton } from '#components/base/Skeleton';
-import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
-import { useGetHomeQuery, useAddItemToShoppingListMutation } from '#generated';
+import { usePantryManagement, useAppNavigation } from '#hooks';
+import { useAddItemToShoppingListMutation } from '#generated';
+import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { commonStyles } from '#styles';
-import { useAppStore } from '#store/useAppStore';
 
 export const LowStockItems: React.FC = () => {
   const { theme } = useUnistyles();
@@ -24,14 +24,10 @@ export const LowStockItems: React.FC = () => {
 
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const isLoggingOut = useAppStore(state => state.isLoggingOut);
-  const { data: homeData } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId || isLoggingOut,
-  });
+  // Use cache-only hook for pantry resolution (no network requests)
+  // This prevents query cascade when switching between pantry screens
+  const { pantry } = useCurrentPantry();
 
-  const pantry = getDefaultPantry(homeData);
   const { items, loading, refetch } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 

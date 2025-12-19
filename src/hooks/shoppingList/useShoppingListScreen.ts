@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { useShoppingListsQuery } from './useShoppingListsQuery';
 import { useShoppingListSelection } from './useShoppingListSelection';
@@ -11,7 +10,7 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  * useShoppingListScreen - Composition hook for the shopping list screen
  *
  * This is a facade that orchestrates specialized hooks:
- * 1. useShoppingListsQuery - Fetch shopping lists for current home
+ * 1. useShoppingListsQuery - Fetch all user's shopping lists (independent of home)
  * 2. useShoppingListSelection - Handle list selection and auto-select
  * 3. useShoppingListManagement - Manage items for current list
  * 4. useShoppingListTransform - Transform items for UI consumption
@@ -21,11 +20,9 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  */
 export function useShoppingListScreen() {
   const { user } = useAuth();
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
 
-  // 1. Query: Fetch shopping lists for current home
-  const { lists, loading: listsLoading, isFocused } =
-    useShoppingListsQuery(selectedHomeId);
+  // 1. Query: Fetch all user's shopping lists (independent of home)
+  const { lists, loading: listsLoading, isFocused } = useShoppingListsQuery();
 
   // 2. Selection: Determine current list with auto-select
   const {

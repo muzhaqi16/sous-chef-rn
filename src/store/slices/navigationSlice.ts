@@ -53,6 +53,9 @@ export interface NavigationState {
   selectedPantryId: string | null;
   selectedShoppingListId: string | null;
 
+  // Home data initialization flag (survives component remounts)
+  hasInitializedHomeData: boolean;
+
   // User-specific navigation states
   userNavigationStates: Record<string, UserNavigationState>;
 
@@ -64,6 +67,7 @@ export interface NavigationState {
   setSelectedHomeId: (id: string | null) => void;
   setSelectedPantryId: (id: string | null) => void;
   setSelectedShoppingListId: (id: string | null) => void;
+  setHasInitializedHomeData: (value: boolean) => void;
   setUserNavigationState: (
     userId: string,
     state: Partial<UserNavigationState>,
@@ -79,6 +83,7 @@ const initialNavigationState = {
   selectedHomeId: null,
   selectedPantryId: null,
   selectedShoppingListId: null,
+  hasInitializedHomeData: false,
   userNavigationStates: {},
   pendingDeepLinkAction: null,
 };
@@ -112,6 +117,12 @@ export const createNavigationSlice: StateCreator<
   setSelectedShoppingListId: id => {
     set(state => {
       state.selectedShoppingListId = id;
+    });
+  },
+
+  setHasInitializedHomeData: value => {
+    set(state => {
+      state.hasInitializedHomeData = value;
     });
   },
 

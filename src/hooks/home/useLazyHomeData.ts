@@ -1,0 +1,64 @@
+import { useCallback, useMemo } from 'react';
+import { useGetHomesLazyQuery, useGetDefaultHomeLazyQuery } from '#generated';
+import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import type { BasicPantryFragment } from '#generated';
+
+/**
+ * useLazyHomeData - Lazy-loads home data only when explicitly requested
+ *
+ * Used in ShoppingListMain for "Move to Pantry" feature.
+ * Prevents unnecessary home queries during shopping list refresh.
+ *
+ * Benefits:
+ * - Eliminates query cascade on shopping list refresh
+ * - Fetches home data only when needed (on-demand)
+ * - Uses cache-first to avoid redundant fetches
+ */
+export function useLazyHomeData() {
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
+
+  const [getHomes, { data: homesData, loading: homesLoading }] = useGetHomesLazyQuery({
+    fetchPolicy: 'cache-first', // Use cache if available
+    errorPolicy: 'ignore',
+  });
+
+  const [getDefaultHome, { loading: defaultHomeLoading }] =
+    useGetDefaultHomeLazyQuery({
+      fetchPolicy: 'cache-first',
+      errorPolicy: 'ignore',
+    });
+
+  // Normalize homes data
+  const homes = useMemo(() => {
+    return normalizeHomes(homesData?.homes ?? []);
+  }, [homesData?.homes]);
+
+  // Get pantries for the current home
+  const pantries = useMemo((): BasicPantryFragment[] => {
+    if (!selectedHomeId || !homes.length) return [];
+    const currentHome = homes.find(h => h.id === selectedHomeId);
+    if (!currentHome) return [];
+    const normalized = normalizeHome(currentHome);
+    return (normalized?.pantries || []) as BasicPantryFragment[];
+  }, [selectedHomeId, homes]);
+
+  // Fetch home data on demand
+  const fetchHomeData = useCallback(async () => {
+    // Only fetch if not already loaded
+    if (!homesData) {
+      await Promise.all([getHomes(), getDefaultHome()]);
+    }
+  }, [homesData, getHomes, getDefaultHome]);
+
+  return {
+    homes,
+    pantries,
+    selectedHomeId,
+    selectedPantryId,
+    loading: homesLoading || defaultHomeLoading,
+    isLoaded: !!homesData,
+    fetchHomeData,
+  };
+}

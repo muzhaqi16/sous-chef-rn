@@ -344,7 +344,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
 
 mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   updatePantryItem(id: $id, input: $input) {
-    ...PantryItemCore
+    ...PantryItemFragment
   }
 }
 
@@ -437,7 +437,7 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    ...PantryItemCore
+    ...PantryItemFragment
   }
 }
 
