@@ -77,6 +77,8 @@ export function useAppNavigation() {
         }),
       pantryItem: (params: any) => navigate('PantryItem', params),
       pantryItemDetail: (params: any) => navigate('PantryItemDetail', params),
+      nutritionScreen: (params: {itemId: string; itemName: string; nutritions: unknown; actualServingGrams?: number}) =>
+        navigate('NutritionScreen', params),
       shoppingListMain: () =>
         navigate('Home', {
           screen: 'ShoppingList',

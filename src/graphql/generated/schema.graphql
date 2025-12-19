@@ -638,6 +638,38 @@ input BanUserInput {
   userId: ID!
 }
 
+type BatchOperationSummary {
+  created: Int!
+  executionTime: Float!
+  failed: Int!
+  successful: Int!
+  total: Int!
+  updated: Int!
+}
+
+input BatchUpsertItemInput {
+  externalId: String!
+  externalType: String
+  itemData: CreateItemInput!
+  source: ExternalSource!
+  sourceData: JSON
+}
+
+type BatchUpsertItemResult {
+  created: Boolean
+  error: String
+  externalId: String!
+  item: Item
+  mapping: ExternalSourceMapping
+  source: ExternalSource!
+  success: Boolean!
+}
+
+type BatchUpsertItemsResponse {
+  results: [BatchUpsertItemResult!]!
+  summary: BatchOperationSummary!
+}
+
 scalar BigInt
 
 """
@@ -3804,6 +3836,9 @@ type Mutation {
   approveItem(itemId: ID!): Item!
   archiveShoppingList(id: ID!): ShoppingList!
   banUser(input: BanUserInput!): UserModeration!
+  batchUpsertItemsByExternalSource(
+    items: [BatchUpsertItemInput!]!
+  ): BatchUpsertItemsResponse!
   """
   Create multiple items at once
   """
@@ -4369,6 +4404,7 @@ type Mutation {
   updateUnit(id: ID!, input: UpdateUnitInput!): Unit!
   updateUser(id: ID!, input: UpdateUserInput!): User!
   updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
+  upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   upsertItemByExternalSource(
     externalId: String!
     externalType: String
@@ -5743,7 +5779,7 @@ type Recipe {
   cookTimeMinutes: Int
   cookingLogs: [CookingLog!]!
   createdAt: DateTime!
-  createdBy: User!
+  createdBy: User
   cuisine: String
   deletedAt: DateTime
   description: String
@@ -8058,6 +8094,11 @@ union UpdateUserSettingsResult =
   | ValidationError
 
 scalar Upload
+
+type UpsertExternalRecipeResult {
+  created: Boolean!
+  recipe: Recipe!
+}
 
 type UpsertItemResult {
   created: Boolean!

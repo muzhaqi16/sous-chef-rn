@@ -255,6 +255,41 @@ export type BanUserInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type BatchOperationSummary = {
+  __typename?: 'BatchOperationSummary';
+  created: Scalars['Int']['output'];
+  executionTime: Scalars['Float']['output'];
+  failed: Scalars['Int']['output'];
+  successful: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type BatchUpsertItemInput = {
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  itemData: CreateItemInput;
+  source: ExternalSource;
+  sourceData?: InputMaybe<Scalars['JSON']['input']>;
+};
+
+export type BatchUpsertItemResult = {
+  __typename?: 'BatchUpsertItemResult';
+  created: Maybe<Scalars['Boolean']['output']>;
+  error: Maybe<Scalars['String']['output']>;
+  externalId: Scalars['String']['output'];
+  item: Maybe<Item>;
+  mapping: Maybe<ExternalSourceMapping>;
+  source: ExternalSource;
+  success: Scalars['Boolean']['output'];
+};
+
+export type BatchUpsertItemsResponse = {
+  __typename?: 'BatchUpsertItemsResponse';
+  results: Array<BatchUpsertItemResult>;
+  summary: BatchOperationSummary;
+};
+
 /**
  * Brand type for product manufacturers and retailers
  * Cache: 1 hour - brand catalog is relatively stable
@@ -3330,6 +3365,7 @@ export type Mutation = {
   approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
+  batchUpsertItemsByExternalSource: BatchUpsertItemsResponse;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
   /** Delete multiple items */
@@ -3654,6 +3690,7 @@ export type Mutation = {
   updateUnit: Unit;
   updateUser: User;
   updateUserAddress: UserAddress;
+  upsertExternalRecipe: UpsertExternalRecipeResult;
   upsertItemByExternalSource: UpsertItemResult;
   /** Add or update item-specific unit conversion */
   upsertItemUnitConversion: ItemUnitConversion;
@@ -3733,6 +3770,10 @@ export type MutationArchiveShoppingListArgs = {
 
 export type MutationBanUserArgs = {
   input: BanUserInput;
+};
+
+export type MutationBatchUpsertItemsByExternalSourceArgs = {
+  items: Array<BatchUpsertItemInput>;
 };
 
 export type MutationBulkCreateItemsArgs = {
@@ -4686,6 +4727,10 @@ export type MutationUpdateUserArgs = {
 
 export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
+};
+
+export type MutationUpsertExternalRecipeArgs = {
+  input: CreateRecipeInput;
 };
 
 export type MutationUpsertItemByExternalSourceArgs = {
@@ -6513,7 +6558,7 @@ export type Recipe = {
   cookTimeMinutes: Maybe<Scalars['Int']['output']>;
   cookingLogs: Array<CookingLog>;
   createdAt: Scalars['DateTime']['output'];
-  createdBy: User;
+  createdBy: Maybe<User>;
   cuisine: Maybe<Scalars['String']['output']>;
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   description: Maybe<Scalars['String']['output']>;
@@ -8730,6 +8775,12 @@ export type UpdateUserSettingsResult =
   | UserSettings
   | ValidationError;
 
+export type UpsertExternalRecipeResult = {
+  __typename?: 'UpsertExternalRecipeResult';
+  created: Scalars['Boolean']['output'];
+  recipe: Recipe;
+};
+
 export type UpsertItemResult = {
   __typename?: 'UpsertItemResult';
   created: Scalars['Boolean']['output'];
@@ -10107,6 +10158,8 @@ export type ShoppingListItemFragment = {
         description: string | null | undefined;
         imageUrl: string | null | undefined;
         netWeight: number | null | undefined;
+        nutritions: any | null | undefined;
+        images: any | null | undefined;
         displayUnit:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
@@ -10513,6 +10566,7 @@ export type ItemFragment = {
   healthBenefits: any | null | undefined;
   allergens: any | null | undefined;
   nutritions: any | null | undefined;
+  images: any | null | undefined;
   metadata: any | null | undefined;
   ingredients: any | null | undefined;
   createdAt: string;
@@ -11089,7 +11143,7 @@ export type RecipeFragment = {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null | undefined;
-  createdBy: { __typename?: 'User' } & BasicUserFragment;
+  createdBy: ({ __typename?: 'User' } & BasicUserFragment) | null | undefined;
   ingredients: Array<
     { __typename?: 'RecipeIngredient' } & RecipeIngredientFragment
   >;
@@ -13226,6 +13280,30 @@ export type CreateRecipeMutation = {
   createRecipe: { __typename?: 'Recipe' } & RecipeFragment;
 };
 
+export type UpsertExternalRecipeMutationVariables = Exact<{
+  input: CreateRecipeInput;
+}>;
+
+export type UpsertExternalRecipeMutation = {
+  __typename?: 'Mutation';
+  upsertExternalRecipe: {
+    __typename?: 'UpsertExternalRecipeResult';
+    created: boolean;
+    recipe: {
+      __typename?: 'Recipe';
+      id: string;
+      name: string;
+      imageUrl: string | null | undefined;
+      externalSource: ExternalSource | null | undefined;
+      externalId: string | null | undefined;
+      servings: number;
+      prepTimeMinutes: number | null | undefined;
+      cookTimeMinutes: number | null | undefined;
+      totalTimeMinutes: number | null | undefined;
+    };
+  };
+};
+
 export type UpdateRecipeMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdateRecipeInput;
@@ -15343,6 +15421,8 @@ export const ShoppingListItemFragmentDoc = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -17680,6 +17760,7 @@ export const ItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -18235,6 +18316,7 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -18683,6 +18765,7 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -19523,6 +19606,7 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -25574,6 +25658,7 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -28068,6 +28153,7 @@ export const GetHomeByJoinCodeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -29265,6 +29351,7 @@ export const CreateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -30441,6 +30528,7 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -40296,6 +40384,7 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -43028,6 +43117,7 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -43671,6 +43761,7 @@ export const DeletePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -44396,6 +44487,7 @@ export const CreatePantryItemUsageDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -45160,6 +45252,7 @@ export const RecordPantryItemWasteDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -45849,6 +45942,7 @@ export const RestockPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -46549,6 +46643,7 @@ export const UpdatePantryItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -47271,6 +47366,7 @@ export const SyncPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -49961,6 +50057,140 @@ export type CreateRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
   CreateRecipeMutation,
   CreateRecipeMutationVariables
 >;
+export const UpsertExternalRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpsertExternalRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'CreateRecipeInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'upsertExternalRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipe' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'externalSource' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'externalId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'servings' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'prepTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cookTimeMinutes' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalTimeMinutes' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'created' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpsertExternalRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  UpsertExternalRecipeMutation,
+  UpsertExternalRecipeMutationVariables
+>;
+
+/**
+ * __useUpsertExternalRecipeMutation__
+ *
+ * To run a mutation, you first call `useUpsertExternalRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpsertExternalRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [upsertExternalRecipeMutation, { data, loading, error }] = useUpsertExternalRecipeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpsertExternalRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpsertExternalRecipeMutation,
+    UpsertExternalRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpsertExternalRecipeMutation,
+    UpsertExternalRecipeMutationVariables
+  >(UpsertExternalRecipeDocument, options);
+}
+export type UpsertExternalRecipeMutationHookResult = ReturnType<
+  typeof useUpsertExternalRecipeMutation
+>;
+export type UpsertExternalRecipeMutationResult =
+  ApolloReactCommon.MutationResult<UpsertExternalRecipeMutation>;
+export type UpsertExternalRecipeMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpsertExternalRecipeMutation,
+    UpsertExternalRecipeMutationVariables
+  >;
 export const UpdateRecipeDocument = {
   kind: 'Document',
   definitions: [
@@ -54279,6 +54509,8 @@ export const GetShoppingListItemDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -56403,6 +56635,8 @@ export const AddItemToShoppingListDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -56982,6 +57216,8 @@ export const UpdateShoppingListItemDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -57652,6 +57888,8 @@ export const MarkItemPurchasedDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -58215,6 +58453,8 @@ export const MoveShoppingListItemDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -59012,6 +59252,8 @@ export const UpdateShoppingListItemQuantityDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -59604,6 +59846,8 @@ export const UpdateShoppingListItemNotesDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -60198,6 +60442,8 @@ export const UpdateShoppingListItemPriorityDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -60949,6 +61195,7 @@ export const MoveShoppingItemToPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
           { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
           { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
           { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
           { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
@@ -61616,6 +61863,8 @@ export const SyncShoppingListItemDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -62430,6 +62679,8 @@ export const SyncMoveShoppingListItemDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },
@@ -63361,6 +63612,8 @@ export const ShoppingListItemsChangedDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'images' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'displayUnit' },

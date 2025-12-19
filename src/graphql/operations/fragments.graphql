@@ -88,6 +88,8 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     description
     imageUrl
     netWeight
+    nutritions
+    images
     displayUnit {
       id
       name
@@ -476,6 +478,7 @@ fragment ItemFragment on Item {
   healthBenefits
   allergens
   nutritions
+  images
   metadata
   ingredients
   createdAt

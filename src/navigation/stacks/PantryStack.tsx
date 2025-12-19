@@ -8,6 +8,7 @@ import {
   CategoryManagement,
   PantrySettings,
   PantryAnalytics,
+  NutritionScreen,
 } from '#screens/pantry';
 
 export type PantryStackParamList = {
@@ -19,6 +20,7 @@ export type PantryStackParamList = {
   CategoryManagement: undefined;
   PantrySettings: {pantryId?: string};
   PantryAnalytics: {pantryId: string};
+  NutritionScreen: {itemId: string; itemName: string; nutritions: unknown; actualServingGrams?: number};
 };
 
 const Stack = createNativeStackNavigator<PantryStackParamList>();
@@ -40,5 +42,6 @@ export const PantryStack = () => (
     <Stack.Screen name="CategoryManagement" component={CategoryManagement} />
     <Stack.Screen name="PantrySettings" component={PantrySettings} />
     <Stack.Screen name="PantryAnalytics" component={PantryAnalytics} />
+    <Stack.Screen name="NutritionScreen" component={NutritionScreen} />
   </Stack.Navigator>
 );

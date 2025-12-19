@@ -251,6 +251,41 @@ export type BanUserInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type BatchOperationSummary = {
+  __typename?: 'BatchOperationSummary';
+  created: Scalars['Int']['output'];
+  executionTime: Scalars['Float']['output'];
+  failed: Scalars['Int']['output'];
+  successful: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type BatchUpsertItemInput = {
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  itemData: CreateItemInput;
+  source: ExternalSource;
+  sourceData?: InputMaybe<Scalars['JSON']['input']>;
+};
+
+export type BatchUpsertItemResult = {
+  __typename?: 'BatchUpsertItemResult';
+  created?: Maybe<Scalars['Boolean']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  externalId: Scalars['String']['output'];
+  item?: Maybe<Item>;
+  mapping?: Maybe<ExternalSourceMapping>;
+  source: ExternalSource;
+  success: Scalars['Boolean']['output'];
+};
+
+export type BatchUpsertItemsResponse = {
+  __typename?: 'BatchUpsertItemsResponse';
+  results: Array<BatchUpsertItemResult>;
+  summary: BatchOperationSummary;
+};
+
 /**
  * Brand type for product manufacturers and retailers
  * Cache: 1 hour - brand catalog is relatively stable
@@ -3326,6 +3361,7 @@ export type Mutation = {
   approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
+  batchUpsertItemsByExternalSource: BatchUpsertItemsResponse;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
   /** Delete multiple items */
@@ -3650,6 +3686,7 @@ export type Mutation = {
   updateUnit: Unit;
   updateUser: User;
   updateUserAddress: UserAddress;
+  upsertExternalRecipe: UpsertExternalRecipeResult;
   upsertItemByExternalSource: UpsertItemResult;
   /** Add or update item-specific unit conversion */
   upsertItemUnitConversion: ItemUnitConversion;
@@ -3729,6 +3766,10 @@ export type MutationArchiveShoppingListArgs = {
 
 export type MutationBanUserArgs = {
   input: BanUserInput;
+};
+
+export type MutationBatchUpsertItemsByExternalSourceArgs = {
+  items: Array<BatchUpsertItemInput>;
 };
 
 export type MutationBulkCreateItemsArgs = {
@@ -4682,6 +4723,10 @@ export type MutationUpdateUserArgs = {
 
 export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
+};
+
+export type MutationUpsertExternalRecipeArgs = {
+  input: CreateRecipeInput;
 };
 
 export type MutationUpsertItemByExternalSourceArgs = {
@@ -6509,7 +6554,7 @@ export type Recipe = {
   cookTimeMinutes?: Maybe<Scalars['Int']['output']>;
   cookingLogs: Array<CookingLog>;
   createdAt: Scalars['DateTime']['output'];
-  createdBy: User;
+  createdBy?: Maybe<User>;
   cuisine?: Maybe<Scalars['String']['output']>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
@@ -8726,6 +8771,12 @@ export type UpdateUserSettingsResult =
   | UserSettings
   | ValidationError;
 
+export type UpsertExternalRecipeResult = {
+  __typename?: 'UpsertExternalRecipeResult';
+  created: Scalars['Boolean']['output'];
+  recipe: Recipe;
+};
+
 export type UpsertItemResult = {
   __typename?: 'UpsertItemResult';
   created: Scalars['Boolean']['output'];
@@ -10261,6 +10312,8 @@ export type ShoppingListItemFragmentFragment = {
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
         netWeight?: number | null | undefined;
+        nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         displayUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
@@ -10749,6 +10802,7 @@ export type ItemFragmentFragment = {
   healthBenefits?: any | null | undefined;
   allergens?: any | null | undefined;
   nutritions?: any | null | undefined;
+  images?: any | null | undefined;
   metadata?: any | null | undefined;
   ingredients?: any | null | undefined;
   createdAt: string;
@@ -10964,6 +11018,7 @@ export type PantryItemFragmentFragment = {
     healthBenefits?: any | null | undefined;
     allergens?: any | null | undefined;
     nutritions?: any | null | undefined;
+    images?: any | null | undefined;
     metadata?: any | null | undefined;
     ingredients?: any | null | undefined;
     createdAt: string;
@@ -11273,6 +11328,7 @@ export type PantryFragmentFragment = {
           healthBenefits?: any | null | undefined;
           allergens?: any | null | undefined;
           nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           metadata?: any | null | undefined;
           ingredients?: any | null | undefined;
           createdAt: string;
@@ -11969,6 +12025,7 @@ export type HomeFragmentFragment = {
                 healthBenefits?: any | null | undefined;
                 allergens?: any | null | undefined;
                 nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 metadata?: any | null | undefined;
                 ingredients?: any | null | undefined;
                 createdAt: string;
@@ -12262,7 +12319,10 @@ export type RecipeFragmentFragment = {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null | undefined;
-  createdBy: { __typename?: 'User'; id: string; email: string };
+  createdBy?:
+    | { __typename?: 'User'; id: string; email: string }
+    | null
+    | undefined;
   ingredients: Array<{
     __typename?: 'RecipeIngredient';
     id: string;
@@ -12515,6 +12575,7 @@ export type GetHomeQuery = {
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
                       nutritions?: any | null | undefined;
+                      images?: any | null | undefined;
                       metadata?: any | null | undefined;
                       ingredients?: any | null | undefined;
                       createdAt: string;
@@ -13300,6 +13361,7 @@ export type GetHomeByJoinCodeQuery = {
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
                       nutritions?: any | null | undefined;
+                      images?: any | null | undefined;
                       metadata?: any | null | undefined;
                       ingredients?: any | null | undefined;
                       createdAt: string;
@@ -13714,6 +13776,7 @@ export type CreateHomeMutation = {
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
                   nutritions?: any | null | undefined;
+                  images?: any | null | undefined;
                   metadata?: any | null | undefined;
                   ingredients?: any | null | undefined;
                   createdAt: string;
@@ -14127,6 +14190,7 @@ export type UpdateHomeMutation = {
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
                   nutritions?: any | null | undefined;
+                  images?: any | null | undefined;
                   metadata?: any | null | undefined;
                   ingredients?: any | null | undefined;
                   createdAt: string;
@@ -15851,6 +15915,7 @@ export type GetPantryItemQuery = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -16423,6 +16488,7 @@ export type UpdatePantryItemMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -16628,6 +16694,7 @@ export type DeletePantryItemMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -16851,6 +16918,7 @@ export type CreatePantryItemUsageMutation = {
         healthBenefits?: any | null | undefined;
         allergens?: any | null | undefined;
         nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         metadata?: any | null | undefined;
         ingredients?: any | null | undefined;
         createdAt: string;
@@ -17071,6 +17139,7 @@ export type RecordPantryItemWasteMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -17284,6 +17353,7 @@ export type RestockPantryItemMutation = {
         healthBenefits?: any | null | undefined;
         allergens?: any | null | undefined;
         nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         metadata?: any | null | undefined;
         ingredients?: any | null | undefined;
         createdAt: string;
@@ -17496,6 +17566,7 @@ export type UpdatePantryItemQuantityMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -17709,6 +17780,7 @@ export type SyncPantryItemMutation = {
             healthBenefits?: any | null | undefined;
             allergens?: any | null | undefined;
             nutritions?: any | null | undefined;
+            images?: any | null | undefined;
             metadata?: any | null | undefined;
             ingredients?: any | null | undefined;
             createdAt: string;
@@ -18298,7 +18370,10 @@ export type GetRecipeQuery = {
         createdAt: string;
         updatedAt: string;
         deletedAt?: string | null | undefined;
-        createdBy: { __typename?: 'User'; id: string; email: string };
+        createdBy?:
+          | { __typename?: 'User'; id: string; email: string }
+          | null
+          | undefined;
         ingredients: Array<{
           __typename?: 'RecipeIngredient';
           id: string;
@@ -18373,7 +18448,10 @@ export type CreateRecipeMutation = {
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null | undefined;
-    createdBy: { __typename?: 'User'; id: string; email: string };
+    createdBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
     ingredients: Array<{
       __typename?: 'RecipeIngredient';
       id: string;
@@ -18399,6 +18477,30 @@ export type CreateRecipeMutation = {
         | null
         | undefined;
     }>;
+  };
+};
+
+export type UpsertExternalRecipeMutationVariables = Exact<{
+  input: CreateRecipeInput;
+}>;
+
+export type UpsertExternalRecipeMutation = {
+  __typename?: 'Mutation';
+  upsertExternalRecipe: {
+    __typename?: 'UpsertExternalRecipeResult';
+    created: boolean;
+    recipe: {
+      __typename?: 'Recipe';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+      externalSource?: ExternalSource | null | undefined;
+      externalId?: string | null | undefined;
+      servings: number;
+      prepTimeMinutes?: number | null | undefined;
+      cookTimeMinutes?: number | null | undefined;
+      totalTimeMinutes?: number | null | undefined;
+    };
   };
 };
 
@@ -18447,7 +18549,10 @@ export type UpdateRecipeMutation = {
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null | undefined;
-    createdBy: { __typename?: 'User'; id: string; email: string };
+    createdBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
     ingredients: Array<{
       __typename?: 'RecipeIngredient';
       id: string;
@@ -19460,6 +19565,8 @@ export type GetShoppingListItemQuery = {
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
               netWeight?: number | null | undefined;
+              nutritions?: any | null | undefined;
+              images?: any | null | undefined;
               displayUnit?:
                 | {
                     __typename?: 'Unit';
@@ -20045,6 +20152,8 @@ export type AddItemToShoppingListMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20262,6 +20371,8 @@ export type UpdateShoppingListItemMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20488,6 +20599,8 @@ export type MarkItemPurchasedMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20704,6 +20817,8 @@ export type MoveShoppingListItemMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20956,6 +21071,8 @@ export type UpdateShoppingListItemQuantityMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21174,6 +21291,8 @@ export type UpdateShoppingListItemNotesMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21392,6 +21511,8 @@ export type UpdateShoppingListItemPriorityMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21639,6 +21760,7 @@ export type MoveShoppingItemToPantryMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -21832,6 +21954,8 @@ export type SyncShoppingListItemMutation = {
                 description?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 displayUnit?:
                   | {
                       __typename?: 'Unit';
@@ -22122,6 +22246,8 @@ export type SyncMoveShoppingListItemMutation = {
                 description?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 displayUnit?:
                   | {
                       __typename?: 'Unit';
@@ -22470,6 +22596,8 @@ export type ShoppingListItemsChangedSubscription = {
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
                     netWeight?: number | null | undefined;
+                    nutritions?: any | null | undefined;
+                    images?: any | null | undefined;
                     displayUnit?:
                       | {
                           __typename?: 'Unit';

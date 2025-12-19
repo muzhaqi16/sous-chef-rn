@@ -79,6 +79,23 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
   }
 }
 
+mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
+  upsertExternalRecipe(input: $input) {
+    recipe {
+      id
+      name
+      imageUrl
+      externalSource
+      externalId
+      servings
+      prepTimeMinutes
+      cookTimeMinutes
+      totalTimeMinutes
+    }
+    created
+  }
+}
+
 mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
   updateRecipe(id: $id, input: $input) {
     ...RecipeFragment
