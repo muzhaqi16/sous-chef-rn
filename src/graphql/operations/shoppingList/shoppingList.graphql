@@ -93,6 +93,21 @@ query GetShoppingLists($homeId: String) {
     home {
       id
       name
+      membersConnection(first: 10) {
+        edges {
+          node {
+            role
+            user {
+              id
+              email
+              profile {
+                displayName
+                avatar
+              }
+            }
+          }
+        }
+      }
     }
     ownerships {
       id
@@ -219,6 +234,11 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     metadata
     createdAt
     updatedAt
+    homeId
+    home {
+      id
+      name
+    }
     itemsConnection(first: 25) {
       edges {
         node {
@@ -409,14 +429,21 @@ mutation ToggleShoppingListItemPurchased(
     purchased: $purchased
     version: $version
   ) {
-    # Use minimal fields matching server response to avoid cache warnings
+    # Request all quantity-related fields to ensure cache is updated correctly
+    # when unmarking items as purchased (server resets purchasedQuantity, etc.)
     id
     itemName
     quantity
+    quantityInput
+    normalizedQuantity
     purchaseInfo {
       isPurchased
+      purchasedQuantity
+      purchasedPrice
+      purchaseDate
     }
     updatedAt
+    version
     category
     unitName
     unit {
@@ -683,24 +710,5 @@ subscription ShoppingListStatusChanged($listId: ID!) {
     }
     userId
     timestamp
-  }
-}
-
-subscription ShoppingListItemAdded($shoppingListId: ID!) {
-  shoppingListItemAdded(shoppingListId: $shoppingListId) {
-    ...ShoppingListItemFragment
-  }
-}
-
-subscription ShoppingListItemUpdated($shoppingListId: ID!) {
-  shoppingListItemUpdated(shoppingListId: $shoppingListId) {
-    ...ShoppingListItemFragment
-  }
-}
-
-subscription ShoppingListItemRemoved($shoppingListId: ID!) {
-  shoppingListItemRemoved(shoppingListId: $shoppingListId) {
-    id
-    itemName
   }
 }

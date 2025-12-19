@@ -29,7 +29,6 @@ import {
   createRemoveFromQueryFieldUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 // Cache updater utilities for homes
 const addToHomesCache = createAddToQueryFieldUpdater('homes');
@@ -44,13 +43,15 @@ export function useHomeManagement() {
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
+  // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   const { data, loading, error, refetch } = useGetHomesQuery({
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   const {
@@ -58,9 +59,9 @@ export function useHomeManagement() {
     loading: loadingDefaultHome,
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
@@ -407,9 +408,10 @@ export function useHomeManagement() {
   // Helper functions using CRUD utilities
   const createHomeOperation = createAddOperation({
     mutation: createHomeMutation,
-    transformInput: (input: { name: string; createDefaultPantry?: boolean }) => ({
+    transformInput: (input: { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean }) => ({
       name: input.name.trim(),
       createDefaultPantry: input.createDefaultPantry ?? true,
+      allowJoinCode: input.allowJoinCode ?? true,
     }),
     validateInput: (input: { name: string }) => {
       if (!input.name?.trim()) {
@@ -423,11 +425,11 @@ export function useHomeManagement() {
 
   // Wrapper to support both string and object signatures
   const createHome = async (
-    nameOrInput: string | { name: string; createDefaultPantry?: boolean },
+    nameOrInput: string | { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean },
   ) => {
     const input =
       typeof nameOrInput === 'string'
-        ? { name: nameOrInput, createDefaultPantry: true }
+        ? { name: nameOrInput, createDefaultPantry: true, allowJoinCode: true }
         : nameOrInput;
     return createHomeOperation(input);
   };

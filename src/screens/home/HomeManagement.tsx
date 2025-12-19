@@ -45,6 +45,7 @@ export const HomeManagement: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [homeName, setHomeName] = useState('');
+  const [allowJoinCode, setAllowJoinCode] = useState(true);
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
@@ -118,9 +119,10 @@ export const HomeManagement: React.FC = () => {
   const handleCreateHome = async () => {
     if (!homeName.trim()) return;
 
-    const result = await createHome(homeName);
+    const result = await createHome({ name: homeName, allowJoinCode });
     if (result) {
       setHomeName('');
+      setAllowJoinCode(true);
       setShowCreateForm(false);
     }
   };
@@ -128,6 +130,7 @@ export const HomeManagement: React.FC = () => {
   const handleCancelCreate = () => {
     setShowCreateForm(false);
     setHomeName('');
+    setAllowJoinCode(true);
     setJoinCode('');
     setMode('create');
   };
@@ -335,6 +338,8 @@ export const HomeManagement: React.FC = () => {
                 isVisible={true}
                 homeName={homeName}
                 onHomeNameChange={setHomeName}
+                allowJoinCode={allowJoinCode}
+                onAllowJoinCodeChange={setAllowJoinCode}
                 onSubmit={handleCreateHome}
                 onCancel={handleCancelCreate}
                 isCreating={creating}

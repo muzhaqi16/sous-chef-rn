@@ -6931,35 +6931,25 @@ type Subscription {
   memberLeft(homeId: ID!): MembershipUpdatePayload!
   membershipRoleChanged(homeId: ID!): MembershipRoleChangedPayload!
   membershipUpdated(homeId: ID): MembershipUpdatePayload!
-  myMembershipUpdated: MembershipUpdatePayload!
   myShoppingListsUpdated: ShoppingListUpdatedPayload
-  notificationByType(type: NotificationType!): NotificationPayload!
   notificationReceived: NotificationPayload!
   notificationUpdated: NotificationPayload!
-  pantryActivityAdded(pantryId: ID!): PantryActivity!
   pantryExpiringItemsAlert(pantryId: ID!): PantryExpiringItemsAlertPayload!
   pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload!
   pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): PantryLowStockAlertPayload!
   pantryUpdated(pantryId: ID!): PantryUpdatedPayload!
   pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload!
-  purchaseCreated(userId: ID): Purchase!
-  purchaseDeleted(userId: ID): Purchase!
-  purchaseUpdated(userId: ID): Purchase!
   riskyLoginAlerts(userId: ID!): LoginHistory!
   shoppingListCollaboratorsChanged(
     listId: ID!
   ): ShoppingListCollaboratorChangedPayload
-  shoppingListItemAdded(shoppingListId: ID!): ShoppingListItem!
-  shoppingListItemRemoved(shoppingListId: ID!): ShoppingListItem!
-  shoppingListItemUpdated(shoppingListId: ID!): ShoppingListItem!
   shoppingListItemsChanged(listId: ID!): ShoppingListItemChangedPayload
   shoppingListStatusChanged(listId: ID!): ShoppingListStatusChangedPayload
   shoppingListUpdated(listId: ID!): ShoppingListUpdatedPayload
   storeRatingChanged(storeId: ID): Store!
   storeUpdated(storeId: ID): Store!
   suspiciousActivity(userId: ID!): SuspiciousActivity!
-  urgentNotificationReceived: NotificationPayload!
   userActivity(userId: ID): UserActivityPayload!
   userModerationChanged(userId: ID): UserModerationChangedPayload!
   userProfileChanged(userId: ID): UserProfileChangedPayload!

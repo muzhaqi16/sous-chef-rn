@@ -150,7 +150,7 @@ export function useAllPendingInvites(userId?: string) {
           sentAt: invite.sentAt,
           isRead: false,
           requiresAction: true,
-          actionType: 'ACCEPT_HOME_INVITE' as const,
+          actionType: 'ACCEPT_HOME_INVITE',
           actionData: {
             inviteId: invite.id,
             homeId: invite.homeId,

@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation, useHomeDetailManagement } from '#hooks';
@@ -12,6 +7,7 @@ import { commonStyles } from '#styles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { EditableField, NavigationRow } from '#components/molecules';
 import { HomeMembersSection } from '#components/organisms/home';
+import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Icon } from '#utils';
 
@@ -29,9 +25,17 @@ export const HomeDetailScreen: React.FC<{
   const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);
+  const [joinCodeLoading, setJoinCodeLoading] = useState(false);
 
-  const { home, loading, saveName, changeRole, removeMember, revokeInvite } =
-    useHomeDetailManagement(homeId);
+  const {
+    home,
+    loading,
+    saveName,
+    changeRole,
+    removeMember,
+    revokeInvite,
+    toggleJoinCode,
+  } = useHomeDetailManagement(homeId);
 
   // Reset copied state after 2 seconds
   useEffect(() => {
@@ -48,9 +52,18 @@ export const HomeDetailScreen: React.FC<{
     }
   };
 
+  const handleToggleJoinCode = async (enabled: boolean) => {
+    setJoinCodeLoading(true);
+    try {
+      await toggleJoinCode(enabled);
+    } finally {
+      setJoinCodeLoading(false);
+    }
+  };
+
   // Find current user's membership to check permissions
   const currentUserMembership = home?.members?.find(
-    member => member.userId === currentUser?.id
+    member => member.userId === currentUser?.id,
   );
 
   if (loading || !home) {
@@ -92,6 +105,15 @@ export const HomeDetailScreen: React.FC<{
               return null;
             }}
           />
+          <SettingSwitch
+            title="Allow Join Code"
+            description="Let others join this home using a code"
+            value={home.allowJoinCode ?? false}
+            onValueChange={handleToggleJoinCode}
+            disabled={joinCodeLoading}
+            loading={joinCodeLoading}
+            containerStyle={styles.joinCodeSwitch}
+          />
           {home.allowJoinCode && home.joinCode && (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
@@ -105,7 +127,9 @@ export const HomeDetailScreen: React.FC<{
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={20}
-                  color={copied ? theme.colors.success : theme.colors.textPrimary}
+                  color={
+                    copied ? theme.colors.success : theme.colors.textPrimary
+                  }
                   library="Ionicons"
                 />
               </TouchableOpacity>
@@ -162,8 +186,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-    marginTop: theme.spacing.md,
   },
   joinCodeContent: {
     flex: 1,
@@ -181,5 +203,10 @@ const styles = StyleSheet.create(theme => ({
   },
   copyButton: {
     padding: theme.spacing.sm,
+  },
+  joinCodeSwitch: {
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
   },
 }));

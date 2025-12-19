@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { subscriptionService } from '#/services/subscriptions';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
+import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -53,10 +54,15 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
   return (
     <>
-      {/* Only initialize subscriptions when user is authenticated
+      {/* Only initialize data and subscriptions when user is authenticated
           This prevents WebSocket connection attempts without a valid JWT token,
           eliminating "JWT token is required for WebSocket connections" errors on startup */}
-      {isAuthenticated && user?.id && <AuthenticatedSubscriptions userId={user.id} />}
+      {isAuthenticated && user?.id && (
+        <>
+          <AuthenticatedDataProvider userId={user.id} />
+          <AuthenticatedSubscriptions userId={user.id} />
+        </>
+      )}
       {children}
     </>
   );

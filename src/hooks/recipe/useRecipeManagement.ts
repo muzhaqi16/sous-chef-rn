@@ -3,7 +3,6 @@ import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 export interface RecipeFilters {
   category?: RecipeCategory;
@@ -18,8 +17,10 @@ export function useRecipeManagement(filters?: RecipeFilters) {
   const { isLoggedOut } = useAuth();
   const shouldSkip = isLoggedOut;
 
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
+  // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
 
   // Query recipes with Connection pattern
   const { data, loading, error, refetch, fetchMore } = useMyRecipesQuery({
@@ -29,7 +30,8 @@ export function useRecipeManagement(filters?: RecipeFilters) {
       difficulty: filters?.difficulty,
     },
     skip: shouldSkip,
-    fetchPolicy,
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });

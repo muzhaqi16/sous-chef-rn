@@ -86,11 +86,7 @@ export const OnboardingCompleteScreen = () => {
       <Button
         title={isCompleting ? 'Completing Setup...' : 'Get Started'}
         onPress={handleComplete}
-        btnStyle={[
-          styles.completeButton,
-          isCompleting && styles.disabledButton,
-        ]}
-        txtStyle={styles.completeText}
+        variant="primary"
         disabled={isCompleting}
       />
 
@@ -150,21 +146,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     paddingHorizontal: theme.spacing.xl,
     lineHeight: theme.typography.lineHeight.normal,
-  },
-  completeButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  completeText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
   },
   errorContainer: {
     marginTop: theme.spacing.md,

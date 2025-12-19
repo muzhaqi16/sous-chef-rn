@@ -43,11 +43,16 @@ export function useShoppingListSelectorModal({
   const selectorRef = useRef<ItemSelectorRef>(null);
 
   // Manage selector with overlay coordination
-  const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
+  const { handleOpenSelector: baseOpenSelector, handleOverlayOpen, handleOverlayClose } =
     useSelectorManagement({
       selectorRef,
       setOverlayOpen,
     });
+
+  // Open selector - data is already cached from initial mount
+  const handleOpenSelector = useCallback(() => {
+    baseOpenSelector();
+  }, [baseOpenSelector]);
 
   // PERFORMANCE: Memoize render function to prevent recreation
   const renderListItem = useCallback(
@@ -96,12 +101,14 @@ export function useShoppingListSelectorModal({
   );
 
   // PERFORMANCE: Memoize actions array separately
+  // Note: setOverlayOpen(false) called before navigate to ensure overlay closes immediately
   const listActions = useMemo(
     () => [
       {
         icon: 'add',
         label: 'Create New List',
         onPress: () => {
+          setOverlayOpen(false);
           selectorRef.current?.close();
           navigate('ListSettings');
         },
@@ -113,6 +120,7 @@ export function useShoppingListSelectorModal({
               icon: 'share',
               label: 'Share Current List',
               onPress: () => {
+                setOverlayOpen(false);
                 selectorRef.current?.close();
                 navigate('ShareList', { listId: currentListId });
               },
@@ -122,6 +130,7 @@ export function useShoppingListSelectorModal({
               icon: 'settings',
               label: 'List Settings',
               onPress: () => {
+                setOverlayOpen(false);
                 selectorRef.current?.close();
                 navigate('ListSettings', { listId: currentListId });
               },
@@ -130,7 +139,7 @@ export function useShoppingListSelectorModal({
           ]
         : []),
     ],
-    [currentListId, navigate],
+    [currentListId, navigate, setOverlayOpen],
   );
 
   // PERFORMANCE: Combine memoized parts into final config

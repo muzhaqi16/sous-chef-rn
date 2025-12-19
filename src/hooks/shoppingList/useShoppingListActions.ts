@@ -2,12 +2,8 @@ import { useCallback, useRef, useLayoutEffect } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
-  ShoppingListItemFragmentDoc,
   ShoppingListItemDisplayFragmentDoc,
-  useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
-  GetShoppingListDocument,
-  GetShoppingListQuery,
 } from '#generated';
 import { toastService } from '#/services/toastService';
 import {
@@ -37,8 +33,9 @@ interface UseShoppingListActionsOptions {
  * - Toggle purchase status
  * - Delete item
  * - Clear all purchased
- * - Sort order updates
  * - Add item from search
+ *
+ * Note: Sort order updates are handled by useItemReordering (canonical handler)
  */
 export function useShoppingListActions({
   currentListId,
@@ -51,104 +48,6 @@ export function useShoppingListActions({
 }: UseShoppingListActionsOptions) {
   const client = useApolloClient();
   const haptic = useHaptic();
-
-  // Mutations
-  const [moveItem] = useMoveShoppingListItemMutation({
-    errorPolicy: 'all',
-    // Optimistic response for instant UI feedback
-    optimisticResponse: variables => {
-      // Read full item from Apollo cache to get all fragment fields
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: variables.input.itemId,
-      });
-
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (!fullItem) {
-        // Fallback - return minimal item, real mutation will handle errors
-        return {
-          __typename: 'Mutation',
-          moveShoppingListItem: {
-            __typename: 'ShoppingListItem',
-            id: variables.input.itemId,
-            sortOrder: 'a0',
-          },
-        };
-      }
-
-      // Calculate optimistic sortOrder based on afterItemId
-      const afterItem = variables.input.afterItemId
-        ? items.find(item => item.id === variables.input.afterItemId)
-        : null;
-
-      // Use fractional indexing for sortOrder
-      const optimisticSortOrder = afterItem?.sortOrder || fullItem.sortOrder;
-
-      // Return updated item with new sortOrder
-      return {
-        __typename: 'Mutation',
-        moveShoppingListItem: {
-          ...fullItem,
-          sortOrder: optimisticSortOrder,
-          updatedAt: new Date().toISOString(),
-          __typename: 'ShoppingListItem',
-        },
-      };
-    },
-    // Update cache to reflect new order
-    // Uses GetShoppingList.itemsConnection as the cache location
-    update(cache, { data }) {
-      if (!data?.moveShoppingListItem || !currentListId) return;
-
-      try {
-        // Read the current shopping list query with itemsConnection
-        const queryResult = cache.readQuery<GetShoppingListQuery>({
-          query: GetShoppingListDocument,
-          variables: { id: currentListId },
-        });
-
-        if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
-
-        // Update single item with new sortOrder
-        const updatedEdges = queryResult.shoppingList.itemsConnection.edges.map(
-          (edge: any) =>
-            edge.node.id === data.moveShoppingListItem.id
-              ? { ...edge, node: { ...edge.node, sortOrder: data.moveShoppingListItem.sortOrder } }
-              : edge,
-        );
-
-        // Write back to cache
-        cache.writeQuery({
-          query: GetShoppingListDocument,
-          variables: { id: currentListId },
-          data: {
-            shoppingList: {
-              ...queryResult.shoppingList,
-              itemsConnection: {
-                ...queryResult.shoppingList.itemsConnection,
-                edges: updatedEdges,
-              },
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Cache update failed for moveItem:', error);
-      }
-    },
-    onError: error => {
-      console.error('Move item error:', error);
-      const errorMessage =
-        error.message || 'Failed to reorder item. Please try again.';
-      Alert.alert('Error', `Could not reorder item: ${errorMessage}`);
-    },
-  });
 
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
@@ -163,56 +62,6 @@ export function useShoppingListActions({
     updateQuantityRef.current = updateQuantity;
     refetchItemsRef.current = refetchItems;
   }, [updateQuantity, refetchItems]);
-
-  // Sort order update handler
-  const handleSortOrderUpdate = useCallback(
-    async (
-      itemId: string,
-      afterItemId: string | null,
-      beforeItemId: string | null,
-      afterSortOrder: string | null,
-      beforeSortOrder: string | null,
-    ) => {
-      if (!currentListId) return;
-
-      try {
-        // DEFENSIVE CHECK: Detect duplicate sortOrder values
-        if (
-          afterSortOrder !== null &&
-          beforeSortOrder !== null &&
-          afterSortOrder === beforeSortOrder
-        ) {
-          console.error('❌ Duplicate sortOrder detected:', {
-            afterItemId,
-            afterSortOrder,
-            beforeItemId,
-            beforeSortOrder,
-          });
-
-          Alert.alert(
-            'Error',
-            'Item positions are out of sync. Refreshing list...',
-          );
-          await refetchItems();
-          return;
-        }
-
-        await moveItem({
-          variables: {
-            input: {
-              itemId,
-              afterItemId: afterItemId ?? undefined,
-              beforeItemId: beforeItemId ?? undefined,
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Failed to move item:', error);
-        toastService.error('Failed to reorder items');
-      }
-    },
-    [currentListId, moveItem, refetchItems],
-  );
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
@@ -489,9 +338,6 @@ export function useShoppingListActions({
   );
 
   return {
-    // Sort order
-    handleSortOrderUpdate,
-
     // Quantity
     handleIncrementQuantity,
     handleDecrementQuantity,

@@ -27,6 +27,19 @@ export const InviteMemberScreen = () => {
     state => state.selectedShoppingListId,
   );
 
+  // Determine what resources the user has
+  const hasHome = !!selectedHomeId;
+  const hasShoppingList = !!selectedShoppingListId;
+  const hasBoth = hasHome && hasShoppingList;
+  const hasNeither = !hasHome && !hasShoppingList;
+
+  // Determine the default invite type based on available resources
+  const getDefaultInviteType = (): 'home' | 'shopping' | 'both' => {
+    if (hasBoth) return 'both';
+    if (hasHome) return 'home';
+    return 'shopping';
+  };
+
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
@@ -71,7 +84,7 @@ export const InviteMemberScreen = () => {
       {
         id: Date.now().toString(),
         email: trimmedEmail,
-        type: 'both', // Default to inviting to both
+        type: getDefaultInviteType(),
       },
     ]);
     setCurrentEmail('');
@@ -82,6 +95,9 @@ export const InviteMemberScreen = () => {
   };
 
   const toggleInviteType = (id: string) => {
+    // Only allow toggling if user has both resources
+    if (!hasBoth) return;
+
     setInvites(
       invites.map(invite => {
         if (invite.id === id) {
@@ -168,6 +184,12 @@ export const InviteMemberScreen = () => {
   };
 
   const getInviteTypeLabel = (type: 'home' | 'shopping' | 'both') => {
+    // If user only has one resource, show a simpler label
+    if (!hasBoth) {
+      if (hasHome) return '🏠 Home';
+      if (hasShoppingList) return '🛒 Shopping List';
+    }
+
     switch (type) {
       case 'both':
         return '🏠 Home & 🛒 Shopping';
@@ -178,10 +200,48 @@ export const InviteMemberScreen = () => {
     }
   };
 
+  const getSubtitle = () => {
+    if (hasNeither) return 'Create a home or shopping list first to invite others';
+    if (hasBoth) return 'Share your home and shopping lists with others (optional)';
+    if (hasHome) return 'Share your home with others (optional)';
+    return 'Share your shopping list with others (optional)';
+  };
+
+  // If user has neither home nor shopping list, show message and skip button
+  if (hasNeither) {
+    return (
+      <OnBoardingWrapper
+        title="Invite family & friends"
+        subtitle={getSubtitle()}
+        step={5}
+        totalSteps={7}
+        onSkip={() => navigateToNextStep('InviteMembers')}
+      >
+        <View style={styles.container}>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              Nothing to share yet
+            </Text>
+            <Text style={styles.emptyStateSubtext}>
+              You need to create a home or shopping list first to invite others.
+              You can invite people later from settings.
+            </Text>
+          </View>
+        </View>
+
+        <Button
+          title="Continue"
+          onPress={() => navigateToNextStep('InviteMembers')}
+          variant="primary"
+        />
+      </OnBoardingWrapper>
+    );
+  }
+
   return (
     <OnBoardingWrapper
       title="Invite family & friends"
-      subtitle="Share your home and shopping lists with others (optional)"
+      subtitle={getSubtitle()}
       step={5}
       totalSteps={7}
       onSkip={() => navigateToNextStep('InviteMembers')}
@@ -230,10 +290,13 @@ export const InviteMemberScreen = () => {
                     <TouchableOpacity
                       onPress={() => toggleInviteType(invite.id)}
                       style={styles.typeButton}
+                      disabled={!hasBoth}
                     >
                       <Text style={styles.typeText}>
                         {getInviteTypeLabel(invite.type)}
-                        <Text style={styles.typeHint}> (tap to change)</Text>
+                        {hasBoth && (
+                          <Text style={styles.typeHint}> (tap to change)</Text>
+                        )}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -265,8 +328,7 @@ export const InviteMemberScreen = () => {
               }`
         }
         onPress={sendInvites}
-        btnStyle={styles.nextButton}
-        txtStyle={styles.nextText}
+        variant="primary"
         disabled={isInviting || invites.length === 0}
       />
     </OnBoardingWrapper>
@@ -378,17 +440,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     lineHeight: theme.typography.lineHeight.tight,
     textAlign: 'center',
-  },
-  nextButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.sm,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  nextText: {
-    color: theme.colors.white,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
   },
 }));

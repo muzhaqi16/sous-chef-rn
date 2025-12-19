@@ -2,7 +2,6 @@ import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
   useNotificationReceivedSubscription,
-  useUrgentNotificationReceivedSubscription,
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
@@ -265,51 +264,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         );
       }
     },
-    onError: error => {
+    onError: (error: Error) => {
       console.error('❌ [NotificationReceived] Subscription error:', serializeError(error));
       handleError('NotificationReceived', error);
-    },
-  });
-
-  useUrgentNotificationReceivedSubscription({
-    skip: config.skip || !user?.id,
-    onData: ({ data }) => {
-      console.log(
-        '🚨 [UrgentNotification] Raw subscription data received:',
-        data,
-      );
-      if (data.data?.urgentNotificationReceived?.notification) {
-        const rawNotification =
-          data.data.urgentNotificationReceived.notification;
-
-        console.log('🚨 [UrgentNotification] Processing urgent notification:', {
-          type: rawNotification.type,
-          id: rawNotification.id,
-          payload: rawNotification.payload,
-        });
-
-        // Create properly structured notification using helper functions
-        processNotification(
-          {
-            type: rawNotification.type,
-            title: getNotificationTitle(
-              rawNotification.type,
-              rawNotification.payload,
-            ),
-            message: getNotificationMessage(
-              rawNotification.type,
-              rawNotification.payload,
-            ),
-            payload: rawNotification.payload,
-            sentAt: rawNotification.sentAt,
-          },
-          getNotificationCategory(rawNotification.type),
-        );
-      }
-    },
-    onError: error => {
-      console.error('❌ [UrgentNotification] Subscription error:', serializeError(error));
-      handleError('UrgentNotificationReceived', error);
     },
   });
 

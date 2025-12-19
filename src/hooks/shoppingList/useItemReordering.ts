@@ -15,6 +15,7 @@ import {
 interface ShoppingListItem {
   id: string;
   sortOrder?: string | null;
+  version: number;
   [key: string]: any;
 }
 
@@ -69,48 +70,71 @@ export function useItemReordering<T extends ShoppingListItem>(
 
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
-    // Optimistic response for instant UI feedback
-    optimisticResponse: variables => {
-      // Find the moved item
-      const movedItem = items.find(
-        item => item.id === variables.input.itemId,
-      );
-      if (!movedItem) {
-        return { __typename: 'Mutation', moveShoppingListItem: null as any };
-      }
+    // NO optimisticResponse - cache.modify handles instant UI feedback
+    // This avoids "Missing field" warnings from partial fragment spreads
+    // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
 
-      // Calculate optimistic sortOrder using fractional indexing
-      const afterItem = variables.input.afterItemId
-        ? items.find(item => item.id === variables.input.afterItemId)
-        : null;
-      const beforeItem = variables.input.beforeItemId
-        ? items.find(item => item.id === variables.input.beforeItemId)
-        : null;
-
-      // Generate new position between neighbors
-      const optimisticSortOrder = generatePosition(
-        afterItem?.sortOrder ?? null,
-        beforeItem?.sortOrder ?? null,
-      );
-
-      // Return updated item with new sortOrder
-      return {
-        __typename: 'Mutation' as const,
-        moveShoppingListItem: {
-          ...movedItem,
-          sortOrder: optimisticSortOrder,
-          updatedAt: new Date().toISOString(),
-          __typename: 'ShoppingListItem' as const,
-        } as any,
-      };
-    },
-    // Update cache to reflect new order
-    // Uses GetShoppingList.itemsConnection as the cache location
-    update(cache, { data }) {
-      if (!data?.moveShoppingListItem || !listId) return;
+    // Update cache to reflect new order immediately using cache.modify
+    // This provides instant UI feedback without the missing field warnings
+    update(cache, _result, { variables }) {
+      if (!variables?.input?.itemId || !listId) return;
 
       try {
-        // Read the current shopping list query with itemsConnection
+        const itemId = variables.input.itemId;
+        const afterItemId = variables.input.afterItemId;
+        const beforeItemId = variables.input.beforeItemId;
+
+        // Find neighbor sortOrders from current items
+        const afterItem = afterItemId
+          ? items.find(i => i.id === afterItemId)
+          : null;
+        const beforeItem = beforeItemId
+          ? items.find(i => i.id === beforeItemId)
+          : null;
+
+        // Get sortOrder values with duplicate handling
+        let effectiveAfterSortOrder = afterItem?.sortOrder ?? null;
+        let effectiveBeforeSortOrder = beforeItem?.sortOrder ?? null;
+
+        // Handle duplicate sortOrder values gracefully
+        // Instead of blocking, recover by using only afterSortOrder
+        if (
+          effectiveAfterSortOrder !== null &&
+          effectiveBeforeSortOrder !== null &&
+          effectiveAfterSortOrder === effectiveBeforeSortOrder
+        ) {
+          console.warn('⚠️ Duplicate sortOrder in cache.modify, recovering:', {
+            afterItemId,
+            afterSortOrder: effectiveAfterSortOrder,
+            beforeItemId,
+            beforeSortOrder: effectiveBeforeSortOrder,
+          });
+          // Use only afterSortOrder - generate position after the "after" item
+          // Server will correct the order when it responds
+          effectiveBeforeSortOrder = null;
+        }
+
+        // Generate new sortOrder using fractional indexing
+        const newSortOrder = generatePosition(
+          effectiveAfterSortOrder,
+          effectiveBeforeSortOrder,
+        );
+
+        // Directly modify the cached item's sortOrder field
+        // This provides instant UI feedback without fragment validation
+        cache.modify({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+          fields: {
+            sortOrder() {
+              return newSortOrder;
+            },
+            updatedAt() {
+              return new Date().toISOString();
+            },
+          },
+        });
+
+        // Re-sort the itemsConnection edges to reflect new order
         const queryResult = cache.readQuery<GetShoppingListQuery>({
           query: GetShoppingListDocument,
           variables: { id: listId },
@@ -118,20 +142,13 @@ export function useItemReordering<T extends ShoppingListItem>(
 
         if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
 
-        // Create new edges array with updated item sortOrder
-        const updatedEdges = queryResult.shoppingList.itemsConnection.edges.map(
-          (edge: any) =>
-            edge.node.id === data.moveShoppingListItem.id
-              ? { ...edge, node: { ...edge.node, sortOrder: data.moveShoppingListItem.sortOrder } }
-              : edge,
+        // Sort edges by sortOrder (localeCompare matches base62 ordering)
+        const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
+          (a: any, b: any) =>
+            (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
         );
 
-        // Sort edges by sortOrder
-        const sortedEdges = [...updatedEdges].sort((a: any, b: any) =>
-          (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-        );
-
-        // Write back to cache
+        // Write back sorted edges to cache
         cache.writeQuery({
           query: GetShoppingListDocument,
           variables: { id: listId },
@@ -166,31 +183,12 @@ export function useItemReordering<T extends ShoppingListItem>(
       itemId: string,
       afterItemId: string | null,
       beforeItemId: string | null,
-      afterSortOrder: string | null,
-      beforeSortOrder: string | null,
+      _afterSortOrder: string | null,
+      _beforeSortOrder: string | null,
     ) => {
       if (!listId) return;
 
       try {
-        // DEFENSIVE CHECK: Detect duplicate sortOrder values
-        if (
-          afterSortOrder !== null &&
-          beforeSortOrder !== null &&
-          afterSortOrder === beforeSortOrder
-        ) {
-          console.error('❌ Duplicate sortOrder detected:', {
-            afterItemId,
-            afterSortOrder,
-            beforeItemId,
-            beforeSortOrder,
-          });
-          Alert.alert(
-            'Error',
-            'Item positions are out of sync. Please refresh the list.',
-          );
-          return;
-        }
-
         // Find the current item from cache to preserve all fields
         const currentItem = items.find(item => item.id === itemId);
         if (!currentItem) {
@@ -199,7 +197,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         }
 
         // Execute mutation with optimistic response and cache update
-        await moveItem({
+        const result = await moveItem({
           variables: {
             input: {
               itemId,
@@ -207,6 +205,37 @@ export function useItemReordering<T extends ShoppingListItem>(
               beforeItemId: beforeItemId ?? undefined,
             },
           },
+        });
+
+        // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
+        if (result.error) {
+          console.error('MoveShoppingListItem mutation error:', result.error);
+          Alert.alert('Error', result.error.message || 'Failed to reorder item');
+          refetch?.(); // Refetch to restore correct order
+          return;
+        }
+
+        // Check if a real move happened by comparing versions
+        const serverItem = result.data?.moveShoppingListItem;
+        const serverVersion = serverItem?.version;
+        const serverSortOrder = serverItem?.sortOrder;
+        const originalVersion = currentItem.version;
+
+        if (serverVersion === originalVersion) {
+          // No-op move - item was already in correct position
+          console.log('⊘ Move was no-op (item already in position):', {
+            itemId,
+            version: serverVersion,
+          });
+          return;
+        }
+
+        // Real move happened
+        console.log('✓ Sort order updated on server:', {
+          itemId,
+          serverSortOrder,
+          oldVersion: originalVersion,
+          newVersion: serverVersion,
         });
 
         // Mark this item as recently reordered to ignore subscription echo

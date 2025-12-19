@@ -11,6 +11,7 @@ import {
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useShoppingListDetails, useAppNavigation, useHomeManagement } from '#/hooks';
+import { useShoppingListsQuery } from '#hooks/shoppingList';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
   useUpdateShoppingListMutation,
@@ -55,6 +56,9 @@ export const ListSettings: React.FC<{
   const { user } = useAuth();
   const { homes } = useHomeManagement();
 
+  // Get lists for finding default list after delete
+  const { lists } = useShoppingListsQuery();
+
   // Check if current user is the owner
   const isOwner =
     listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
@@ -97,17 +101,19 @@ export const ListSettings: React.FC<{
     update(cache, { data }) {
       if (data?.createShoppingList) {
         try {
-          // Read the existing query from cache
+          // Read with empty variables (shopping lists are independent of homes)
           const existingData = cache.readQuery<{
             shoppingLists: ShoppingList[];
           }>({
             query: GetShoppingListsDocument,
+            variables: {},
           });
 
           if (existingData) {
-            // Write the updated data back to cache
+            // Write with same empty variables to update the cache
             cache.writeQuery({
               query: GetShoppingListsDocument,
+              variables: {},
               data: {
                 ...existingData,
                 shoppingLists: [
@@ -199,8 +205,13 @@ export const ListSettings: React.FC<{
           style: 'destructive',
           onPress: async () => {
             await deleteList({ variables: { id: listId! } });
-            // Clear the selected shopping list ID if we just deleted it
-            setSelectedShoppingListId(null);
+
+            // Find next list to select (default list from remaining lists)
+            const remainingLists = lists.filter(l => l.id !== listId);
+            const defaultList = remainingLists.find(l => l.isDefault);
+
+            // Set default list if found, otherwise null to trigger auto-select
+            setSelectedShoppingListId(defaultList?.id || null);
             navigateTo.shoppingListMain();
           },
         },

@@ -59,18 +59,6 @@ subscription NotificationReceived {
   }
 }
 
-subscription NotificationByType($type: NotificationType!) {
-  notificationByType(type: $type) {
-    ...NotificationSubscription
-  }
-}
-
-subscription UrgentNotificationReceived {
-  urgentNotificationReceived {
-    ...NotificationSubscription
-  }
-}
-
 subscription NotificationUpdated {
   notificationUpdated {
     ...NotificationSubscription

@@ -29,12 +29,9 @@ import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet';
 import {
   useUpdateShoppingListItemQuantityMutation,
   ShoppingListItemDisplayFragment,
-  BasicPantryFragment,
 } from '#generated';
-import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useDefaultHome } from '#hooks/home/useDefaultHome';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
@@ -44,6 +41,7 @@ import {
   useMoveToPantry,
   type MoveToPantryInput,
 } from '#/hooks/shoppingList/useMoveToPantry';
+import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
 
 /**
  * Shopping List Main Screen
@@ -85,6 +83,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     currentListId,
     items,
     sortableItems,
+    unpurchasedItems,
+    purchasedItems,
     loading,
     isLoadingInitial,
     searchQuery,
@@ -99,9 +99,15 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     setSelectedShoppingListId,
   } = useShoppingListScreen();
 
+  // --- Reordering Hook (optimistic UI with fractional indexing) ---
+  const { handleSortOrderUpdate } = useItemReordering({
+    listId: currentListId,
+    items,
+    refetch: refetchItems,
+  });
+
   // --- Actions Hook ---
   const {
-    handleSortOrderUpdate,
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,
@@ -161,18 +167,13 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       },
     });
 
-  // Get home and pantries for moving items
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
-  const { selectedHomeId, homes } = useDefaultHome();
-
-  // Get pantries for the current home
-  const pantries = useMemo(() => {
-    if (!selectedHomeId || !homes.length) return [];
-    const currentHome = homes.find(h => h.id === selectedHomeId);
-    if (!currentHome) return [];
-    const normalized = normalizeHome(currentHome);
-    return (normalized?.pantries || []) as BasicPantryFragment[];
-  }, [selectedHomeId, homes]);
+  // Get home and pantries for moving items (lazy loaded on demand)
+  const {
+    pantries,
+    selectedPantryId,
+    isLoaded: homeDataLoaded,
+    fetchHomeData,
+  } = useLazyHomeData();
 
   // Move to pantry hook
   const { moveToPantry } = useMoveToPantry({
@@ -185,8 +186,16 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Handle move to pantry button press
   const handleMoveToPantry = useCallback(
-    (itemId: string) => {
-      if (pantries.length === 0) {
+    async (itemId: string) => {
+      // Fetch home data if not already loaded (lazy load on demand)
+      if (!homeDataLoaded) {
+        await fetchHomeData();
+      }
+
+      // Check pantries after data is loaded
+      // Note: pantries will be populated after fetchHomeData completes and component re-renders
+      // We check pantries.length here but the actual check happens after the async fetch
+      if (pantries.length === 0 && homeDataLoaded) {
         Alert.alert(
           'No Pantry Available',
           'Please create a pantry in your home first.',
@@ -201,7 +210,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         setMoveToPantryModalVisible(true);
       }
     },
-    [pantries.length],
+    [homeDataLoaded, fetchHomeData, pantries.length],
   );
 
   // Handle confirm move to pantry
@@ -279,10 +288,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // PERFORMANCE: Only depend on items.length to avoid re-running on every items change
   useEffect(() => {
     if (items.length > 0 && !swipeHint.hasBeenShown) {
-      const unpurchasedItems = itemsRef.current.filter(
+      const unpurchasedForHint = itemsRef.current.filter(
         (item: any) => !item.purchaseInfo?.isPurchased,
       );
-      if (unpurchasedItems.length > 0) {
+      if (unpurchasedForHint.length > 0) {
         const timer = setTimeout(() => {
           swipeHint.show();
         }, 1500);
@@ -365,6 +374,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   );
 
   // PERFORMANCE: Memoize customListProps to prevent ShoppingListTabs re-renders
+  // Pre-filtered items have stable references from useShoppingListScreen
   const customListProps = useMemo(
     () => ({
       loading: isLoadingInitial,
@@ -378,6 +388,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       onClearAllPurchased: handleClearAllPurchased,
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
+      // Pre-filtered items with stable references (no filtering needed in ShoppingListTabs)
+      unpurchasedItems,
+      purchasedItems,
     }),
     [
       isLoadingInitial,
@@ -391,6 +404,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       handleClearAllPurchased,
       handleSwipeableWillOpen,
       handleSwipeableClose,
+      unpurchasedItems,
+      purchasedItems,
     ],
   );
 
@@ -594,7 +609,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
                       isDefault: iu.isDefault,
                       isPreferred: iu.isPreferred,
                     }))
-                    .filter(u => u.symbol) || [],
+                    .filter(
+                      u =>
+                        u.symbol &&
+                        u.symbol.toLowerCase() !== 'undetermined',
+                    ) || [],
               }
             : null
         }

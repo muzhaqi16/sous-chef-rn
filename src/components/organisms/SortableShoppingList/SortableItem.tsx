@@ -1,6 +1,8 @@
 import React, { useCallback } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import Animated from 'react-native-reanimated';
+import { useItemExitAnimation } from '#/hooks/animations';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
@@ -52,6 +54,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   onSwipeableClose,
 }) => {
   const { theme } = useUnistyles();
+
+  // ANIMATION: Exit animation using reusable hook
+  const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
 
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
@@ -149,20 +154,35 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   // Create checkbox element for marking items as purchased
   // Uses onToggleComplete so animation plays BEFORE mutation moves item
+  // When marking as purchased: slide right + fade out + height collapse
+  // When unmarking: slide left + fade out + height collapse
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase) return null;
 
     return (
       <AnimatedCheckbox
         checked={!!item.isPurchased}
-        onToggleComplete={() => onTogglePurchase(item.id)}
+        onToggleComplete={() => {
+          // Direction: 1 = right (marking purchased), -1 = left (unmarking)
+          const direction = item.isPurchased ? -1 : 1;
+          // triggerExit handles animation + calls onComplete via runOnJS
+          triggerExit(direction, () => {
+            onTogglePurchase(item.id);
+          });
+        }}
         size={28}
       />
     );
-  }, [item.isPurchased, item.id, onTogglePurchase]);
+  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit]);
 
   return (
-    <View style={[styles.container, isActive && styles.activeContainer]}>
+    <Animated.View
+      style={[
+        styles.container,
+        isActive && styles.activeContainer,
+        exitAnimatedStyle,
+      ]}
+    >
       <SwipeableItem
         onPress={() => onItemPress(item.id)}
         onLongPress={
@@ -187,7 +207,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           isPurchased={item.isPurchased}
         />
       </SwipeableItem>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -195,10 +215,8 @@ const styles = StyleSheet.create(theme => ({
   container: {
     ...commonStyles.shadow,
     opacity: 1,
-    // Horizontal margin for shadow visibility
     marginHorizontal: theme.spacing.md,
-    // Vertical margin for consistent spacing between items
-    marginVertical: theme.spacing.sm,
+    marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },
   activeContainer: {

@@ -61,7 +61,7 @@ export const OnBoardingWrapper = ({
   return (
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
-        {onBack && (
+        {onBack ? (
           <TouchableOpacity
             onPress={onBack}
             style={styles.iconButton}
@@ -74,7 +74,15 @@ export const OnBoardingWrapper = ({
               color={theme.colors.primary}
             />
           </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButton} />
         )}
+        {displayTitle && (
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {displayTitle}
+          </Text>
+        )}
+        <View style={styles.iconButton} />
       </View>
 
       {/* Animated Step Indicator */}
@@ -100,7 +108,6 @@ export const OnBoardingWrapper = ({
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {displayTitle && <Text style={styles.title}>{displayTitle}</Text>}
           {displaySubtitle && (
             <Text style={styles.subtitle}>{displaySubtitle}</Text>
           )}
@@ -162,9 +169,18 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   headerContainer: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
   },
   stepsContainer: {
     paddingVertical: theme.spacing.md,
@@ -177,7 +193,6 @@ const styles = StyleSheet.create(theme => ({
     height: theme.sizes.button.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.sm,
   },
   skipButton: {
     marginLeft: 'auto',
@@ -214,13 +229,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-  },
-  title: {
-    fontSize: theme.typography.fontSize['2xl'] + 4,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
   },
   subtitle: {
     fontSize: theme.typography.fontSize.md,

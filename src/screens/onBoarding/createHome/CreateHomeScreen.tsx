@@ -454,15 +454,13 @@ const CreateHomeScreenComponent = () => {
         <Button
           title="Create My Own Home"
           onPress={() => setForceShowCreateForm(true)}
-          btnStyle={styles.createOwnButton}
-          txtStyle={styles.createOwnText}
+          variant="secondary"
         />
 
         <Button
           title="Skip for Now"
           onPress={() => skipToStep('CreateShoppingList')}
-          btnStyle={styles.skipButton}
-          txtStyle={styles.skipText}
+          variant="ghost"
         />
       </OnBoardingWrapper>
     );
@@ -503,8 +501,7 @@ const CreateHomeScreenComponent = () => {
         <Button
           title="Continue"
           onPress={() => navigateToNextStep('CreateHome')}
-          btnStyle={styles.continueButton}
-          txtStyle={styles.continueText}
+          variant="primary"
         />
       </OnBoardingWrapper>
     );
@@ -600,18 +597,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     lineHeight: theme.typography.lineHeight.normal,
   },
-  continueButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.lg,
-  },
-  continueText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.bold,
-  },
   invitesContainer: {
     marginVertical: theme.spacing.lg,
   },
@@ -705,30 +690,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  createOwnButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  createOwnText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  skipButton: {
-    backgroundColor: theme.colors.transparent,
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  skipText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
   },
 }));

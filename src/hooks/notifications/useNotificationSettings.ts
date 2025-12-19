@@ -7,7 +7,6 @@ import {
   ExpirationFrequency,
 } from '#generated';
 import {useErrorHandler} from '#/utils/errorHandling';
-import {useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES} from '#/apollo/policies/offlineFetchPolicies';
 
 export interface NotificationSettings {
   // Core toggles
@@ -48,16 +47,14 @@ export const useNotificationSettings = () => {
   const user = useStore(state => state.user);
   const {handleApolloError} = useErrorHandler();
 
-  // Use offline-aware fetch policy for settings
-  const fetchPolicy = useOfflineAwareFetchPolicy(
-    OFFLINE_FETCH_POLICIES.DETAIL.online,   // 'cache-first' when online
-    OFFLINE_FETCH_POLICIES.DETAIL.offline   // 'cache-only' when offline
-  );
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-first: Uses cache if available for settings
+  // - errorPolicy: 'all' returns cached data when network fails
 
   const {data, loading, error} = useGetNotificationPreferencesQuery({
     skip: !user?.id,
-    fetchPolicy,
-    errorPolicy: 'all', // Return partial data on errors
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'all',
   });
 
   const preferences = data?.myNotificationPreferences;

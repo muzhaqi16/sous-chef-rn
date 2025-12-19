@@ -344,7 +344,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
 
 mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   updatePantryItem(id: $id, input: $input) {
-    ...PantryItemCore
+    ...PantryItemFragment
   }
 }
 
@@ -437,7 +437,7 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    ...PantryItemCore
+    ...PantryItemFragment
   }
 }
 
@@ -506,29 +506,6 @@ subscription PantryUpdated($pantryId: ID!) {
     updatedFields
     userId
     timestamp
-  }
-}
-
-subscription PantryActivityAdded($pantryId: ID!) {
-  pantryActivityAdded(pantryId: $pantryId) {
-    id
-    pantryId
-    userId
-    action
-    description
-    itemName
-    quantity
-    oldValue
-    newValue
-    metadata
-    createdAt
-    user {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
   }
 }
 
