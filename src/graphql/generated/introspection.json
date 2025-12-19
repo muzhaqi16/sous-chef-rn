@@ -13298,6 +13298,18 @@
             "deprecationReason": null
           },
           {
+            "name": "isDefault",
+            "description": "Whether this home is the current user's default home.\nComputed per-user from UserSettings.defaultHomeId.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "isPublic",
             "description": null,
             "args": [],
@@ -36152,7 +36164,11 @@
             "name": "unit",
             "description": null,
             "args": [],
-            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Unit", "ofType": null }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -36160,7 +36176,11 @@
             "name": "unitId",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -40421,8 +40441,8 @@
             "description": null,
             "args": [],
             "type": { "kind": "OBJECT", "name": "Home", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
+            "isDeprecated": true,
+            "deprecationReason": "Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default."
           },
           {
             "name": "getItemConversions",

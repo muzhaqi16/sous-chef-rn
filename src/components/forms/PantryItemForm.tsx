@@ -203,7 +203,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       // In edit mode, only use explicitly set packageWeight (don't fall back to catalog item)
       const weight = item.packageWeight ?? undefined;
       // Tracking unit (for counting items) - from item.unit or item.unitName
-      const trackingUnitSymbol = item.unit?.symbol || item.unitName || '';
+      const trackingUnitSymbol = item.unit.symbol;
       // Weight unit (for physical weight) - only use if explicitly set (don't fall back to catalog)
       const weightUnitSymbol = item.packageWeightUnit?.symbol || '';
       return {
@@ -269,10 +269,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       const item = existingItemData.pantryItem;
       // Tracking unit state
       setTrackingUnit({
-        id: item.unit?.id || null,
-        name: item.unit?.name || null,
-        symbol: item.unit?.symbol || null,
-        type: item.unit?.type || null,
+        id: item.unit.id,
+        name: item.unit.name,
+        symbol: item.unit.symbol,
+        type: item.unit.type ?? null,
       });
       // Weight unit state (separate from tracking unit)
       // In edit mode, only use explicitly set packageWeightUnit (don't fall back to catalog)
@@ -303,23 +303,34 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         setValue('category', item.category.name);
         setSelectedCategoryId(null);
       }
-      if (item.defaultUnit?.symbol) {
+      // Auto-populate weight from catalog
+      // When item has netWeight, the defaultUnit is the WEIGHT unit, not tracking unit
+      if (item.netWeight != null) {
+        setValue('itemWeight', item.netWeight);
+        if (item.defaultUnit?.symbol) {
+          setValue('weightUnit', item.defaultUnit.symbol);
+          setWeightUnit({
+            id: item.defaultUnit.id || null,
+            name: item.defaultUnit.name || null,
+            symbol: item.defaultUnit.symbol || null,
+            type: null,
+          });
+        }
+        // Clear tracking unit - item is tracked by weight, not counted
+        setValue('unit', '');
+        setTrackingUnit({ id: null, name: null, symbol: null, type: null });
+      } else if (item.defaultUnit?.symbol) {
+        // No weight info - defaultUnit is the tracking unit
         setValue('unit', item.defaultUnit.symbol);
-      }
-      if (item.defaultUnit) {
         setTrackingUnit({
           id: item.defaultUnit.id || null,
           name: item.defaultUnit.name || null,
           symbol: item.defaultUnit.symbol || null,
-          type: null, // ItemSuggestion doesn't include unit type
+          type: null,
         });
       }
-      // Auto-populate weight from catalog
-      if (item.netWeight != null) {
-        setValue('itemWeight', item.netWeight);
-      }
     },
-    [setValue],
+    [setValue, setWeightUnit, setTrackingUnit],
   );
 
   const handleCategorySelect = useCallback((categoryId: string | null) => {

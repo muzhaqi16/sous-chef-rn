@@ -846,6 +846,7 @@ fragment HomeDisplay on Home {
   timezone
   version
   updatedAt
+  isDefault
   __typename
   membersConnection(first: 10) {
     edges {

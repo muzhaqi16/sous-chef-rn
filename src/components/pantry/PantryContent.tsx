@@ -37,9 +37,9 @@ interface PantryItem {
   expiresAt?: string | null;
   currentQuantity: number;
   storageState?: string | null;
-  unit?: {
-    symbol?: string;
-  } | null;
+  unit: {
+    symbol: string;
+  };
   // Package weight for display (prioritized over currentQuantity)
   packageWeight?: number | null;
   packageWeightUnit?: {
@@ -198,7 +198,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
 
       // Show count first, weight as fallback
       let quantity: string;
-      const unitSymbol = item.unit?.symbol || item.item?.displayUnit?.symbol || 'pcs';
+      const unitSymbol = item.unit.symbol;
 
       if (item.currentQuantity > 0) {
         quantity = formatQuantityDisplay(item.currentQuantity, unitSymbol);

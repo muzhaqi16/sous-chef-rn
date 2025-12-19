@@ -223,7 +223,7 @@ export const PantryItemDetail: React.FC<{
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.currentQuantity || 1,
-            unitId: data?.pantryItem?.unit?.id || '',
+            unitId: data?.pantryItem?.unit.id ?? '',
             itemName: data?.pantryItem?.item?.name || '',
           },
         },
@@ -379,7 +379,7 @@ export const PantryItemDetail: React.FC<{
                 ? `${item.packageWeight} ${
                     item.packageWeightUnit?.symbol || 'g'
                   }`
-                : `${item.currentQuantity} ${item.unit?.symbol || 'pcs'}`}
+                : `${item.currentQuantity} ${item.unit.symbol}`}
             </Text>
           </View>
         </View>
@@ -397,7 +397,7 @@ export const PantryItemDetail: React.FC<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {item.currentQuantity} {item.unit?.name || item.unitName || 'pcs'}
+              {item.currentQuantity} {item.unit.name}
             </Text>
           </View>
         </View>
@@ -584,7 +584,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit?.symbol || 'pcs'}
+                {item.minQuantity} {item.unit.symbol}
               </Text>
             </View>
           </View>
@@ -604,7 +604,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit?.symbol || 'pcs'}
+                {item.restockQuantity} {item.unit.symbol}
               </Text>
             </View>
           </View>
@@ -625,7 +625,7 @@ export const PantryItemDetail: React.FC<{
                   />
                 </View>
                 <Text style={styles.infoValue}>
-                  {item.initialQuantity} {item.unit?.symbol || 'pcs'}
+                  {item.initialQuantity} {item.unit.symbol}
                 </Text>
               </View>
             </View>

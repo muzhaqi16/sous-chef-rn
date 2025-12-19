@@ -13,6 +13,7 @@ import Animated, {
   FadeInDown,
   FadeOutUp,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -39,7 +40,7 @@ import { commonStyles } from '#/styles';
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
   const { user } = useAuth();
-
+  const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -404,7 +405,7 @@ export const HomeManagement: React.FC = () => {
         {/* Homes List - Virtualized */}
         <Animated.View
           layout={LinearTransition.duration(300)}
-          style={styles.scrollView}
+          style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
           <FlatList
             data={sortedHomes}

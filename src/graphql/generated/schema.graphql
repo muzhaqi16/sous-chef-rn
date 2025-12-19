@@ -2346,6 +2346,11 @@ type Home {
     first: Int
     last: Int
   ): HomeInviteConnection!
+  """
+  Whether this home is the current user's default home.
+  Computed per-user from UserSettings.defaultHomeId.
+  """
+  isDefault: Boolean!
   isPublic: Boolean!
   joinCode: String
   maxMembers: Int
@@ -4857,8 +4862,8 @@ type PantryItem {
   storeId: String
   tags: [String!]!
   totalCost: Float
-  unit: Unit
-  unitId: String
+  unit: Unit!
+  unitId: String!
   unitName: String!
   updatedAt: DateTime
   usageRecords: [PantryItemUsage!]!
@@ -5405,6 +5410,9 @@ type Query {
   getBestDisplayUnit(currentUnitId: ID!, itemId: ID, quantity: Float!): Unit!
   getConvertibleUnits(unitId: ID!): [Unit!]!
   getDefaultHome: Home
+    @deprecated(
+      reason: "Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default."
+    )
   """
   Get all available conversions for an item
   Returns both stored conversions and calculable standard conversions

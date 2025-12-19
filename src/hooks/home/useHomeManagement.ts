@@ -8,7 +8,6 @@ import {
   useInviteToHomeMutation,
   GetHomesDocument,
   MembershipRole,
-  useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
@@ -54,16 +53,6 @@ export function useHomeManagement() {
     errorPolicy: 'ignore',
   });
 
-  const {
-    data: defaultHomeData,
-    loading: loadingDefaultHome,
-    refetch: refetchDefaultHome,
-  } = useGetDefaultHomeQuery({
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
-
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
     errorPolicy: 'all',
 
@@ -76,19 +65,26 @@ export function useHomeManagement() {
       },
     }),
 
-    // Update Apollo cache to keep GetDefaultHomeQuery in sync
-    // Uses existing Home reference from cache to avoid "Missing fields" errors
+    // Update Apollo cache to set isDefault on the correct home
     update: (cache, _result, { variables }) => {
       if (!variables?.homeId) return;
 
-      // Get reference to the Home object already in cache
-      const homeRef = cache.identify({ __typename: 'Home', id: variables.homeId });
-      if (!homeRef) return;
-
-      // Update the getDefaultHome field to point to this Home reference
+      // Update isDefault field on all homes in cache
       cache.modify({
         fields: {
-          getDefaultHome: () => homeRef,
+          homes: (existingHomes = [], { readField }) => {
+            return existingHomes.map((homeRef: any) => {
+              const homeId = readField('id', homeRef);
+              // Update isDefault field on each home
+              cache.modify({
+                id: cache.identify(homeRef),
+                fields: {
+                  isDefault: () => homeId === variables.homeId,
+                },
+              });
+              return homeRef;
+            });
+          },
         },
       });
     },
@@ -100,7 +96,12 @@ export function useHomeManagement() {
     () => normalizeHomes(preservedHomes),
     [preservedHomes],
   );
-  const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
+
+  // Derive default home from isDefault field (no separate query needed)
+  const remoteDefaultHomeId = useMemo(
+    () => preservedHomes?.find((h: any) => h.isDefault)?.id ?? null,
+    [preservedHomes],
+  );
 
   // NOTE: Remote sync logic removed from here to prevent infinite loop
   // The sync from remote → local is now handled ONLY by useDefaultHome hook
@@ -113,7 +114,7 @@ export function useHomeManagement() {
       !hasInitializedDefaultHome.current &&
       !selectedHomeId &&
       !remoteDefaultHomeId &&
-      !loadingDefaultHome &&
+      !loading &&
       homes &&
       homes.length > 0
     ) {
@@ -134,7 +135,7 @@ export function useHomeManagement() {
   }, [
     selectedHomeId,
     remoteDefaultHomeId,
-    loadingDefaultHome,
+    loading,
     homes,
     setDefaultHomeMutation,
     handleApolloError,
@@ -629,8 +630,8 @@ export function useHomeManagement() {
 
   // Memoize the refetch function to prevent unnecessary re-renders
   const memoizedRefetch = useCallback(async () => {
-    await Promise.all([refetch(), refetchDefaultHome()]);
-  }, [refetch, refetchDefaultHome]);
+    await refetch();
+  }, [refetch]);
 
   return {
     // Data
@@ -640,9 +641,8 @@ export function useHomeManagement() {
     defaultHomeId: selectedHomeId,
     remoteDefaultHomeId,
     isSynced,
-    loading: loading || loadingDefaultHome,
-    initialLoading:
-      (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
+    loading,
+    initialLoading: !homes && loading,
     error,
     stats,
     previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
