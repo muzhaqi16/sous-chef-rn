@@ -60,7 +60,6 @@
     "tag:dev": "node scripts/create-tag.mjs dev",
     "tag:stg": "node scripts/create-tag.mjs stg",
     "tag:prod": "node scripts/create-tag.mjs prod",
-    "tag:release": "node scripts/create-tag.mjs release",
     "tag:playstore": "node scripts/create-tag.mjs playstore"
   },
   "dependencies": {
