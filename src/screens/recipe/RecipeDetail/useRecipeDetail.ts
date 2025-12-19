@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Alert } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
-  useCreateRecipeMutation,
   useGetRecipeQuery,
   useCreateShoppingListItemsFromRecipeMutation,
   useCreateShoppingListItemFromRecipeIngredientMutation,
@@ -17,11 +15,9 @@ import {
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAppNavigation } from '#/hooks';
 import { normalizeRecipes } from '#/utils/connectionUtils';
-import {
-  createAddToParentConnectionUpdater,
-  createAddToQueryFieldUpdater,
-} from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
+import { useRecipePreload } from '#/hooks/recipe';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
@@ -79,28 +75,24 @@ export function useRecipeDetail() {
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
 
+  // Recipe preload hook - preloads recipe to backend and handles favorites
+  const {
+    preloading,
+    preloadedRecipe,
+    preloadRecipe,
+    saveRecipeToFavorites,
+    savingToFavorites,
+  } = useRecipePreload({
+    onFavoriteSuccess: () => {
+      setRecipeSaved(true);
+    },
+  });
+
   // Refs for bottom sheets
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
 
   // Mutations
-  const [saveRecipeMutation] = useCreateRecipeMutation({
-    update: (cache, { data }) => {
-      if (!data?.createRecipe) return;
-      try {
-        const addToRecipesCache = createAddToQueryFieldUpdater('recipes');
-        addToRecipesCache(cache, data.createRecipe, { position: 'start' });
-      } catch (err) {
-        console.warn('Cache update failed for saveRecipe:', err);
-      }
-    },
-    onError: err => {
-      console.error('Save recipe error:', err);
-      const errorMessage = err.message || 'Failed to save recipe. Please try again.';
-      Alert.alert('Error', `Could not save recipe: ${errorMessage}`);
-    },
-  });
-
   const [addRecipeToShoppingListMutation] = useCreateShoppingListItemsFromRecipeMutation({
     update: (cache, { data }, { variables }) => {
       if (!data?.createShoppingListItemsFromRecipe || !variables) return;
@@ -122,7 +114,7 @@ export function useRecipeDetail() {
     onError: err => {
       console.error('Add recipe to shopping list error:', err);
       const errorMessage = err.message || 'Failed to add ingredients to shopping list';
-      Alert.alert('Error', `Could not add ingredients: ${errorMessage}`);
+      toastService.error(`Could not add ingredients: ${errorMessage}`);
     },
   });
 
@@ -213,6 +205,12 @@ export function useRecipeDetail() {
             includeNutrition: true,
           });
           setExternalRecipe(data);
+
+          // Preload recipe to backend (fire-and-forget)
+          // Backend handles recipe storage and ingredient enrichment
+          preloadRecipe(data).catch(() => {
+            // Ignore errors - fire and forget
+          });
         } else {
           throw new Error(`Unsupported external source: ${externalSource}`);
         }
@@ -225,7 +223,7 @@ export function useRecipeDetail() {
     };
 
     fetchRecipe();
-  }, [externalSource, externalId, recipeId, backendLoading]);
+  }, [externalSource, externalId, recipeId, backendLoading, preloadRecipe]);
 
   // Normalize recipes data
   const normalizedRecipes = useMemo(
@@ -260,53 +258,17 @@ export function useRecipeDetail() {
     setSaving(true);
 
     try {
-      const ingredients = externalRecipe.extendedIngredients?.map(ing => ({
-        name: ing.name,
-        quantity: ing.amount || 0,
-        spoonacularIngredientId: ing.id,
-        originalString: ing.original,
-        aisle: ing.aisle,
-        consistency: ing.consistency,
-        image: ing.image,
-        metricAmount: ing.measures?.metric?.amount,
-        metricUnit: ing.measures?.metric?.unitShort,
-        usAmount: ing.measures?.us?.amount,
-        usUnit: ing.measures?.us?.unitShort,
-        meta: ing.meta || [],
-      })) || [];
+      // Use the new saveRecipeToFavorites which handles creating the recipe
+      // and adding it to favorites in one flow
+      const result = await saveRecipeToFavorites(externalRecipe);
 
-      const instructions = externalRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
-        number: step.number,
-        step: step.step,
-      })) || [];
-
-      await saveRecipeMutation({
-        variables: {
-          input: {
-            source: externalSource,
-            externalSourceId: externalId,
-            externalSourceUrl: externalRecipe.sourceUrl,
-            externalSourceData: externalRecipe,
-            name: externalRecipe.title,
-            ingredients,
-            instructions: instructions as any,
-            servings: externalRecipe.servings,
-            prepTimeMinutes: externalRecipe.preparationMinutes,
-            cookTimeMinutes: externalRecipe.cookingMinutes,
-            imageUrl: externalRecipe.image,
-            description: externalRecipe.summary?.replace(/<[^>]*>/g, ''),
-            cuisine: externalRecipe.cuisines?.join(', '),
-            caloriesPerServing: externalRecipe.nutrition?.nutrients?.find(
-              n => n.name === 'Calories',
-            )?.amount,
-          },
-        },
-      });
-
-      setRecipeSaved(true);
+      if (result.success) {
+        setRecipeSaved(true);
+        // Toast is shown by the hook
+      }
     } catch (err: any) {
       console.error('Failed to save recipe:', err);
-      toastService.error('Failed to save recipe. Please try again.');
+      // Error toast is shown by the hook
     } finally {
       setSaving(false);
     }
@@ -615,9 +577,13 @@ export function useRecipeDetail() {
     backendRecipe,
 
     // Save state
-    saving,
+    saving: saving || savingToFavorites,
     recipeSaved,
     handleSaveRecipe,
+
+    // Recipe preload state
+    preloading,
+    preloadedRecipe,
 
     // Shopping list
     addingToList,

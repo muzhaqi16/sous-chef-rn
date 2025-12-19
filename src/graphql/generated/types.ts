@@ -251,6 +251,41 @@ export type BanUserInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type BatchOperationSummary = {
+  __typename?: 'BatchOperationSummary';
+  created: Scalars['Int']['output'];
+  executionTime: Scalars['Float']['output'];
+  failed: Scalars['Int']['output'];
+  successful: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+  updated: Scalars['Int']['output'];
+};
+
+export type BatchUpsertItemInput = {
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  itemData: CreateItemInput;
+  source: ExternalSource;
+  sourceData?: InputMaybe<Scalars['JSON']['input']>;
+};
+
+export type BatchUpsertItemResult = {
+  __typename?: 'BatchUpsertItemResult';
+  created?: Maybe<Scalars['Boolean']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  externalId: Scalars['String']['output'];
+  item?: Maybe<Item>;
+  mapping?: Maybe<ExternalSourceMapping>;
+  source: ExternalSource;
+  success: Scalars['Boolean']['output'];
+};
+
+export type BatchUpsertItemsResponse = {
+  __typename?: 'BatchUpsertItemsResponse';
+  results: Array<BatchUpsertItemResult>;
+  summary: BatchOperationSummary;
+};
+
 /**
  * Brand type for product manufacturers and retailers
  * Cache: 1 hour - brand catalog is relatively stable
@@ -1876,6 +1911,11 @@ export type Home = {
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   invitesConnection: HomeInviteConnection;
+  /**
+   * Whether this home is the current user's default home.
+   * Computed per-user from UserSettings.defaultHomeId.
+   */
+  isDefault: Scalars['Boolean']['output'];
   isPublic: Scalars['Boolean']['output'];
   joinCode?: Maybe<Scalars['String']['output']>;
   maxMembers?: Maybe<Scalars['Int']['output']>;
@@ -3321,6 +3361,7 @@ export type Mutation = {
   approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
+  batchUpsertItemsByExternalSource: BatchUpsertItemsResponse;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
   /** Delete multiple items */
@@ -3645,6 +3686,7 @@ export type Mutation = {
   updateUnit: Unit;
   updateUser: User;
   updateUserAddress: UserAddress;
+  upsertExternalRecipe: UpsertExternalRecipeResult;
   upsertItemByExternalSource: UpsertItemResult;
   /** Add or update item-specific unit conversion */
   upsertItemUnitConversion: ItemUnitConversion;
@@ -3724,6 +3766,10 @@ export type MutationArchiveShoppingListArgs = {
 
 export type MutationBanUserArgs = {
   input: BanUserInput;
+};
+
+export type MutationBatchUpsertItemsByExternalSourceArgs = {
+  items: Array<BatchUpsertItemInput>;
 };
 
 export type MutationBulkCreateItemsArgs = {
@@ -4679,6 +4725,10 @@ export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
 };
 
+export type MutationUpsertExternalRecipeArgs = {
+  input: CreateRecipeInput;
+};
+
 export type MutationUpsertItemByExternalSourceArgs = {
   externalId: Scalars['String']['input'];
   externalType?: InputMaybe<Scalars['String']['input']>;
@@ -5183,8 +5233,8 @@ export type PantryItem = {
   storeId?: Maybe<Scalars['String']['output']>;
   tags: Array<Scalars['String']['output']>;
   totalCost?: Maybe<Scalars['Float']['output']>;
-  unit?: Maybe<Unit>;
-  unitId?: Maybe<Scalars['String']['output']>;
+  unit: Unit;
+  unitId: Scalars['String']['output'];
   unitName: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
   usageRecords: Array<PantryItemUsage>;
@@ -5679,6 +5729,7 @@ export type Query = {
    */
   getBestDisplayUnit: Unit;
   getConvertibleUnits: Array<Unit>;
+  /** @deprecated Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default. */
   getDefaultHome?: Maybe<Home>;
   /**
    * Get all available conversions for an item
@@ -6503,7 +6554,7 @@ export type Recipe = {
   cookTimeMinutes?: Maybe<Scalars['Int']['output']>;
   cookingLogs: Array<CookingLog>;
   createdAt: Scalars['DateTime']['output'];
-  createdBy: User;
+  createdBy?: Maybe<User>;
   cuisine?: Maybe<Scalars['String']['output']>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
@@ -8720,6 +8771,12 @@ export type UpdateUserSettingsResult =
   | UserSettings
   | ValidationError;
 
+export type UpsertExternalRecipeResult = {
+  __typename?: 'UpsertExternalRecipeResult';
+  created: Scalars['Boolean']['output'];
+  recipe: Recipe;
+};
+
 export type UpsertItemResult = {
   __typename?: 'UpsertItemResult';
   created: Scalars['Boolean']['output'];
@@ -10255,6 +10312,8 @@ export type ShoppingListItemFragmentFragment = {
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
         netWeight?: number | null | undefined;
+        nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         displayUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
@@ -10743,6 +10802,7 @@ export type ItemFragmentFragment = {
   healthBenefits?: any | null | undefined;
   allergens?: any | null | undefined;
   nutritions?: any | null | undefined;
+  images?: any | null | undefined;
   metadata?: any | null | undefined;
   ingredients?: any | null | undefined;
   createdAt: string;
@@ -10848,7 +10908,7 @@ export type PantryItemCoreFragment = {
   itemId: string;
   itemName: string;
   currentQuantity: number;
-  unitId?: string | null | undefined;
+  unitId: string;
   unitName: string;
   version?: number | null | undefined;
   updatedAt?: string | null | undefined;
@@ -10870,7 +10930,7 @@ export type PantryItemDisplayFragment = {
   itemId: string;
   itemName: string;
   currentQuantity: number;
-  unitId?: string | null | undefined;
+  unitId: string;
   unitName: string;
   version?: number | null | undefined;
   updatedAt?: string | null | undefined;
@@ -10890,10 +10950,7 @@ export type PantryItemDisplayFragment = {
       | null
       | undefined;
   };
-  unit?:
-    | { __typename: 'Unit'; id: string; name: string; symbol: string }
-    | null
-    | undefined;
+  unit: { __typename: 'Unit'; id: string; name: string; symbol: string };
   storageLocation?:
     | {
         __typename: 'StorageLocation';
@@ -10933,7 +10990,7 @@ export type PantryItemFragmentFragment = {
   itemId: string;
   itemName: string;
   currentQuantity: number;
-  unitId?: string | null | undefined;
+  unitId: string;
   unitName: string;
   version?: number | null | undefined;
   updatedAt?: string | null | undefined;
@@ -10961,6 +11018,7 @@ export type PantryItemFragmentFragment = {
     healthBenefits?: any | null | undefined;
     allergens?: any | null | undefined;
     nutritions?: any | null | undefined;
+    images?: any | null | undefined;
     metadata?: any | null | undefined;
     ingredients?: any | null | undefined;
     createdAt: string;
@@ -11034,23 +11092,20 @@ export type PantryItemFragmentFragment = {
       | null
       | undefined;
   };
-  unit?:
-    | {
-        __typename: 'Unit';
-        type: UnitType;
-        isMetric: boolean;
-        baseUnitId?: string | null | undefined;
-        conversionFactor: number;
-        isCommon: boolean;
-        displayAsFraction: boolean;
-        minPrecision: number;
-        autoConvertThreshold?: number | null | undefined;
-        id: string;
-        name: string;
-        symbol: string;
-      }
-    | null
-    | undefined;
+  unit: {
+    __typename: 'Unit';
+    type: UnitType;
+    isMetric: boolean;
+    baseUnitId?: string | null | undefined;
+    conversionFactor: number;
+    isCommon: boolean;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    autoConvertThreshold?: number | null | undefined;
+    id: string;
+    name: string;
+    symbol: string;
+  };
   normalizedUnit?:
     | { __typename?: 'Unit'; id: string; name: string; symbol: string }
     | null
@@ -11245,7 +11300,7 @@ export type PantryFragmentFragment = {
         itemId: string;
         itemName: string;
         currentQuantity: number;
-        unitId?: string | null | undefined;
+        unitId: string;
         unitName: string;
         version?: number | null | undefined;
         updatedAt?: string | null | undefined;
@@ -11273,6 +11328,7 @@ export type PantryFragmentFragment = {
           healthBenefits?: any | null | undefined;
           allergens?: any | null | undefined;
           nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           metadata?: any | null | undefined;
           ingredients?: any | null | undefined;
           createdAt: string;
@@ -11346,23 +11402,20 @@ export type PantryFragmentFragment = {
             | null
             | undefined;
         };
-        unit?:
-          | {
-              __typename: 'Unit';
-              type: UnitType;
-              isMetric: boolean;
-              baseUnitId?: string | null | undefined;
-              conversionFactor: number;
-              isCommon: boolean;
-              displayAsFraction: boolean;
-              minPrecision: number;
-              autoConvertThreshold?: number | null | undefined;
-              id: string;
-              name: string;
-              symbol: string;
-            }
-          | null
-          | undefined;
+        unit: {
+          __typename: 'Unit';
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          isCommon: boolean;
+          displayAsFraction: boolean;
+          minPrecision: number;
+          autoConvertThreshold?: number | null | undefined;
+          id: string;
+          name: string;
+          symbol: string;
+        };
         normalizedUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
@@ -11630,6 +11683,7 @@ export type HomeDisplayFragment = {
   timezone?: string | null | undefined;
   version: number;
   updatedAt: string;
+  isDefault: boolean;
   membersConnection: {
     __typename?: 'MembershipConnection';
     totalCount: number;
@@ -11943,7 +11997,7 @@ export type HomeFragmentFragment = {
               itemId: string;
               itemName: string;
               currentQuantity: number;
-              unitId?: string | null | undefined;
+              unitId: string;
               unitName: string;
               version?: number | null | undefined;
               updatedAt?: string | null | undefined;
@@ -11971,6 +12025,7 @@ export type HomeFragmentFragment = {
                 healthBenefits?: any | null | undefined;
                 allergens?: any | null | undefined;
                 nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 metadata?: any | null | undefined;
                 ingredients?: any | null | undefined;
                 createdAt: string;
@@ -12054,23 +12109,20 @@ export type HomeFragmentFragment = {
                   | null
                   | undefined;
               };
-              unit?:
-                | {
-                    __typename: 'Unit';
-                    type: UnitType;
-                    isMetric: boolean;
-                    baseUnitId?: string | null | undefined;
-                    conversionFactor: number;
-                    isCommon: boolean;
-                    displayAsFraction: boolean;
-                    minPrecision: number;
-                    autoConvertThreshold?: number | null | undefined;
-                    id: string;
-                    name: string;
-                    symbol: string;
-                  }
-                | null
-                | undefined;
+              unit: {
+                __typename: 'Unit';
+                type: UnitType;
+                isMetric: boolean;
+                baseUnitId?: string | null | undefined;
+                conversionFactor: number;
+                isCommon: boolean;
+                displayAsFraction: boolean;
+                minPrecision: number;
+                autoConvertThreshold?: number | null | undefined;
+                id: string;
+                name: string;
+                symbol: string;
+              };
               normalizedUnit?:
                 | {
                     __typename?: 'Unit';
@@ -12267,7 +12319,10 @@ export type RecipeFragmentFragment = {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null | undefined;
-  createdBy: { __typename?: 'User'; id: string; email: string };
+  createdBy?:
+    | { __typename?: 'User'; id: string; email: string }
+    | null
+    | undefined;
   ingredients: Array<{
     __typename?: 'RecipeIngredient';
     id: string;
@@ -12492,7 +12547,7 @@ export type GetHomeQuery = {
                     itemId: string;
                     itemName: string;
                     currentQuantity: number;
-                    unitId?: string | null | undefined;
+                    unitId: string;
                     unitName: string;
                     version?: number | null | undefined;
                     updatedAt?: string | null | undefined;
@@ -12520,6 +12575,7 @@ export type GetHomeQuery = {
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
                       nutritions?: any | null | undefined;
+                      images?: any | null | undefined;
                       metadata?: any | null | undefined;
                       ingredients?: any | null | undefined;
                       createdAt: string;
@@ -12603,23 +12659,20 @@ export type GetHomeQuery = {
                         | null
                         | undefined;
                     };
-                    unit?:
-                      | {
-                          __typename: 'Unit';
-                          type: UnitType;
-                          isMetric: boolean;
-                          baseUnitId?: string | null | undefined;
-                          conversionFactor: number;
-                          isCommon: boolean;
-                          displayAsFraction: boolean;
-                          minPrecision: number;
-                          autoConvertThreshold?: number | null | undefined;
-                          id: string;
-                          name: string;
-                          symbol: string;
-                        }
-                      | null
-                      | undefined;
+                    unit: {
+                      __typename: 'Unit';
+                      type: UnitType;
+                      isMetric: boolean;
+                      baseUnitId?: string | null | undefined;
+                      conversionFactor: number;
+                      isCommon: boolean;
+                      displayAsFraction: boolean;
+                      minPrecision: number;
+                      autoConvertThreshold?: number | null | undefined;
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    };
                     normalizedUnit?:
                       | {
                           __typename?: 'Unit';
@@ -12907,6 +12960,7 @@ export type GetHomesQuery = {
     timezone?: string | null | undefined;
     version: number;
     updatedAt: string;
+    isDefault: boolean;
     membersConnection: {
       __typename?: 'MembershipConnection';
       totalCount: number;
@@ -13279,7 +13333,7 @@ export type GetHomeByJoinCodeQuery = {
                     itemId: string;
                     itemName: string;
                     currentQuantity: number;
-                    unitId?: string | null | undefined;
+                    unitId: string;
                     unitName: string;
                     version?: number | null | undefined;
                     updatedAt?: string | null | undefined;
@@ -13307,6 +13361,7 @@ export type GetHomeByJoinCodeQuery = {
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
                       nutritions?: any | null | undefined;
+                      images?: any | null | undefined;
                       metadata?: any | null | undefined;
                       ingredients?: any | null | undefined;
                       createdAt: string;
@@ -13390,23 +13445,20 @@ export type GetHomeByJoinCodeQuery = {
                         | null
                         | undefined;
                     };
-                    unit?:
-                      | {
-                          __typename: 'Unit';
-                          type: UnitType;
-                          isMetric: boolean;
-                          baseUnitId?: string | null | undefined;
-                          conversionFactor: number;
-                          isCommon: boolean;
-                          displayAsFraction: boolean;
-                          minPrecision: number;
-                          autoConvertThreshold?: number | null | undefined;
-                          id: string;
-                          name: string;
-                          symbol: string;
-                        }
-                      | null
-                      | undefined;
+                    unit: {
+                      __typename: 'Unit';
+                      type: UnitType;
+                      isMetric: boolean;
+                      baseUnitId?: string | null | undefined;
+                      conversionFactor: number;
+                      isCommon: boolean;
+                      displayAsFraction: boolean;
+                      minPrecision: number;
+                      autoConvertThreshold?: number | null | undefined;
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    };
                     normalizedUnit?:
                       | {
                           __typename?: 'Unit';
@@ -13696,7 +13748,7 @@ export type CreateHomeMutation = {
                 itemId: string;
                 itemName: string;
                 currentQuantity: number;
-                unitId?: string | null | undefined;
+                unitId: string;
                 unitName: string;
                 version?: number | null | undefined;
                 updatedAt?: string | null | undefined;
@@ -13724,6 +13776,7 @@ export type CreateHomeMutation = {
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
                   nutritions?: any | null | undefined;
+                  images?: any | null | undefined;
                   metadata?: any | null | undefined;
                   ingredients?: any | null | undefined;
                   createdAt: string;
@@ -13807,23 +13860,20 @@ export type CreateHomeMutation = {
                     | null
                     | undefined;
                 };
-                unit?:
-                  | {
-                      __typename: 'Unit';
-                      type: UnitType;
-                      isMetric: boolean;
-                      baseUnitId?: string | null | undefined;
-                      conversionFactor: number;
-                      isCommon: boolean;
-                      displayAsFraction: boolean;
-                      minPrecision: number;
-                      autoConvertThreshold?: number | null | undefined;
-                      id: string;
-                      name: string;
-                      symbol: string;
-                    }
-                  | null
-                  | undefined;
+                unit: {
+                  __typename: 'Unit';
+                  type: UnitType;
+                  isMetric: boolean;
+                  baseUnitId?: string | null | undefined;
+                  conversionFactor: number;
+                  isCommon: boolean;
+                  displayAsFraction: boolean;
+                  minPrecision: number;
+                  autoConvertThreshold?: number | null | undefined;
+                  id: string;
+                  name: string;
+                  symbol: string;
+                };
                 normalizedUnit?:
                   | {
                       __typename?: 'Unit';
@@ -14112,7 +14162,7 @@ export type UpdateHomeMutation = {
                 itemId: string;
                 itemName: string;
                 currentQuantity: number;
-                unitId?: string | null | undefined;
+                unitId: string;
                 unitName: string;
                 version?: number | null | undefined;
                 updatedAt?: string | null | undefined;
@@ -14140,6 +14190,7 @@ export type UpdateHomeMutation = {
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
                   nutritions?: any | null | undefined;
+                  images?: any | null | undefined;
                   metadata?: any | null | undefined;
                   ingredients?: any | null | undefined;
                   createdAt: string;
@@ -14223,23 +14274,20 @@ export type UpdateHomeMutation = {
                     | null
                     | undefined;
                 };
-                unit?:
-                  | {
-                      __typename: 'Unit';
-                      type: UnitType;
-                      isMetric: boolean;
-                      baseUnitId?: string | null | undefined;
-                      conversionFactor: number;
-                      isCommon: boolean;
-                      displayAsFraction: boolean;
-                      minPrecision: number;
-                      autoConvertThreshold?: number | null | undefined;
-                      id: string;
-                      name: string;
-                      symbol: string;
-                    }
-                  | null
-                  | undefined;
+                unit: {
+                  __typename: 'Unit';
+                  type: UnitType;
+                  isMetric: boolean;
+                  baseUnitId?: string | null | undefined;
+                  conversionFactor: number;
+                  isCommon: boolean;
+                  displayAsFraction: boolean;
+                  minPrecision: number;
+                  autoConvertThreshold?: number | null | undefined;
+                  id: string;
+                  name: string;
+                  symbol: string;
+                };
                 normalizedUnit?:
                   | {
                       __typename?: 'Unit';
@@ -14663,422 +14711,6 @@ export type MembershipRoleChangedSubscription = {
   };
 };
 
-export type GetDefaultHomeQueryVariables = Exact<{ [key: string]: never }>;
-
-export type GetDefaultHomeQuery = {
-  __typename?: 'Query';
-  getDefaultHome?:
-    | {
-        __typename?: 'Home';
-        id: string;
-        name: string;
-        type: HomeType;
-        description?: string | null | undefined;
-        timezone?: string | null | undefined;
-        currency?: string | null | undefined;
-        isPublic: boolean;
-        joinCode?: string | null | undefined;
-        allowJoinCode: boolean;
-        maxMembers?: number | null | undefined;
-        tags: Array<string>;
-        metadata?: any | null | undefined;
-        version: number;
-        createdAt: string;
-        updatedAt: string;
-        invitesConnection: {
-          __typename?: 'HomeInviteConnection';
-          totalCount: number;
-          edges: Array<{
-            __typename?: 'HomeInviteEdge';
-            cursor: string;
-            node: {
-              __typename?: 'HomeInvite';
-              id: string;
-              token: string;
-              email: string;
-              homeId: string;
-              invitedUserId?: string | null | undefined;
-              recipientName?: string | null | undefined;
-              role: MembershipRole;
-              status: InviteStatus;
-              expiresAt: string;
-              sentAt: string;
-              lastReminderAt?: string | null | undefined;
-              reminderCount: number;
-              acceptedAt?: string | null | undefined;
-              declinedAt?: string | null | undefined;
-              revokedAt?: string | null | undefined;
-              message?: string | null | undefined;
-              createdAt: string;
-              customPermissions?:
-                | {
-                    __typename?: 'HomePermissions';
-                    canViewPantry?: boolean | null | undefined;
-                    canEditPantry?: boolean | null | undefined;
-                    canAddItems?: boolean | null | undefined;
-                    canRemoveItems?: boolean | null | undefined;
-                    canInviteOthers?: boolean | null | undefined;
-                    canManageHome?: boolean | null | undefined;
-                  }
-                | null
-                | undefined;
-              home: { __typename?: 'Home'; id: string; name: string };
-              inviter: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      displayName?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-              };
-            };
-          }>;
-          pageInfo: {
-            __typename?: 'PageInfo';
-            hasNextPage: boolean;
-            endCursor?: string | null | undefined;
-          };
-        };
-        membersConnection: {
-          __typename?: 'MembershipConnection';
-          totalCount: number;
-          edges: Array<{
-            __typename?: 'MembershipEdge';
-            cursor: string;
-            node: {
-              __typename?: 'Membership';
-              id: string;
-              homeId: string;
-              userId: string;
-              role: MembershipRole;
-              status: MembershipStatus;
-              displayName?: string | null | undefined;
-              canViewPantry: boolean;
-              canEditPantry: boolean;
-              canAddItems: boolean;
-              canRemoveItems: boolean;
-              canInviteOthers: boolean;
-              canManageHome: boolean;
-              lastActiveAt?: string | null | undefined;
-              joinedAt: string;
-              leftAt?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              user: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                emailVerified: boolean;
-                role: UserRole;
-                onBoarded: boolean;
-                timezone?: string | null | undefined;
-                preferredCurrency?: string | null | undefined;
-                language?: string | null | undefined;
-                defaultShoppingListId?: string | null | undefined;
-                defaultHomeId?: string | null | undefined;
-                createdAt: string;
-                updatedAt: string;
-                lastActiveAt?: string | null | undefined;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      id: string;
-                      firstName?: string | null | undefined;
-                      lastName?: string | null | undefined;
-                      displayName?: string | null | undefined;
-                      bio?: string | null | undefined;
-                      avatar?: string | null | undefined;
-                      phone?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-                settings?:
-                  | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
-                  | null
-                  | undefined;
-              };
-            };
-          }>;
-          pageInfo: {
-            __typename?: 'PageInfo';
-            hasNextPage: boolean;
-            endCursor?: string | null | undefined;
-          };
-        };
-        pantriesConnection: {
-          __typename?: 'PantryConnection';
-          totalCount: number;
-          edges: Array<{
-            __typename?: 'PantryEdge';
-            cursor: string;
-            node: {
-              __typename?: 'Pantry';
-              id: string;
-              homeId: string;
-              name: string;
-              description?: string | null | undefined;
-              isDefault: boolean;
-              location?: string | null | undefined;
-              temperature?: string | null | undefined;
-              tags: Array<string>;
-              metadata?: any | null | undefined;
-              version: number;
-              createdAt: string;
-              updatedAt: string;
-              itemsConnection: {
-                __typename?: 'PantryItemConnection';
-                totalCount: number;
-                edges: Array<{
-                  __typename?: 'PantryItemEdge';
-                  cursor: string;
-                  node: {
-                    __typename: 'PantryItem';
-                    storageNotes?: string | null | undefined;
-                    normalizedUnitId?: string | null | undefined;
-                    packageWeight?: number | null | undefined;
-                    packageWeightUnitId?: string | null | undefined;
-                    createdAt: string;
-                    restockQuantity?: number | null | undefined;
-                    wasteAmount: number;
-                    wasteDate?: string | null | undefined;
-                    wasteReason?: WasteReason | null | undefined;
-                    condition: ItemCondition;
-                    acquisitionMethod: AcquisitionMethod;
-                    costPerUnit?: number | null | undefined;
-                    totalCost?: number | null | undefined;
-                    tags: Array<string>;
-                    initialQuantity: number;
-                    consumedQuantity: number;
-                    id: string;
-                    pantryId: string;
-                    itemId: string;
-                    itemName: string;
-                    currentQuantity: number;
-                    unitId?: string | null | undefined;
-                    unitName: string;
-                    version?: number | null | undefined;
-                    updatedAt?: string | null | undefined;
-                    storageState: StorageState;
-                    expiresAt?: string | null | undefined;
-                    lowStockAlert: boolean;
-                    minQuantity?: number | null | undefined;
-                    lastUsedAt?: string | null | undefined;
-                    item: {
-                      __typename: 'Item';
-                      id: string;
-                      imageUrl?: string | null | undefined;
-                      name: string;
-                      netWeight?: number | null | undefined;
-                      description?: string | null | undefined;
-                      dataSource: DataSource;
-                      type: ItemType;
-                      storageState: StorageState;
-                      showInOnboarding: boolean;
-                      shelfLifeDays?: number | null | undefined;
-                      popularity: number;
-                      status: ItemStatus;
-                      visibility: Visibility;
-                      tags: Array<string>;
-                      healthBenefits?: any | null | undefined;
-                      allergens?: any | null | undefined;
-                      nutritions?: any | null | undefined;
-                      metadata?: any | null | undefined;
-                      ingredients?: any | null | undefined;
-                      createdAt: string;
-                      deletedAt?: string | null | undefined;
-                      density?: number | null | undefined;
-                      preferredTrackingUnitId?: string | null | undefined;
-                      displayUnit?:
-                        | {
-                            __typename: 'Unit';
-                            id: string;
-                            name: string;
-                            symbol: string;
-                          }
-                        | null
-                        | undefined;
-                      preferredTrackingUnit?:
-                        | {
-                            __typename?: 'Unit';
-                            id: string;
-                            name: string;
-                            symbol: string;
-                          }
-                        | null
-                        | undefined;
-                      units: Array<{
-                        __typename?: 'ItemUnit';
-                        id: string;
-                        itemId: string;
-                        unitId: string;
-                        isDefault: boolean;
-                        isPreferred: boolean;
-                        isCommon: boolean;
-                        packageSize?: number | null | undefined;
-                        packageDescription?: string | null | undefined;
-                        retailUnit: boolean;
-                        usageContext: Array<UnitUsageContext>;
-                        recommendedFor: Array<UnitRecommendation>;
-                        minQuantity?: number | null | undefined;
-                        maxQuantity?: number | null | undefined;
-                        quantityStep?: number | null | undefined;
-                        averagePricePerUnit?: number | null | undefined;
-                        lastPriceUpdate?: string | null | undefined;
-                        priceSource?: string | null | undefined;
-                        usageCount: number;
-                        lastUsedAt?: string | null | undefined;
-                        popularityScore: number;
-                        source: UnitSource;
-                        confidence?: number | null | undefined;
-                        isVerified: boolean;
-                        verifiedAt?: string | null | undefined;
-                        createdAt: string;
-                        updatedAt: string;
-                        version: number;
-                      }>;
-                      brands: Array<{
-                        __typename?: 'ItemBrand';
-                        id: string;
-                        brand: {
-                          __typename?: 'Brand';
-                          id: string;
-                          name: string;
-                          description?: string | null | undefined;
-                          createdAt: string;
-                          updatedAt: string;
-                          version: number;
-                        };
-                      }>;
-                      categories?:
-                        | Array<{
-                            __typename?: 'ItemCategory';
-                            id: string;
-                            isPrimary: boolean;
-                            category: {
-                              __typename: 'Category';
-                              id: string;
-                              name: string;
-                              color?: string | null | undefined;
-                              icon?: string | null | undefined;
-                            };
-                          }>
-                        | null
-                        | undefined;
-                    };
-                    unit?:
-                      | {
-                          __typename: 'Unit';
-                          type: UnitType;
-                          isMetric: boolean;
-                          baseUnitId?: string | null | undefined;
-                          conversionFactor: number;
-                          isCommon: boolean;
-                          displayAsFraction: boolean;
-                          minPrecision: number;
-                          autoConvertThreshold?: number | null | undefined;
-                          id: string;
-                          name: string;
-                          symbol: string;
-                        }
-                      | null
-                      | undefined;
-                    normalizedUnit?:
-                      | {
-                          __typename?: 'Unit';
-                          id: string;
-                          name: string;
-                          symbol: string;
-                        }
-                      | null
-                      | undefined;
-                    packageWeightUnit?:
-                      | {
-                          __typename: 'Unit';
-                          id: string;
-                          name: string;
-                          symbol: string;
-                          type: UnitType;
-                        }
-                      | null
-                      | undefined;
-                    store?:
-                      | { __typename?: 'Store'; id: string; name: string }
-                      | null
-                      | undefined;
-                    purchase?:
-                      | {
-                          __typename?: 'Purchase';
-                          id: string;
-                          purchaseDate: string;
-                          unitPrice: number;
-                          totalPrice: number;
-                          quantity: number;
-                        }
-                      | null
-                      | undefined;
-                    usageRecords: Array<{
-                      __typename?: 'PantryItemUsage';
-                      id: string;
-                      quantityUsed: number;
-                      usedAt: string;
-                      purpose: UsagePurpose;
-                      notes?: string | null | undefined;
-                      pantryItem: { __typename?: 'PantryItem'; id: string };
-                      usedBy?:
-                        | { __typename?: 'User'; id: string }
-                        | null
-                        | undefined;
-                      cookingLog?:
-                        | { __typename?: 'CookingLog'; id: string }
-                        | null
-                        | undefined;
-                      mealPlanItem?:
-                        | { __typename?: 'MealPlanItem'; id: string }
-                        | null
-                        | undefined;
-                      recipe?:
-                        | { __typename?: 'Recipe'; id: string }
-                        | null
-                        | undefined;
-                    }>;
-                    storageLocation?:
-                      | {
-                          __typename: 'StorageLocation';
-                          id: string;
-                          name: string;
-                          type: StorageType;
-                        }
-                      | null
-                      | undefined;
-                    brand?:
-                      | { __typename: 'Brand'; id: string; name: string }
-                      | null
-                      | undefined;
-                  };
-                }>;
-                pageInfo: {
-                  __typename?: 'PageInfo';
-                  hasNextPage: boolean;
-                  endCursor?: string | null | undefined;
-                };
-              };
-            };
-          }>;
-          pageInfo: {
-            __typename?: 'PageInfo';
-            hasNextPage: boolean;
-            endCursor?: string | null | undefined;
-          };
-        };
-      }
-    | null
-    | undefined;
-};
-
 export type SetDefaultHomeMutationVariables = Exact<{
   homeId: Scalars['ID']['input'];
 }>;
@@ -15405,10 +15037,7 @@ export type CalculateRecipePantryDeficitQuery = {
       itemName: string;
       currentQuantity: number;
       expiresAt?: string | null | undefined;
-      unit?:
-        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
-        | null
-        | undefined;
+      unit: { __typename?: 'Unit'; id: string; name: string; symbol: string };
     }>;
   }>;
 };
@@ -16131,7 +15760,7 @@ export type GetPantryQuery = {
               itemId: string;
               itemName: string;
               currentQuantity: number;
-              unitId?: string | null | undefined;
+              unitId: string;
               unitName: string;
               version?: number | null | undefined;
               updatedAt?: string | null | undefined;
@@ -16151,15 +15780,12 @@ export type GetPantryQuery = {
                   | null
                   | undefined;
               };
-              unit?:
-                | {
-                    __typename: 'Unit';
-                    id: string;
-                    name: string;
-                    symbol: string;
-                  }
-                | null
-                | undefined;
+              unit: {
+                __typename: 'Unit';
+                id: string;
+                name: string;
+                symbol: string;
+              };
               storageLocation?:
                 | {
                     __typename: 'StorageLocation';
@@ -16261,7 +15887,7 @@ export type GetPantryItemQuery = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -16289,6 +15915,7 @@ export type GetPantryItemQuery = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -16362,23 +15989,20 @@ export type GetPantryItemQuery = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -16765,7 +16389,7 @@ export type CreatePantryItemMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -16785,10 +16409,7 @@ export type CreatePantryItemMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | { __typename: 'Unit'; id: string; name: string; symbol: string }
-      | null
-      | undefined;
+    unit: { __typename: 'Unit'; id: string; name: string; symbol: string };
     storageLocation?:
       | {
           __typename: 'StorageLocation';
@@ -16839,7 +16460,7 @@ export type UpdatePantryItemMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -16867,6 +16488,7 @@ export type UpdatePantryItemMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -16940,23 +16562,20 @@ export type UpdatePantryItemMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -17047,7 +16666,7 @@ export type DeletePantryItemMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -17075,6 +16694,7 @@ export type DeletePantryItemMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -17148,23 +16768,20 @@ export type DeletePantryItemMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -17273,7 +16890,7 @@ export type CreatePantryItemUsageMutation = {
       pantryId: string;
       itemId: string;
       itemName: string;
-      unitId?: string | null | undefined;
+      unitId: string;
       unitName: string;
       version?: number | null | undefined;
       updatedAt?: string | null | undefined;
@@ -17301,6 +16918,7 @@ export type CreatePantryItemUsageMutation = {
         healthBenefits?: any | null | undefined;
         allergens?: any | null | undefined;
         nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         metadata?: any | null | undefined;
         ingredients?: any | null | undefined;
         createdAt: string;
@@ -17374,23 +16992,20 @@ export type CreatePantryItemUsageMutation = {
           | null
           | undefined;
       };
-      unit?:
-        | {
-            __typename: 'Unit';
-            type: UnitType;
-            isMetric: boolean;
-            baseUnitId?: string | null | undefined;
-            conversionFactor: number;
-            isCommon: boolean;
-            displayAsFraction: boolean;
-            minPrecision: number;
-            autoConvertThreshold?: number | null | undefined;
-            id: string;
-            name: string;
-            symbol: string;
-          }
-        | null
-        | undefined;
+      unit: {
+        __typename: 'Unit';
+        type: UnitType;
+        isMetric: boolean;
+        baseUnitId?: string | null | undefined;
+        conversionFactor: number;
+        isCommon: boolean;
+        displayAsFraction: boolean;
+        minPrecision: number;
+        autoConvertThreshold?: number | null | undefined;
+        id: string;
+        name: string;
+        symbol: string;
+      };
       normalizedUnit?:
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
@@ -17496,7 +17111,7 @@ export type RecordPantryItemWasteMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -17524,6 +17139,7 @@ export type RecordPantryItemWasteMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -17597,23 +17213,20 @@ export type RecordPantryItemWasteMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -17712,7 +17325,7 @@ export type RestockPantryItemMutation = {
       itemId: string;
       itemName: string;
       currentQuantity: number;
-      unitId?: string | null | undefined;
+      unitId: string;
       unitName: string;
       version?: number | null | undefined;
       updatedAt?: string | null | undefined;
@@ -17740,6 +17353,7 @@ export type RestockPantryItemMutation = {
         healthBenefits?: any | null | undefined;
         allergens?: any | null | undefined;
         nutritions?: any | null | undefined;
+        images?: any | null | undefined;
         metadata?: any | null | undefined;
         ingredients?: any | null | undefined;
         createdAt: string;
@@ -17813,23 +17427,20 @@ export type RestockPantryItemMutation = {
           | null
           | undefined;
       };
-      unit?:
-        | {
-            __typename: 'Unit';
-            type: UnitType;
-            isMetric: boolean;
-            baseUnitId?: string | null | undefined;
-            conversionFactor: number;
-            isCommon: boolean;
-            displayAsFraction: boolean;
-            minPrecision: number;
-            autoConvertThreshold?: number | null | undefined;
-            id: string;
-            name: string;
-            symbol: string;
-          }
-        | null
-        | undefined;
+      unit: {
+        __typename: 'Unit';
+        type: UnitType;
+        isMetric: boolean;
+        baseUnitId?: string | null | undefined;
+        conversionFactor: number;
+        isCommon: boolean;
+        displayAsFraction: boolean;
+        minPrecision: number;
+        autoConvertThreshold?: number | null | undefined;
+        id: string;
+        name: string;
+        symbol: string;
+      };
       normalizedUnit?:
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
@@ -17927,7 +17538,7 @@ export type UpdatePantryItemQuantityMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -17955,6 +17566,7 @@ export type UpdatePantryItemQuantityMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -18028,23 +17640,20 @@ export type UpdatePantryItemQuantityMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -18143,7 +17752,7 @@ export type SyncPantryItemMutation = {
           itemId: string;
           itemName: string;
           currentQuantity: number;
-          unitId?: string | null | undefined;
+          unitId: string;
           unitName: string;
           version?: number | null | undefined;
           updatedAt?: string | null | undefined;
@@ -18171,6 +17780,7 @@ export type SyncPantryItemMutation = {
             healthBenefits?: any | null | undefined;
             allergens?: any | null | undefined;
             nutritions?: any | null | undefined;
+            images?: any | null | undefined;
             metadata?: any | null | undefined;
             ingredients?: any | null | undefined;
             createdAt: string;
@@ -18249,23 +17859,20 @@ export type SyncPantryItemMutation = {
               | null
               | undefined;
           };
-          unit?:
-            | {
-                __typename: 'Unit';
-                type: UnitType;
-                isMetric: boolean;
-                baseUnitId?: string | null | undefined;
-                conversionFactor: number;
-                isCommon: boolean;
-                displayAsFraction: boolean;
-                minPrecision: number;
-                autoConvertThreshold?: number | null | undefined;
-                id: string;
-                name: string;
-                symbol: string;
-              }
-            | null
-            | undefined;
+          unit: {
+            __typename: 'Unit';
+            type: UnitType;
+            isMetric: boolean;
+            baseUnitId?: string | null | undefined;
+            conversionFactor: number;
+            isCommon: boolean;
+            displayAsFraction: boolean;
+            minPrecision: number;
+            autoConvertThreshold?: number | null | undefined;
+            id: string;
+            name: string;
+            symbol: string;
+          };
           normalizedUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -18489,7 +18096,7 @@ export type PantryItemsChangedSubscription = {
       itemId: string;
       itemName: string;
       currentQuantity: number;
-      unitId?: string | null | undefined;
+      unitId: string;
       unitName: string;
       version?: number | null | undefined;
       updatedAt?: string | null | undefined;
@@ -18509,10 +18116,7 @@ export type PantryItemsChangedSubscription = {
           | null
           | undefined;
       };
-      unit?:
-        | { __typename: 'Unit'; id: string; name: string; symbol: string }
-        | null
-        | undefined;
+      unit: { __typename: 'Unit'; id: string; name: string; symbol: string };
       storageLocation?:
         | {
             __typename: 'StorageLocation';
@@ -18580,10 +18184,7 @@ export type PantryWasteAlertSubscription = {
       itemName: string;
       pantryId: string;
       currentQuantity: number;
-      unit?:
-        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
-        | null
-        | undefined;
+      unit: { __typename?: 'Unit'; id: string; name: string; symbol: string };
       item: {
         __typename?: 'Item';
         id: string;
@@ -18769,7 +18370,10 @@ export type GetRecipeQuery = {
         createdAt: string;
         updatedAt: string;
         deletedAt?: string | null | undefined;
-        createdBy: { __typename?: 'User'; id: string; email: string };
+        createdBy?:
+          | { __typename?: 'User'; id: string; email: string }
+          | null
+          | undefined;
         ingredients: Array<{
           __typename?: 'RecipeIngredient';
           id: string;
@@ -18844,7 +18448,10 @@ export type CreateRecipeMutation = {
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null | undefined;
-    createdBy: { __typename?: 'User'; id: string; email: string };
+    createdBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
     ingredients: Array<{
       __typename?: 'RecipeIngredient';
       id: string;
@@ -18870,6 +18477,30 @@ export type CreateRecipeMutation = {
         | null
         | undefined;
     }>;
+  };
+};
+
+export type UpsertExternalRecipeMutationVariables = Exact<{
+  input: CreateRecipeInput;
+}>;
+
+export type UpsertExternalRecipeMutation = {
+  __typename?: 'Mutation';
+  upsertExternalRecipe: {
+    __typename?: 'UpsertExternalRecipeResult';
+    created: boolean;
+    recipe: {
+      __typename?: 'Recipe';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+      externalSource?: ExternalSource | null | undefined;
+      externalId?: string | null | undefined;
+      servings: number;
+      prepTimeMinutes?: number | null | undefined;
+      cookTimeMinutes?: number | null | undefined;
+      totalTimeMinutes?: number | null | undefined;
+    };
   };
 };
 
@@ -18918,7 +18549,10 @@ export type UpdateRecipeMutation = {
     createdAt: string;
     updatedAt: string;
     deletedAt?: string | null | undefined;
-    createdBy: { __typename?: 'User'; id: string; email: string };
+    createdBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
     ingredients: Array<{
       __typename?: 'RecipeIngredient';
       id: string;
@@ -19931,6 +19565,8 @@ export type GetShoppingListItemQuery = {
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
               netWeight?: number | null | undefined;
+              nutritions?: any | null | undefined;
+              images?: any | null | undefined;
               displayUnit?:
                 | {
                     __typename?: 'Unit';
@@ -20516,6 +20152,8 @@ export type AddItemToShoppingListMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20733,6 +20371,8 @@ export type UpdateShoppingListItemMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -20959,6 +20599,8 @@ export type MarkItemPurchasedMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21175,6 +20817,8 @@ export type MoveShoppingListItemMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21427,6 +21071,8 @@ export type UpdateShoppingListItemQuantityMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21645,6 +21291,8 @@ export type UpdateShoppingListItemNotesMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -21863,6 +21511,8 @@ export type UpdateShoppingListItemPriorityMutation = {
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
           netWeight?: number | null | undefined;
+          nutritions?: any | null | undefined;
+          images?: any | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -22082,7 +21732,7 @@ export type MoveShoppingItemToPantryMutation = {
     itemId: string;
     itemName: string;
     currentQuantity: number;
-    unitId?: string | null | undefined;
+    unitId: string;
     unitName: string;
     version?: number | null | undefined;
     updatedAt?: string | null | undefined;
@@ -22110,6 +21760,7 @@ export type MoveShoppingItemToPantryMutation = {
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
       nutritions?: any | null | undefined;
+      images?: any | null | undefined;
       metadata?: any | null | undefined;
       ingredients?: any | null | undefined;
       createdAt: string;
@@ -22183,23 +21834,20 @@ export type MoveShoppingItemToPantryMutation = {
         | null
         | undefined;
     };
-    unit?:
-      | {
-          __typename: 'Unit';
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
-          displayAsFraction: boolean;
-          minPrecision: number;
-          autoConvertThreshold?: number | null | undefined;
-          id: string;
-          name: string;
-          symbol: string;
-        }
-      | null
-      | undefined;
+    unit: {
+      __typename: 'Unit';
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null | undefined;
+      conversionFactor: number;
+      isCommon: boolean;
+      displayAsFraction: boolean;
+      minPrecision: number;
+      autoConvertThreshold?: number | null | undefined;
+      id: string;
+      name: string;
+      symbol: string;
+    };
     normalizedUnit?:
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
@@ -22306,6 +21954,8 @@ export type SyncShoppingListItemMutation = {
                 description?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 displayUnit?:
                   | {
                       __typename?: 'Unit';
@@ -22596,6 +22246,8 @@ export type SyncMoveShoppingListItemMutation = {
                 description?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                nutritions?: any | null | undefined;
+                images?: any | null | undefined;
                 displayUnit?:
                   | {
                       __typename?: 'Unit';
@@ -22944,6 +22596,8 @@ export type ShoppingListItemsChangedSubscription = {
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
                     netWeight?: number | null | undefined;
+                    nutritions?: any | null | undefined;
+                    images?: any | null | undefined;
                     displayUnit?:
                       | {
                           __typename?: 'Unit';

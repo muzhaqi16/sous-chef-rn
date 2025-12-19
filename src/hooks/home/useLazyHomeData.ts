@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useGetHomesLazyQuery, useGetDefaultHomeLazyQuery } from '#generated';
+import { useGetHomesLazyQuery } from '#generated';
 import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 import type { BasicPantryFragment } from '#generated';
@@ -19,16 +19,10 @@ export function useLazyHomeData() {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const selectedPantryId = useAppStore(selectSelectedPantryId);
 
-  const [getHomes, { data: homesData, loading: homesLoading }] = useGetHomesLazyQuery({
+  const [getHomes, { data: homesData, loading }] = useGetHomesLazyQuery({
     fetchPolicy: 'cache-first', // Use cache if available
     errorPolicy: 'ignore',
   });
-
-  const [getDefaultHome, { loading: defaultHomeLoading }] =
-    useGetDefaultHomeLazyQuery({
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'ignore',
-    });
 
   // Normalize homes data
   const homes = useMemo(() => {
@@ -48,16 +42,16 @@ export function useLazyHomeData() {
   const fetchHomeData = useCallback(async () => {
     // Only fetch if not already loaded
     if (!homesData) {
-      await Promise.all([getHomes(), getDefaultHome()]);
+      await getHomes();
     }
-  }, [homesData, getHomes, getDefaultHome]);
+  }, [homesData, getHomes]);
 
   return {
     homes,
     pantries,
     selectedHomeId,
     selectedPantryId,
-    loading: homesLoading || defaultHomeLoading,
+    loading,
     isLoaded: !!homesData,
     fetchHomeData,
   };

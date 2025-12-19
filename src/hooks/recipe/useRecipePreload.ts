@@ -1,0 +1,306 @@
+/**
+ * Hook for preloading recipe data to the backend
+ *
+ * When a user views an external recipe (from Spoonacular), this hook will:
+ * 1. Store the recipe in the backend via upsertExternalRecipe
+ * 2. Return the backend recipe ID for subsequent operations
+ * 3. Provide a function to save the recipe to user's favorites
+ */
+
+import { useState, useCallback, useRef } from 'react';
+import {
+  useFavoriteRecipeMutation,
+  useUpsertExternalRecipeMutation,
+  ExternalSource,
+} from '#generated';
+import { RecipeInformation } from '#/services/recipeApi/types';
+import { toastService } from '#/services/toastService';
+
+/**
+ * Represents a recipe that has been preloaded to the backend
+ */
+export interface PreloadedRecipe {
+  /** Backend recipe ID */
+  id: string;
+  /** Recipe name */
+  name: string;
+  /** Recipe image URL */
+  imageUrl?: string;
+  /** Whether this was a newly created recipe (vs found existing) */
+  created: boolean;
+  /** External source */
+  externalSource: ExternalSource;
+  /** External ID (Spoonacular ID) */
+  externalId: string;
+}
+
+export interface UseRecipePreloadOptions {
+  /** Callback when preload succeeds */
+  onPreloadSuccess?: (recipe: PreloadedRecipe) => void;
+  /** Callback when preload fails */
+  onPreloadError?: (error: Error) => void;
+  /** Callback when favorite succeeds */
+  onFavoriteSuccess?: () => void;
+  /** Callback when favorite fails */
+  onFavoriteError?: (error: Error) => void;
+}
+
+export interface SaveToFavoritesOptions {
+  /** Folder to save recipe to */
+  folder?: string;
+  /** Tags to add to the saved recipe */
+  tags?: string[];
+  /** User notes about the recipe */
+  notes?: string;
+}
+
+export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
+  const { onPreloadSuccess, onFavoriteSuccess, onFavoriteError } = options;
+
+  // State
+  const [preloading, setPreloading] = useState(false);
+  const [preloadedRecipe, setPreloadedRecipe] = useState<PreloadedRecipe | null>(null);
+  const [preloadError, setPreloadError] = useState<string | null>(null);
+  const [savingToFavorites, setSavingToFavorites] = useState(false);
+
+  // Cache of preloaded recipes (externalId -> PreloadedRecipe)
+  const preloadCacheRef = useRef<Map<string, PreloadedRecipe>>(new Map());
+
+  // Track which recipes we've already attempted to preload (to prevent multiple calls)
+  const attemptedPreloadsRef = useRef<Set<string>>(new Set());
+
+  // Mutations
+  const [favoriteRecipe] = useFavoriteRecipeMutation();
+  const [upsertRecipe] = useUpsertExternalRecipeMutation();
+
+  /**
+   * Transform Spoonacular recipe data to CreateRecipeInput format
+   */
+  const transformToRecipeInput = useCallback((spoonacularRecipe: RecipeInformation) => {
+    // Extract calories from nutrition data
+    const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
+      n => n.name === 'Calories',
+    )?.amount;
+
+    // Transform instructions to JSON format
+    const instructions = spoonacularRecipe.analyzedInstructions?.[0]?.steps?.map(step => ({
+      number: step.number,
+      step: step.step,
+    })) || [];
+
+    return {
+      // Basic recipe info
+      name: spoonacularRecipe.title,
+      description: spoonacularRecipe.summary?.replace(/<[^>]*>/g, ''),
+      servings: spoonacularRecipe.servings,
+      prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
+      cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
+      imageUrl: spoonacularRecipe.image,
+      instructions: instructions as unknown,
+      caloriesPerServing: caloriesPerServing ? Math.round(caloriesPerServing) : undefined,
+      cuisine: spoonacularRecipe.cuisines?.join(', '),
+
+      // External source fields
+      source: ExternalSource.Spoonacular,
+      externalSourceId: String(spoonacularRecipe.id),
+      externalSourceUrl: spoonacularRecipe.sourceUrl,
+      externalSourceData: spoonacularRecipe,
+
+      // Transform ingredients for backend
+      ingredients:
+        spoonacularRecipe.extendedIngredients?.map((ing, idx) => ({
+          name: ing.name,
+          quantity: ing.amount || 0,
+          originalString: ing.original,
+          spoonacularIngredientId: ing.id,
+          aisle: ing.aisle,
+          image: ing.image,
+          metricAmount: ing.measures?.metric?.amount,
+          metricUnit: ing.measures?.metric?.unitShort,
+          usAmount: ing.measures?.us?.amount,
+          usUnit: ing.measures?.us?.unitShort,
+          sortOrder: idx,
+        })) || [],
+    };
+  }, []);
+
+  /**
+   * Preload a recipe to the backend (fire-and-forget)
+   *
+   * This should be called when a user views an external recipe.
+   * The recipe will be stored in the backend (find-or-create pattern).
+   * This is fire-and-forget - it only attempts once per recipe.
+   */
+  const preloadRecipe = useCallback(
+    async (
+      spoonacularRecipe: RecipeInformation,
+      externalSource: ExternalSource = ExternalSource.Spoonacular,
+    ): Promise<PreloadedRecipe | null> => {
+      const externalId = String(spoonacularRecipe.id);
+
+      // Only attempt once per recipe (fire-and-forget)
+      if (attemptedPreloadsRef.current.has(externalId)) {
+        const cached = preloadCacheRef.current.get(externalId);
+        return cached || null;
+      }
+      attemptedPreloadsRef.current.add(externalId);
+
+      setPreloading(true);
+
+      try {
+        const input = transformToRecipeInput(spoonacularRecipe);
+
+        const result = await upsertRecipe({
+          variables: { input },
+        });
+
+        const data = result.data?.upsertExternalRecipe;
+        if (data?.recipe) {
+          const preloaded: PreloadedRecipe = {
+            id: data.recipe.id,
+            name: data.recipe.name,
+            imageUrl: data.recipe.imageUrl ?? undefined,
+            created: data.created,
+            externalSource,
+            externalId,
+          };
+
+          // Cache the result for saveRecipeToFavorites
+          preloadCacheRef.current.set(externalId, preloaded);
+          setPreloadedRecipe(preloaded);
+          onPreloadSuccess?.(preloaded);
+
+          return preloaded;
+        }
+
+        return null;
+      } catch {
+        // Fire-and-forget: silently ignore errors
+        return null;
+      } finally {
+        setPreloading(false);
+      }
+    },
+    [transformToRecipeInput, upsertRecipe, onPreloadSuccess],
+  );
+
+  /**
+   * Save a preloaded recipe to user's favorites
+   *
+   * If the recipe has been preloaded, this uses favoriteRecipe.
+   * If not preloaded yet, this preloads first then favorites it.
+   */
+  const saveRecipeToFavorites = useCallback(
+    async (
+      spoonacularRecipe: RecipeInformation,
+      saveOptions?: SaveToFavoritesOptions,
+    ): Promise<{ success: boolean; recipeId?: string }> => {
+      setSavingToFavorites(true);
+
+      try {
+        const externalId = String(spoonacularRecipe.id);
+        let cached = preloadCacheRef.current.get(externalId);
+
+        // If not preloaded yet, preload first
+        if (!cached || cached.id.startsWith('pending_')) {
+          const preloaded = await preloadRecipe(spoonacularRecipe);
+          if (!preloaded) {
+            throw new Error('Failed to save recipe to backend');
+          }
+          cached = preloaded;
+        }
+
+        const recipeId = cached.id;
+
+        // Now favorite the recipe
+        await favoriteRecipe({
+          variables: {
+            input: {
+              recipeId,
+              folder: saveOptions?.folder,
+              notes: saveOptions?.notes,
+            },
+          },
+        });
+
+        toastService.success('Recipe saved to your collection!');
+        onFavoriteSuccess?.();
+
+        return { success: true, recipeId };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to save recipe to favorites:', errorMessage);
+        toastService.error('Failed to save recipe. Please try again.');
+
+        if (error instanceof Error) {
+          onFavoriteError?.(error);
+        }
+
+        return { success: false };
+      } finally {
+        setSavingToFavorites(false);
+      }
+    },
+    [
+      preloadRecipe,
+      favoriteRecipe,
+      onFavoriteSuccess,
+      onFavoriteError,
+    ],
+  );
+
+  /**
+   * Check if a recipe is preloaded
+   */
+  const isPreloaded = useCallback((externalId: string): boolean => {
+    const cached = preloadCacheRef.current.get(externalId);
+    return !!cached && !cached.id.startsWith('pending_');
+  }, []);
+
+  /**
+   * Get preloaded recipe by external ID
+   */
+  const getPreloadedRecipe = useCallback(
+    (externalId: string): PreloadedRecipe | undefined => {
+      return preloadCacheRef.current.get(externalId);
+    },
+    [],
+  );
+
+  /**
+   * Check if a recipe is fully saved (not just pending)
+   */
+  const isFullySaved = useCallback((externalId: string): boolean => {
+    const cached = preloadCacheRef.current.get(externalId);
+    return !!cached && !cached.id.startsWith('pending_');
+  }, []);
+
+  /**
+   * Clear the preload cache
+   */
+  const clearCache = useCallback(() => {
+    preloadCacheRef.current.clear();
+    setPreloadedRecipe(null);
+    setPreloadError(null);
+  }, []);
+
+  return {
+    // State
+    preloading,
+    preloadedRecipe,
+    preloadError,
+    savingToFavorites,
+
+    // Actions
+    preloadRecipe,
+    saveRecipeToFavorites,
+
+    // Helpers
+    isPreloaded,
+    getPreloadedRecipe,
+    isFullySaved,
+    clearCache,
+  };
+}
+
+export type UseRecipePreloadReturn = ReturnType<typeof useRecipePreload>;

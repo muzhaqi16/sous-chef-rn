@@ -97,7 +97,7 @@ export const LowStockItems: React.FC = () => {
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.item?.name}</Text>
                 <Text style={[commonStyles.caption, styles.itemDetails]}>
-                  {item.currentQuantity} {item.unit?.symbol || 'pcs'} remaining
+                  {item.currentQuantity} {item.unit.symbol} remaining
                 </Text>
               </View>
               <TouchableOpacity

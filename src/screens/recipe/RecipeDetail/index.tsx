@@ -84,13 +84,17 @@ const RecipeDetailScreen: React.FC = () => {
     const errorMessage =
       error ||
       backendError?.message ||
-      (recipeId && !backendRecipe ? 'Recipe not found in database' : 'Recipe not found');
+      (recipeId && !backendRecipe
+        ? 'Recipe not found in database'
+        : 'Recipe not found');
 
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{errorMessage}</Text>
         {backendError && (
-          <Text style={styles.errorDetails}>{JSON.stringify(backendError, null, 2)}</Text>
+          <Text style={styles.errorDetails}>
+            {JSON.stringify(backendError, null, 2)}
+          </Text>
         )}
       </View>
     );
@@ -123,7 +127,9 @@ const RecipeDetailScreen: React.FC = () => {
                 <ActivityIndicator size="small" color="#E91E63" />
               ) : (
                 <Ionicons
-                  name={recipeSaved || isBackendRecipe ? 'heart' : 'heart-outline'}
+                  name={
+                    recipeSaved || isBackendRecipe ? 'heart' : 'heart-outline'
+                  }
                   size={24}
                   color="#E91E63"
                 />
@@ -138,14 +144,21 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Recipe Metadata */}
           <View style={styles.metadata}>
             {displayData.servings != null && (
-              <Text style={styles.metadataText}>🍽️ {displayData.servings} servings</Text>
+              <Text style={styles.metadataText}>
+                🍽️ {displayData.servings} servings
+              </Text>
             )}
             {displayData.readyInMinutes != null && (
-              <Text style={styles.metadataText}>⏱️ {displayData.readyInMinutes} min</Text>
+              <Text style={styles.metadataText}>
+                ⏱️ {displayData.readyInMinutes} min
+              </Text>
             )}
-            {displayData.healthScore != null && !isNaN(displayData.healthScore) && (
-              <Text style={styles.metadataText}>💚 {Math.round(displayData.healthScore)}% healthy</Text>
-            )}
+            {displayData.healthScore != null &&
+              !isNaN(displayData.healthScore) && (
+                <Text style={styles.metadataText}>
+                  💚 {Math.round(displayData.healthScore)}% healthy
+                </Text>
+              )}
           </View>
 
           {/* I Cooked This Button */}
@@ -169,10 +182,26 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Dietary Tags */}
           {!isBackendRecipe && (
             <View style={styles.tags}>
-              {displayData.vegetarian && <View style={styles.tag}><Text style={styles.tagText}>Vegetarian</Text></View>}
-              {displayData.vegan && <View style={styles.tag}><Text style={styles.tagText}>Vegan</Text></View>}
-              {displayData.glutenFree && <View style={styles.tag}><Text style={styles.tagText}>Gluten Free</Text></View>}
-              {displayData.dairyFree && <View style={styles.tag}><Text style={styles.tagText}>Dairy Free</Text></View>}
+              {displayData.vegetarian && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Vegetarian</Text>
+                </View>
+              )}
+              {displayData.vegan && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Vegan</Text>
+                </View>
+              )}
+              {displayData.glutenFree && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Gluten Free</Text>
+                </View>
+              )}
+              {displayData.dairyFree && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Dairy Free</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -193,14 +222,19 @@ const RecipeDetailScreen: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
-                <TouchableOpacity onPress={handleAddAllIngredientsToList} disabled={addingToList}>
-                  <Text style={styles.addAllButton}>{addingToList ? 'Adding...' : 'Add All'}</Text>
+                <TouchableOpacity
+                  onPress={handleAddAllIngredientsToList}
+                  disabled={addingToList}
+                >
+                  <Text style={styles.addAllButton}>
+                    {addingToList ? 'Adding...' : 'Add All'}
+                  </Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 horizontal
                 data={displayData.ingredients}
-                keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                keyExtractor={(item, index) => `${item.id}-${index}`}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.ingredientsList}
                 ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
@@ -231,7 +265,11 @@ const RecipeDetailScreen: React.FC = () => {
               displayData.instructionsHtml &&
               typeof displayData.instructionsHtml === 'string';
 
-            if (!hasBackendInstructions && !hasAnalyzedInstructions && !hasHtmlInstructions) {
+            if (
+              !hasBackendInstructions &&
+              !hasAnalyzedInstructions &&
+              !hasHtmlInstructions
+            ) {
               return null;
             }
 
@@ -241,22 +279,30 @@ const RecipeDetailScreen: React.FC = () => {
                 {hasBackendInstructions &&
                   displayData.instructions.map((step: any, index: number) => (
                     <View key={index} style={styles.instructionStep}>
-                      <Text style={styles.stepNumber}>{step.number || index + 1}.</Text>
+                      <Text style={styles.stepNumber}>
+                        {step.number || index + 1}.
+                      </Text>
                       <Text style={styles.stepText}>{step.step}</Text>
                     </View>
                   ))}
                 {hasAnalyzedInstructions &&
-                  displayData.instructions[0].steps.map((step: any, index: number) => (
-                    <View key={index} style={styles.instructionStep}>
-                      <Text style={styles.stepNumber}>{step.number}.</Text>
-                      <Text style={styles.stepText}>{step.step}</Text>
-                    </View>
-                  ))}
-                {!hasBackendInstructions && !hasAnalyzedInstructions && hasHtmlInstructions && (
-                  <Text style={styles.description}>
-                    {displayData.instructionsHtml?.replace(/<[^>]*>/g, '\n').trim()}
-                  </Text>
-                )}
+                  displayData.instructions[0].steps.map(
+                    (step: any, index: number) => (
+                      <View key={index} style={styles.instructionStep}>
+                        <Text style={styles.stepNumber}>{step.number}.</Text>
+                        <Text style={styles.stepText}>{step.step}</Text>
+                      </View>
+                    ),
+                  )}
+                {!hasBackendInstructions &&
+                  !hasAnalyzedInstructions &&
+                  hasHtmlInstructions && (
+                    <Text style={styles.description}>
+                      {displayData.instructionsHtml
+                        ?.replace(/<[^>]*>/g, '\n')
+                        .trim()}
+                    </Text>
+                  )}
               </View>
             );
           })()}
@@ -265,7 +311,9 @@ const RecipeDetailScreen: React.FC = () => {
           {(displayData.sourceName || displayData.sourceUrl) && (
             <TouchableOpacity
               style={styles.attribution}
-              onPress={() => displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)}
+              onPress={() =>
+                displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
+              }
               disabled={!displayData.sourceUrl}
               activeOpacity={displayData.sourceUrl ? 0.7 : 1}
             >
@@ -274,8 +322,14 @@ const RecipeDetailScreen: React.FC = () => {
               </Text>
               {displayData.sourceUrl && (
                 <View style={styles.viewOriginalLink}>
-                  <Text style={styles.viewOriginalText}>View Original Recipe</Text>
-                  <Ionicons name="open-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.viewOriginalText}>
+                    View Original Recipe
+                  </Text>
+                  <Ionicons
+                    name="open-outline"
+                    size={14}
+                    color={theme.colors.primary}
+                  />
                 </View>
               )}
             </TouchableOpacity>
@@ -291,20 +345,34 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <View style={styles.shoppingListOptions}>
           <TouchableOpacity
-            style={[styles.optionButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}
+            style={[
+              styles.optionButton,
+              { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+            ]}
             onPress={handleAddAllIngredients}
           >
             <Ionicons name="list" size={24} color={theme.colors.primary} />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Add All Ingredients</Text>
-              <Text style={styles.optionDescription}>Add all recipe ingredients to your shopping list</Text>
+              <Text style={styles.optionDescription}>
+                Add all recipe ingredients to your shopping list
+              </Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton} onPress={openIngredientSelector}>
-            <Ionicons name="checkmark-circle-outline" size={24} color={theme.colors.primary} />
+          <TouchableOpacity
+            style={styles.optionButton}
+            onPress={openIngredientSelector}
+          >
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Select Ingredients</Text>
-              <Text style={styles.optionDescription}>Choose specific ingredients to add</Text>
+              <Text style={styles.optionDescription}>
+                Choose specific ingredients to add
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -318,15 +386,22 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <FlatList
           data={backendRecipe?.ingredients || []}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => {
             const isSelected = selectedIngredients.has(item.id);
             return (
-              <TouchableOpacity style={styles.ingredientItem} onPress={() => toggleIngredient(item.id)}>
+              <TouchableOpacity
+                style={styles.ingredientItem}
+                onPress={() => toggleIngredient(item.id)}
+              >
                 <Ionicons
                   name={isSelected ? 'checkbox' : 'square-outline'}
                   size={24}
-                  color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                  color={
+                    isSelected
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary
+                  }
                 />
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{item.name}</Text>
@@ -337,10 +412,15 @@ const RecipeDetailScreen: React.FC = () => {
               </TouchableOpacity>
             );
           }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No ingredients available</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No ingredients available</Text>
+          }
         />
         <TouchableOpacity
-          style={[styles.addSelectedButton, { backgroundColor: theme.colors.primary }]}
+          style={[
+            styles.addSelectedButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
           onPress={handleAddSelectedIngredients}
           disabled={selectedIngredients.size === 0 || addingToList}
         >
@@ -348,7 +428,8 @@ const RecipeDetailScreen: React.FC = () => {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.addSelectedButtonText}>
-              Add {selectedIngredients.size} ingredient{selectedIngredients.size !== 1 ? 's' : ''}
+              Add {selectedIngredients.size} ingredient
+              {selectedIngredients.size !== 1 ? 's' : ''}
             </Text>
           )}
         </TouchableOpacity>

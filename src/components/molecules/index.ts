@@ -51,3 +51,6 @@ export * from './ShoppingListHeader';
 export * from './RecipesHeader';
 export * from './ItemRecentCard';
 export * from './ItemSuggestionsList';
+export * from './NutritionSummary';
+export * from './NutritionDetailList';
+export * from './ImageGalleryTabs';

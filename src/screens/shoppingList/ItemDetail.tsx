@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
@@ -6,8 +6,11 @@ import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
+import { NutritionSummary, ImageGalleryTabs } from '#components/molecules';
 import { FormattedItemSubtitle } from '#components';
 import { commonStyles } from '#styles';
+import { parseImages, hasImages } from '#utils/imageUtils';
+import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 
 type RouteParams = {
   listId: string;
@@ -33,6 +36,29 @@ export const ShoppingListItemDetail: React.FC<{
     navigate('EditItem', { listId, itemId });
   };
 
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Images and nutrition from catalog item
+  // Must be called before early return to follow rules of hooks
+  const itemImages = useMemo(
+    () => parseImages(item?.item?.images),
+    [item?.item?.images],
+  );
+  const itemNutritions = useMemo(
+    () => parseNutritions(item?.item?.nutritions),
+    [item?.item?.nutritions],
+  );
+  const showImages = hasImages(itemImages);
+  const showNutrition = hasNutritionData(itemNutritions);
+
   if (!item) {
     return (
       <DetailTemplate
@@ -52,22 +78,18 @@ export const ShoppingListItemDetail: React.FC<{
     );
   }
 
-  const formatDate = (dateString?: string | null) => {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
   const sections = [
     {
       content: (
         <View>
           <View style={styles.headerSection}>
-            {item.item?.imageUrl ? (
+            {showImages ? (
+              <ImageGalleryTabs
+                images={itemImages}
+                fallbackImageUrl={item.item?.imageUrl}
+                imageHeight={160}
+              />
+            ) : item.item?.imageUrl ? (
               <Image
                 source={{ uri: item.item.imageUrl }}
                 style={styles.itemImage}
@@ -151,6 +173,16 @@ export const ShoppingListItemDetail: React.FC<{
       ),
     },
   ];
+
+  // Nutrition section (inline display, no navigation for shopping list)
+  if (showNutrition) {
+    sections.push({
+      title: 'Nutrition',
+      content: (
+        <NutritionSummary nutritions={itemNutritions} showHighlights compact />
+      ),
+    });
+  }
 
   // Purchase History section - Clickable panel
   // Extract purchases from paginated connection

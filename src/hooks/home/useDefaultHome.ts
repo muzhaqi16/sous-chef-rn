@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
-import { useGetHomesLazyQuery, useGetDefaultHomeLazyQuery } from '#generated';
+import { useGetHomesLazyQuery } from '#generated';
 import {
   useAppStore,
   selectPantryState,
@@ -33,22 +33,14 @@ export const useDefaultHome = () => {
     errorPolicy: 'ignore',
   });
 
-  const [getDefaultHome, { data: defaultHomeData, loading: loadingDefaultHome }] =
-    useGetDefaultHomeLazyQuery({
-      fetchPolicy: 'cache-first',
-      nextFetchPolicy: 'cache-first',
-      errorPolicy: 'ignore',
-    });
-
-  // Execute queries ONCE when authenticated and no home is selected
+  // Execute query ONCE when authenticated and no home is selected
   // This prevents the query cascade issue where re-renders trigger new queries
-  // Uses Zustand flag (survives remounts) instead of ref, and omits getHomes/getDefaultHome
-  // from deps since they only need to be called once (not re-called when they change)
+  // Uses Zustand flag (survives remounts) instead of ref, and omits getHomes
+  // from deps since it only needs to be called once (not re-called when it changes)
   useEffect(() => {
     if (canAttemptQueries && !hasInitializedHomeData && !selectedHomeId) {
       setHasInitializedHomeData(true);
       getHomes();
-      getDefaultHome();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAttemptQueries, selectedHomeId, hasInitializedHomeData]);
@@ -56,18 +48,23 @@ export const useDefaultHome = () => {
   // Preserve homes data even when query fails - prevents cascade failures
   const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));
 
-  const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
+  // Derive default home from isDefault field (no separate query needed)
+  const remoteDefaultHomeId = useMemo(
+    () => homesList?.find((h: any) => h.isDefault)?.id ?? null,
+    [homesList],
+  );
 
   // PERFORMANCE: Extract default pantry ID with stable reference to prevent infinite loops
   // Using useMemo ensures we only recalculate when the underlying data changes
   const defaultPantryId = useMemo(() => {
-    const normalizedHome = normalizeHome(defaultHomeData?.getDefaultHome);
-    if (!normalizedHome?.pantries?.length) return null;
+    // Find the default home from the homes list
+    const defaultHome = homesList?.find((h: any) => h.isDefault);
+    if (!defaultHome?.pantries?.length) return null;
     const defaultPantry =
-      normalizedHome.pantries.find((p: any) => p.isDefault) ||
-      normalizedHome.pantries[0];
+      defaultHome.pantries.find((p: any) => p.isDefault) ||
+      defaultHome.pantries[0];
     return defaultPantry?.id || null;
-  }, [defaultHomeData?.getDefaultHome]);
+  }, [homesList]);
 
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
@@ -123,7 +120,7 @@ export const useDefaultHome = () => {
   return {
     selectedHomeId: currentHomeId,
     homes: homesList,
-    loading: loading || loadingDefaultHome,
+    loading,
     error,
     hasDefaultHome: !!currentHomeId,
     getDefaultPantry,
