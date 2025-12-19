@@ -13,7 +13,6 @@ import { formatRole } from '#utils/formatters';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -24,13 +23,15 @@ import {
  * Manages home details, members, and invites
  */
 export function useHomeDetailManagement(homeId: string) {
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('DETAIL');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-first: Uses cache if available for detail views
+  // - errorPolicy: 'ignore' returns cached data when network fails
 
   // Query
   const { data, loading, refetch } = useGetHomeQuery({
     variables: { homeId },
-    fetchPolicy,
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   // Mutations

@@ -6,7 +6,6 @@ import {
 } from '../graphql/generated';
 import {usePreservedArrayData} from './apollo';
 import {useAppStore, selectSelectedHomeId} from '#store/useAppStore';
-import {useOfflinePresetPolicy} from '#/apollo/policies/offlineFetchPolicies';
 
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
@@ -36,27 +35,28 @@ export const useItemSelector = ({
   // This prevents cascade: useDefaultHome uses cache-and-network which always fires network requests
   const selectedHomeId = useAppStore(selectSelectedHomeId);
 
-  // Use LIST preset: cache-and-network online (fresh data for selectors), cache-only offline
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Query data based on type
   const {data: shoppingListData, loading: shoppingListLoading} =
     useGetShoppingListsQuery({
-      fetchPolicy,
+      fetchPolicy: 'cache-and-network',
       errorPolicy: 'ignore', // Return cached data on network errors
       skip: type !== 'shoppingList',
     });
 
   const {data: pantryData, loading: pantryLoading} = useGetPantriesQuery({
     variables: {homeId: selectedHomeId || ''},
-    fetchPolicy,
+    fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const {data: homeData, loading: homeLoading} = useGetHomesQuery({
-    fetchPolicy,
+    fetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore', // Return cached data on network errors
     skip: type !== 'home',
   });

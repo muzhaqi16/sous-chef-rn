@@ -29,7 +29,6 @@ import {
   createRemoveFromQueryFieldUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 // Cache updater utilities for homes
 const addToHomesCache = createAddToQueryFieldUpdater('homes');
@@ -44,13 +43,15 @@ export function useHomeManagement() {
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
-  const fetchPolicy = useOfflinePresetPolicy('LIST');
+  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
+  // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   const { data, loading, error, refetch } = useGetHomesQuery({
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   const {
@@ -58,9 +59,9 @@ export function useHomeManagement() {
     loading: loadingDefaultHome,
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
-    fetchPolicy,
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
