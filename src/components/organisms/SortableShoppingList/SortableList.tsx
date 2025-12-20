@@ -63,10 +63,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   // Rendering all at once blocks JS thread for 4-5 seconds
   // Progressive loading renders 6 items, yields, renders 3 more, etc.
   const progressiveItems = useProgressiveList(localItems, {
-    initialBatch: 6, // Show 6 items immediately (fills viewport)
-    batchSize: 3, // Add 3 items per batch after initial
-    batchDelay: 32, // ~2 frames at 60fps - gives time for animations
-    enabled: false, // Disabled: getItemLayout + DraggableFlatList batching handles performance
+    initialBatch: 8, // Show 8 items immediately (fills viewport)
+    batchSize: 4, // Add 4 items per batch after initial
+    batchDelay: 16, // ~1 frame at 60fps - quick batching
+    enabled: true, // Enable progressive rendering to reduce JS thread blocking
   });
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);

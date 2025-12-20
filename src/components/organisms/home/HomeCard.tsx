@@ -138,7 +138,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         onPress={() => onPress?.(home.id)}
         activeOpacity={onPress ? 0.7 : 1}
         accessibilityRole="button"
-        accessibilityLabel={`${home.name}, ${home.members?.length || 0} members, ${home.pantries?.length || 0} pantries${isDefault ? ', default home' : ''}`}
+        accessibilityLabel={`${home.name}, ${home.members?.length || 0} ${(home.members?.length || 0) === 1 ? 'member' : 'members'}, ${home.pantries?.length || 0} ${(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}${isDefault ? ', default home' : ''}`}
         accessibilityHint="Tap to view home details"
         disabled={!onPress}
       >
@@ -146,8 +146,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           <Text style={styles.homeName}>{home.name}</Text>
 
           <Text style={styles.homeDetails}>
-            {home.members?.length || 0} members • {home.pantries?.length || 0}{' '}
-            pantries
+            {home.members?.length || 0}{' '}
+            {(home.members?.length || 0) === 1 ? 'member' : 'members'} •{' '}
+            {home.pantries?.length || 0}{' '}
+            {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
           </Text>
         </View>
         {isDefault && (

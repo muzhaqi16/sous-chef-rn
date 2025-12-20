@@ -123,7 +123,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               itemId: item.id,
               initialQuantity: 1,
               itemName: item.name,
-              unitId: item.unitId,
+              // unitId removed - API calculates from weight info
               itemUpc: item.upc || item.primaryUpc, // Include UPC from barcode scan
               ...weightInput, // Include weight info from catalog item
             },
@@ -131,12 +131,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         });
         setIsAdded(true);
       } else if (source === 'shoppingList' && shoppingListId) {
-        // Get the default unit or first unit from the item
-        const defaultUnit =
-          item.units?.find((u: any) => u.isDefault) || item.units?.[0];
-        const unitId = defaultUnit?.unitId;
-        const unitName = defaultUnit?.unit?.symbol;
-
         await addToShoppingList({
           variables: {
             input: {
@@ -144,8 +138,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               itemId: item.id,
               quantity: 1,
               itemName: item.name,
-              unitId: unitId,
-              unitName: unitName,
+              // unitId/unitName removed - API calculates from item's weight
             },
           },
         });

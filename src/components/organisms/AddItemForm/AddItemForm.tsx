@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { AnimatedButton } from '#/components/atoms';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation';
@@ -409,25 +410,24 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.primaryButton]}
+        <AnimatedButton
+          variant="primary"
+          fullWidth
+          loading={loading}
+          disabled={!isValid}
           onPress={handleSubmit(handleFormSubmit)}
-          disabled={loading || !isValid}
         >
-          {loading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Add Item</Text>
-          )}
-        </TouchableOpacity>
+          Add Item
+        </AnimatedButton>
 
-        <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={onClose}
+        <AnimatedButton
+          variant="secondary"
+          fullWidth
           disabled={loading}
+          onPress={onClose}
         >
-          <Text style={styles.secondaryButtonText}>Cancel</Text>
-        </TouchableOpacity>
+          Cancel
+        </AnimatedButton>
       </View>
     </>
   );
@@ -498,29 +498,6 @@ const styles = StyleSheet.create(theme => ({
   buttonContainer: {
     gap: 12,
     paddingBottom: theme.spacing.lg,
-  },
-  button: {
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#62B1F6',
-  },
-  primaryButtonText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  secondaryButton: {
-    backgroundColor: theme.colors.transparent,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-  },
-  secondaryButtonText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));
 

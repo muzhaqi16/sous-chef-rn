@@ -74,6 +74,13 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const { uploadItemImage } = useImageUpload();
 
+  // Clear previous search results when barcode changes to prevent showing stale data
+  useEffect(() => {
+    setSearchResults([]);
+    setSearchError(null);
+    setSearching(true);
+  }, [barcode, setSearchResults, setSearchError, setSearching]);
+
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {
       if (data.createItem) {
@@ -122,6 +129,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     error: upcError,
   } = useItemByUpcFilterQuery({
     variables: { upc: barcode, upcFormat },
+    fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
   });
 
   // Get first item from UPC filter results
@@ -134,11 +142,16 @@ export const useSearchResults = (barcode: string, format?: string) => {
   } = useItemBySkuFilterQuery({
     variables: { sku: barcode, skuStoreId: undefined },
     skip: !!upcItem, // Skip SKU search if UPC search found a result
+    fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
   });
 
-  // Handle UPC query completion
+  // Handle UPC query completion - trust API's UPC matching
   useEffect(() => {
-    if (upcItem) {
+    // Only process after loading completes to avoid acting on stale data
+    // Apollo's data field retains previous values during loading
+    if (!upcLoading && upcItem) {
+      // API handles UPC matching (primaryUpc, alternateUpcs, externalSource data, etc.)
+      // Just show the result if API returns a match
       setSearching(false);
       const item = convertToScannedItem(upcItem, barcode);
       setSearchResults([item]);
@@ -147,6 +160,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     }
   }, [
     upcItem,
+    upcLoading,
     barcode,
     setSearching,
     setSearchResults,
@@ -154,11 +168,13 @@ export const useSearchResults = (barcode: string, format?: string) => {
     hideBottomSheet,
   ]);
 
-  // Handle SKU query completion
+  // Handle SKU query completion - trust API's SKU matching
   useEffect(() => {
     const skuItem = skuData?.items?.edges?.[0]?.node;
 
-    if (skuData) {
+    // Only process after loading completes to avoid acting on stale data
+    // Apollo's data field retains previous values during loading
+    if (!skuLoading && skuData) {
       console.log('SKU search completed:', {
         barcode,
         foundItem: !!skuItem,
@@ -166,19 +182,23 @@ export const useSearchResults = (barcode: string, format?: string) => {
       });
 
       setSearching(false);
+
       if (skuItem) {
+        // API handles SKU matching - just show the result
         const item = convertToScannedItem(skuItem, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
         hideBottomSheet();
-      } else {
-        // Neither UPC nor SKU found anything
-        setSearchResults([]);
-        showBottomSheet(1);
+        return;
       }
+
+      // Neither UPC nor SKU found a matching item
+      setSearchResults([]);
+      showBottomSheet(1);
     }
   }, [
     skuData,
+    skuLoading,
     barcode,
     setSearching,
     setSearchResults,
@@ -187,14 +207,27 @@ export const useSearchResults = (barcode: string, format?: string) => {
     showBottomSheet,
   ]);
 
-  // Handle errors from both queries
+  // Handle errors from both queries (including network errors for offline scenarios)
   useEffect(() => {
-    if (upcError && skuError) {
+    if (upcError || skuError) {
+      const error = (upcError || skuError) as any;
+      const isNetworkError = error?.networkError;
+
       setSearching(false);
-      setSearchError(`Search failed: ${upcError.message}`);
-      showBottomSheet(1);
+
+      if (isNetworkError) {
+        setSearchError('Unable to search. Please check your connection and try again.');
+      } else if (upcError && skuError) {
+        // Both queries failed with non-network errors
+        setSearchError(`Search failed: ${upcError.message}`);
+      }
+
+      // Only show bottom sheet if we have an error and no results
+      if (!upcData?.items?.edges?.length && !skuData?.items?.edges?.length) {
+        showBottomSheet(1);
+      }
     }
-  }, [upcError, skuError, setSearching, setSearchError, showBottomSheet]);
+  }, [upcError, skuError, upcData, skuData, setSearching, setSearchError, showBottomSheet]);
 
   // Handle loading state from both queries
   useEffect(() => {

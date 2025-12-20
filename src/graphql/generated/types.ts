@@ -15270,6 +15270,7 @@ export type ItemByUpcFilterQuery = {
         name: string;
         netWeight?: number | null | undefined;
         primaryUpc?: string | null | undefined;
+        alternateUpcs: Array<string>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;

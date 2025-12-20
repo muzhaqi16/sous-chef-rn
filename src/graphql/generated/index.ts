@@ -12042,6 +12042,7 @@ export type ItemByUpcFilterQuery = {
         name: string;
         netWeight: number | null | undefined;
         primaryUpc: string | null | undefined;
+        alternateUpcs: Array<string>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -36520,6 +36521,10 @@ export const ItemByUpcFilterDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'primaryUpc' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'alternateUpcs' },
                             },
                             {
                               kind: 'Field',

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 import { View, Dimensions } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import BottomSheet, {
@@ -47,6 +48,17 @@ export const SearchResultsScreen: React.FC<{
     handleRetry,
     clearSearch,
   } = useSearchResults(barcode, format);
+
+  const apolloClient = useApolloClient();
+
+  // Cleanup barcode search cache on unmount to prevent stale results
+  useEffect(() => {
+    return () => {
+      // Evict barcode-related queries from cache to prevent stale results on next scan
+      apolloClient.cache.evict({ fieldName: 'items' });
+      apolloClient.cache.gc();
+    };
+  }, [apolloClient]);
 
   // Handle bottom sheet changes
   useEffect(() => {
