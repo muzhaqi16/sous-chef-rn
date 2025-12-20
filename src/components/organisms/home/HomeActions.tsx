@@ -7,6 +7,7 @@ interface HomeActionsProps {
   homeId: string;
   isDefault: boolean;
   canInvite?: boolean;
+  canDelete?: boolean;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
   onDelete: (homeId: string) => void;
@@ -16,6 +17,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   homeId,
   isDefault,
   canInvite = true, // Default to true for backward compatibility
+  canDelete = true, // Default to true for backward compatibility
   onSetDefault,
   onInvite,
   onDelete,
@@ -45,14 +47,16 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => onDelete(homeId)}>
-        <Icon name="delete" size={20} color={theme.colors.error} />
-        <Text style={[styles.actionText, {color: theme.colors.error}]}>
-          Delete
-        </Text>
-      </TouchableOpacity>
+      {canDelete && (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onDelete(homeId)}>
+          <Icon name="delete" size={20} color={theme.colors.error} />
+          <Text style={[styles.actionText, {color: theme.colors.error}]}>
+            Delete
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

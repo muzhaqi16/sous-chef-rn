@@ -1,11 +1,11 @@
-import {useState, useCallback, useEffect} from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  useGetShoppingListsQuery,
+  useGetShoppingListsLiteQuery,
   useGetPantriesQuery,
   useGetHomesQuery,
 } from '../graphql/generated';
-import {usePreservedArrayData} from './apollo';
-import {useAppStore, selectSelectedHomeId} from '#store/useAppStore';
+import { usePreservedArrayData } from './apollo';
+import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
@@ -40,22 +40,22 @@ export const useItemSelector = ({
   // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Query data based on type
-  const {data: shoppingListData, loading: shoppingListLoading} =
-    useGetShoppingListsQuery({
+  const { data: shoppingListData, loading: shoppingListLoading } =
+    useGetShoppingListsLiteQuery({
       fetchPolicy: 'cache-and-network',
       errorPolicy: 'ignore', // Return cached data on network errors
       skip: type !== 'shoppingList',
     });
 
-  const {data: pantryData, loading: pantryLoading} = useGetPantriesQuery({
-    variables: {homeId: selectedHomeId || ''},
+  const { data: pantryData, loading: pantryLoading } = useGetPantriesQuery({
+    variables: { homeId: selectedHomeId || '' },
     fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  const {data: homeData, loading: homeLoading} = useGetHomesQuery({
+  const { data: homeData, loading: homeLoading } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore', // Return cached data on network errors
     skip: type !== 'home',
@@ -120,7 +120,10 @@ export const useItemSelector = ({
   const handleSelect = useCallback(
     (id: string, item: any) => {
       if (__DEV__) {
-        console.log(`[useItemSelector:${type}] User selected: ${id}`, item?.name || item?.title || item);
+        console.log(
+          `[useItemSelector:${type}] User selected: ${id}`,
+          item?.name || item?.title || item,
+        );
       }
       setSelectedId(id);
       onSelect?.(id, item);
@@ -146,11 +149,11 @@ export const useItemSelector = ({
 // Convenience hooks for specific types
 export const useShoppingListSelector = (
   config?: Omit<UseItemSelectorConfig, 'type'>,
-) => useItemSelector({...config, type: 'shoppingList'});
+) => useItemSelector({ ...config, type: 'shoppingList' });
 
 export const usePantrySelector = (
   config?: Omit<UseItemSelectorConfig, 'type'>,
-) => useItemSelector({...config, type: 'pantry'});
+) => useItemSelector({ ...config, type: 'pantry' });
 
 export const useHomeSelector = (config?: Omit<UseItemSelectorConfig, 'type'>) =>
-  useItemSelector({...config, type: 'home'});
+  useItemSelector({ ...config, type: 'home' });

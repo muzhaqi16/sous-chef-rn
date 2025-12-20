@@ -3,42 +3,41 @@ import { useGetShoppingListQuery, GetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 
-// Export the shopping list detail type
+// Export the shopping list type from the detail query
 export type ShoppingListDetail = NonNullable<GetShoppingListQuery['shoppingList']>;
 
 /**
- * useShoppingListItemsQuery - Query shopping list items and details
+ * useShoppingListDetailQuery - Query detailed shopping list data
  *
  * Single responsibility:
- * - Fetch items AND full details for a specific shopping list
+ * - Fetch full details for a specific shopping list (items, collaborators, permissions)
  * - Handle offline-aware fetch policy
  * - Sort items by sortOrder (for fractional indexing support)
  * - Provide stable items array with fallback to previous data
- * - Provide shoppingList details for permissions and collaborators
  *
- * This hook is consumed by useShoppingListManagement for data orchestration.
+ * Use this hook when you need:
+ * - Items for the current list
+ * - Collaborator data for permissions
+ * - Home membership data for home-linked lists
+ *
+ * Note: For list metadata only (list selector), use useShoppingListsQuery.
  */
-export function useShoppingListItemsQuery(listId: string | null | undefined) {
+export function useShoppingListDetailQuery(listId: string | null | undefined) {
   const { isLoggedOut } = useAuth();
 
   const shouldSkip = !listId || isLoggedOut;
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available, prevents duplicate fetches on navigation
+  // - cache-and-network: Shows cached data immediately, fetches fresh in background
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders/tab switches
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
-  // Note: Pull-to-refresh uses explicit refetch() for fresh data
-
-  // Watch cache for updates from mutations and subscriptions
-  // Uses GetShoppingList with itemsConnection as single source of truth
-  // PERFORMANCE: Include previousData to prevent UI flash during refetch
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListQuery({
       variables: {
         id: listId ?? '',
       },
       skip: shouldSkip,
-      fetchPolicy: 'cache-first',
+      fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
@@ -79,7 +78,6 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
   ]);
 
   // Extract the shopping list detail (with previousData fallback for same list)
-  // Used for permissions, collaborators, and home membership
   const shoppingList = useMemo((): ShoppingListDetail | null => {
     if (listIdChanged) {
       return data?.shoppingList ?? null;
@@ -88,9 +86,10 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
   }, [listIdChanged, data?.shoppingList, previousData?.shoppingList]);
 
   return {
-    items,
-    // Full shopping list data (for permissions, collaborators, home membership)
+    // Full shopping list data (for permissions, collaborators, etc.)
     shoppingList,
+    // Extracted and sorted items
+    items,
     loading,
     error,
     refetch,

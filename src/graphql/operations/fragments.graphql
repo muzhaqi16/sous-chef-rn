@@ -212,6 +212,10 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   role
   status
   collaboratorId
+  canAddItems
+  canRemoveItems
+  canEditItems
+  canMarkPurchased
   collaborator {
     id
     email
@@ -902,6 +906,16 @@ fragment HomeDisplay on Home {
       endCursor
     }
     totalCount
+  }
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canAddItems
+    canRemoveItems
+    canEditPantry
   }
 }
 

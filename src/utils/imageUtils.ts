@@ -8,7 +8,17 @@ import type { ItemImage, ImageSize, ImageTab } from '#types';
  * @returns Image URL or null if no image is available
  */
 export const getItemImageUrl = (item: any): string | null => {
-  return item?.imageUrl || null;
+  const imageUrl = item?.imageUrl;
+  if (!imageUrl) return null;
+
+  // Only return valid URLs - filenames without full path are invalid
+  // The API should be returning full CDN URLs, not just filenames
+  if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+    console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
+    return null;
+  }
+
+  return imageUrl;
 };
 
 // =============================================================================

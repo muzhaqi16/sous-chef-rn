@@ -1,37 +1,40 @@
 import { useMemo, useCallback } from 'react';
 import { useAppNavigation } from '#hooks';
-import { useGetShoppingListsQuery, GetShoppingListsQuery } from '#generated';
+import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
 
-// Extract the shopping list type from the query
-export type ShoppingListFromQuery = GetShoppingListsQuery['shoppingLists'][number];
+// Extract the shopping list type from the lite query (metadata only)
+export type ShoppingListFromQuery = GetShoppingListsLiteQuery['shoppingLists'][number];
 
 /**
- * useShoppingListsQuery - Query shopping lists with smart caching
+ * useShoppingListsQuery - Query shopping lists with smart caching (LIGHTWEIGHT)
  *
  * Single responsibility:
- * - Fetch all user's shopping lists (independent of home)
+ * - Fetch all user's shopping lists METADATA ONLY (no items, no collaborators)
  * - Use cache-and-network for best UX (instant cache display + fresh data)
  * - Provide fetchLists() for manual refresh (e.g., when selector opens)
  * - Provide stable lists array with fallback to previous data
  *
- * PERFORMANCE: Uses hardcoded fetchPolicy to prevent query cascade.
- * - cache-and-network: Shows cached data immediately, fetches fresh in background
- * - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
- * - No homeId: shopping lists are independent of homes
- * - Offline: errorPolicy returns cached data when network fails
+ * PERFORMANCE: Uses GetShoppingListsLite query to reduce API complexity.
+ * - Only fetches list metadata (id, name, totalItems, etc.)
+ * - NO itemsConnection (items fetched via GetShoppingList for current list)
+ * - NO collaboratorsConnection (permissions fetched via GetShoppingList)
+ * - NO home.membersConnection/myMembership (fetched via GetShoppingList)
  *
- * Note: This is different from useShoppingListQuery which fetches items for a single list.
- * This hook fetches the list of shopping lists.
+ * Note: For detailed list data (items, permissions, collaborators), use
+ * useShoppingListDetailQuery with the current list ID.
  */
 export function useShoppingListsQuery() {
+  // DEBUG: Track hook calls to investigate duplicate queries
+  console.log('[useShoppingListsQuery] Hook called');
+
   const { isFocused } = useAppNavigation();
 
-  // PERFORMANCE: Hardcoded policy prevents cascade from network status changes
+  // PERFORMANCE: Uses lightweight query - metadata only, no items/collaborators
   // - cache-and-network: Shows cached data immediately, fetches fresh in background
   // - nextFetchPolicy: Prevents re-fetches on subsequent renders/list switches
   // - No homeId: shopping lists are independent of homes
   const { data, previousData, loading, error, refetch } =
-    useGetShoppingListsQuery({
+    useGetShoppingListsLiteQuery({
       variables: {},
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',

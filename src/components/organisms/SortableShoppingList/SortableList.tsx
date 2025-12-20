@@ -47,6 +47,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onDragBegin: externalOnDragBegin,
   onDragRelease: externalOnDragRelease,
   isDragging = false,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
   ...flatListProps
 }) => {
   // Track render performance
@@ -270,6 +273,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
             isActive={isActive}
             onSwipeableWillOpen={handleSwipeableWillOpen}
             onSwipeableClose={handleSwipeableClose}
+            canRemoveItems={canRemoveItems}
+            canEditItems={canEditItems}
+            canMarkPurchased={canMarkPurchased}
           />
         </ScaleDecorator>
       );
@@ -284,6 +290,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       disabled,
       handleSwipeableWillOpen,
       handleSwipeableClose,
+      canRemoveItems,
+      canEditItems,
+      canMarkPurchased,
     ],
   );
 

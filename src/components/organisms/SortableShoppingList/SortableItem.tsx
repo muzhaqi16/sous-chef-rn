@@ -38,6 +38,10 @@ interface SimpleDraggableItemProps {
   isActive?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  // Permission flags for conditional rendering
+  canRemoveItems?: boolean;
+  canEditItems?: boolean;
+  canMarkPurchased?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
@@ -52,6 +56,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   isActive,
   onSwipeableWillOpen,
   onSwipeableClose,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
 }) => {
   const { theme } = useUnistyles();
 
@@ -156,8 +163,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Uses onToggleComplete so animation plays BEFORE mutation moves item
   // When marking as purchased: slide right + fade out + height collapse
   // When unmarking: slide left + fade out + height collapse
+  // Only shown if user has permission to mark items as purchased
   const checkboxElement = React.useMemo(() => {
-    if (!onTogglePurchase) return null;
+    if (!onTogglePurchase || !canMarkPurchased) return null;
 
     return (
       <AnimatedCheckbox
@@ -173,7 +181,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         size={28}
       />
     );
-  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit]);
+  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit, canMarkPurchased]);
 
   return (
     <Animated.View
@@ -188,8 +196,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
-        onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
-        onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
+        onEdit={canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined}
+        onDelete={canRemoveItems && onItemDelete ? () => onItemDelete(item.id) : undefined}
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
@@ -249,13 +257,16 @@ const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Fast path: same item reference + same drag state = definitely equal
+  // Fast path: same item reference + same drag state + same permissions = definitely equal
   if (
     prev.item === next.item &&
     prev.isActive === next.isActive &&
     prev.drag === next.drag &&
     prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress
+    prev.onQuantityPress === next.onQuantityPress &&
+    prev.canRemoveItems === next.canRemoveItems &&
+    prev.canEditItems === next.canEditItems &&
+    prev.canMarkPurchased === next.canMarkPurchased
   ) {
     return true;
   }
@@ -271,7 +282,10 @@ const arePropsEqual = (
     prev.isActive === next.isActive &&
     prev.drag === next.drag &&
     prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress
+    prev.onQuantityPress === next.onQuantityPress &&
+    prev.canRemoveItems === next.canRemoveItems &&
+    prev.canEditItems === next.canEditItems &&
+    prev.canMarkPurchased === next.canMarkPurchased
   );
 };
 

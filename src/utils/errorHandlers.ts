@@ -21,6 +21,7 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
+import { getErrorMessage } from './errorHandling';
 
 /**
  * Version conflict handler configuration
@@ -252,8 +253,8 @@ export const handleMutationErrorAlert = (
 ): void => {
   const { operation, customMessage, showAlert = true } = config;
 
-  const errorMessage =
-    customMessage || error?.message || 'An unexpected error occurred';
+  // Use getErrorMessage to properly extract GraphQL error messages from Apollo errors
+  const errorMessage = customMessage || getErrorMessage(error);
 
   if (showAlert) {
     Alert.alert('Error', errorMessage);

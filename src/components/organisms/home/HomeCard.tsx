@@ -7,7 +7,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
-import { formatRole, getRoleBadgeStyle } from '#utils/formatters';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { commonStyles } from '#/styles';
@@ -41,6 +40,7 @@ export type PartialHome = {
     role: string;
     status: string;
     displayName?: string;
+    canManageHome?: boolean;
   } | null;
 };
 
@@ -49,6 +49,7 @@ interface HomeCardProps {
   isDefault: boolean;
   isHighlighted?: boolean;
   canInvite?: boolean;
+  canDelete?: boolean;
   onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
@@ -60,6 +61,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   isDefault,
   isHighlighted = false,
   canInvite,
+  canDelete,
   onPress,
   onSetDefault,
   onInvite,
@@ -148,33 +150,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             pantries
           </Text>
         </View>
-        <View style={styles.badgeContainer}>
-          {home.myMembership?.role && (
-            <View
-              style={[
-                styles.roleBadge,
-                getRoleBadgeStyle(home.myMembership.role, theme),
-              ]}
-            >
-              <Text
-                style={[
-                  styles.roleText,
-                  {
-                    color: getRoleBadgeStyle(home.myMembership.role, theme)
-                      .color,
-                  },
-                ]}
-              >
-                {formatRole(home.myMembership.role)}
-              </Text>
-            </View>
-          )}
-          {isDefault && (
-            <View style={styles.defaultBadge}>
-              <Text style={styles.defaultText}>Default</Text>
-            </View>
-          )}
-        </View>
+        {isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>Default</Text>
+          </View>
+        )}
         {onPress && (
           <Icon
             name="chevron-forward"
@@ -189,6 +169,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         homeId={home.id}
         isDefault={isDefault}
         canInvite={canInvite}
+        canDelete={canDelete}
         onSetDefault={onSetDefault}
         onInvite={onInvite}
         onDelete={handleDelete}
@@ -238,20 +219,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs + 2,
-  },
-  roleBadge: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.sm,
-  },
-  roleText: {
-    fontSize: theme.typography.fontSize.xs - 1,
-    fontWeight: theme.fonts.weight.semibold,
   },
   defaultBadge: {
     backgroundColor: theme.colors.primary + '20',

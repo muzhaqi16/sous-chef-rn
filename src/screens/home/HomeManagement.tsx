@@ -221,10 +221,10 @@ export const HomeManagement: React.FC = () => {
       const userCanInvite = membership
         ? canInviteToHome(membership.role)
         : false;
+      const userCanDelete = home.myMembership?.canManageHome ?? false;
 
       return (
         <Animated.View
-          key={home.id}
           entering={FadeInDown.delay(index * 50).springify()}
           layout={LinearTransition.duration(600)
             .springify()
@@ -237,6 +237,7 @@ export const HomeManagement: React.FC = () => {
             isDefault={home.id === defaultHomeId}
             isHighlighted={home.id === highlightedHomeId}
             canInvite={userCanInvite}
+            canDelete={userCanDelete}
             onPress={handleViewHomeDetail}
             onSetDefault={handleSetDefault}
             onInvite={handleInviteMember}

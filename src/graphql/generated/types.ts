@@ -10522,6 +10522,10 @@ export type ShoppingListCollaboratorFragmentFragment = {
   role: CollaboratorRole;
   status: CollaboratorStatus;
   collaboratorId?: string | null | undefined;
+  canAddItems: boolean;
+  canRemoveItems: boolean;
+  canEditItems: boolean;
+  canMarkPurchased: boolean;
   collaborator?:
     | {
         __typename?: 'User';
@@ -11805,6 +11809,20 @@ export type HomeDisplayFragment = {
       endCursor?: string | null | undefined;
     };
   };
+  myMembership?:
+    | {
+        __typename?: 'Membership';
+        id: string;
+        role: MembershipRole;
+        status: MembershipStatus;
+        displayName?: string | null | undefined;
+        canManageHome: boolean;
+        canAddItems: boolean;
+        canRemoveItems: boolean;
+        canEditPantry: boolean;
+      }
+    | null
+    | undefined;
 };
 
 export type HomeFragmentFragment = {
@@ -13082,6 +13100,20 @@ export type GetHomesQuery = {
         endCursor?: string | null | undefined;
       };
     };
+    myMembership?:
+      | {
+          __typename?: 'Membership';
+          id: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          canManageHome: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canEditPantry: boolean;
+        }
+      | null
+      | undefined;
   }>;
 };
 
@@ -19081,6 +19113,26 @@ export type GetShoppingListQuery = {
         completedItems: number;
         createdAt: string;
         updatedAt: string;
+        homeId?: string | null | undefined;
+        home?:
+          | {
+              __typename?: 'Home';
+              id: string;
+              name: string;
+              myMembership?:
+                | {
+                    __typename?: 'Membership';
+                    id: string;
+                    role: MembershipRole;
+                    canAddItems: boolean;
+                    canRemoveItems: boolean;
+                    canEditPantry: boolean;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
         ownerships?:
           | Array<{
               __typename?: 'ShoppingListOwnership';
@@ -19252,11 +19304,11 @@ export type GetShoppingListQuery = {
     | undefined;
 };
 
-export type GetShoppingListsQueryVariables = Exact<{
+export type GetShoppingListsLiteQueryVariables = Exact<{
   homeId?: InputMaybe<Scalars['String']['input']>;
 }>;
 
-export type GetShoppingListsQuery = {
+export type GetShoppingListsLiteQuery = {
   __typename?: 'Query';
   shoppingLists: Array<{
     __typename?: 'ShoppingList';
@@ -19264,49 +19316,13 @@ export type GetShoppingListsQuery = {
     name: string;
     description?: string | null | undefined;
     isDefault: boolean;
-    isPublic: boolean;
-    tags: Array<string>;
     totalItems: number;
     completedItems: number;
-    estimatedTotal: number;
-    currency?: string | null | undefined;
     status: ListStatus;
     isCompleted: boolean;
-    priority: number;
     createdAt: string;
     updatedAt: string;
     homeId?: string | null | undefined;
-    home?:
-      | {
-          __typename?: 'Home';
-          id: string;
-          name: string;
-          membersConnection: {
-            __typename?: 'MembershipConnection';
-            edges: Array<{
-              __typename?: 'MembershipEdge';
-              node: {
-                __typename?: 'Membership';
-                role: MembershipRole;
-                user: {
-                  __typename?: 'User';
-                  id: string;
-                  email: string;
-                  profile?:
-                    | {
-                        __typename?: 'UserProfile';
-                        displayName?: string | null | undefined;
-                        avatar?: string | null | undefined;
-                      }
-                    | null
-                    | undefined;
-                };
-              };
-            }>;
-          };
-        }
-      | null
-      | undefined;
     ownerships?:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -19315,7 +19331,6 @@ export type GetShoppingListsQuery = {
           user: {
             __typename?: 'User';
             id: string;
-            email: string;
             profile?:
               | {
                   __typename?: 'UserProfile';
@@ -19328,73 +19343,6 @@ export type GetShoppingListsQuery = {
         }>
       | null
       | undefined;
-    itemsConnection: {
-      __typename?: 'ShoppingListItemConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'ShoppingListItemEdge';
-        cursor: string;
-        node: {
-          __typename?: 'ShoppingListItem';
-          id: string;
-          itemName?: string | null | undefined;
-          quantity?: number | null | undefined;
-          sortOrder: string;
-          unitName?: string | null | undefined;
-          category?: string | null | undefined;
-          version: number;
-          purchaseInfo: {
-            __typename?: 'ShoppingListItemPurchaseInfo';
-            isPurchased: boolean;
-          };
-          unit?:
-            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
-            | null
-            | undefined;
-          item?:
-            | {
-                __typename?: 'Item';
-                id: string;
-                imageUrl?: string | null | undefined;
-                categories?:
-                  | Array<{
-                      __typename?: 'ItemCategory';
-                      id: string;
-                      isPrimary: boolean;
-                      category: {
-                        __typename?: 'Category';
-                        id: string;
-                        name: string;
-                      };
-                    }>
-                  | null
-                  | undefined;
-                units: Array<{
-                  __typename?: 'ItemUnit';
-                  id: string;
-                  isDefault: boolean;
-                  isPreferred: boolean;
-                  unit?:
-                    | {
-                        __typename?: 'Unit';
-                        id: string;
-                        name: string;
-                        symbol: string;
-                      }
-                    | null
-                    | undefined;
-                }>;
-              }
-            | null
-            | undefined;
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
   }>;
 };
 
@@ -19483,6 +19431,10 @@ export type GetDefaultShoppingListQuery = {
               role: CollaboratorRole;
               status: CollaboratorStatus;
               collaboratorId?: string | null | undefined;
+              canAddItems: boolean;
+              canRemoveItems: boolean;
+              canEditItems: boolean;
+              canMarkPurchased: boolean;
               collaborator?:
                 | {
                     __typename?: 'User';
@@ -19841,6 +19793,10 @@ export type CreateShoppingListMutation = {
           role: CollaboratorRole;
           status: CollaboratorStatus;
           collaboratorId?: string | null | undefined;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canEditItems: boolean;
+          canMarkPurchased: boolean;
           collaborator?:
             | {
                 __typename?: 'User';
@@ -19966,6 +19922,10 @@ export type UpdateShoppingListMutation = {
           role: CollaboratorRole;
           status: CollaboratorStatus;
           collaboratorId?: string | null | undefined;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canEditItems: boolean;
+          canMarkPurchased: boolean;
           collaborator?:
             | {
                 __typename?: 'User';

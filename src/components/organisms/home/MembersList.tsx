@@ -73,7 +73,9 @@ export const MembersList: React.FC<MembersListProps> = ({
               >
                 {displayName}
               </Text>
-              <Text style={styles.memberRole}>{formatRole(member.role)}</Text>
+              <Text style={[styles.memberRole, isCurrentUser && styles.currentUserRole]}>
+                {formatRole(member.role)}
+              </Text>
             </View>
           );
         })}
@@ -146,6 +148,9 @@ const styles = StyleSheet.create(theme => ({
   currentUserText: {
     color: theme.colors.white,
     fontWeight: '700',
+  },
+  currentUserRole: {
+    color: theme.colors.white,
   },
   inviteChip: {
     backgroundColor: theme.colors.transparent,

@@ -12,16 +12,22 @@ export type { ShoppingListItemInput, ShoppingListItemUpdate };
  * useShoppingListManagement - Composition hook for shopping list data management
  *
  * Orchestrates specialized hooks:
- * 1. useShoppingListItemsQuery - Fetch items with offline-aware policy
+ * 1. useShoppingListItemsQuery - Fetch items AND shopping list details
  * 2. useShoppingListItemMutations - CRUD operations with optimistic responses
  * 3. useSearchableList - Client-side search filtering
+ *
+ * Returns:
+ * - items: Sorted shopping list items
+ * - shoppingList: Full shopping list details (for permissions, collaborators)
+ * - mutations: addItem, updateItem, removeItem, toggleItem
+ * - search: query, setQuery, filtered items
  *
  * @param currentListId - Validated list ID from useShoppingListSelection
  *   (ensures the ID exists in available lists, preventing queries for deleted lists)
  */
 export function useShoppingListManagement(currentListId: string | undefined) {
-  // 1. Query: Fetch items for current list (validated ID prevents deleted list queries)
-  const { items, loading, error, refetch } = useShoppingListItemsQuery(currentListId);
+  // 1. Query: Fetch items AND shopping list details (for permissions)
+  const { items, shoppingList, loading, error, refetch } = useShoppingListItemsQuery(currentListId);
 
   // 2. Mutations: CRUD operations
   const { addItem, updateItem, removeItem, toggleItem } = useShoppingListItemMutations(
@@ -82,6 +88,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: items,
+    shoppingList, // Full shopping list details for permissions, collaborators
     loading,
     error,
     stats,

@@ -40,6 +40,11 @@ interface ShoppingListTabsProps {
   onClearAllPurchased?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  // Permission flags for conditional rendering of item actions
+  canAddItems?: boolean;
+  canRemoveItems?: boolean;
+  canEditItems?: boolean;
+  canMarkPurchased?: boolean;
 }
 
 const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
@@ -61,6 +66,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onClearAllPurchased,
   onSwipeableWillOpen,
   onSwipeableClose,
+  // Permission props - default to true for backward compatibility
+  canAddItems = true,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
 }) => {
   // Track open swipeable across both tabs
   const openSwipeableRef = useRef<any>(null);
@@ -88,6 +98,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     loading,
     disabled,
     refreshing,
+    canAddItems,
+    canRemoveItems,
+    canEditItems,
+    canMarkPurchased,
   });
 
   // Keep refs updated with latest callbacks and state
@@ -108,6 +122,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       loading,
       disabled,
       refreshing,
+      canAddItems,
+      canRemoveItems,
+      canEditItems,
+      canMarkPurchased,
     };
   });
 
@@ -205,6 +223,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onSwipeableClose={callbacks.onSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
+              canRemoveItems={state.canRemoveItems}
+              canEditItems={state.canEditItems}
+              canMarkPurchased={state.canMarkPurchased}
             />
           );
 
@@ -227,6 +248,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onSwipeableClose={callbacks.onSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
+              canRemoveItems={state.canRemoveItems}
+              canEditItems={state.canEditItems}
+              canMarkPurchased={state.canMarkPurchased}
             />
           );
 
