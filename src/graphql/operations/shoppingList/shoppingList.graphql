@@ -99,11 +99,16 @@ query GetShoppingListsLite($homeId: String) {
     createdAt
     updatedAt
     homeId
+    home {
+      id
+      name
+    }
     ownerships {
       id
       userId
       user {
         id
+        email
         profile {
           displayName
           avatar
@@ -478,6 +483,27 @@ mutation UpdateCollaboratorRole(
 mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   moveShoppingItemToPantry(input: $input) {
     ...PantryItemFragment
+  }
+}
+
+mutation AddItemsToShoppingList(
+  $shoppingListId: ID!
+  $items: [BatchAddShoppingListItemInput!]!
+) {
+  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+    results {
+      index
+      clientId
+      success
+      item {
+        ...ShoppingListItemFragment
+      }
+      quantityIncremented
+      error
+    }
+    successCount
+    failedCount
+    incrementedCount
   }
 }
 

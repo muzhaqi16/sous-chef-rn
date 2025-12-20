@@ -23,8 +23,8 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   const shouldSkip = !listId || isLoggedOut;
 
-  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available, prevents duplicate fetches on navigation
+  // PERFORMANCE: cache-and-network shows cached data immediately, fetches fresh in background
+  // - cache-and-network: Instant UI from cache + background fetch for fresh data
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders/tab switches
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
   // Note: Pull-to-refresh uses explicit refetch() for fresh data
@@ -38,7 +38,7 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
         id: listId ?? '',
       },
       skip: shouldSkip,
-      fetchPolicy: 'cache-first',
+      fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });

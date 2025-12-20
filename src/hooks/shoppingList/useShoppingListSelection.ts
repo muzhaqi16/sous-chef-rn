@@ -28,27 +28,6 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
     [lists],
   );
 
-  // Derive: current list ID (only use selectedShoppingListId if it exists in lists)
-  // This prevents querying deleted lists during race conditions after delete
-  const currentListId = useMemo(() => {
-    // If there's a selection, verify it exists in the available lists
-    if (selectedShoppingListId) {
-      const exists = lists.some(list => list.id === selectedShoppingListId);
-      if (exists) {
-        return selectedShoppingListId;
-      }
-      // Selected list doesn't exist (was deleted) - fall through to default
-    }
-    // No valid selection - use default
-    return defaultList?.id || undefined;
-  }, [selectedShoppingListId, lists, defaultList?.id]);
-
-  // Derive: current list object
-  const currentList = useMemo(
-    () => lists.find(list => list.id === currentListId) || defaultList,
-    [lists, currentListId, defaultList],
-  );
-
   // Check if selected list still exists in the lists array
   const selectedListExists = useMemo(
     () =>
@@ -58,20 +37,36 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
     [selectedShoppingListId, lists],
   );
 
-  // Auto-select: when no list selected OR selected list no longer exists
-  // Note: Synchronous update prevents duplicate query batches during initialization
+  // Derive: current list ID (only use selectedShoppingListId if it exists in lists)
+  // This prevents querying deleted lists during race conditions after delete
+  const currentListId = useMemo(() => {
+    if (selectedShoppingListId && selectedListExists) {
+      return selectedShoppingListId;
+    }
+    return defaultList?.id || undefined;
+  }, [selectedShoppingListId, selectedListExists, defaultList?.id]);
+
+  // Derive: current list object
+  const currentList = useMemo(
+    () => lists.find(list => list.id === currentListId) || defaultList,
+    [lists, currentListId, defaultList],
+  );
+
+  // Auto-select: ONLY when no selection exists OR selected list was deleted
+  // Key fix: Don't include defaultList?.id in dependencies - it changes on every lists update
+  // Instead, calculate fallback list inside the effect to prevent infinite loops
   useEffect(() => {
-    if (!selectedShoppingListId || !selectedListExists) {
-      if (defaultList?.id) {
-        setSelectedShoppingListId(defaultList.id);
+    // Only auto-select if we have lists but no valid selection
+    if (lists.length > 0 && (!selectedShoppingListId || !selectedListExists)) {
+      const fallbackList = lists.find(list => list.isDefault) || lists[0];
+      if (fallbackList?.id) {
+        setSelectedShoppingListId(fallbackList.id);
       }
     }
-  }, [
-    selectedShoppingListId,
-    selectedListExists,
-    defaultList?.id,
-    setSelectedShoppingListId,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedShoppingListId, selectedListExists, lists.length]);
+  // NOTE: Deliberately NOT including setSelectedShoppingListId, defaultList?.id or lists
+  // to prevent infinite loop when lists change
 
   return {
     currentListId,

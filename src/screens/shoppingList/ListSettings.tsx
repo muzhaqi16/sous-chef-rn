@@ -17,7 +17,7 @@ import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
-  GetShoppingListsDocument,
+  GetShoppingListsLiteDocument,
   ShoppingList,
 } from '#generated';
 import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
@@ -105,14 +105,14 @@ export const ListSettings: React.FC<{
           const existingData = cache.readQuery<{
             shoppingLists: ShoppingList[];
           }>({
-            query: GetShoppingListsDocument,
+            query: GetShoppingListsLiteDocument,
             variables: {},
           });
 
           if (existingData) {
             // Write with same empty variables to update the cache
             cache.writeQuery({
-              query: GetShoppingListsDocument,
+              query: GetShoppingListsLiteDocument,
               variables: {},
               data: {
                 ...existingData,

@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
@@ -36,6 +37,7 @@ const RecipeDetailScreen: React.FC = () => {
     saving,
     recipeSaved,
     handleSaveRecipe,
+    shoppingLists,
     addingToList,
     addedIngredients,
     selectedIngredients,
@@ -43,10 +45,12 @@ const RecipeDetailScreen: React.FC = () => {
     handleAddAllIngredientsToList,
     handleAddAllIngredients,
     handleAddSelectedIngredients,
+    handleListSelected,
     toggleIngredient,
     openIngredientSelector,
     shoppingListOptionsRef,
     ingredientSelectorRef,
+    listPickerRef,
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
@@ -435,6 +439,64 @@ const RecipeDetailScreen: React.FC = () => {
         </TouchableOpacity>
       </BottomSheetAction>
 
+      {/* Shopping List Picker Bottom Sheet */}
+      <BottomSheetAction
+        sheetRef={listPickerRef}
+        sheetTitle="Add to Shopping List"
+        snapPoints={['50%']}
+        scrollable={false}
+      >
+        <BottomSheetFlatList
+          data={shoppingLists}
+          keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+          renderItem={({ item }: { item: (typeof shoppingLists)[number] }) => (
+            <TouchableOpacity
+              style={styles.listPickerItem}
+              onPress={() => handleListSelected(item.id)}
+            >
+              <View style={styles.listPickerInfo}>
+                <Text style={styles.listPickerName}>{item.name}</Text>
+                <Text style={styles.listPickerCount}>
+                  {item.totalItems ?? 0} items
+                </Text>
+              </View>
+              {item.isDefault && (
+                <View
+                  style={[
+                    styles.defaultBadge,
+                    { backgroundColor: theme.colors.primary + '20' },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.defaultBadgeText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    Default
+                  </Text>
+                </View>
+              )}
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyListPicker}>
+              <Text style={styles.emptyText}>No shopping lists found</Text>
+              <Text style={styles.emptySubtext}>
+                Create a shopping list first
+              </Text>
+            </View>
+          }
+        />
+      </BottomSheetAction>
+
       {/* Mark Cooked Modal */}
       <MarkCookedModal
         visible={cookedModalVisible}
@@ -714,5 +776,46 @@ const styles = StyleSheet.create(theme => ({
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
+  },
+  // List picker styles
+  listPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.md,
+  },
+  listPickerInfo: {
+    flex: 1,
+  },
+  listPickerName: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  listPickerCount: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  defaultBadge: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
+  },
+  defaultBadgeText: {
+    fontSize: theme.fonts.size.xs,
+    fontWeight: '600',
+  },
+  emptyListPicker: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptySubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
   },
 }));

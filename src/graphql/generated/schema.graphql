@@ -638,6 +638,82 @@ input BanUserInput {
   userId: ID!
 }
 
+"""
+Input for a single item in batch add operation (without shoppingListId)
+"""
+input BatchAddShoppingListItemInput {
+  addedContext: String
+  aisle: String
+  budgetPrice: Float
+  category: String
+  """
+  Client-provided ID for matching results (optional)
+  """
+  clientId: String
+  estimatedPrice: Float
+  itemId: String
+  itemName: String
+  notes: String
+  preferredStoreId: String
+  priority: Int
+  quantity: Float
+  recipeId: ID
+  recipeIngredientId: ID
+  sortOrder: String
+  storeSection: String
+  unitId: String
+  unitName: String
+}
+
+"""
+Result for a single item in batch add operation
+"""
+type BatchAddShoppingListItemResult {
+  """
+  Client ID if provided in input
+  """
+  clientId: String
+  """
+  Error message if failed
+  """
+  error: String
+  """
+  Index in the input array
+  """
+  index: Int!
+  """
+  The created/updated item (null if failed)
+  """
+  item: ShoppingListItem
+  """
+  Whether quantity was incremented (item already existed)
+  """
+  quantityIncremented: Boolean
+  """
+  Whether the operation succeeded
+  """
+  success: Boolean!
+}
+
+"""
+Response for batch add operation
+"""
+type BatchAddShoppingListItemsResponse {
+  """
+  Number of items that failed
+  """
+  failedCount: Int!
+  """
+  Number of items where quantity was incremented
+  """
+  incrementedCount: Int!
+  results: [BatchAddShoppingListItemResult!]!
+  """
+  Number of items successfully added
+  """
+  successCount: Int!
+}
+
 type BatchOperationSummary {
   created: Int!
   executionTime: Float!
@@ -3794,6 +3870,15 @@ type Mutation {
   acceptShoppingListInvite(token: String!): ShoppingListCollaborator!
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItem!
+  """
+  Batch add multiple items to a shopping list.
+  More efficient than calling addItemToShoppingList multiple times.
+  Max 50 items per batch.
+  """
+  addItemsToShoppingList(
+    items: [BatchAddShoppingListItemInput!]!
+    shoppingListId: ID!
+  ): BatchAddShoppingListItemsResponse!
   """
   Add all low stock items from a home's pantries to a shopping list.
   If no shoppingListId is provided, uses the home's default shopping list.
