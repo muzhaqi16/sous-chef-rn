@@ -48,6 +48,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   const [notes, setNotes] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [localFolders, setLocalFolders] = useState<string[]>([]); // Track newly created folders
 
   // Reset form when sheet opens
   useEffect(() => {
@@ -58,6 +59,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       setNotes('');
       setShowNewFolder(false);
       setNewFolderName('');
+      setLocalFolders([]);
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -82,15 +84,21 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   }, []);
 
   const handleCreateFolder = useCallback(() => {
-    if (newFolderName.trim()) {
-      setSelectedFolder(newFolderName.trim());
+    const trimmedName = newFolderName.trim();
+    if (trimmedName) {
+      // Add to local folders list so it appears in the UI
+      setLocalFolders(prev =>
+        prev.includes(trimmedName) ? prev : [...prev, trimmedName]
+      );
+      setSelectedFolder(trimmedName);
       setShowNewFolder(false);
       setNewFolderName('');
     }
   }, [newFolderName]);
 
-  // Dedupe folders with "Favorites" first
-  const displayFolders = ['Favorites', ...folders.filter(f => f !== 'Favorites')];
+  // Dedupe folders with "Favorites" first, then existing folders, then locally created folders
+  const allFolders = [...new Set([...folders, ...localFolders])];
+  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
 
   return (
     <BottomSheetModal
@@ -103,6 +111,8 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}

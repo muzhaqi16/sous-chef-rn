@@ -1,12 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Keyboard,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 
@@ -96,7 +90,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
         {/* Input field */}
         {editable && tags.length < maxTags && (
-          <TextInput
+          <BottomSheetTextInput
             style={styles.input}
             value={inputValue}
             onChangeText={setInputValue}

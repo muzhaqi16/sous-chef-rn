@@ -86,6 +86,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           {/* Tappable quantity badge */}
           <QuantityBadge
             quantity={config.quantity}
+            quantityInput={config.quantityInput}
             unit={config.unit}
             onPress={() => onQuantityPress?.(config.itemId)}
             disabled={config.disabled}

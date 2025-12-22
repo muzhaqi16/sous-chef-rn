@@ -1,15 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  TextInput,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
+  BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
@@ -30,6 +26,7 @@ interface QuantityEditSheetItem {
   id: string;
   itemName: string;
   quantity: number;
+  quantityInput?: string | null;
   unitName?: string | null;
   unitId?: string | null;
   category?: string | null;
@@ -42,9 +39,45 @@ interface QuantityEditSheetProps {
   visible: boolean;
   item: QuantityEditSheetItem | null;
   onClose: () => void;
-  onSave: (quantity: number, unitName: string | null, unitId: string | null) => void;
+  onSave: (
+    quantity: string,
+    unitName: string | null,
+    unitId: string | null,
+  ) => void;
   loading?: boolean;
 }
+
+/**
+ * Parse fractional quantity input to a number
+ * Supports: decimals (1.5), simple fractions (1/4), mixed numbers (1 1/4)
+ */
+const parseFractionInput = (input: string): number | null => {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // Mixed number: "1 1/4"
+  const mixedMatch = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixedMatch) {
+    const whole = parseInt(mixedMatch[1]);
+    const numerator = parseInt(mixedMatch[2]);
+    const denominator = parseInt(mixedMatch[3]);
+    if (denominator === 0) return null;
+    return whole + numerator / denominator;
+  }
+
+  // Simple fraction: "1/4"
+  const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/);
+  if (fractionMatch) {
+    const numerator = parseInt(fractionMatch[1]);
+    const denominator = parseInt(fractionMatch[2]);
+    if (denominator === 0) return null;
+    return numerator / denominator;
+  }
+
+  // Decimal or whole number
+  const num = parseFloat(trimmed);
+  return isNaN(num) || num < 0 ? null : num;
+};
 
 /**
  * QuantityEditSheet - Bottom sheet for editing item quantity and unit
@@ -68,7 +101,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const animationConfigs = useSharedBottomSheetConfigs();
 
   // Local state for editing
-  const [quantity, setQuantity] = useState(0);
+  const [quantityInput, setQuantityInput] = useState('');
   const [unitName, setUnitName] = useState<string | null>(null);
   const [unitId, setUnitId] = useState<string | null>(null);
 
@@ -78,17 +111,20 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const inputRef = useRef<TextInput>(null);
 
   // Use item-specific units if available (sorted: preferred first, then default, then alphabetically)
-  const itemUnits = item?.itemUnits?.slice().sort((a, b) => {
-    if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
-    if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-    return a.symbol.localeCompare(b.symbol);
-  }) || [];
+  const itemUnits =
+    item?.itemUnits?.slice().sort((a, b) => {
+      if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      return a.symbol.localeCompare(b.symbol);
+    }) || [];
 
   // Initialize state only when sheet opens or item ID changes
   // NOT when item properties change (to prevent flash-back during save)
   useEffect(() => {
     if (visible && item) {
-      setQuantity(item.quantity ?? 0);
+      // Initialize from quantityInput (user's original input) or fall back to formatted quantity
+      const initialInput = item.quantityInput || formatQuantity(item.quantity ?? 0);
+      setQuantityInput(initialInput);
 
       // Sync unit with available item units (case-insensitive match)
       // This ensures consistent display (e.g., "Tbsps" -> "tbsp" if chip exists)
@@ -138,24 +174,24 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   // Handle quantity changes (with hybrid mode support)
   const handleIncrement = useCallback(() => {
-    setQuantity(prev => {
-      const newValue = prev + 1;
-      if (isEditing) {
-        setInputValue(formatQuantity(newValue));
-      }
-      return newValue;
-    });
-  }, [isEditing, formatQuantity]);
+    const parsed = parseFractionInput(quantityInput) ?? 0;
+    const newValue = parsed + 1;
+    const formatted = formatQuantity(newValue);
+    setQuantityInput(formatted);
+    if (isEditing) {
+      setInputValue(formatted);
+    }
+  }, [quantityInput, isEditing, formatQuantity]);
 
   const handleDecrement = useCallback(() => {
-    setQuantity(prev => {
-      const newValue = Math.max(0, prev - 1);
-      if (isEditing) {
-        setInputValue(formatQuantity(newValue));
-      }
-      return newValue;
-    });
-  }, [isEditing, formatQuantity]);
+    const parsed = parseFractionInput(quantityInput) ?? 0;
+    const newValue = Math.max(0, parsed - 1);
+    const formatted = formatQuantity(newValue);
+    setQuantityInput(formatted);
+    if (isEditing) {
+      setInputValue(formatted);
+    }
+  }, [quantityInput, isEditing, formatQuantity]);
 
   // Handle unit chip selection
   const handleUnitChipPress = useCallback((unit: ItemUnit) => {
@@ -165,13 +201,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   // Handle tap on quantity to enter edit mode
   const handleQuantityPress = useCallback(() => {
-    setInputValue(formatQuantity(quantity));
+    setInputValue(quantityInput);
     setIsEditing(true);
     // Focus after state update
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
-  }, [quantity, formatQuantity]);
+  }, [quantityInput]);
 
   // Handle input text change - no sanitization to avoid cursor jumping
   // Validation happens on blur instead
@@ -179,31 +215,23 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     setInputValue(text);
   }, []);
 
-  // Handle input blur - validate and update quantity
+  // Handle input blur - update quantityInput (validation happens on save by server)
   const handleInputBlur = useCallback(() => {
     setIsEditing(false);
 
     if (inputValue.trim() === '') {
       // Empty input becomes 0
-      setQuantity(0);
-      return;
+      setQuantityInput('0');
+    } else {
+      // Keep whatever the user typed - validation happens on save
+      setQuantityInput(inputValue);
     }
-
-    const parsed = parseFloat(inputValue);
-    if (isNaN(parsed)) {
-      // Invalid input - revert to current quantity (already in state)
-      return;
-    }
-
-    // Round to 2 decimal places and clamp to min 0
-    const rounded = Math.round(Math.max(0, parsed) * 100) / 100;
-    setQuantity(rounded);
   }, [inputValue]);
 
   // Handle save
   const handleSave = useCallback(() => {
-    onSave(quantity, unitName, unitId);
-  }, [quantity, unitName, unitId, onSave]);
+    onSave(quantityInput, unitName, unitId);
+  }, [quantityInput, unitName, unitId, onSave]);
 
   // Render backdrop
   const renderBackdrop = useCallback(
@@ -219,8 +247,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   );
 
   // Check if values changed
+  const originalQuantityInput = item?.quantityInput || formatQuantity(item?.quantity ?? 0);
   const hasChanges =
-    item && (quantity !== item.quantity || unitName !== item.unitName);
+    item && (quantityInput !== originalQuantityInput || unitName !== item.unitName);
 
   return (
     <BottomSheetModal
@@ -232,8 +261,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
     >
-      <BottomSheetView style={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
+      <BottomSheetView
+        style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+      >
         {/* Item Header */}
         {item && (
           <View style={styles.header}>
@@ -244,7 +277,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 resizeMode="cover"
               />
             ) : (
-              <View style={[styles.imagePlaceholder, { backgroundColor: theme.colors.surfaceVariant }]}>
+              <View
+                style={[
+                  styles.imagePlaceholder,
+                  { backgroundColor: theme.colors.surfaceVariant },
+                ]}
+              >
                 <Icon
                   name="shopping-cart"
                   size={24}
@@ -254,11 +292,20 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               </View>
             )}
             <View style={styles.headerText}>
-              <Text style={[styles.itemName, { color: theme.colors.textPrimary }]} numberOfLines={1}>
+              <Text
+                style={[styles.itemName, { color: theme.colors.textPrimary }]}
+                numberOfLines={1}
+              >
                 {item.itemName}
               </Text>
               {item.category && (
-                <Text style={[styles.category, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.category,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                  numberOfLines={1}
+                >
                   {item.category}
                 </Text>
               )}
@@ -267,25 +314,39 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         )}
 
         {/* Divider */}
-        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+        <View
+          style={[styles.divider, { backgroundColor: theme.colors.border }]}
+        />
 
         {/* Quantity Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}
+          >
             Quantity
           </Text>
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
             <TouchableOpacity
-              style={[styles.counterButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              style={[
+                styles.counterButton,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               onPress={handleDecrement}
-              disabled={quantity <= 0}
+              disabled={(parseFractionInput(quantityInput) ?? 0) <= 0}
               activeOpacity={0.7}
             >
               <Icon
                 name="remove"
                 size={24}
-                color={quantity <= 0 ? theme.colors.textTertiary : theme.colors.textPrimary}
+                color={
+                  (parseFractionInput(quantityInput) ?? 0) <= 0
+                    ? theme.colors.textTertiary
+                    : theme.colors.textPrimary
+                }
                 library="MaterialIcons"
               />
             </TouchableOpacity>
@@ -301,9 +362,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               activeOpacity={0.8}
             >
               {isEditing ? (
-                <TextInput
+                <BottomSheetTextInput
                   ref={inputRef}
-                  style={[styles.quantityInput, { color: theme.colors.textPrimary }]}
+                  style={[
+                    styles.quantityInput,
+                    { color: theme.colors.textPrimary },
+                  ]}
                   value={inputValue}
                   onChangeText={handleInputChange}
                   onBlur={handleInputBlur}
@@ -312,15 +376,24 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                   maxLength={10}
                 />
               ) : (
-                <Text style={[styles.quantityText, { color: theme.colors.textPrimary }]}>
-                  {formatQuantity(quantity)}
+                <Text
+                  style={[
+                    styles.quantityText,
+                    { color: theme.colors.textPrimary },
+                  ]}
+                >
+                  {quantityInput || '0'}
                 </Text>
               )}
             </TouchableOpacity>
 
             {/* Increment Button */}
             <TouchableOpacity
-              style={[styles.counterButton, styles.incrementButton, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.counterButton,
+                styles.incrementButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
               onPress={handleIncrement}
               activeOpacity={0.7}
             >
@@ -336,7 +409,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
         {/* Unit Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+          <Text
+            style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}
+          >
             Unit
           </Text>
 
@@ -357,7 +432,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           {/* Autocomplete for custom/search */}
           <InlineUnitsAutocomplete
             value={unitName || ''}
-            onChangeText={(text) => {
+            onChangeText={text => {
               // Convert empty string to null to properly clear the unit
               setUnitName(text || null);
               // Clear unitId when user types custom text
@@ -370,7 +445,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               }
               setUnitId(selectedUnitId);
             }}
-            placeholder={itemUnits.length > 0 ? 'Or type to search...' : 'Type to search units...'}
+            placeholder={
+              itemUnits.length > 0
+                ? 'Or type to search...'
+                : 'Type to search units...'
+            }
           />
         </View>
 

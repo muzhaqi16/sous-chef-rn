@@ -22,6 +22,7 @@ import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { normalizePantry } from '#/utils/connectionUtils';
+import { subscriptionService } from '#/services/subscriptions';
 
 export const PantrySettings: React.FC<{
   route: { params?: PantryStackParamList['PantrySettings'] };
@@ -330,8 +331,16 @@ export const PantrySettings: React.FC<{
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deletePantry({ variables: { id: pantryId } });
-            goBack();
+            // Register parent deletion to prevent subscription race conditions
+            subscriptionService.registerParentDeletion(pantryId);
+
+            try {
+              await deletePantry({ variables: { id: pantryId } });
+              goBack();
+            } finally {
+              // Cleanup (timeout in service provides fallback)
+              subscriptionService.unregisterParentDeletion(pantryId);
+            }
           },
         },
       ],

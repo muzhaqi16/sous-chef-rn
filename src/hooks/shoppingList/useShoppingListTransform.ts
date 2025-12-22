@@ -32,6 +32,7 @@ export function useShoppingListTransform(
       const rightElementConfig: QuantityElementConfig = {
         type: 'quantity',
         quantity: item.quantity || 0,
+        quantityInput: item.quantityInput,
         unit: item.unit?.symbol || item.unitName || undefined,
         itemId: item.id,
         disabled: item.purchaseInfo?.isPurchased ?? false,

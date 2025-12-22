@@ -252,7 +252,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Handle quantity save - update item with new quantity and/or unit
   const handleQuantitySave = useCallback(
     async (
-      quantity: number,
+      quantity: string,
       _unitName: string | null,
       unitId: string | null,
     ) => {
@@ -263,7 +263,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         await updateShoppingListItemQuantity({
           variables: {
             itemId: selectedItemForQuantity.id,
-            quantity: quantity.toString(),
+            quantity,
             // null clears unit, undefined keeps current, string updates to new unit
             unitId,
             version: selectedItemForQuantity.version,

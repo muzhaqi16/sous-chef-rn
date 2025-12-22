@@ -30,6 +30,7 @@ export type Scalars = {
   Float: { input: number; output: number };
   BigInt: { input: string; output: string };
   DateTime: { input: string; output: string };
+  FlexibleQuantity: { input: string | number; output: string | number };
   IPv4: { input: string; output: string };
   JSON: { input: any; output: any };
   Upload: { input: File; output: File };
@@ -265,7 +266,8 @@ export type BatchAddShoppingListItemInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  quantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
+  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
@@ -1144,7 +1146,8 @@ export type CreateShoppingListItemInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  quantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
+  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
@@ -7989,8 +7992,8 @@ export type SyncShoppingListItemInput = {
   priority?: InputMaybe<Scalars['Int']['input']>;
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
-  /** Quantity of the item */
-  quantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
+  quantity?: InputMaybe<QuantityInput>;
   /** Recipe references */
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
@@ -8669,7 +8672,8 @@ export type UpdateShoppingListItemInput = {
   priority?: InputMaybe<Scalars['Int']['input']>;
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
-  quantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
+  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
@@ -10303,6 +10307,7 @@ export type ShoppingListItemDisplayFragmentFragment = {
   id: string;
   itemName?: string | null | undefined;
   quantity?: number | null | undefined;
+  quantityInput?: string | null | undefined;
   sortOrder: string;
   unitName?: string | null | undefined;
   category?: string | null | undefined;
@@ -19507,6 +19512,7 @@ export type GetShoppingListQuery = {
               id: string;
               itemName?: string | null | undefined;
               quantity?: number | null | undefined;
+              quantityInput?: string | null | undefined;
               sortOrder: string;
               unitName?: string | null | undefined;
               category?: string | null | undefined;

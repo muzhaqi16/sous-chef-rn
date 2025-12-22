@@ -386,7 +386,7 @@ export const PantryItemDetail: React.FC<{
                 ? `${item.packageWeight} ${
                     item.packageWeightUnit?.symbol || 'g'
                   }`
-                : `${item.currentQuantity} ${item.unit.symbol}`}
+                : `${item.currentQuantity} ${item.unit?.symbol ?? item.unitName}`}
             </Text>
           </View>
         </View>
@@ -424,7 +424,7 @@ export const PantryItemDetail: React.FC<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {item.currentQuantity} {item.unit.name}
+              {item.currentQuantity} {item.unit?.name ?? item.unitName}
             </Text>
           </View>
         </View>
@@ -611,7 +611,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit.symbol}
+                {item.minQuantity} {item.unit?.symbol ?? item.unitName}
               </Text>
             </View>
           </View>
@@ -631,7 +631,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit.symbol}
+                {item.restockQuantity} {item.unit?.symbol ?? item.unitName}
               </Text>
             </View>
           </View>
@@ -652,7 +652,7 @@ export const PantryItemDetail: React.FC<{
                   />
                 </View>
                 <Text style={styles.infoValue}>
-                  {item.initialQuantity} {item.unit.symbol}
+                  {item.initialQuantity} {item.unit?.symbol ?? item.unitName}
                 </Text>
               </View>
             </View>

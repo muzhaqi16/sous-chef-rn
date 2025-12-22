@@ -61,6 +61,11 @@ export class SubscriptionService {
     connectionField: string;
   }>();
 
+  // Pending parent entity deletes (shopping lists, pantries)
+  // When deleting a parent entity, subscriptions may still be active and receiving
+  // messages. We track pending parent deletes to skip subscription processing.
+  private pendingParentDeletes = new Set<string>();
+
   // Statistics
   private stats = {
     totalUpdates: 0,
@@ -121,6 +126,32 @@ export class SubscriptionService {
    */
   isPendingDelete(itemId: string): boolean {
     return this.pendingDeletes.has(itemId);
+  }
+
+  /**
+   * Register that a parent entity (shopping list, pantry) is being deleted.
+   * Subscriptions for this entity will be skipped during the deletion process.
+   *
+   * @param entityId - The ID of the entity being deleted
+   */
+  registerParentDeletion(entityId: string): void {
+    this.pendingParentDeletes.add(entityId);
+    // Auto-cleanup after 10s to prevent memory leaks
+    setTimeout(() => this.pendingParentDeletes.delete(entityId), 10000);
+  }
+
+  /**
+   * Unregister a parent entity deletion (called after navigation completes)
+   */
+  unregisterParentDeletion(entityId: string): void {
+    this.pendingParentDeletes.delete(entityId);
+  }
+
+  /**
+   * Check if a parent entity is currently being deleted
+   */
+  isParentDeleting(entityId: string): boolean {
+    return this.pendingParentDeletes.has(entityId);
   }
 
   /**
@@ -189,6 +220,14 @@ export class SubscriptionService {
   ): (context: { data: any; client: any }) => void {
     return ({ data, client }) => {
       try {
+        // Skip processing if parent entity is being deleted
+        if (config.entityId && this.pendingParentDeletes.has(config.entityId)) {
+          this.log(config, LogLevel.DEBUG, 'Skipping update for entity being deleted', {
+            entityId: config.entityId,
+          });
+          return;
+        }
+
         // Extract payload from subscription data
         const subscriptionData = data?.data;
         if (!subscriptionData) {
@@ -274,6 +313,22 @@ export class SubscriptionService {
     config: SubscriptionConfig<TData>,
   ): (error: any) => void {
     return (error: any) => {
+      // Check if this is a network-related error that will be auto-recovered
+      const errorMessage = error?.message?.toLowerCase() || '';
+      const isSocketClosed = errorMessage.includes('socket closed');
+      const isNetworkError = errorMessage.includes('network') ||
+        errorMessage.includes('connection') ||
+        errorMessage.includes('websocket');
+
+      // Socket closed errors are expected during network transitions
+      // The WebSocket will auto-reconnect, so we only log at DEBUG level
+      if (isSocketClosed || isNetworkError) {
+        this.log(config, LogLevel.DEBUG, 'Connection interrupted (will auto-reconnect)', {
+          error: errorMessage,
+        });
+        return; // Don't count as error or call custom handler for expected disconnects
+      }
+
       this.stats.totalErrors++;
       this.updateSubscriptionStats(config, 'error');
 
@@ -694,6 +749,8 @@ export class SubscriptionService {
     this.subscriptions.clear();
     this.processedMutations.clear();
     this.recentReorders.clear();
+    this.pendingDeletes.clear();
+    this.pendingParentDeletes.clear();
     this.stats = {
       totalUpdates: 0,
       totalErrors: 0,

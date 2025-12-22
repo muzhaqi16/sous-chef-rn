@@ -17,6 +17,7 @@ export interface GroupBoundary {
 export interface QuantityElementConfig {
   type: 'quantity';
   quantity: number;
+  quantityInput?: string | null;
   unit?: string;
   itemId: string;
   disabled: boolean;

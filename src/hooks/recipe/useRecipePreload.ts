@@ -161,6 +161,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     async (
       spoonacularRecipe: RecipeInformation,
       externalSource: ExternalSource = ExternalSource.Spoonacular,
+      preloadOptions: { throwOnError?: boolean } = {},
     ): Promise<PreloadedRecipe | null> => {
       const externalId = String(spoonacularRecipe.id);
 
@@ -200,8 +201,12 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
         }
 
         return null;
-      } catch {
-        // Fire-and-forget: silently ignore errors
+      } catch (error) {
+        // Log error for debugging
+        console.error('[preloadRecipe] Error:', error);
+        if (preloadOptions.throwOnError) {
+          throw error; // Propagate error for explicit saves
+        }
         return null;
       } finally {
         setPreloading(false);
@@ -229,7 +234,14 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
         // If not preloaded yet, preload first
         if (!cached || cached.id.startsWith('pending_')) {
-          const preloaded = await preloadRecipe(spoonacularRecipe);
+          // Clear attempted preload flag to allow retry when explicitly saving
+          attemptedPreloadsRef.current.delete(externalId);
+
+          const preloaded = await preloadRecipe(
+            spoonacularRecipe,
+            ExternalSource.Spoonacular,
+            { throwOnError: true },
+          );
           if (!preloaded) {
             throw new Error('Failed to save recipe to backend');
           }

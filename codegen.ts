@@ -72,6 +72,7 @@ const config: CodegenConfig = {
           Upload: 'File',
           BigInt: 'string', // Handle large integers as strings to avoid precision loss
           IPv4: 'string', // IP addresses as strings
+          FlexibleQuantity: 'string | number', // Accepts decimals, fractions (1/4), or mixed (1 1/4)
         },
 
         // Modern TypeScript
@@ -160,6 +161,7 @@ const config: CodegenConfig = {
           Upload: 'File',
           BigInt: 'string', // Handle large integers as strings to avoid precision loss
           IPv4: 'string', // IP addresses as strings
+          FlexibleQuantity: 'string | number', // Accepts decimals, fractions (1/4), or mixed (1 1/4)
         },
         maybeValue: 'T | null | undefined',
         inputMaybeValue: 'T | null | undefined',

@@ -22,11 +22,22 @@ export const handleSubscriptionError = (
   error: SubscriptionError,
   onRetry?: () => void,
 ): boolean => {
-  const errorMessage = error.message || '';
-  
+  const errorMessage = (error.message || '').toLowerCase();
+
+  // Check if this is a network-related error that will auto-recover
+  const isSocketClosed = errorMessage.includes('socket closed');
+  const isNetworkError = errorMessage.includes('network') ||
+    errorMessage.includes('connection') ||
+    errorMessage.includes('websocket');
+
+  // Socket closed and network errors are expected during transitions - suppress them
+  if (isSocketClosed || isNetworkError) {
+    return false;
+  }
+
   // Check if this is a server-side resolver issue
   const isServerResolverError =
-    errorMessage.includes('Subscription field must return Async Iterable');
+    errorMessage.includes('subscription field must return async iterable');
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry

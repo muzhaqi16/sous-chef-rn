@@ -483,7 +483,7 @@ export function usePantryItemFormMutations({
           variables: {
             pantryItemId: itemId,
             quantity: input.quantityInput || quantityValue.toString(),
-            unitId: unitId || undefined,
+            unitId: unitId,
             version: currentItem.version ?? undefined,
           },
           optimisticResponse: {

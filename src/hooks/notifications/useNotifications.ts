@@ -20,7 +20,6 @@ import {
   handleSubscriptionError,
   clearAllRetryStates,
 } from '#utils/subscriptionErrorHandler';
-import { serializeError } from '#/utils/errorSerialization';
 import { useNotificationSettings } from './useNotificationSettings';
 
 // PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
@@ -218,8 +217,19 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     ],
   );
 
-  // Error handler
+  // Error handler - suppresses expected network errors
   const handleError = useCallback((subscriptionName: string, error: any) => {
+    const errorMessage = error?.message?.toLowerCase() || '';
+    const isSocketClosed = errorMessage.includes('socket closed');
+    const isNetworkError = errorMessage.includes('network') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('websocket');
+
+    // Socket closed errors are expected during network transitions - will auto-reconnect
+    if (isSocketClosed || isNetworkError) {
+      return;
+    }
+
     console.warn(`${subscriptionName} subscription error:`, error.message);
     handleSubscriptionError(subscriptionName, error);
   }, []);
@@ -265,7 +275,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       }
     },
     onError: (error: Error) => {
-      console.error('❌ [NotificationReceived] Subscription error:', serializeError(error));
+      // Let handleError decide whether to log based on error type
       handleError('NotificationReceived', error);
     },
   });

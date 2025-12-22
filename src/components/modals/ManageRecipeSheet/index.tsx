@@ -59,12 +59,15 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const animationConfigs = useSharedBottomSheetConfigs();
 
   // Local state for editing
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(currentFolder ?? null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(
+    currentFolder ?? null,
+  );
   const [tags, setTags] = useState<string[]>(currentTags);
   const [notes, setNotes] = useState(currentNotes ?? '');
   const [rating, setRating] = useState<number | null>(currentRating ?? null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [localFolders, setLocalFolders] = useState<string[]>([]);
 
   // Sync local state when props change
   useEffect(() => {
@@ -76,32 +79,43 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setRating(currentRating ?? null);
       setShowNewFolder(false);
       setNewFolderName('');
+      setLocalFolders([]);
     } else {
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
 
-  const handleSelectFolder = useCallback(async (folder: string | null) => {
-    setSelectedFolder(folder);
-    setShowNewFolder(false);
-    setNewFolderName('');
-    await onUpdateFolder(folder);
-  }, [onUpdateFolder]);
-
-  const handleCreateFolder = useCallback(async () => {
-    if (newFolderName.trim()) {
-      const folder = newFolderName.trim();
+  const handleSelectFolder = useCallback(
+    async (folder: string | null) => {
       setSelectedFolder(folder);
       setShowNewFolder(false);
       setNewFolderName('');
       await onUpdateFolder(folder);
+    },
+    [onUpdateFolder],
+  );
+
+  const handleCreateFolder = useCallback(async () => {
+    const trimmedName = newFolderName.trim();
+    if (trimmedName) {
+      // Add to local folders list so it appears in the UI
+      setLocalFolders(prev =>
+        prev.includes(trimmedName) ? prev : [...prev, trimmedName]
+      );
+      setSelectedFolder(trimmedName);
+      setShowNewFolder(false);
+      setNewFolderName('');
+      await onUpdateFolder(trimmedName);
     }
   }, [newFolderName, onUpdateFolder]);
 
-  const handleTagsChange = useCallback(async (newTags: string[]) => {
-    setTags(newTags);
-    await onUpdateTags(newTags);
-  }, [onUpdateTags]);
+  const handleTagsChange = useCallback(
+    async (newTags: string[]) => {
+      setTags(newTags);
+      await onUpdateTags(newTags);
+    },
+    [onUpdateTags],
+  );
 
   const handleNotesBlur = useCallback(async () => {
     if (notes !== (currentNotes ?? '')) {
@@ -109,20 +123,24 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
     }
   }, [notes, currentNotes, onUpdateNotes]);
 
-  const handleRatingPress = useCallback(async (star: number) => {
-    // Toggle off if pressing same rating, otherwise set new rating
-    const newRating = rating === star ? null : star;
-    setRating(newRating);
-    await onUpdateRating(newRating);
-  }, [rating, onUpdateRating]);
+  const handleRatingPress = useCallback(
+    async (star: number) => {
+      // Toggle off if pressing same rating, otherwise set new rating
+      const newRating = rating === star ? null : star;
+      setRating(newRating);
+      await onUpdateRating(newRating);
+    },
+    [rating, onUpdateRating],
+  );
 
   const handleRemove = useCallback(async () => {
     await onRemove();
     onClose();
   }, [onRemove, onClose]);
 
-  // Dedupe folders with "Favorites" first
-  const displayFolders = ['Favorites', ...folders.filter(f => f !== 'Favorites')];
+  // Dedupe folders with "Favorites" first, then existing folders, then locally created
+  const allFolders = [...new Set([...folders, ...localFolders])];
+  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
 
   return (
     <BottomSheetModal
@@ -135,6 +153,8 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -169,10 +189,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               disabled={updating}
             >
-              <Ionicons name="trash-outline" size={22} color={theme.colors.error} />
+              <Ionicons
+                name="trash-outline"
+                size={22}
+                color={theme.colors.error}
+              />
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="close"
+                size={24}
+                color={theme.colors.textPrimary}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -196,15 +227,19 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               disabled={updating}
             >
               <Ionicons
-                name={rating !== null && star <= rating ? 'star' : 'star-outline'}
+                name={
+                  rating !== null && star <= rating ? 'star' : 'star-outline'
+                }
                 size={32}
-                color={rating !== null && star <= rating ? '#FFB800' : theme.colors.textSecondary}
+                color={
+                  rating !== null && star <= rating
+                    ? '#FFB800'
+                    : theme.colors.textSecondary
+                }
               />
             </TouchableOpacity>
           ))}
-          {rating !== null && (
-            <Text style={styles.ratingText}>{rating}/5</Text>
-          )}
+          {rating !== null && <Text style={styles.ratingText}>{rating}/5</Text>}
         </View>
 
         {/* Folder Selection */}
@@ -226,7 +261,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             <Ionicons
               name="folder-outline"
               size={18}
-              color={!selectedFolder ? theme.colors.primary : theme.colors.textSecondary}
+              color={
+                !selectedFolder
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary
+              }
             />
             <Text
               style={[
@@ -237,7 +276,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               No Folder
             </Text>
             {!selectedFolder && (
-              <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
+              <Ionicons
+                name="checkmark"
+                size={18}
+                color={theme.colors.primary}
+              />
             )}
           </TouchableOpacity>
 
@@ -255,7 +298,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               <Ionicons
                 name="folder"
                 size={18}
-                color={selectedFolder === folder ? theme.colors.primary : theme.colors.textSecondary}
+                color={
+                  selectedFolder === folder
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary
+                }
               />
               <Text
                 style={[
@@ -266,7 +313,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 {folder}
               </Text>
               {selectedFolder === folder && (
-                <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
+                <Ionicons
+                  name="checkmark"
+                  size={18}
+                  color={theme.colors.primary}
+                />
               )}
             </TouchableOpacity>
           ))}

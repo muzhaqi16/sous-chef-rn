@@ -4,11 +4,23 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface QuantityBadgeProps {
   quantity: number;
+  quantityInput?: string | null;
   unit?: string | null;
   onPress: () => void;
   disabled?: boolean;
   isPurchased?: boolean;
 }
+
+/**
+ * Format quantity to max 2 decimal places, removing trailing zeros
+ */
+const formatQuantity = (value: number): string => {
+  const rounded = Math.round(value * 100) / 100;
+  if (rounded % 1 === 0) {
+    return rounded.toString();
+  }
+  return rounded.toFixed(2).replace(/\.?0+$/, '');
+};
 
 /**
  * QuantityBadge - Tappable pill displaying quantity + unit
@@ -22,11 +34,12 @@ interface QuantityBadgeProps {
  * - "3" (when no unit)
  */
 export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
-  ({ quantity, unit, onPress, disabled = false, isPurchased = false }) => {
+  ({ quantity, quantityInput, unit, onPress, disabled = false, isPurchased = false }) => {
     const { theme } = useUnistyles();
 
-    // Format display text
-    const displayText = unit ? `${quantity} ${unit}` : `${quantity}`;
+    // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
+    const formattedQuantity = quantityInput || formatQuantity(quantity);
+    const displayText = unit ? `${formattedQuantity} ${unit}` : formattedQuantity;
 
     const isDisabled = disabled || isPurchased;
 
