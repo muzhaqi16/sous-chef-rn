@@ -12,6 +12,8 @@ import {
   useFavoriteRecipeMutation,
   useUpsertExternalRecipeMutation,
   ExternalSource,
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
 } from '#generated';
 import { RecipeInformation } from '#/services/recipeApi/types';
 import { toastService } from '#/services/toastService';
@@ -70,7 +72,31 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const attemptedPreloadsRef = useRef<Set<string>>(new Set());
 
   // Mutations
-  const [favoriteRecipe] = useFavoriteRecipeMutation();
+  const [favoriteRecipe] = useFavoriteRecipeMutation({
+    // Use cache.updateQuery instead of refetchQueries for better performance and offline support
+    update: (cache, { data }) => {
+      if (!data?.favoriteRecipe) return;
+
+      // Add to MySavedRecipes cache
+      cache.updateQuery<MySavedRecipesQuery>(
+        { query: MySavedRecipesDocument },
+        existing => {
+          if (!existing) return existing;
+
+          // Check if already exists (prevent duplicates)
+          const exists = existing.mySavedRecipes.some(
+            sr => sr.id === data.favoriteRecipe.id,
+          );
+          if (exists) return existing;
+
+          return {
+            ...existing,
+            mySavedRecipes: [...existing.mySavedRecipes, data.favoriteRecipe],
+          };
+        },
+      );
+    },
+  });
   const [upsertRecipe] = useUpsertExternalRecipeMutation();
 
   /**
@@ -218,6 +244,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
             input: {
               recipeId,
               folder: saveOptions?.folder,
+              tags: saveOptions?.tags,
               notes: saveOptions?.notes,
             },
           },

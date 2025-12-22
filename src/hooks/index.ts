@@ -5,6 +5,7 @@ export * from './shoppingList';
 export * from './pantry';
 export * from './invitations';
 export * from './profile';
+export * from './items';
 export * from './home/useHomeManagement';
 export * from './home/usePantryManagement';
 export * from './home/useCategoryManagement';

@@ -132,13 +132,14 @@ export function useHomeManagement() {
         console.warn('Failed to set first home as default:', message);
       });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedHomeId,
     remoteDefaultHomeId,
     loading,
-    homes,
+    homes?.length, // Use primitive to prevent re-runs when array reference changes
     setDefaultHomeMutation,
-    handleApolloError,
+    // handleApolloError removed - it's a static method, no need to track
     setSelectedHomeId,
   ]);
 

@@ -12360,6 +12360,18 @@ export type BasicRecipeFragmentFragment = {
   caloriesPerServing?: number | null | undefined;
   createdAt: string;
   updatedAt: string;
+  savedDetails?:
+    | {
+        __typename?: 'SavedRecipe';
+        id: string;
+        folder?: string | null | undefined;
+        tags: Array<string>;
+        notes?: string | null | undefined;
+        personalRating?: number | null | undefined;
+        cookedCount: number;
+      }
+    | null
+    | undefined;
 };
 
 export type RecipeFragmentFragment = {
@@ -12429,6 +12441,18 @@ export type RecipeFragmentFragment = {
       | null
       | undefined;
   }>;
+  savedDetails?:
+    | {
+        __typename?: 'SavedRecipe';
+        id: string;
+        folder?: string | null | undefined;
+        tags: Array<string>;
+        notes?: string | null | undefined;
+        personalRating?: number | null | undefined;
+        cookedCount: number;
+      }
+    | null
+    | undefined;
 };
 
 export type GetHomeQueryVariables = Exact<{
@@ -14648,6 +14672,12 @@ export type JoinHomeByCodeMutation = {
   };
 };
 
+export type LeaveHomeMutationVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type LeaveHomeMutation = { __typename?: 'Mutation'; leaveHome: boolean };
+
 export type MembershipUpdatedSubscriptionVariables = Exact<{
   homeId?: InputMaybe<Scalars['ID']['input']>;
 }>;
@@ -15437,6 +15467,58 @@ export type AutocompleteCategoriesQuery = {
       name: string;
       type: CategoryType;
       icon?: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPopularItemsQueryVariables = Exact<{
+  first?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetPopularItemsQuery = {
+  __typename?: 'Query';
+  items: {
+    __typename?: 'ItemConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      node: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl?: string | null | undefined;
+        popularity: number;
+        displayUnit?:
+          | {
+              __typename?: 'Unit';
+              id: string;
+              name: string;
+              symbol: string;
+              type: UnitType;
+            }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              isPrimary: boolean;
+              category: {
+                __typename?: 'Category';
+                id: string;
+                name: string;
+                type: CategoryType;
+                color?: string | null | undefined;
+                icon?: string | null | undefined;
+                slug: string;
+              };
+            }>
+          | null
+          | undefined;
+      };
     }>;
   };
 };
@@ -18323,6 +18405,18 @@ export type SearchRecipesQuery = {
         caloriesPerServing?: number | null | undefined;
         createdAt: string;
         updatedAt: string;
+        savedDetails?:
+          | {
+              __typename?: 'SavedRecipe';
+              id: string;
+              folder?: string | null | undefined;
+              tags: Array<string>;
+              notes?: string | null | undefined;
+              personalRating?: number | null | undefined;
+              cookedCount: number;
+            }
+          | null
+          | undefined;
       };
     }>;
     pageInfo: {
@@ -18363,6 +18457,18 @@ export type SuggestedRecipesQuery = {
         caloriesPerServing?: number | null | undefined;
         createdAt: string;
         updatedAt: string;
+        savedDetails?:
+          | {
+              __typename?: 'SavedRecipe';
+              id: string;
+              folder?: string | null | undefined;
+              tags: Array<string>;
+              notes?: string | null | undefined;
+              personalRating?: number | null | undefined;
+              cookedCount: number;
+            }
+          | null
+          | undefined;
       };
     }>;
     pageInfo: {
@@ -18409,6 +18515,18 @@ export type MyRecipesQuery = {
         caloriesPerServing?: number | null | undefined;
         createdAt: string;
         updatedAt: string;
+        savedDetails?:
+          | {
+              __typename?: 'SavedRecipe';
+              id: string;
+              folder?: string | null | undefined;
+              tags: Array<string>;
+              notes?: string | null | undefined;
+              personalRating?: number | null | undefined;
+              cookedCount: number;
+            }
+          | null
+          | undefined;
       };
     }>;
     pageInfo: {
@@ -18495,9 +18613,74 @@ export type GetRecipeQuery = {
             | null
             | undefined;
         }>;
+        savedDetails?:
+          | {
+              __typename?: 'SavedRecipe';
+              id: string;
+              folder?: string | null | undefined;
+              tags: Array<string>;
+              notes?: string | null | undefined;
+              personalRating?: number | null | undefined;
+              cookedCount: number;
+            }
+          | null
+          | undefined;
       }
     | null
     | undefined;
+};
+
+export type MySavedRecipesQueryVariables = Exact<{
+  folder?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type MySavedRecipesQuery = {
+  __typename?: 'Query';
+  mySavedRecipes: Array<{
+    __typename?: 'SavedRecipe';
+    id: string;
+    folder?: string | null | undefined;
+    tags: Array<string>;
+    notes?: string | null | undefined;
+    personalRating?: number | null | undefined;
+    cookedCount: number;
+    lastCookedAt?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    recipe: {
+      __typename?: 'Recipe';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+      servings: number;
+      prepTimeMinutes?: number | null | undefined;
+      cookTimeMinutes?: number | null | undefined;
+      totalTimeMinutes?: number | null | undefined;
+      difficulty: Difficulty;
+      category: RecipeCategory;
+      status: RecipeStatus;
+      isExternal: boolean;
+      externalSource?: ExternalSource | null | undefined;
+      externalId?: string | null | undefined;
+      primarySource?: string | null | undefined;
+      caloriesPerServing?: number | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+      savedDetails?:
+        | {
+            __typename?: 'SavedRecipe';
+            id: string;
+            folder?: string | null | undefined;
+            tags: Array<string>;
+            notes?: string | null | undefined;
+            personalRating?: number | null | undefined;
+            cookedCount: number;
+          }
+        | null
+        | undefined;
+    };
+  }>;
 };
 
 export type CreateRecipeMutationVariables = Exact<{
@@ -18573,6 +18756,18 @@ export type CreateRecipeMutation = {
         | null
         | undefined;
     }>;
+    savedDetails?:
+      | {
+          __typename?: 'SavedRecipe';
+          id: string;
+          folder?: string | null | undefined;
+          tags: Array<string>;
+          notes?: string | null | undefined;
+          personalRating?: number | null | undefined;
+          cookedCount: number;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -18674,6 +18869,18 @@ export type UpdateRecipeMutation = {
         | null
         | undefined;
     }>;
+    savedDetails?:
+      | {
+          __typename?: 'SavedRecipe';
+          id: string;
+          folder?: string | null | undefined;
+          tags: Array<string>;
+          notes?: string | null | undefined;
+          personalRating?: number | null | undefined;
+          cookedCount: number;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -18700,6 +18907,73 @@ export type FavoriteRecipeMutation = {
     folder?: string | null | undefined;
     tags: Array<string>;
     notes?: string | null | undefined;
+    personalRating?: number | null | undefined;
+    cookedCount: number;
+    lastCookedAt?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    recipe: {
+      __typename?: 'Recipe';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+      servings: number;
+      prepTimeMinutes?: number | null | undefined;
+      cookTimeMinutes?: number | null | undefined;
+      totalTimeMinutes?: number | null | undefined;
+      difficulty: Difficulty;
+      category: RecipeCategory;
+      status: RecipeStatus;
+      isExternal: boolean;
+      externalSource?: ExternalSource | null | undefined;
+      externalId?: string | null | undefined;
+      primarySource?: string | null | undefined;
+      caloriesPerServing?: number | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+      savedDetails?:
+        | {
+            __typename?: 'SavedRecipe';
+            id: string;
+            folder?: string | null | undefined;
+            tags: Array<string>;
+            notes?: string | null | undefined;
+            personalRating?: number | null | undefined;
+            cookedCount: number;
+          }
+        | null
+        | undefined;
+    };
+  };
+};
+
+export type UnfavoriteRecipeMutationVariables = Exact<{
+  recipeId: Scalars['ID']['input'];
+}>;
+
+export type UnfavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  unfavoriteRecipe: boolean;
+};
+
+export type UpdateFavoriteRecipeMutationVariables = Exact<{
+  recipeId: Scalars['ID']['input'];
+  input: UpdateFavoriteRecipeInput;
+}>;
+
+export type UpdateFavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  updateFavoriteRecipe: {
+    __typename?: 'SavedRecipe';
+    id: string;
+    recipeId: string;
+    userId: string;
+    folder?: string | null | undefined;
+    tags: Array<string>;
+    notes?: string | null | undefined;
+    personalRating?: number | null | undefined;
+    cookedCount: number;
     createdAt: string;
     updatedAt: string;
   };

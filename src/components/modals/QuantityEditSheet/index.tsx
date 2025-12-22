@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -67,9 +68,14 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const animationConfigs = useSharedBottomSheetConfigs();
 
   // Local state for editing
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(0);
   const [unitName, setUnitName] = useState<string | null>(null);
   const [unitId, setUnitId] = useState<string | null>(null);
+
+  // Edit mode state for direct quantity input
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<TextInput>(null);
 
   // Use item-specific units if available (sorted: preferred first, then default, then alphabetically)
   const itemUnits = item?.itemUnits?.slice().sort((a, b) => {
@@ -116,23 +122,83 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
+      // Reset edit mode when sheet closes
+      setIsEditing(false);
     }
   }, [visible, item]);
 
-  // Handle quantity changes
-  const handleIncrement = useCallback(() => {
-    setQuantity(prev => prev + 1);
+  // Format quantity for display (max 2 decimal places, no trailing zeros)
+  const formatQuantity = useCallback((value: number): string => {
+    const rounded = Math.round(value * 100) / 100;
+    if (rounded % 1 === 0) {
+      return rounded.toString();
+    }
+    return rounded.toFixed(2).replace(/\.?0+$/, '');
   }, []);
 
+  // Handle quantity changes (with hybrid mode support)
+  const handleIncrement = useCallback(() => {
+    setQuantity(prev => {
+      const newValue = prev + 1;
+      if (isEditing) {
+        setInputValue(formatQuantity(newValue));
+      }
+      return newValue;
+    });
+  }, [isEditing, formatQuantity]);
+
   const handleDecrement = useCallback(() => {
-    setQuantity(prev => Math.max(1, prev - 1));
-  }, []);
+    setQuantity(prev => {
+      const newValue = Math.max(0, prev - 1);
+      if (isEditing) {
+        setInputValue(formatQuantity(newValue));
+      }
+      return newValue;
+    });
+  }, [isEditing, formatQuantity]);
 
   // Handle unit chip selection
   const handleUnitChipPress = useCallback((unit: ItemUnit) => {
     setUnitName(unit.symbol);
     setUnitId(unit.id);
   }, []);
+
+  // Handle tap on quantity to enter edit mode
+  const handleQuantityPress = useCallback(() => {
+    setInputValue(formatQuantity(quantity));
+    setIsEditing(true);
+    // Focus after state update
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  }, [quantity, formatQuantity]);
+
+  // Handle input text change - no sanitization to avoid cursor jumping
+  // Validation happens on blur instead
+  const handleInputChange = useCallback((text: string) => {
+    setInputValue(text);
+  }, []);
+
+  // Handle input blur - validate and update quantity
+  const handleInputBlur = useCallback(() => {
+    setIsEditing(false);
+
+    if (inputValue.trim() === '') {
+      // Empty input becomes 0
+      setQuantity(0);
+      return;
+    }
+
+    const parsed = parseFloat(inputValue);
+    if (isNaN(parsed)) {
+      // Invalid input - revert to current quantity (already in state)
+      return;
+    }
+
+    // Round to 2 decimal places and clamp to min 0
+    const rounded = Math.round(Math.max(0, parsed) * 100) / 100;
+    setQuantity(rounded);
+  }, [inputValue]);
 
   // Handle save
   const handleSave = useCallback(() => {
@@ -213,23 +279,44 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             <TouchableOpacity
               style={[styles.counterButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
               onPress={handleDecrement}
-              disabled={quantity <= 1}
+              disabled={quantity <= 0}
               activeOpacity={0.7}
             >
               <Icon
                 name="remove"
                 size={24}
-                color={quantity <= 1 ? theme.colors.textTertiary : theme.colors.textPrimary}
+                color={quantity <= 0 ? theme.colors.textTertiary : theme.colors.textPrimary}
                 library="MaterialIcons"
               />
             </TouchableOpacity>
 
-            {/* Quantity Display */}
-            <View style={styles.quantityDisplay}>
-              <Text style={[styles.quantityText, { color: theme.colors.textPrimary }]}>
-                {quantity}
-              </Text>
-            </View>
+            {/* Quantity Display - Tappable for direct input */}
+            <TouchableOpacity
+              style={[
+                styles.quantityDisplay,
+                isEditing && styles.quantityDisplayEditing,
+                isEditing && { borderColor: theme.colors.primary },
+              ]}
+              onPress={handleQuantityPress}
+              activeOpacity={0.8}
+            >
+              {isEditing ? (
+                <TextInput
+                  ref={inputRef}
+                  style={[styles.quantityInput, { color: theme.colors.textPrimary }]}
+                  value={inputValue}
+                  onChangeText={handleInputChange}
+                  onBlur={handleInputBlur}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  maxLength={10}
+                />
+              ) : (
+                <Text style={[styles.quantityText, { color: theme.colors.textPrimary }]}>
+                  {formatQuantity(quantity)}
+                </Text>
+              )}
+            </TouchableOpacity>
 
             {/* Increment Button */}
             <TouchableOpacity
@@ -384,6 +471,19 @@ const styles = StyleSheet.create(theme => ({
   quantityText: {
     fontSize: 40,
     fontWeight: '600',
+  },
+  quantityDisplayEditing: {
+    borderWidth: 2,
+    borderRadius: theme.radii.md,
+    paddingVertical: theme.spacing.xs,
+    marginHorizontal: theme.spacing.md,
+  },
+  quantityInput: {
+    fontSize: 40,
+    fontWeight: '600',
+    textAlign: 'center',
+    minWidth: 80,
+    padding: 0,
   },
   saveButton: {
     paddingVertical: theme.spacing.md,

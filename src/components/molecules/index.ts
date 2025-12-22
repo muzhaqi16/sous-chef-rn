@@ -54,3 +54,6 @@ export * from './ItemSuggestionsList';
 export * from './NutritionSummary';
 export * from './NutritionDetailList';
 export * from './ImageGalleryTabs';
+export * from './FolderPicker';
+export * from './TagPicker';
+export * from './TagInput';

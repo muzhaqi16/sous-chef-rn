@@ -1047,6 +1047,14 @@ fragment BasicRecipeFragment on Recipe {
   caloriesPerServing
   createdAt
   updatedAt
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
+  }
 }
 
 fragment RecipeFragment on Recipe {
@@ -1097,6 +1105,15 @@ fragment RecipeFragment on Recipe {
 
   ingredients {
     ...RecipeIngredientFragment
+  }
+
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
   }
 
   createdAt

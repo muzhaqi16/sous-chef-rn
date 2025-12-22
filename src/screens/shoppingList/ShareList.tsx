@@ -20,6 +20,8 @@ import { useShoppingListDetails } from '#/hooks';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
+import { useAppStore, selectUser } from '#store/useAppStore';
+import { Button } from '#components/base';
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (status: string) => {
@@ -62,13 +64,23 @@ export const ShareList: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const permissionsBottomSheetRef =
     useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
-  const { loading, collaborators, refetch } = useShoppingListDetails(listId);
+  // Get current user to check if they are owner
+  const currentUser = useAppStore(selectUser);
+
+  const { loading, collaborators, name: listName, refetch } = useShoppingListDetails(listId);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
+
+  // Check if current user is owner
+  const currentUserCollaborator = collaborators.find(
+    c => c.email === currentUser?.email || c.collaboratorId === currentUser?.id,
+  );
+  const isOwner = currentUserCollaborator?.role === CollaboratorRole.Owner;
 
   const handleShare = async () => {
     if (!email.trim()) {
@@ -97,7 +109,7 @@ export const ShareList: React.FC = () => {
   };
 
   const handleRemoveMember = useCallback(
-    (email: string) => {
+    (memberEmail: string) => {
       Alert.alert(
         'Remove Member',
         'Are you sure you want to remove this member?',
@@ -110,7 +122,7 @@ export const ShareList: React.FC = () => {
               try {
                 await removeMember({
                   variables: {
-                    data: { shoppingListId: listId, email },
+                    data: { shoppingListId: listId, email: memberEmail },
                   },
                 });
                 refetch();
@@ -124,6 +136,50 @@ export const ShareList: React.FC = () => {
     },
     [listId, removeMember, refetch],
   );
+
+  const handleLeaveList = useCallback(() => {
+    // Block owners from leaving
+    if (isOwner) {
+      Alert.alert(
+        'Cannot Leave',
+        'Owners cannot leave the list. Please transfer ownership to another member or delete the list.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Leave Shopping List',
+      `Are you sure you want to leave "${listName || 'this list'}"? You will lose access to this shared list.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentUser?.email) {
+              Alert.alert('Error', 'Could not determine your email');
+              return;
+            }
+
+            setLeaving(true);
+            try {
+              await removeMember({
+                variables: {
+                  data: { shoppingListId: listId, email: currentUser.email },
+                },
+              });
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to leave list');
+            } finally {
+              setLeaving(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [isOwner, listName, currentUser?.email, listId, removeMember, navigation]);
 
   // PERFORMANCE: Memoized renderItem to avoid recreating on every render
   const renderMemberItem = useCallback(
@@ -234,6 +290,23 @@ export const ShareList: React.FC = () => {
             data={collaborators}
             keyExtractor={member => member.id}
             renderItem={renderMemberItem}
+          />
+        </View>
+      )}
+
+      {/* Leave List section - only show for non-owners who are collaborators */}
+      {currentUserCollaborator && !isOwner && (
+        <View style={styles.leaveSection}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <Text style={styles.leaveDescription}>
+            Leaving this list will remove your access to all shared items.
+          </Text>
+          <Button
+            title="Leave List"
+            onPress={handleLeaveList}
+            variant="danger"
+            loading={leaving}
+            disabled={leaving}
           />
         </View>
       )}
@@ -374,5 +447,17 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  leaveSection: {
+    padding: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    marginTop: 'auto',
+    gap: theme.spacing.md,
+  },
+  leaveDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.typography.fontSize.sm * 1.5,
   },
 }));

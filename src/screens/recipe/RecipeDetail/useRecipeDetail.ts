@@ -12,6 +12,10 @@ import {
   useGetShoppingListsLiteQuery,
   useMyRecipesQuery,
   useMarkRecipeAsCookedMutation,
+  useUpdateFavoriteRecipeMutation,
+  useUnfavoriteRecipeMutation,
+  MySavedRecipesDocument,
+  type MySavedRecipesQuery,
   type BatchAddShoppingListItemInput,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
@@ -118,6 +122,10 @@ export function useRecipeDetail() {
   // State for mark as cooked modal
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
+
+  // State for folder/tag editing
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
   // Recipe preload hook - preloads recipe to backend and handles favorites
   const {
@@ -236,6 +244,48 @@ export function useRecipeDetail() {
     },
   });
 
+  const [updateFavoriteRecipeMutation] = useUpdateFavoriteRecipeMutation({
+    onError: err => {
+      console.error('Update favorite recipe error:', err);
+      toastService.error(err.message || 'Failed to update recipe');
+    },
+  });
+
+  const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
+    // Use cache updates instead of refetchQueries for better performance and offline support
+    update: (cache, { data }, { variables }) => {
+      if (!data?.unfavoriteRecipe || !variables?.recipeId) return;
+
+      // 1. Remove from mySavedRecipes array
+      cache.updateQuery<MySavedRecipesQuery>(
+        { query: MySavedRecipesDocument },
+        existing => {
+          if (!existing) return existing;
+          return {
+            ...existing,
+            mySavedRecipes: existing.mySavedRecipes.filter(
+              sr => sr.recipe.id !== variables.recipeId,
+            ),
+          };
+        },
+      );
+
+      // 2. Update recipe's savedDetails to null
+      cache.modify({
+        id: cache.identify({ __typename: 'Recipe', id: variables.recipeId }),
+        fields: {
+          savedDetails() {
+            return null;
+          },
+        },
+      });
+    },
+    onError: err => {
+      console.error('Unfavorite recipe error:', err);
+      toastService.error(err.message || 'Failed to remove recipe from saved');
+    },
+  });
+
   // Fetch backend recipe if recipeId is provided
   const {
     data: backendRecipeData,
@@ -325,27 +375,40 @@ export function useRecipeDetail() {
 
   const isBackendRecipe = !!recipeId && !!backendRecipe;
 
-  const handleSaveRecipe = async () => {
-    if (!externalRecipe || !externalSource || !externalId) return;
+  // For backend recipes, derive saved state from savedDetails
+  // savedDetails is non-null when the recipe is in user's favorites
+  const isSaved = isBackendRecipe
+    ? !!backendRecipe?.savedDetails
+    : recipeSaved;
 
-    setSaving(true);
+  const handleSaveRecipe = useCallback(
+    async (folder?: string | null, tags?: string[], notes?: string) => {
+      if (!externalRecipe || !externalSource || !externalId) return;
 
-    try {
-      // Use the new saveRecipeToFavorites which handles creating the recipe
-      // and adding it to favorites in one flow
-      const result = await saveRecipeToFavorites(externalRecipe);
+      setSaving(true);
 
-      if (result.success) {
-        setRecipeSaved(true);
-        // Toast is shown by the hook
+      try {
+        // Use the new saveRecipeToFavorites which handles creating the recipe
+        // and adding it to favorites in one flow
+        const result = await saveRecipeToFavorites(externalRecipe, {
+          folder: folder ?? undefined,
+          tags: tags && tags.length > 0 ? tags : undefined,
+          notes: notes || undefined,
+        });
+
+        if (result.success) {
+          setRecipeSaved(true);
+          // Toast is shown by the hook
+        }
+      } catch (err: any) {
+        console.error('Failed to save recipe:', err);
+        // Error toast is shown by the hook
+      } finally {
+        setSaving(false);
       }
-    } catch (err: any) {
-      console.error('Failed to save recipe:', err);
-      // Error toast is shown by the hook
-    } finally {
-      setSaving(false);
-    }
-  };
+    },
+    [externalRecipe, externalSource, externalId, saveRecipeToFavorites],
+  );
 
   // Add single ingredient to user's selected/default list (no picker)
   const handleAddSingleIngredient = useCallback(
@@ -626,6 +689,130 @@ export function useRecipeDetail() {
     [recipeId, markRecipeAsCookedMutation],
   );
 
+  // Update recipe folder
+  const handleUpdateFolder = useCallback(
+    async (folder: string | null) => {
+      if (!recipeId) return;
+
+      setUpdatingFolderTags(true);
+      setShowFolderPicker(false);
+
+      try {
+        await updateFavoriteRecipeMutation({
+          variables: {
+            recipeId,
+            input: {
+              folder: folder ?? undefined,
+            },
+          },
+        });
+        toastService.success(folder ? `Moved to "${folder}"` : 'Removed from folder');
+      } catch (err) {
+        // Error handled by mutation onError
+      } finally {
+        setUpdatingFolderTags(false);
+      }
+    },
+    [recipeId, updateFavoriteRecipeMutation],
+  );
+
+  // Update recipe tags
+  const handleUpdateTags = useCallback(
+    async (tags: string[]) => {
+      if (!recipeId) return;
+
+      setUpdatingFolderTags(true);
+
+      try {
+        await updateFavoriteRecipeMutation({
+          variables: {
+            recipeId,
+            input: {
+              tags,
+            },
+          },
+        });
+        toastService.success('Tags updated');
+      } catch (err) {
+        // Error handled by mutation onError
+      } finally {
+        setUpdatingFolderTags(false);
+      }
+    },
+    [recipeId, updateFavoriteRecipeMutation],
+  );
+
+  // Update recipe notes
+  const handleUpdateNotes = useCallback(
+    async (notes: string) => {
+      if (!recipeId) return;
+
+      setUpdatingFolderTags(true);
+
+      try {
+        await updateFavoriteRecipeMutation({
+          variables: {
+            recipeId,
+            input: {
+              notes: notes || undefined,
+            },
+          },
+        });
+        toastService.success('Notes updated');
+      } catch (err) {
+        // Error handled by mutation onError
+      } finally {
+        setUpdatingFolderTags(false);
+      }
+    },
+    [recipeId, updateFavoriteRecipeMutation],
+  );
+
+  // Update recipe rating
+  const handleUpdateRating = useCallback(
+    async (rating: number | null) => {
+      if (!recipeId) return;
+
+      setUpdatingFolderTags(true);
+
+      try {
+        await updateFavoriteRecipeMutation({
+          variables: {
+            recipeId,
+            input: {
+              personalRating: rating,
+            },
+          },
+        });
+        toastService.success(rating ? `Rated ${rating}/5` : 'Rating removed');
+      } catch (err) {
+        // Error handled by mutation onError
+      } finally {
+        setUpdatingFolderTags(false);
+      }
+    },
+    [recipeId, updateFavoriteRecipeMutation],
+  );
+
+  // Unfavorite (remove from saved) recipe
+  const handleUnfavoriteRecipe = useCallback(async () => {
+    if (!recipeId) return;
+
+    setUpdatingFolderTags(true);
+
+    try {
+      await unfavoriteRecipeMutation({
+        variables: { recipeId },
+      });
+      setRecipeSaved(false);
+      toastService.success('Recipe removed from saved');
+    } catch (err) {
+      // Error handled by mutation onError
+    } finally {
+      setUpdatingFolderTags(false);
+    }
+  }, [recipeId, unfavoriteRecipeMutation]);
+
   // Normalize recipe data for display
   const displayData = useMemo((): RecipeDisplayData | null => {
     if (isBackendRecipe && backendRecipe) {
@@ -677,7 +864,7 @@ export function useRecipeDetail() {
 
     // Save state
     saving: saving || savingToFavorites,
-    recipeSaved,
+    isSaved,
     handleSaveRecipe,
 
     // Recipe preload state
@@ -707,5 +894,22 @@ export function useRecipeDetail() {
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
+
+    // Folder/tag editing
+    showFolderPicker,
+    setShowFolderPicker,
+    updatingFolderTags,
+    handleUpdateFolder,
+    handleUpdateTags,
+    handleUpdateNotes,
+    handleUpdateRating,
+    savedFolder: backendRecipe?.savedDetails?.folder ?? null,
+    savedTags: backendRecipe?.savedDetails?.tags ?? [],
+    savedNotes: backendRecipe?.savedDetails?.notes ?? null,
+    savedRating: backendRecipe?.savedDetails?.personalRating ?? null,
+    cookedCount: backendRecipe?.savedDetails?.cookedCount ?? 0,
+
+    // Unfavorite
+    handleUnfavoriteRecipe,
   };
 }

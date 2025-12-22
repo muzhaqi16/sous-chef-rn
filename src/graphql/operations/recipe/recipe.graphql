@@ -69,6 +69,23 @@ query GetRecipe($id: ID!) {
   }
 }
 
+query MySavedRecipes($folder: String) {
+  mySavedRecipes(folder: $folder) {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
+    lastCookedAt
+    createdAt
+    updatedAt
+    recipe {
+      ...BasicRecipeFragment
+    }
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -114,6 +131,31 @@ mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
     folder
     tags
     notes
+    personalRating
+    cookedCount
+    lastCookedAt
+    createdAt
+    updatedAt
+    recipe {
+      ...BasicRecipeFragment
+    }
+  }
+}
+
+mutation UnfavoriteRecipe($recipeId: ID!) {
+  unfavoriteRecipe(recipeId: $recipeId)
+}
+
+mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
+  updateFavoriteRecipe(recipeId: $recipeId, input: $input) {
+    id
+    recipeId
+    userId
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
     createdAt
     updatedAt
   }

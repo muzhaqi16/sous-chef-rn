@@ -11184,6 +11184,18 @@ export type BasicRecipeFragment = {
   caloriesPerServing: number | null | undefined;
   createdAt: string;
   updatedAt: string;
+  savedDetails:
+    | {
+        __typename?: 'SavedRecipe';
+        id: string;
+        folder: string | null | undefined;
+        tags: Array<string>;
+        notes: string | null | undefined;
+        personalRating: number | null | undefined;
+        cookedCount: number;
+      }
+    | null
+    | undefined;
 };
 
 export type RecipeFragment = {
@@ -11228,6 +11240,18 @@ export type RecipeFragment = {
   ingredients: Array<
     { __typename?: 'RecipeIngredient' } & RecipeIngredientFragment
   >;
+  savedDetails:
+    | {
+        __typename?: 'SavedRecipe';
+        id: string;
+        folder: string | null | undefined;
+        tags: Array<string>;
+        notes: string | null | undefined;
+        personalRating: number | null | undefined;
+        cookedCount: number;
+      }
+    | null
+    | undefined;
 };
 
 export type GetHomeQueryVariables = Exact<{
@@ -11419,6 +11443,12 @@ export type JoinHomeByCodeMutation = {
     updatedAt: string;
   };
 };
+
+export type LeaveHomeMutationVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type LeaveHomeMutation = { __typename?: 'Mutation'; leaveHome: boolean };
 
 export type MembershipUpdatedSubscriptionVariables = Exact<{
   homeId?: InputMaybe<Scalars['ID']['input']>;
@@ -12209,6 +12239,58 @@ export type AutocompleteCategoriesQuery = {
       name: string;
       type: CategoryType;
       icon: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPopularItemsQueryVariables = Exact<{
+  first?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetPopularItemsQuery = {
+  __typename?: 'Query';
+  items: {
+    __typename?: 'ItemConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'ItemEdge';
+      node: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl: string | null | undefined;
+        popularity: number;
+        displayUnit:
+          | {
+              __typename?: 'Unit';
+              id: string;
+              name: string;
+              symbol: string;
+              type: UnitType;
+            }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
+        categories:
+          | Array<{
+              __typename?: 'ItemCategory';
+              isPrimary: boolean;
+              category: {
+                __typename?: 'Category';
+                id: string;
+                name: string;
+                type: CategoryType;
+                color: string | null | undefined;
+                icon: string | null | undefined;
+                slug: string;
+              };
+            }>
+          | null
+          | undefined;
+      };
     }>;
   };
 };
@@ -13353,6 +13435,27 @@ export type GetRecipeQuery = {
   recipe: ({ __typename?: 'Recipe' } & RecipeFragment) | null | undefined;
 };
 
+export type MySavedRecipesQueryVariables = Exact<{
+  folder?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type MySavedRecipesQuery = {
+  __typename?: 'Query';
+  mySavedRecipes: Array<{
+    __typename?: 'SavedRecipe';
+    id: string;
+    folder: string | null | undefined;
+    tags: Array<string>;
+    notes: string | null | undefined;
+    personalRating: number | null | undefined;
+    cookedCount: number;
+    lastCookedAt: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    recipe: { __typename?: 'Recipe' } & BasicRecipeFragment;
+  }>;
+};
+
 export type CreateRecipeMutationVariables = Exact<{
   input: CreateRecipeInput;
 }>;
@@ -13419,6 +13522,41 @@ export type FavoriteRecipeMutation = {
     folder: string | null | undefined;
     tags: Array<string>;
     notes: string | null | undefined;
+    personalRating: number | null | undefined;
+    cookedCount: number;
+    lastCookedAt: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    recipe: { __typename?: 'Recipe' } & BasicRecipeFragment;
+  };
+};
+
+export type UnfavoriteRecipeMutationVariables = Exact<{
+  recipeId: Scalars['ID']['input'];
+}>;
+
+export type UnfavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  unfavoriteRecipe: boolean;
+};
+
+export type UpdateFavoriteRecipeMutationVariables = Exact<{
+  recipeId: Scalars['ID']['input'];
+  input: UpdateFavoriteRecipeInput;
+}>;
+
+export type UpdateFavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  updateFavoriteRecipe: {
+    __typename?: 'SavedRecipe';
+    id: string;
+    recipeId: string;
+    userId: string;
+    folder: string | null | undefined;
+    tags: Array<string>;
+    notes: string | null | undefined;
+    personalRating: number | null | undefined;
+    cookedCount: number;
     createdAt: string;
     updatedAt: string;
   };
@@ -20395,6 +20533,24 @@ export const BasicRecipeFragmentDoc = {
           },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
         ],
       },
     },
@@ -20523,6 +20679,24 @@ export const RecipeFragmentDoc = {
                   kind: 'FragmentSpread',
                   name: { kind: 'Name', value: 'RecipeIngredientFragment' },
                 },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
               ],
             },
           },
@@ -32497,6 +32671,91 @@ export type JoinHomeByCodeMutationOptions =
     JoinHomeByCodeMutation,
     JoinHomeByCodeMutationVariables
   >;
+export const LeaveHomeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'LeaveHome' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'leaveHome' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'homeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'homeId' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type LeaveHomeMutationFn = ApolloReactCommon.MutationFunction<
+  LeaveHomeMutation,
+  LeaveHomeMutationVariables
+>;
+
+/**
+ * __useLeaveHomeMutation__
+ *
+ * To run a mutation, you first call `useLeaveHomeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useLeaveHomeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [leaveHomeMutation, { data, loading, error }] = useLeaveHomeMutation({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useLeaveHomeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    LeaveHomeMutation,
+    LeaveHomeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    LeaveHomeMutation,
+    LeaveHomeMutationVariables
+  >(LeaveHomeDocument, options);
+}
+export type LeaveHomeMutationHookResult = ReturnType<
+  typeof useLeaveHomeMutation
+>;
+export type LeaveHomeMutationResult =
+  ApolloReactCommon.MutationResult<LeaveHomeMutation>;
+export type LeaveHomeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  LeaveHomeMutation,
+  LeaveHomeMutationVariables
+>;
 export const MembershipUpdatedDocument = {
   kind: 'Document',
   definitions: [
@@ -37680,6 +37939,281 @@ export function refetchAutocompleteCategoriesQuery(
   variables: AutocompleteCategoriesQueryVariables,
 ) {
   return { query: AutocompleteCategoriesDocument, variables: variables };
+}
+export const GetPopularItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetPopularItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'first' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+          defaultValue: { kind: 'IntValue', value: '10' },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'items' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'sort' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'field' },
+                      value: { kind: 'EnumValue', value: 'POPULARITY' },
+                    },
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'order' },
+                      value: { kind: 'EnumValue', value: 'DESC' },
+                    },
+                  ],
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'first' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'popularity' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'symbol' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'type' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brand' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'categories' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'isPrimary' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'category' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'type' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'color',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'icon' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'slug' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetPopularItemsQuery__
+ *
+ * To run a query within a React component, call `useGetPopularItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPopularItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPopularItemsQuery({
+ *   variables: {
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useGetPopularItemsQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >(GetPopularItemsDocument, options);
+}
+export function useGetPopularItemsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >(GetPopularItemsDocument, options);
+}
+export function useGetPopularItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPopularItemsQuery,
+        GetPopularItemsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >(GetPopularItemsDocument, options);
+}
+export type GetPopularItemsQueryHookResult = ReturnType<
+  typeof useGetPopularItemsQuery
+>;
+export type GetPopularItemsLazyQueryHookResult = ReturnType<
+  typeof useGetPopularItemsLazyQuery
+>;
+export type GetPopularItemsSuspenseQueryHookResult = ReturnType<
+  typeof useGetPopularItemsSuspenseQuery
+>;
+export type GetPopularItemsQueryResult = ApolloReactCommon.QueryResult<
+  GetPopularItemsQuery,
+  GetPopularItemsQueryVariables
+>;
+export function refetchGetPopularItemsQuery(
+  variables?: GetPopularItemsQueryVariables,
+) {
+  return { query: GetPopularItemsDocument, variables: variables };
 }
 export const CreateItemDocument = {
   kind: 'Document',
@@ -49164,6 +49698,24 @@ export const SearchRecipesDocument = {
           },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
         ],
       },
     },
@@ -49349,6 +49901,24 @@ export const SuggestedRecipesDocument = {
           },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
         ],
       },
     },
@@ -49616,6 +50186,24 @@ export const MyRecipesDocument = {
           },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
         ],
       },
     },
@@ -49875,6 +50463,24 @@ export const GetRecipeDocument = {
               ],
             },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
@@ -49958,6 +50564,206 @@ export type GetRecipeQueryResult = ApolloReactCommon.QueryResult<
 >;
 export function refetchGetRecipeQuery(variables: GetRecipeQueryVariables) {
   return { query: GetRecipeDocument, variables: variables };
+}
+export const MySavedRecipesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'MySavedRecipes' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'folder' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'mySavedRecipes' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'folder' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'folder' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastCookedAt' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipe' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'BasicRecipeFragment' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useMySavedRecipesQuery__
+ *
+ * To run a query within a React component, call `useMySavedRecipesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMySavedRecipesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMySavedRecipesQuery({
+ *   variables: {
+ *      folder: // value for 'folder'
+ *   },
+ * });
+ */
+export function useMySavedRecipesQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >(MySavedRecipesDocument, options);
+}
+export function useMySavedRecipesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >(MySavedRecipesDocument, options);
+}
+export function useMySavedRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MySavedRecipesQuery,
+        MySavedRecipesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >(MySavedRecipesDocument, options);
+}
+export type MySavedRecipesQueryHookResult = ReturnType<
+  typeof useMySavedRecipesQuery
+>;
+export type MySavedRecipesLazyQueryHookResult = ReturnType<
+  typeof useMySavedRecipesLazyQuery
+>;
+export type MySavedRecipesSuspenseQueryHookResult = ReturnType<
+  typeof useMySavedRecipesSuspenseQuery
+>;
+export type MySavedRecipesQueryResult = ApolloReactCommon.QueryResult<
+  MySavedRecipesQuery,
+  MySavedRecipesQueryVariables
+>;
+export function refetchMySavedRecipesQuery(
+  variables?: MySavedRecipesQueryVariables,
+) {
+  return { query: MySavedRecipesDocument, variables: variables };
 }
 export const CreateRecipeDocument = {
   kind: 'Document',
@@ -50141,6 +50947,24 @@ export const CreateRecipeDocument = {
                   kind: 'FragmentSpread',
                   name: { kind: 'Name', value: 'RecipeIngredientFragment' },
                 },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
               ],
             },
           },
@@ -50530,6 +51354,24 @@ export const UpdateRecipeDocument = {
               ],
             },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
@@ -50712,8 +51554,82 @@ export const FavoriteRecipeDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastCookedAt' },
+                },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipe' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'BasicRecipeFragment' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedDetails' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
               ],
             },
           },
@@ -50765,6 +51681,219 @@ export type FavoriteRecipeMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     FavoriteRecipeMutation,
     FavoriteRecipeMutationVariables
+  >;
+export const UnfavoriteRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UnfavoriteRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'recipeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unfavoriteRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'recipeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'recipeId' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UnfavoriteRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  UnfavoriteRecipeMutation,
+  UnfavoriteRecipeMutationVariables
+>;
+
+/**
+ * __useUnfavoriteRecipeMutation__
+ *
+ * To run a mutation, you first call `useUnfavoriteRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUnfavoriteRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [unfavoriteRecipeMutation, { data, loading, error }] = useUnfavoriteRecipeMutation({
+ *   variables: {
+ *      recipeId: // value for 'recipeId'
+ *   },
+ * });
+ */
+export function useUnfavoriteRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UnfavoriteRecipeMutation,
+    UnfavoriteRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UnfavoriteRecipeMutation,
+    UnfavoriteRecipeMutationVariables
+  >(UnfavoriteRecipeDocument, options);
+}
+export type UnfavoriteRecipeMutationHookResult = ReturnType<
+  typeof useUnfavoriteRecipeMutation
+>;
+export type UnfavoriteRecipeMutationResult =
+  ApolloReactCommon.MutationResult<UnfavoriteRecipeMutation>;
+export type UnfavoriteRecipeMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UnfavoriteRecipeMutation,
+    UnfavoriteRecipeMutationVariables
+  >;
+export const UpdateFavoriteRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateFavoriteRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'recipeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateFavoriteRecipeInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateFavoriteRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'recipeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'recipeId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'recipeId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'personalRating' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'cookedCount' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateFavoriteRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateFavoriteRecipeMutation,
+  UpdateFavoriteRecipeMutationVariables
+>;
+
+/**
+ * __useUpdateFavoriteRecipeMutation__
+ *
+ * To run a mutation, you first call `useUpdateFavoriteRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFavoriteRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFavoriteRecipeMutation, { data, loading, error }] = useUpdateFavoriteRecipeMutation({
+ *   variables: {
+ *      recipeId: // value for 'recipeId'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateFavoriteRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateFavoriteRecipeMutation,
+    UpdateFavoriteRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateFavoriteRecipeMutation,
+    UpdateFavoriteRecipeMutationVariables
+  >(UpdateFavoriteRecipeDocument, options);
+}
+export type UpdateFavoriteRecipeMutationHookResult = ReturnType<
+  typeof useUpdateFavoriteRecipeMutation
+>;
+export type UpdateFavoriteRecipeMutationResult =
+  ApolloReactCommon.MutationResult<UpdateFavoriteRecipeMutation>;
+export type UpdateFavoriteRecipeMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateFavoriteRecipeMutation,
+    UpdateFavoriteRecipeMutationVariables
   >;
 export const CreateShoppingListItemsFromRecipeDocument = {
   kind: 'Document',

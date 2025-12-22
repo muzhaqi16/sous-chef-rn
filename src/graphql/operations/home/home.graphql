@@ -138,3 +138,7 @@ mutation JoinHomeByCode($joinCode: String!) {
     updatedAt
   }
 }
+
+mutation LeaveHome($homeId: ID!) {
+  leaveHome(homeId: $homeId)
+}

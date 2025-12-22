@@ -22,7 +22,7 @@ export function useShoppingListScreen() {
   const { user } = useAuth();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
-  const { lists, loading: listsLoading, isFocused } = useShoppingListsQuery();
+  const { lists, loading: listsLoading } = useShoppingListsQuery();
 
   // 2. Selection: Determine current list with auto-select
   const {
@@ -83,8 +83,5 @@ export function useShoppingListScreen() {
     // Loading states
     loading: listsLoading || itemsLoading,
     isLoadingInitial,
-
-    // Focus state (for consumer components)
-    isFocused,
   };
 }

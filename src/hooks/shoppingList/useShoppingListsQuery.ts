@@ -1,5 +1,4 @@
 import { useMemo, useCallback } from 'react';
-import { useAppNavigation } from '#hooks';
 import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
 
 // Extract the shopping list type from the lite query (metadata only)
@@ -24,11 +23,6 @@ export type ShoppingListFromQuery = GetShoppingListsLiteQuery['shoppingLists'][n
  * useShoppingListDetailQuery with the current list ID.
  */
 export function useShoppingListsQuery() {
-  // DEBUG: Track hook calls to investigate duplicate queries
-  console.log('[useShoppingListsQuery] Hook called');
-
-  const { isFocused } = useAppNavigation();
-
   // PERFORMANCE: Uses lightweight query - metadata only, no items/collaborators
   // - cache-and-network: Shows cached data immediately, fetches fresh in background
   // - nextFetchPolicy: Prevents re-fetches on subsequent renders/list switches
@@ -59,6 +53,5 @@ export function useShoppingListsQuery() {
     error,
     refetch,
     fetchLists, // Call this when selector opens to trigger fresh fetch
-    isFocused,
   };
 }
