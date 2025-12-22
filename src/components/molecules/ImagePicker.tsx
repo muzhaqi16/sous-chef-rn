@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Text, TouchableOpacity, Alert } from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
@@ -128,15 +128,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         },
         {
           text: 'Photo Library',
-          onPress: () =>
-            requestPermissionAndLaunch(
-              Platform.OS === 'android'
-                ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
-                : PERMISSIONS.IOS.PHOTO_LIBRARY,
-              launchImageLibrary,
-              'Photo Library',
-              true, // Allow launch without permission on modern iOS
-            ),
+          onPress: () => {
+            // Android Photo Picker doesn't require permissions
+            // iOS also allows launching without explicit permission on modern versions
+            launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+          },
           style: 'default',
         },
         {
@@ -146,7 +142,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       ],
       { cancelable: true },
     );
-  }, [disabled, requestPermissionAndLaunch]);
+  }, [disabled, requestPermissionAndLaunch, handleImageResponse]);
 
   if (children) {
     return (

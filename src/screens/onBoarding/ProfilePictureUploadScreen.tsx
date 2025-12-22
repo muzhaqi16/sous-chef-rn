@@ -123,20 +123,10 @@ export const ProfilePictureUploadScreen = () => {
     }
   }, [handleImageResponse]);
 
-  const handleSelectPhoto = useCallback(async () => {
-    try {
-      const result = await request(
-        PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE ||
-          PERMISSIONS.IOS.PHOTO_LIBRARY,
-      );
-      if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
-        launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-      } else {
-        launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-      }
-    } catch (error) {
-      launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-    }
+  const handleSelectPhoto = useCallback(() => {
+    // Android Photo Picker doesn't require permissions
+    // iOS also allows launching without explicit permission on modern versions
+    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
   }, [handleImageResponse]);
 
   const handleCropImage = useCallback(() => {

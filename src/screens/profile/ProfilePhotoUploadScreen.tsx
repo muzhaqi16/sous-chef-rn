@@ -6,7 +6,6 @@ import {
   Alert,
   Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
@@ -152,42 +151,10 @@ export const ProfilePhotoUploadScreen: React.FC<{
     }
   }, [handleImageResponse]);
 
-  const handleSelectPhoto = useCallback(async () => {
-    try {
-      const permission =
-        Platform.OS === 'android'
-          ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
-          : PERMISSIONS.IOS.PHOTO_LIBRARY;
-      const result = await request(permission);
-      if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
-        launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-      } else if (result === RESULTS.DENIED) {
-        // PERFORMANCE: Specific error message - permission denied
-        Alert.alert(
-          'Photo Library Permission Denied',
-          'Photo library access is required to select photos. Please enable it in your device settings.',
-        );
-      } else if (result === RESULTS.BLOCKED) {
-        // PERFORMANCE: Specific error message - permission permanently blocked
-        Alert.alert(
-          'Photo Library Permission Blocked',
-          'Photo library access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable photo access.',
-        );
-      } else {
-        // PERFORMANCE: Specific error message - other permission states
-        Alert.alert(
-          'Photo Library Permission',
-          'Photo library access is required to select photos. Please enable it in your device settings.',
-        );
-      }
-    } catch (error) {
-      console.error('Photo library permission error:', error);
-      // PERFORMANCE: Specific error message - permission request failed
-      Alert.alert(
-        'Permission Error',
-        'Failed to request photo library permission. Please try again or check your device settings.',
-      );
-    }
+  const handleSelectPhoto = useCallback(() => {
+    // Android Photo Picker doesn't require permissions
+    // iOS also allows launching without explicit permission on modern versions
+    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
   }, [handleImageResponse]);
 
   const handleCropImage = useCallback(() => {
