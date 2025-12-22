@@ -24,6 +24,18 @@ query GetShoppingList($id: ID!) {
     completedItems
     createdAt
     updatedAt
+    homeId
+    home {
+      id
+      name
+      myMembership {
+        id
+        role
+        canAddItems
+        canRemoveItems
+        canEditPantry
+      }
+    }
     ownerships {
       ...ShoppingListOwnershipFragment
     }
@@ -72,42 +84,24 @@ query GetShoppingList($id: ID!) {
   }
 }
 
-query GetShoppingLists($homeId: String) {
+# Lightweight query for list selector - metadata only, no items/collaborators
+# Use this for dashboard/list views. Use GetShoppingList for full details.
+query GetShoppingListsLite($homeId: String) {
   shoppingLists(filters: { homeId: $homeId }) {
     id
     name
     description
     isDefault
-    isPublic
-    tags
     totalItems
     completedItems
-    estimatedTotal
-    currency
     status
     isCompleted
-    priority
     createdAt
     updatedAt
     homeId
     home {
       id
       name
-      membersConnection(first: 10) {
-        edges {
-          node {
-            role
-            user {
-              id
-              email
-              profile {
-                displayName
-                avatar
-              }
-            }
-          }
-        }
-      }
     }
     ownerships {
       id
@@ -120,22 +114,6 @@ query GetShoppingLists($homeId: String) {
           avatar
         }
       }
-    }
-    # PERFORMANCE: Include items in initial query to eliminate second GetShoppingListItems call
-    # Uses lightweight ShoppingListItemDisplayFragment (11 fields vs 60+) for ~80% payload reduction
-    # orderBy sortOrder ASC ensures items are returned in correct drag-reorder position
-    itemsConnection(first: 100, orderBy: { sortOrder: ASC }) {
-      edges {
-        cursor
-        node {
-          ...ShoppingListItemDisplayFragment
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
     }
   }
 }
@@ -505,6 +483,27 @@ mutation UpdateCollaboratorRole(
 mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   moveShoppingItemToPantry(input: $input) {
     ...PantryItemFragment
+  }
+}
+
+mutation AddItemsToShoppingList(
+  $shoppingListId: ID!
+  $items: [BatchAddShoppingListItemInput!]!
+) {
+  addItemsToShoppingList(shoppingListId: $shoppingListId, items: $items) {
+    results {
+      index
+      clientId
+      success
+      item {
+        ...ShoppingListItemFragment
+      }
+      quantityIncremented
+      error
+    }
+    successCount
+    failedCount
+    incrementedCount
   }
 }
 

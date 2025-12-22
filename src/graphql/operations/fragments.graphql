@@ -88,6 +88,8 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     description
     imageUrl
     netWeight
+    nutritions
+    images
     displayUnit {
       id
       name
@@ -210,6 +212,10 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   role
   status
   collaboratorId
+  canAddItems
+  canRemoveItems
+  canEditItems
+  canMarkPurchased
   collaborator {
     id
     email
@@ -476,6 +482,7 @@ fragment ItemFragment on Item {
   healthBenefits
   allergens
   nutritions
+  images
   metadata
   ingredients
   createdAt
@@ -846,6 +853,7 @@ fragment HomeDisplay on Home {
   timezone
   version
   updatedAt
+  isDefault
   __typename
   membersConnection(first: 10) {
     edges {
@@ -898,6 +906,16 @@ fragment HomeDisplay on Home {
       endCursor
     }
     totalCount
+  }
+  myMembership {
+    id
+    role
+    status
+    displayName
+    canManageHome
+    canAddItems
+    canRemoveItems
+    canEditPantry
   }
 }
 
@@ -1029,6 +1047,14 @@ fragment BasicRecipeFragment on Recipe {
   caloriesPerServing
   createdAt
   updatedAt
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
+  }
 }
 
 fragment RecipeFragment on Recipe {
@@ -1079,6 +1105,15 @@ fragment RecipeFragment on Recipe {
 
   ingredients {
     ...RecipeIngredientFragment
+  }
+
+  savedDetails {
+    id
+    folder
+    tags
+    notes
+    personalRating
+    cookedCount
   }
 
   createdAt

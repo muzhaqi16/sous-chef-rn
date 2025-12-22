@@ -1,11 +1,15 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
+import { useShallow } from 'zustand/shallow';
 import {
   useGetHomeQuery,
   useUpdateHomeMutation,
   useUpdateMembershipMutation,
   useRemoveMemberMutation,
   useRevokeHomeInviteMutation,
+  useLeaveHomeMutation,
+  useSetDefaultHomeMutation,
+  GetHomesDocument,
   MembershipRole,
 } from '#generated';
 import { MESSAGES } from '#constants';
@@ -17,12 +21,21 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
 
 /**
  * Custom hook for HomeDetailScreen business logic
  * Manages home details, members, and invites
  */
 export function useHomeDetailManagement(homeId: string) {
+  // Store state and actions for managing selections after leaving
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
+
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for detail views
   // - errorPolicy: 'ignore' returns cached data when network fails
@@ -138,6 +151,54 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
+  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
+
+  const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
+    useLeaveHomeMutation({
+      errorPolicy: 'all',
+      update(cache, { data }) {
+        if (!data?.leaveHome) return;
+
+        try {
+          // Evict the home from cache after leaving
+          cache.evict({
+            id: cache.identify({ __typename: 'Home', id: homeId }),
+          });
+          cache.gc();
+        } catch (error) {
+          console.warn('Cache update failed for leaveHome:', error);
+        }
+      },
+      onCompleted: data => {
+        if (data?.leaveHome && homeId === selectedHomeId) {
+          // Read remaining homes from cache
+          const cachedData = leaveClient.cache.readQuery({
+            query: GetHomesDocument,
+          }) as { homes: any[] } | null;
+          const remainingHomes = cachedData?.homes ?? [];
+
+          if (remainingHomes.length > 0) {
+            const newDefaultHome = remainingHomes[0];
+            setSelectedHomeId(newDefaultHome.id);
+            setSelectedPantryId(null);
+            setDefaultHomeMutation({
+              variables: { homeId: newDefaultHome.id },
+            }).catch(err => {
+              console.warn('Failed to set new default home after leave:', err);
+            });
+          } else {
+            setSelectedHomeId(null);
+            setSelectedPantryId(null);
+          }
+          // Clear shopping list selection (may have belonged to left home)
+          setSelectedShoppingListId(null);
+        }
+      },
+      onError: error => {
+        Alert.alert('Error', error.message || 'Failed to leave home');
+      },
+    });
+
   const home = normalizeHome(data?.home);
 
   // CRUD operations utilities
@@ -234,6 +295,35 @@ export function useHomeDetailManagement(homeId: string) {
     [revokeInviteMutation, createRemoveOperation],
   );
 
+  const leaveHome = useCallback(
+    (homeName: string): Promise<boolean> => {
+      return new Promise(resolve => {
+        Alert.alert(
+          'Leave Home',
+          `Are you sure you want to leave "${homeName}"? You will lose access to this home and its pantries and shopping lists.`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            {
+              text: 'Leave',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const result = await leaveHomeMutation({
+                    variables: { homeId },
+                  });
+                  resolve(!!result.data?.leaveHome);
+                } catch {
+                  resolve(false);
+                }
+              },
+            },
+          ],
+        );
+      });
+    },
+    [homeId, leaveHomeMutation],
+  );
+
   const toggleJoinCode = useCallback(
     async (enabled: boolean) => {
       await updateHomeMutation({
@@ -251,12 +341,14 @@ export function useHomeDetailManagement(homeId: string) {
     home,
     loading,
     updating,
+    leaving,
 
     // Actions
     saveName,
     changeRole,
     removeMember,
     revokeInvite,
+    leaveHome,
     toggleJoinCode,
   };
 }

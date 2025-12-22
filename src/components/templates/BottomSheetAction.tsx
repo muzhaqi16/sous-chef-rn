@@ -3,7 +3,6 @@ import { Keyboard, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSharedBottomSheetConfigs } from '#hooks';
@@ -84,9 +83,15 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
           {content}
         </BottomSheetScrollView>
       ) : (
-        <BottomSheetView style={[styles.view, { paddingBottom: insets.bottom }]}>
-          {content}
-        </BottomSheetView>
+        <>
+          {(sheetTitle || headerRight) && (
+            <View style={styles.nonScrollableHeader}>
+              {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+              {headerRight}
+            </View>
+          )}
+          {children}
+        </>
       )}
     </BottomSheetModal>
   );
@@ -107,6 +112,13 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  nonScrollableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: theme.spacing.sm,
   },
   sheetTitle: {

@@ -32,6 +32,8 @@ import {
 } from '#generated';
 import { useStore } from '#store';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
+import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
+import { useAuth } from '#/hooks/auth/useAuth';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
@@ -53,6 +55,12 @@ import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
  * - useShoppingListSelectorModal: List selector modal logic
  */
 const ShoppingListMainScreen: React.FC = React.memo(() => {
+  // DEBUG: Track component mount/unmount to investigate duplicate queries
+  useEffect(() => {
+    console.log('[ShoppingListMain] MOUNTED');
+    return () => console.log('[ShoppingListMain] UNMOUNTED');
+  }, []);
+
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
 
@@ -72,6 +80,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   const { profile } = useProfileData();
   const unreadCount = useStore(state => state.unreadCount);
 
+  // Get current user for permission calculations
+  const { user } = useAuth();
+
   // Track screen performance
   useScreenTransition('ShoppingListMain');
 
@@ -80,6 +91,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     lists,
     listDataWithOwnership,
     currentList,
+    currentListDetails, // Full details from GetShoppingList (for permissions)
     currentListId,
     items,
     sortableItems,
@@ -350,6 +362,38 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     openSwipeableRef.current = null;
   }, []);
 
+  // Calculate permissions for the current list
+  // - Home-linked lists use home membership permissions
+  // - Personal lists use collaborator permissions
+  // - Owners always have full permissions
+  // Uses currentListDetails from GetShoppingList query (has full data for permissions)
+  const permissions = useMemo(() => {
+    if (!currentListDetails) {
+      return {
+        canAddItems: true,
+        canRemoveItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      };
+    }
+
+    // Build the shopping list data shape for permission calculation
+    const listData = {
+      homeId: currentListDetails.homeId,
+      collaboratorsConnection: currentListDetails.collaboratorsConnection,
+      ownership: currentListDetails.ownerships?.[0],
+    };
+
+    // Get home membership if list is linked to a home
+    const homeMembership = currentListDetails.home?.myMembership ?? null;
+
+    return getShoppingListPermissionsWithOwner(
+      listData,
+      user?.id,
+      homeMembership,
+    );
+  }, [currentListDetails, user?.id]);
+
   // Search bar actions - icons inside the input (matching pantry style)
   const searchBarActions = useMemo(
     () => ({
@@ -391,6 +435,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       // Pre-filtered items with stable references (no filtering needed in ShoppingListTabs)
       unpurchasedItems,
       purchasedItems,
+      // Permission flags for conditional rendering of item actions
+      canAddItems: permissions.canAddItems,
+      canRemoveItems: permissions.canRemoveItems,
+      canEditItems: permissions.canEditItems,
+      canMarkPurchased: permissions.canMarkPurchased,
     }),
     [
       isLoadingInitial,
@@ -406,6 +455,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       handleSwipeableClose,
       unpurchasedItems,
       purchasedItems,
+      permissions,
     ],
   );
 

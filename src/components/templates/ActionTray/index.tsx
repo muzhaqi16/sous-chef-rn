@@ -104,7 +104,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           <Backdrop onTap={handleBackdropTap} isActive={active} />
         )}
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.container, trayStyle, style]}>
+          <Animated.View style={[styles.container, { maxHeight }, trayStyle, style]}>
             <ActionTrayContent
               title={title}
               showCloseButton={showCloseButton}

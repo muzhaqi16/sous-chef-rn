@@ -1368,6 +1368,602 @@
         "possibleTypes": null
       },
       {
+        "kind": "INPUT_OBJECT",
+        "name": "BatchAddShoppingListItemInput",
+        "description": "Input for a single item in batch add operation (without shoppingListId)",
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "addedContext",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "aisle",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "budgetPrice",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "category",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "clientId",
+            "description": "Client-provided ID for matching results (optional)",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "estimatedPrice",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemName",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "notes",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "preferredStoreId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "priority",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "quantity",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "recipeId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "recipeIngredientId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sortOrder",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storeSection",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "unitId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "unitName",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "BatchAddShoppingListItemResult",
+        "description": "Result for a single item in batch add operation",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "clientId",
+            "description": "Client ID if provided in input",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "error",
+            "description": "Error message if failed",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "index",
+            "description": "Index in the input array",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "item",
+            "description": "The created/updated item (null if failed)",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ShoppingListItem",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "quantityIncremented",
+            "description": "Whether quantity was incremented (item already existed)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "success",
+            "description": "Whether the operation succeeded",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "BatchAddShoppingListItemsResponse",
+        "description": "Response for batch add operation",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "failedCount",
+            "description": "Number of items that failed",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "incrementedCount",
+            "description": "Number of items where quantity was incremented",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "results",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "BatchAddShoppingListItemResult",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "successCount",
+            "description": "Number of items successfully added",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "BatchOperationSummary",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "created",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "executionTime",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Float", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "failed",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "successful",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "total",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "updated",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "BatchUpsertItemInput",
+        "description": null,
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "externalId",
+            "description": null,
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "externalType",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemData",
+            "description": null,
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "INPUT_OBJECT",
+                "name": "CreateItemInput",
+                "ofType": null
+              }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "source",
+            "description": null,
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ExternalSource",
+                "ofType": null
+              }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sourceData",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "BatchUpsertItemResult",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "created",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "error",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "externalId",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "item",
+            "description": null,
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Item", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "mapping",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ExternalSourceMapping",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "source",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ExternalSource",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "success",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "BatchUpsertItemsResponse",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "results",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "BatchUpsertItemResult",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "summary",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "BatchOperationSummary",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "SCALAR",
         "name": "BigInt",
         "description": null,
@@ -13298,6 +13894,18 @@
             "deprecationReason": null
           },
           {
+            "name": "isDefault",
+            "description": "Whether this home is the current user's default home.\nComputed per-user from UserSettings.defaultHomeId.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "isPublic",
             "description": null,
             "args": [],
@@ -24120,6 +24728,59 @@
             "deprecationReason": null
           },
           {
+            "name": "addItemsToShoppingList",
+            "description": "Batch add multiple items to a shopping list.\nMore efficient than calling addItemToShoppingList multiple times.\nMax 50 items per batch.",
+            "args": [
+              {
+                "name": "items",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "INPUT_OBJECT",
+                        "name": "BatchAddShoppingListItemInput",
+                        "ofType": null
+                      }
+                    }
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "shoppingListId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "BatchAddShoppingListItemsResponse",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "addLowStockItemsToShoppingList",
             "description": "Add all low stock items from a home's pantries to a shopping list.\nIf no shoppingListId is provided, uses the home's default shopping list.",
             "args": [
@@ -24533,6 +25194,47 @@
               "ofType": {
                 "kind": "OBJECT",
                 "name": "UserModeration",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "batchUpsertItemsByExternalSource",
+            "description": null,
+            "args": [
+              {
+                "name": "items",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "INPUT_OBJECT",
+                        "name": "BatchUpsertItemInput",
+                        "ofType": null
+                      }
+                    }
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "BatchUpsertItemsResponse",
                 "ofType": null
               }
             },
@@ -32444,6 +33146,39 @@
             "deprecationReason": null
           },
           {
+            "name": "upsertExternalRecipe",
+            "description": null,
+            "args": [
+              {
+                "name": "input",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "CreateRecipeInput",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UpsertExternalRecipeResult",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "upsertItemByExternalSource",
             "description": null,
             "args": [
@@ -36152,7 +36887,11 @@
             "name": "unit",
             "description": null,
             "args": [],
-            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Unit", "ofType": null }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -36160,7 +36899,11 @@
             "name": "unitId",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -40421,8 +41164,8 @@
             "description": null,
             "args": [],
             "type": { "kind": "OBJECT", "name": "Home", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
+            "isDeprecated": true,
+            "deprecationReason": "Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default."
           },
           {
             "name": "getItemConversions",
@@ -44426,11 +45169,7 @@
             "name": "createdBy",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "OBJECT", "name": "User", "ofType": null }
-            },
+            "type": { "kind": "OBJECT", "name": "User", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -60095,6 +60834,42 @@
         "fields": null,
         "inputFields": null,
         "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "UpsertExternalRecipeResult",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "created",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "recipe",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Recipe", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
         "enumValues": null,
         "possibleTypes": null
       },

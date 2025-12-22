@@ -30,6 +30,10 @@ interface PurchasedTabProps {
   onSwipeableClose?: () => void;
   onDragBegin?: () => void;
   onDragRelease?: () => void;
+  // Permission flags
+  canRemoveItems?: boolean;
+  canEditItems?: boolean;
+  canMarkPurchased?: boolean;
 }
 
 const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
@@ -49,6 +53,9 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onSwipeableClose,
   onDragBegin,
   onDragRelease,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
 }) => {
   const { theme } = useUnistyles();
 
@@ -140,8 +147,11 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
       onSwipeableClose={onSwipeableClose}
       onDragBegin={onDragBegin}
       onDragRelease={onDragRelease}
+      canRemoveItems={canRemoveItems}
+      canEditItems={canEditItems}
+      canMarkPurchased={canMarkPurchased}
       ListFooterComponent={
-        onClearAll ? (
+        onClearAll && canRemoveItems ? (
           <View key="purchased-footer" style={styles.footer}>
             <TouchableOpacity style={clearButtonStyle} onPress={handleClearAll}>
               <Icon

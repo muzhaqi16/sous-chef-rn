@@ -1,0 +1,182 @@
+import React, { useMemo } from 'react';
+import { View, Text, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import type { NutritionsData, NutrientCategory } from '#types';
+import {
+  parseNutritions,
+  getNutrientEntries,
+  groupNutrientsByCategory,
+  getCategoryLabel,
+  formatNutritionValue,
+  formatServingSize,
+  hasNutritionData,
+} from '#utils/nutritionUtils';
+
+interface NutritionDetailListProps {
+  /** Raw nutritions JSON from API or parsed NutritionsData */
+  nutritions: unknown;
+  /** Actual serving size in grams to scale values (optional) */
+  actualServingGrams?: number | null;
+  /** Container style */
+  style?: ViewStyle;
+}
+
+export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
+  nutritions: nutritionsRaw,
+  actualServingGrams,
+  style,
+}) => {
+  const nutritions = useMemo(
+    () =>
+      typeof nutritionsRaw === 'object' && nutritionsRaw !== null
+        ? (nutritionsRaw as NutritionsData)
+        : parseNutritions(nutritionsRaw),
+    [nutritionsRaw],
+  );
+
+  const entries = useMemo(
+    () => getNutrientEntries(nutritions, actualServingGrams),
+    [nutritions, actualServingGrams],
+  );
+
+  const groupedEntries = useMemo(
+    () => groupNutrientsByCategory(entries),
+    [entries],
+  );
+
+  // Display serving size - use actual if provided, otherwise use base
+  const displayServingSize = actualServingGrams
+    ? formatServingSize(actualServingGrams)
+    : nutritions?.servingSize;
+
+  if (!hasNutritionData(nutritions)) {
+    return (
+      <View style={[styles.container, style]}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>No nutrition data available</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Order categories for display
+  const categoryOrder: NutrientCategory[] = [
+    'macro',
+    'vitamin',
+    'mineral',
+    'other',
+  ];
+
+  return (
+    <View style={[styles.container, style]}>
+      {/* Serving size header */}
+      {displayServingSize && (
+        <View style={styles.servingHeader}>
+          <Text style={styles.servingLabel}>Serving Size</Text>
+          <Text style={styles.servingValue}>{displayServingSize}</Text>
+        </View>
+      )}
+
+      {/* Nutrient sections by category */}
+      {categoryOrder.map(category => {
+        const categoryEntries = groupedEntries[category];
+        if (!categoryEntries || categoryEntries.length === 0) return null;
+
+        return (
+          <View key={category} style={styles.section}>
+            <Text style={styles.sectionTitle}>{getCategoryLabel(category)}</Text>
+
+            {categoryEntries.map((entry, index) => (
+              <View
+                key={entry.key}
+                style={[
+                  styles.row,
+                  index === categoryEntries.length - 1 && styles.lastRow,
+                ]}
+              >
+                <Text style={styles.nutrientName}>{entry.name}</Text>
+                <Text style={styles.nutrientValue}>
+                  {formatNutritionValue(entry.amount, entry.unit)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  servingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.primary + '10',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  servingLabel: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+  },
+  servingValue: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  section: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  sectionTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  lastRow: {
+    borderBottomWidth: 0,
+  },
+  nutrientName: {
+    flex: 1,
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  nutrientValue: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+  },
+  emptyState: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+  },
+}));

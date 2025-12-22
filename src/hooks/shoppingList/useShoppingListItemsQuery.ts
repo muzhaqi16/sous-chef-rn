@@ -1,16 +1,20 @@
 import { useMemo, useRef, useEffect } from 'react';
-import { useGetShoppingListQuery } from '#generated';
+import { useGetShoppingListQuery, GetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 
+// Export the shopping list detail type
+export type ShoppingListDetail = NonNullable<GetShoppingListQuery['shoppingList']>;
+
 /**
- * useShoppingListItemsQuery - Query shopping list items with focus-aware fetching
+ * useShoppingListItemsQuery - Query shopping list items and details
  *
  * Single responsibility:
- * - Fetch items for a specific shopping list
+ * - Fetch items AND full details for a specific shopping list
  * - Handle offline-aware fetch policy
  * - Sort items by sortOrder (for fractional indexing support)
  * - Provide stable items array with fallback to previous data
+ * - Provide shoppingList details for permissions and collaborators
  *
  * This hook is consumed by useShoppingListManagement for data orchestration.
  */
@@ -19,8 +23,8 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   const shouldSkip = !listId || isLoggedOut;
 
-  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available, prevents duplicate fetches on navigation
+  // PERFORMANCE: cache-and-network shows cached data immediately, fetches fresh in background
+  // - cache-and-network: Instant UI from cache + background fetch for fresh data
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders/tab switches
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
   // Note: Pull-to-refresh uses explicit refetch() for fresh data
@@ -34,7 +38,7 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
         id: listId ?? '',
       },
       skip: shouldSkip,
-      fetchPolicy: 'cache-first',
+      fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
@@ -74,8 +78,19 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
     previousData?.shoppingList?.itemsConnection?.edges,
   ]);
 
+  // Extract the shopping list detail (with previousData fallback for same list)
+  // Used for permissions, collaborators, and home membership
+  const shoppingList = useMemo((): ShoppingListDetail | null => {
+    if (listIdChanged) {
+      return data?.shoppingList ?? null;
+    }
+    return data?.shoppingList ?? previousData?.shoppingList ?? null;
+  }, [listIdChanged, data?.shoppingList, previousData?.shoppingList]);
+
   return {
     items,
+    // Full shopping list data (for permissions, collaborators, home membership)
+    shoppingList,
     loading,
     error,
     refetch,

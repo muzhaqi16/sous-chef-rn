@@ -13,7 +13,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
+import { useSharedBottomSheetConfigs, useAppNavigation, usePopularItems } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { Icon } from '#utils';
@@ -68,6 +68,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
 
   const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
+
+  // Fetch popular items for auto-suggest when search is empty
+  const { popularItems, loading: loadingPopular } = usePopularItems(10);
 
   // Fetch recently deleted items
   // PERFORMANCE: Only fetch when sheet is visible to avoid unnecessary queries on screen mount
@@ -239,8 +242,37 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
+  // Handle quick add from popular items
+  const handleQuickAddPopular = useCallback(
+    async (item: (typeof popularItems)[0]) => {
+      if (!shoppingListId || adding) return;
+
+      try {
+        await addItemMutation({
+          variables: {
+            input: {
+              shoppingListId,
+              itemId: item.id,
+              itemName: item.name,
+              quantity: 1,
+            },
+          },
+        });
+
+        toastService.success(`Added ${item.name}`);
+        onItemAdded?.();
+      } catch (error) {
+        toastService.error('Failed to add item. Please try again.');
+      }
+    },
+    [shoppingListId, adding, addItemMutation, onItemAdded],
+  );
+
   // Determine if we should show search results
   const showSearchResults = searchQuery.length >= 2;
+
+  // Show popular items when search is empty or has few results
+  const showPopularItems = !showSearchResults && popularItems.length > 0;
 
   return (
     <BottomSheetModal
@@ -366,6 +398,53 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             <Text style={styles.actionButtonText}>Add Manually</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Popular Items Section - shown when search is empty */}
+        {showPopularItems && (
+          <View style={styles.popularSection}>
+            <Text style={styles.sectionTitle}>POPULAR ITEMS</Text>
+            {loadingPopular ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              </View>
+            ) : (
+              <View style={styles.popularList}>
+                {popularItems.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.popularItem}
+                    onPress={() => handleQuickAddPopular(item)}
+                    disabled={adding}
+                  >
+                    <View style={styles.popularItemInfo}>
+                      <Text style={styles.popularItemName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      {item.brand && (
+                        <Text style={styles.popularItemBrand} numberOfLines={1}>
+                          {item.brand}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.quickAddButton}
+                      onPress={() => handleQuickAddPopular(item)}
+                      disabled={adding}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Icon
+                        name="add"
+                        size={20}
+                        color={theme.colors.primary}
+                        library="MaterialIcons"
+                      />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Recent Items Section */}
         <View style={styles.recentSection}>
@@ -494,5 +573,42 @@ const styles = StyleSheet.create(theme => ({
   },
   recentList: {
     gap: theme.spacing.sm,
+  },
+  popularSection: {
+    marginBottom: theme.spacing.xl,
+  },
+  popularList: {
+    gap: theme.spacing.sm,
+  },
+  popularItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  popularItemInfo: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
+  popularItemName: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+  },
+  popularItemBrand: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  quickAddButton: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }));

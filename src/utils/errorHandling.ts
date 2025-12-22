@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { logger } from './environment';
 import {
   CombinedGraphQLErrors,
@@ -340,8 +341,9 @@ export const getErrorMessage = (error: any): string => {
 };
 
 // Hook for handling errors in components
+// Memoized to prevent unstable references in effect dependencies
 export const useErrorHandler = () => {
-  return {
+  return useMemo(() => ({
     handleApolloError: ErrorHandler.handleApolloError,
     handleGenericError: ErrorHandler.handleGenericError,
     getUserFriendlyMessage: ErrorHandler.getUserFriendlyMessage,
@@ -349,5 +351,5 @@ export const useErrorHandler = () => {
     shouldRetry: ErrorHandler.shouldRetry,
     isAuthError: ErrorHandler.isAuthError,
     getErrorMessage,
-  };
+  }), []); // Empty deps - these are all static class methods
 };

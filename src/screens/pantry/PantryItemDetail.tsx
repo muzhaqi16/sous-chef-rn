@@ -19,7 +19,9 @@ import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
+import { NutritionSummary, ImageGalleryTabs } from '#components/molecules';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
@@ -223,7 +225,7 @@ export const PantryItemDetail: React.FC<{
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.currentQuantity || 1,
-            unitId: data?.pantryItem?.unit?.id || '',
+            unitId: data?.pantryItem?.unit.id ?? '',
             itemName: data?.pantryItem?.item?.name || '',
           },
         },
@@ -263,6 +265,11 @@ export const PantryItemDetail: React.FC<{
   const brandName = item?.brand?.name || null;
   // Get category name for display
   const categoryName = item?.item?.categories?.[0]?.category?.name || null;
+  // Images and nutrition from catalog item
+  const itemImages = parseImages(item?.item?.images);
+  const itemNutritions = parseNutritions(item?.item?.nutritions);
+  const showImages = hasImages(itemImages) || !!imageUrl;
+  const showNutrition = hasNutritionData(itemNutritions);
 
   if (!item) {
     return (
@@ -312,13 +319,13 @@ export const PantryItemDetail: React.FC<{
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image - only show if image exists */}
-        {imageUrl && (
+        {/* Image Gallery - show if images or fallback URL exists */}
+        {showImages && (
           <View style={styles.imageSection}>
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.heroImage}
-              resizeMode="contain"
+            <ImageGalleryTabs
+              images={itemImages}
+              fallbackImageUrl={imageUrl}
+              imageHeight={200}
             />
           </View>
         )}
@@ -379,10 +386,30 @@ export const PantryItemDetail: React.FC<{
                 ? `${item.packageWeight} ${
                     item.packageWeightUnit?.symbol || 'g'
                   }`
-                : `${item.currentQuantity} ${item.unit?.symbol || 'pcs'}`}
+                : `${item.currentQuantity} ${item.unit.symbol}`}
             </Text>
           </View>
         </View>
+
+        {/* Nutrition Summary - navigates to NutritionScreen */}
+        {showNutrition && (
+          <View style={styles.nutritionSection}>
+            <Text style={styles.nutritionTitle}>Nutrition</Text>
+            <NutritionSummary
+              nutritions={itemNutritions}
+              actualServingGrams={item.packageWeight ?? undefined}
+              showHighlights
+              onPress={() =>
+                navigateTo.nutritionScreen({
+                  itemId: item.id,
+                  itemName: item.item?.name || item.itemName,
+                  nutritions: item.item?.nutritions,
+                  actualServingGrams: item.packageWeight ?? undefined,
+                })
+              }
+            />
+          </View>
+        )}
 
         {/* Quantity Row */}
         <View style={styles.infoRow}>
@@ -397,7 +424,7 @@ export const PantryItemDetail: React.FC<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {item.currentQuantity} {item.unit?.name || item.unitName || 'pcs'}
+              {item.currentQuantity} {item.unit.name}
             </Text>
           </View>
         </View>
@@ -584,7 +611,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit?.symbol || 'pcs'}
+                {item.minQuantity} {item.unit.symbol}
               </Text>
             </View>
           </View>
@@ -604,7 +631,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit?.symbol || 'pcs'}
+                {item.restockQuantity} {item.unit.symbol}
               </Text>
             </View>
           </View>
@@ -625,7 +652,7 @@ export const PantryItemDetail: React.FC<{
                   />
                 </View>
                 <Text style={styles.infoValue}>
-                  {item.initialQuantity} {item.unit?.symbol || 'pcs'}
+                  {item.initialQuantity} {item.unit.symbol}
                 </Text>
               </View>
             </View>
@@ -860,10 +887,6 @@ const styles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
   imageSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.xl,
-    backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.md,
   },
   heroImage: {
@@ -945,6 +968,16 @@ const styles = StyleSheet.create(theme => ({
   },
   expiryColumnExpired: {
     color: theme.colors.error,
+  },
+  nutritionSection: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  nutritionTitle: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
   },
   infoRow: {
     flexDirection: 'row',

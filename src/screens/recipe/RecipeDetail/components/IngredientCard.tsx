@@ -20,7 +20,9 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
   const quantity = ingredient.quantity || ingredient.amount || '';
   const unit = ingredient.unit?.symbol || ingredient.measures?.us?.unitShort || '';
   const imageUrl = ingredient.image
-    ? `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}`
+    ? ingredient.image.startsWith('http')
+      ? ingredient.image // Already full URL from backend
+      : `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}` // Filename needs URL
     : ingredient.item?.imageUrl;
 
   return (

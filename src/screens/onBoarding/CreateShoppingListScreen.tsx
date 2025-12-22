@@ -12,7 +12,7 @@ import {
 } from '#components';
 import {
   useCreateShoppingListMutation,
-  useGetShoppingListsQuery,
+  useGetShoppingListsLiteQuery,
 } from '#generated';
 import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
@@ -34,14 +34,14 @@ export const CreateShoppingListScreen = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
 
-  // GraphQL query
-  const { data: listsData, loading: listsLoading } = useGetShoppingListsQuery({
+  // GraphQL query - uses lightweight query for list metadata only
+  const { data: listsData, loading: listsLoading } = useGetShoppingListsLiteQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-and-network',
   });
 
   const lists = listsData?.shoppingLists || [];
-  const existingList = lists.find(list => list.isDefault) || lists[0];
+  const existingList = lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
 
   // GraphQL mutation
   const [createShoppingList] = useCreateShoppingListMutation();

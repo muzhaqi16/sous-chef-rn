@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useShoppingListDetails, useAppNavigation, useHomeManagement } from '#/hooks';
+import { useShoppingListDetails, useAppNavigation } from '#/hooks';
+import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { useShoppingListsQuery } from '#hooks/shoppingList';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
-  GetShoppingListsDocument,
+  GetShoppingListsLiteDocument,
   ShoppingList,
 } from '#generated';
 import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
@@ -54,7 +55,9 @@ export const ListSettings: React.FC<{
   const { shoppingList, isShared, collaborators } =
     useShoppingListDetails(listId);
   const { user } = useAuth();
-  const { homes } = useHomeManagement();
+  // Use lazy loading for homes data to avoid triggering Zustand store updates
+  // that would cause ShoppingListMain to re-render
+  const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
 
   // Get lists for finding default list after delete
   const { lists } = useShoppingListsQuery();
@@ -105,14 +108,14 @@ export const ListSettings: React.FC<{
           const existingData = cache.readQuery<{
             shoppingLists: ShoppingList[];
           }>({
-            query: GetShoppingListsDocument,
+            query: GetShoppingListsLiteDocument,
             variables: {},
           });
 
           if (existingData) {
             // Write with same empty variables to update the cache
             cache.writeQuery({
-              query: GetShoppingListsDocument,
+              query: GetShoppingListsLiteDocument,
               variables: {},
               data: {
                 ...existingData,
@@ -219,6 +222,14 @@ export const ListSettings: React.FC<{
     );
   };
 
+  // Lazy-load homes when opening the picker
+  const handleOpenHomePicker = useCallback(() => {
+    if (!homesLoaded) {
+      fetchHomeData();
+    }
+    setShowHomePicker(true);
+  }, [homesLoaded, fetchHomeData]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -304,7 +315,7 @@ export const ListSettings: React.FC<{
                 <Text style={styles.label}>Link to Home (Optional)</Text>
                 <TouchableOpacity
                   style={styles.pickerButton}
-                  onPress={() => setShowHomePicker(true)}
+                  onPress={handleOpenHomePicker}
                 >
                   <Text style={styles.pickerText}>
                     {homes?.find(h => h.id === selectedHomeId)?.name || 'Personal (No Home)'}

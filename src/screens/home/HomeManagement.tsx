@@ -13,6 +13,7 @@ import Animated, {
   FadeInDown,
   FadeOutUp,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -39,7 +40,7 @@ import { commonStyles } from '#/styles';
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
   const { user } = useAuth();
-
+  const insets = useSafeAreaInsets();
   const { theme } = useUnistyles();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -220,10 +221,10 @@ export const HomeManagement: React.FC = () => {
       const userCanInvite = membership
         ? canInviteToHome(membership.role)
         : false;
+      const userCanDelete = home.myMembership?.canManageHome ?? false;
 
       return (
         <Animated.View
-          key={home.id}
           entering={FadeInDown.delay(index * 50).springify()}
           layout={LinearTransition.duration(600)
             .springify()
@@ -236,6 +237,7 @@ export const HomeManagement: React.FC = () => {
             isDefault={home.id === defaultHomeId}
             isHighlighted={home.id === highlightedHomeId}
             canInvite={userCanInvite}
+            canDelete={userCanDelete}
             onPress={handleViewHomeDetail}
             onSetDefault={handleSetDefault}
             onInvite={handleInviteMember}
@@ -404,7 +406,7 @@ export const HomeManagement: React.FC = () => {
         {/* Homes List - Virtualized */}
         <Animated.View
           layout={LinearTransition.duration(300)}
-          style={styles.scrollView}
+          style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
           <FlatList
             data={sortedHomes}

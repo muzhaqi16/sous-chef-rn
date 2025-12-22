@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation, useHomeDetailManagement } from '#hooks';
@@ -10,6 +10,7 @@ import { HomeMembersSection } from '#components/organisms/home';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Icon } from '#utils';
+import { Button } from '#components/base';
 
 type RouteParams = {
   homeId: string;
@@ -30,10 +31,12 @@ export const HomeDetailScreen: React.FC<{
   const {
     home,
     loading,
+    leaving,
     saveName,
     changeRole,
     removeMember,
     revokeInvite,
+    leaveHome,
     toggleJoinCode,
   } = useHomeDetailManagement(homeId);
 
@@ -65,6 +68,27 @@ export const HomeDetailScreen: React.FC<{
   const currentUserMembership = home?.members?.find(
     member => member.userId === currentUser?.id,
   );
+
+  const isOwner = currentUserMembership?.role === 'OWNER';
+
+  const handleLeaveHome = async () => {
+    if (!home) return;
+
+    // Check if user is owner
+    if (isOwner) {
+      Alert.alert(
+        'Cannot Leave',
+        'Owners cannot leave the home. Please transfer ownership to another member or delete the home.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    const success = await leaveHome(home.name);
+    if (success) {
+      goBack();
+    }
+  };
 
   if (loading || !home) {
     return (
@@ -164,6 +188,29 @@ export const HomeDetailScreen: React.FC<{
         />
       ),
     },
+    // Only show Leave Home section for non-owners
+    ...(!isOwner
+      ? [
+          {
+            title: 'Danger Zone',
+            content: (
+              <View style={styles.leaveHomeSection}>
+                <Text style={styles.leaveHomeDescription}>
+                  Leaving this home will remove your access to all shared
+                  pantries and shopping lists.
+                </Text>
+                <Button
+                  title="Leave Home"
+                  onPress={handleLeaveHome}
+                  variant="danger"
+                  loading={leaving}
+                  disabled={leaving}
+                />
+              </View>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -208,5 +255,13 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
+  },
+  leaveHomeSection: {
+    gap: theme.spacing.md,
+  },
+  leaveHomeDescription: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.fonts.size.sm * 1.5,
   },
 }));

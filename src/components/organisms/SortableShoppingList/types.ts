@@ -74,6 +74,10 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onDragBegin?: () => void;
   onDragRelease?: () => void;
   isDragging?: boolean;
+  // Permission flags for conditional rendering of item actions
+  canRemoveItems?: boolean;
+  canEditItems?: boolean;
+  canMarkPurchased?: boolean;
 }
 
 // Sort order update for API calls

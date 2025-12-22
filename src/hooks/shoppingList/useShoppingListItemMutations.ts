@@ -276,73 +276,33 @@ export function useShoppingListItemMutations(
   });
 
   // === TOGGLE MUTATION ===
+  // Uses cache.modify() pattern (Pattern 5 from Apollo patterns doc) for instant UI updates
+  // This avoids "Missing field" warnings from partial optimistic responses
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    optimisticResponse: variables => {
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: variables.id,
+    // Use cache.modify for instant UI updates - no optimistic response needed
+    update(cache, _result, { variables }) {
+      if (!variables) return;
+
+      const itemId = variables.id;
+      const newStatus = variables.purchased;
+
+      // Directly modify the cached item's purchaseInfo.isPurchased field
+      // This executes immediately, providing instant UI feedback
+      cache.modify({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        fields: {
+          purchaseInfo(existingPurchaseInfo = {}) {
+            return {
+              ...existingPurchaseInfo,
+              isPurchased: newStatus,
+            };
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
       });
-
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (fullItem) {
-        return {
-          __typename: 'Mutation',
-          toggleShoppingListItemPurchased: {
-            ...fullItem,
-            __typename: 'ShoppingListItem',
-            purchaseInfo: {
-              ...fullItem.purchaseInfo,
-              isPurchased: variables.purchased,
-            },
-            version: (fullItem.version ?? 0) + 1,
-            updatedAt: new Date().toISOString(),
-          },
-        };
-      }
-
-      const currentItem = items.find(item => item.id === variables.id);
-      if (currentItem) {
-        return {
-          __typename: 'Mutation',
-          toggleShoppingListItemPurchased: {
-            __typename: 'ShoppingListItem',
-            id: currentItem.id,
-            itemName: currentItem.itemName,
-            quantity: currentItem.quantity,
-            purchaseInfo: {
-              __typename: 'PurchaseInfo',
-              isPurchased: variables.purchased,
-            },
-            version: (currentItem.version ?? 0) + 1,
-            updatedAt: new Date().toISOString(),
-            category: currentItem.category,
-            unitName: currentItem.unitName,
-            unit: currentItem.unit,
-          } as any,
-        };
-      }
-
-      return {
-        __typename: 'Mutation',
-        toggleShoppingListItemPurchased: {
-          __typename: 'ShoppingListItem',
-          id: variables.id,
-          purchaseInfo: {
-            __typename: 'PurchaseInfo',
-            isPurchased: variables.purchased,
-          },
-          version: (variables.version ?? 0) + 1,
-          updatedAt: new Date().toISOString(),
-        } as any,
-      };
     },
     onCompleted: data => {
       if (data?.toggleShoppingListItemPurchased) {
@@ -354,10 +314,12 @@ export function useShoppingListItemMutations(
       }
     },
     onError: error => {
+      // On error, refetch to restore correct state
       const { message } = handleApolloError(error, {
         operation: 'Toggle Item Purchased',
       });
       Alert.alert('Error', message);
+      refetch();
     },
   });
 

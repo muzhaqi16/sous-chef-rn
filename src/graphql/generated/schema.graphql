@@ -638,6 +638,114 @@ input BanUserInput {
   userId: ID!
 }
 
+"""
+Input for a single item in batch add operation (without shoppingListId)
+"""
+input BatchAddShoppingListItemInput {
+  addedContext: String
+  aisle: String
+  budgetPrice: Float
+  category: String
+  """
+  Client-provided ID for matching results (optional)
+  """
+  clientId: String
+  estimatedPrice: Float
+  itemId: String
+  itemName: String
+  notes: String
+  preferredStoreId: String
+  priority: Int
+  quantity: Float
+  recipeId: ID
+  recipeIngredientId: ID
+  sortOrder: String
+  storeSection: String
+  unitId: String
+  unitName: String
+}
+
+"""
+Result for a single item in batch add operation
+"""
+type BatchAddShoppingListItemResult {
+  """
+  Client ID if provided in input
+  """
+  clientId: String
+  """
+  Error message if failed
+  """
+  error: String
+  """
+  Index in the input array
+  """
+  index: Int!
+  """
+  The created/updated item (null if failed)
+  """
+  item: ShoppingListItem
+  """
+  Whether quantity was incremented (item already existed)
+  """
+  quantityIncremented: Boolean
+  """
+  Whether the operation succeeded
+  """
+  success: Boolean!
+}
+
+"""
+Response for batch add operation
+"""
+type BatchAddShoppingListItemsResponse {
+  """
+  Number of items that failed
+  """
+  failedCount: Int!
+  """
+  Number of items where quantity was incremented
+  """
+  incrementedCount: Int!
+  results: [BatchAddShoppingListItemResult!]!
+  """
+  Number of items successfully added
+  """
+  successCount: Int!
+}
+
+type BatchOperationSummary {
+  created: Int!
+  executionTime: Float!
+  failed: Int!
+  successful: Int!
+  total: Int!
+  updated: Int!
+}
+
+input BatchUpsertItemInput {
+  externalId: String!
+  externalType: String
+  itemData: CreateItemInput!
+  source: ExternalSource!
+  sourceData: JSON
+}
+
+type BatchUpsertItemResult {
+  created: Boolean
+  error: String
+  externalId: String!
+  item: Item
+  mapping: ExternalSourceMapping
+  source: ExternalSource!
+  success: Boolean!
+}
+
+type BatchUpsertItemsResponse {
+  results: [BatchUpsertItemResult!]!
+  summary: BatchOperationSummary!
+}
+
 scalar BigInt
 
 """
@@ -2346,6 +2454,11 @@ type Home {
     first: Int
     last: Int
   ): HomeInviteConnection!
+  """
+  Whether this home is the current user's default home.
+  Computed per-user from UserSettings.defaultHomeId.
+  """
+  isDefault: Boolean!
   isPublic: Boolean!
   joinCode: String
   maxMembers: Int
@@ -3758,6 +3871,15 @@ type Mutation {
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItem!
   """
+  Batch add multiple items to a shopping list.
+  More efficient than calling addItemToShoppingList multiple times.
+  Max 50 items per batch.
+  """
+  addItemsToShoppingList(
+    items: [BatchAddShoppingListItemInput!]!
+    shoppingListId: ID!
+  ): BatchAddShoppingListItemsResponse!
+  """
   Add all low stock items from a home's pantries to a shopping list.
   If no shoppingListId is provided, uses the home's default shopping list.
   """
@@ -3799,6 +3921,9 @@ type Mutation {
   approveItem(itemId: ID!): Item!
   archiveShoppingList(id: ID!): ShoppingList!
   banUser(input: BanUserInput!): UserModeration!
+  batchUpsertItemsByExternalSource(
+    items: [BatchUpsertItemInput!]!
+  ): BatchUpsertItemsResponse!
   """
   Create multiple items at once
   """
@@ -4364,6 +4489,7 @@ type Mutation {
   updateUnit(id: ID!, input: UpdateUnitInput!): Unit!
   updateUser(id: ID!, input: UpdateUserInput!): User!
   updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
+  upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   upsertItemByExternalSource(
     externalId: String!
     externalType: String
@@ -4857,8 +4983,8 @@ type PantryItem {
   storeId: String
   tags: [String!]!
   totalCost: Float
-  unit: Unit
-  unitId: String
+  unit: Unit!
+  unitId: String!
   unitName: String!
   updatedAt: DateTime
   usageRecords: [PantryItemUsage!]!
@@ -5405,6 +5531,9 @@ type Query {
   getBestDisplayUnit(currentUnitId: ID!, itemId: ID, quantity: Float!): Unit!
   getConvertibleUnits(unitId: ID!): [Unit!]!
   getDefaultHome: Home
+    @deprecated(
+      reason: "Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default."
+    )
   """
   Get all available conversions for an item
   Returns both stored conversions and calculable standard conversions
@@ -5735,7 +5864,7 @@ type Recipe {
   cookTimeMinutes: Int
   cookingLogs: [CookingLog!]!
   createdAt: DateTime!
-  createdBy: User!
+  createdBy: User
   cuisine: String
   deletedAt: DateTime
   description: String
@@ -8050,6 +8179,11 @@ union UpdateUserSettingsResult =
   | ValidationError
 
 scalar Upload
+
+type UpsertExternalRecipeResult {
+  created: Boolean!
+  recipe: Recipe!
+}
 
 type UpsertItemResult {
   created: Boolean!

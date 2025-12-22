@@ -9,7 +9,6 @@ on:
       - "dev-v*"
       - "stg-v*"
       - "prod-v*"
-      - "release-v*"
       - "playstore-v*"
   workflow_dispatch:
     inputs:
@@ -200,7 +199,7 @@ jobs:
             SUFFIX="staging"
           else
             APK_DIR="./android/app/build/outputs/apk/release"
-            SUFFIX="${{ env.BUILD_ENV }}"
+            SUFFIX="release"
           fi
 
           # Rename universal APK

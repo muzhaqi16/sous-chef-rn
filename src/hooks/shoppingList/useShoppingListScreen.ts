@@ -22,7 +22,7 @@ export function useShoppingListScreen() {
   const { user } = useAuth();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
-  const { lists, loading: listsLoading, isFocused } = useShoppingListsQuery();
+  const { lists, loading: listsLoading } = useShoppingListsQuery();
 
   // 2. Selection: Determine current list with auto-select
   const {
@@ -35,8 +35,9 @@ export function useShoppingListScreen() {
 
   // 3. Items: Fetch and manage items for current list
   // Pass validated currentListId (ensures ID exists in lists, prevents deleted list queries)
+  // Also returns shoppingList details (for permissions, collaborators, home membership)
   const shoppingListManagement = useShoppingListManagement(currentListId);
-  const { items, loading: itemsLoading } = shoppingListManagement;
+  const { items, shoppingList: currentListDetails, loading: itemsLoading } = shoppingListManagement;
 
   // 4. Transform: Convert raw items to UI format
   const { sortableItems, unpurchasedItems, purchasedItems } =
@@ -62,7 +63,10 @@ export function useShoppingListScreen() {
     // Lists
     lists,
     listDataWithOwnership,
+    // currentList from selection is lightweight (for list display only)
     currentList,
+    // currentListDetails from detail query has full data (for permissions)
+    currentListDetails,
     currentListId,
     defaultList,
 
@@ -79,8 +83,5 @@ export function useShoppingListScreen() {
     // Loading states
     loading: listsLoading || itemsLoading,
     isLoadingInitial,
-
-    // Focus state (for consumer components)
-    isFocused,
   };
 }

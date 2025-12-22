@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,9 +16,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { BottomSheetAction } from '#components';
+import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import { BottomSheetAction, FolderPicker } from '#components';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
+import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet';
+import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet';
+import { useRecipeFolders, useRecipeTags } from '#/hooks/recipe';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components';
 
@@ -34,8 +38,9 @@ const RecipeDetailScreen: React.FC = () => {
     isBackendRecipe,
     backendRecipe,
     saving,
-    recipeSaved,
+    isSaved,
     handleSaveRecipe,
+    shoppingLists,
     addingToList,
     addedIngredients,
     selectedIngredients,
@@ -43,15 +48,93 @@ const RecipeDetailScreen: React.FC = () => {
     handleAddAllIngredientsToList,
     handleAddAllIngredients,
     handleAddSelectedIngredients,
+    handleListSelected,
     toggleIngredient,
     openIngredientSelector,
     shoppingListOptionsRef,
     ingredientSelectorRef,
+    listPickerRef,
     cookedModalVisible,
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
+    showFolderPicker,
+    setShowFolderPicker,
+    updatingFolderTags,
+    handleUpdateFolder,
+    handleUpdateTags,
+    handleUpdateNotes,
+    handleUpdateRating,
+    savedFolder,
+    savedTags,
+    savedNotes,
+    savedRating,
+    cookedCount,
+    handleUnfavoriteRecipe,
   } = useRecipeDetail();
+
+  // Get available folders and tags for picker and autocomplete
+  const { folders } = useRecipeFolders();
+  const { tags: availableTags } = useRecipeTags();
+
+  // State for save/manage recipe sheets
+  const [showSaveSheet, setShowSaveSheet] = useState(false);
+  const [showManageSheet, setShowManageSheet] = useState(false);
+
+  // Handle heart icon press - quick toggle save/unsave
+  const handleHeartPress = useCallback(() => {
+    if (saving || updatingFolderTags) return;
+
+    if (isSaved) {
+      // Already saved - remove from saved
+      handleUnfavoriteRecipe();
+    } else {
+      // Not saved - quick save to "Favorites" folder
+      handleSaveRecipe('Favorites');
+    }
+  }, [
+    saving,
+    updatingFolderTags,
+    isSaved,
+    handleUnfavoriteRecipe,
+    handleSaveRecipe,
+  ]);
+
+  // Handle folder icon press - show advanced options
+  const handleFolderPress = useCallback(() => {
+    if (saving || updatingFolderTags) return;
+
+    if (isSaved) {
+      // Already saved - show manage sheet
+      setShowManageSheet(true);
+    } else {
+      // Not saved - show save sheet with folder/tag options
+      setShowSaveSheet(true);
+    }
+  }, [saving, updatingFolderTags, isSaved]);
+
+  // Handle save from SaveRecipeSheet
+  const handleConfirmSave = useCallback(
+    async (options: { folder?: string; tags?: string[]; notes?: string }) => {
+      await handleSaveRecipe(
+        options.folder ?? null,
+        options.tags,
+        options.notes,
+      );
+      setShowSaveSheet(false);
+    },
+    [handleSaveRecipe],
+  );
+
+  // Handle close save sheet
+  const handleCloseSaveSheet = useCallback(() => {
+    setShowSaveSheet(false);
+  }, []);
+
+  // Handle close manage sheet
+  const handleCloseManageSheet = useCallback(() => {
+    setShowManageSheet(false);
+  }, []);
 
   // Scroll animation for parallax effect
   const scrollY = useSharedValue(0);
@@ -84,13 +167,17 @@ const RecipeDetailScreen: React.FC = () => {
     const errorMessage =
       error ||
       backendError?.message ||
-      (recipeId && !backendRecipe ? 'Recipe not found in database' : 'Recipe not found');
+      (recipeId && !backendRecipe
+        ? 'Recipe not found in database'
+        : 'Recipe not found');
 
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{errorMessage}</Text>
         {backendError && (
-          <Text style={styles.errorDetails}>{JSON.stringify(backendError, null, 2)}</Text>
+          <Text style={styles.errorDetails}>
+            {JSON.stringify(backendError, null, 2)}
+          </Text>
         )}
       </View>
     );
@@ -114,21 +201,37 @@ const RecipeDetailScreen: React.FC = () => {
             <TouchableOpacity onPress={goBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#1d1d1d" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSaveRecipe}
-              style={styles.favoriteButton}
-              disabled={saving || recipeSaved || isBackendRecipe}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#E91E63" />
-              ) : (
+            {/* Right side buttons container */}
+            <View style={styles.rightButtons}>
+              {/* Folder button - advanced save options */}
+              <TouchableOpacity
+                onPress={handleFolderPress}
+                style={styles.actionButton}
+                disabled={saving || updatingFolderTags}
+              >
                 <Ionicons
-                  name={recipeSaved || isBackendRecipe ? 'heart' : 'heart-outline'}
-                  size={24}
-                  color="#E91E63"
+                  name="folder-outline"
+                  size={22}
+                  color={theme.colors.primary}
                 />
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+              {/* Heart button - quick toggle save/unsave */}
+              <TouchableOpacity
+                onPress={handleHeartPress}
+                style={styles.actionButton}
+                disabled={saving || updatingFolderTags}
+              >
+                {saving || updatingFolderTags ? (
+                  <ActivityIndicator size="small" color="#E91E63" />
+                ) : (
+                  <Ionicons
+                    name={isSaved ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color="#E91E63"
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -138,41 +241,159 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Recipe Metadata */}
           <View style={styles.metadata}>
             {displayData.servings != null && (
-              <Text style={styles.metadataText}>🍽️ {displayData.servings} servings</Text>
+              <Text style={styles.metadataText}>
+                🍽️ {displayData.servings} servings
+              </Text>
             )}
             {displayData.readyInMinutes != null && (
-              <Text style={styles.metadataText}>⏱️ {displayData.readyInMinutes} min</Text>
+              <Text style={styles.metadataText}>
+                ⏱️ {displayData.readyInMinutes} min
+              </Text>
             )}
-            {displayData.healthScore != null && !isNaN(displayData.healthScore) && (
-              <Text style={styles.metadataText}>💚 {Math.round(displayData.healthScore)}% healthy</Text>
+            {displayData.healthScore != null &&
+              !isNaN(displayData.healthScore) && (
+                <Text style={styles.metadataText}>
+                  💚 {Math.round(displayData.healthScore)}% healthy
+                </Text>
+              )}
+            {/* Cooked count - inline with metadata */}
+            {isBackendRecipe && recipeId && isSaved && (
+              <TouchableOpacity
+                style={styles.cookedMetadata}
+                onPress={() => setCookedModalVisible(true)}
+                disabled={markingAsCooked}
+              >
+                {markingAsCooked ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.success}
+                  />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={
+                        cookedCount > 0
+                          ? 'checkmark-circle'
+                          : 'checkmark-circle-outline'
+                      }
+                      size={14}
+                      color={
+                        cookedCount > 0
+                          ? theme.colors.success
+                          : theme.colors.textSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.metadataText,
+                        cookedCount > 0 && styles.cookedMetadataTextActive,
+                      ]}
+                    >
+                      {cookedCount > 0
+                        ? `Cooked ${cookedCount}x`
+                        : 'Mark cooked'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
             )}
           </View>
 
-          {/* I Cooked This Button */}
-          {isBackendRecipe && recipeId && (
-            <TouchableOpacity
-              style={styles.cookedButton}
-              onPress={() => setCookedModalVisible(true)}
-              disabled={markingAsCooked}
-            >
-              {markingAsCooked ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.cookedButtonText}>I Cooked This!</Text>
-                </>
+          {/* Folder, Tags, Notes, Rating Section - Only for saved recipes */}
+          {isBackendRecipe && recipeId && isSaved && (
+            <View style={styles.folderTagsSection}>
+              {/* Rating */}
+              {savedRating !== null && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Rating</Text>
+                  <View style={styles.ratingStars}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <Ionicons
+                        key={star}
+                        name={star <= savedRating ? 'star' : 'star-outline'}
+                        size={14}
+                        color={
+                          star <= savedRating
+                            ? '#FFB800'
+                            : theme.colors.textSecondary
+                        }
+                      />
+                    ))}
+                  </View>
+                </View>
               )}
-            </TouchableOpacity>
+
+              {/* Folder - read-only display */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Folder</Text>
+                <View style={styles.detailValue}>
+                  <Ionicons
+                    name="folder"
+                    size={theme.fonts.size.sm}
+                    color={
+                      savedFolder
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.detailValueText,
+                      savedFolder && styles.detailValueTextActive,
+                    ]}
+                  >
+                    {savedFolder || 'None'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Tags - read-only display */}
+              {savedTags.length > 0 && (
+                <View style={styles.tagsDisplayRow}>
+                  <Text style={styles.detailLabel}>Tags</Text>
+                  <View style={styles.tagsChipsContainer}>
+                    {savedTags.map((tag, index) => (
+                      <View key={`${tag}-${index}`} style={styles.tagChip}>
+                        <Text style={styles.tagChipText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Notes */}
+              {savedNotes && (
+                <View style={styles.notesDisplayRow}>
+                  <Text style={styles.detailLabel}>Notes</Text>
+                  <Text style={styles.notesText}>{savedNotes}</Text>
+                </View>
+              )}
+            </View>
           )}
 
           {/* Dietary Tags */}
           {!isBackendRecipe && (
             <View style={styles.tags}>
-              {displayData.vegetarian && <View style={styles.tag}><Text style={styles.tagText}>Vegetarian</Text></View>}
-              {displayData.vegan && <View style={styles.tag}><Text style={styles.tagText}>Vegan</Text></View>}
-              {displayData.glutenFree && <View style={styles.tag}><Text style={styles.tagText}>Gluten Free</Text></View>}
-              {displayData.dairyFree && <View style={styles.tag}><Text style={styles.tagText}>Dairy Free</Text></View>}
+              {displayData.vegetarian && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Vegetarian</Text>
+                </View>
+              )}
+              {displayData.vegan && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Vegan</Text>
+                </View>
+              )}
+              {displayData.glutenFree && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Gluten Free</Text>
+                </View>
+              )}
+              {displayData.dairyFree && (
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>Dairy Free</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -193,14 +414,19 @@ const RecipeDetailScreen: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
-                <TouchableOpacity onPress={handleAddAllIngredientsToList} disabled={addingToList}>
-                  <Text style={styles.addAllButton}>{addingToList ? 'Adding...' : 'Add All'}</Text>
+                <TouchableOpacity
+                  onPress={handleAddAllIngredientsToList}
+                  disabled={addingToList}
+                >
+                  <Text style={styles.addAllButton}>
+                    {addingToList ? 'Adding...' : 'Add All'}
+                  </Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 horizontal
                 data={displayData.ingredients}
-                keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+                keyExtractor={(item, index) => `${item.id}-${index}`}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.ingredientsList}
                 ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
@@ -231,7 +457,11 @@ const RecipeDetailScreen: React.FC = () => {
               displayData.instructionsHtml &&
               typeof displayData.instructionsHtml === 'string';
 
-            if (!hasBackendInstructions && !hasAnalyzedInstructions && !hasHtmlInstructions) {
+            if (
+              !hasBackendInstructions &&
+              !hasAnalyzedInstructions &&
+              !hasHtmlInstructions
+            ) {
               return null;
             }
 
@@ -241,22 +471,30 @@ const RecipeDetailScreen: React.FC = () => {
                 {hasBackendInstructions &&
                   displayData.instructions.map((step: any, index: number) => (
                     <View key={index} style={styles.instructionStep}>
-                      <Text style={styles.stepNumber}>{step.number || index + 1}.</Text>
+                      <Text style={styles.stepNumber}>
+                        {step.number || index + 1}.
+                      </Text>
                       <Text style={styles.stepText}>{step.step}</Text>
                     </View>
                   ))}
                 {hasAnalyzedInstructions &&
-                  displayData.instructions[0].steps.map((step: any, index: number) => (
-                    <View key={index} style={styles.instructionStep}>
-                      <Text style={styles.stepNumber}>{step.number}.</Text>
-                      <Text style={styles.stepText}>{step.step}</Text>
-                    </View>
-                  ))}
-                {!hasBackendInstructions && !hasAnalyzedInstructions && hasHtmlInstructions && (
-                  <Text style={styles.description}>
-                    {displayData.instructionsHtml?.replace(/<[^>]*>/g, '\n').trim()}
-                  </Text>
-                )}
+                  displayData.instructions[0].steps.map(
+                    (step: any, index: number) => (
+                      <View key={index} style={styles.instructionStep}>
+                        <Text style={styles.stepNumber}>{step.number}.</Text>
+                        <Text style={styles.stepText}>{step.step}</Text>
+                      </View>
+                    ),
+                  )}
+                {!hasBackendInstructions &&
+                  !hasAnalyzedInstructions &&
+                  hasHtmlInstructions && (
+                    <Text style={styles.description}>
+                      {displayData.instructionsHtml
+                        ?.replace(/<[^>]*>/g, '\n')
+                        .trim()}
+                    </Text>
+                  )}
               </View>
             );
           })()}
@@ -265,7 +503,9 @@ const RecipeDetailScreen: React.FC = () => {
           {(displayData.sourceName || displayData.sourceUrl) && (
             <TouchableOpacity
               style={styles.attribution}
-              onPress={() => displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)}
+              onPress={() =>
+                displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
+              }
               disabled={!displayData.sourceUrl}
               activeOpacity={displayData.sourceUrl ? 0.7 : 1}
             >
@@ -274,8 +514,14 @@ const RecipeDetailScreen: React.FC = () => {
               </Text>
               {displayData.sourceUrl && (
                 <View style={styles.viewOriginalLink}>
-                  <Text style={styles.viewOriginalText}>View Original Recipe</Text>
-                  <Ionicons name="open-outline" size={14} color={theme.colors.primary} />
+                  <Text style={styles.viewOriginalText}>
+                    View Original Recipe
+                  </Text>
+                  <Ionicons
+                    name="open-outline"
+                    size={14}
+                    color={theme.colors.primary}
+                  />
                 </View>
               )}
             </TouchableOpacity>
@@ -291,20 +537,34 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <View style={styles.shoppingListOptions}>
           <TouchableOpacity
-            style={[styles.optionButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}
+            style={[
+              styles.optionButton,
+              { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+            ]}
             onPress={handleAddAllIngredients}
           >
             <Ionicons name="list" size={24} color={theme.colors.primary} />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Add All Ingredients</Text>
-              <Text style={styles.optionDescription}>Add all recipe ingredients to your shopping list</Text>
+              <Text style={styles.optionDescription}>
+                Add all recipe ingredients to your shopping list
+              </Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionButton} onPress={openIngredientSelector}>
-            <Ionicons name="checkmark-circle-outline" size={24} color={theme.colors.primary} />
+          <TouchableOpacity
+            style={styles.optionButton}
+            onPress={openIngredientSelector}
+          >
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
             <View style={styles.optionTextContainer}>
               <Text style={styles.optionTitle}>Select Ingredients</Text>
-              <Text style={styles.optionDescription}>Choose specific ingredients to add</Text>
+              <Text style={styles.optionDescription}>
+                Choose specific ingredients to add
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -318,15 +578,22 @@ const RecipeDetailScreen: React.FC = () => {
       >
         <FlatList
           data={backendRecipe?.ingredients || []}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item }) => {
             const isSelected = selectedIngredients.has(item.id);
             return (
-              <TouchableOpacity style={styles.ingredientItem} onPress={() => toggleIngredient(item.id)}>
+              <TouchableOpacity
+                style={styles.ingredientItem}
+                onPress={() => toggleIngredient(item.id)}
+              >
                 <Ionicons
                   name={isSelected ? 'checkbox' : 'square-outline'}
                   size={24}
-                  color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                  color={
+                    isSelected
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary
+                  }
                 />
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{item.name}</Text>
@@ -337,10 +604,15 @@ const RecipeDetailScreen: React.FC = () => {
               </TouchableOpacity>
             );
           }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No ingredients available</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No ingredients available</Text>
+          }
         />
         <TouchableOpacity
-          style={[styles.addSelectedButton, { backgroundColor: theme.colors.primary }]}
+          style={[
+            styles.addSelectedButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
           onPress={handleAddSelectedIngredients}
           disabled={selectedIngredients.size === 0 || addingToList}
         >
@@ -348,10 +620,69 @@ const RecipeDetailScreen: React.FC = () => {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.addSelectedButtonText}>
-              Add {selectedIngredients.size} ingredient{selectedIngredients.size !== 1 ? 's' : ''}
+              Add {selectedIngredients.size} ingredient
+              {selectedIngredients.size !== 1 ? 's' : ''}
             </Text>
           )}
         </TouchableOpacity>
+      </BottomSheetAction>
+
+      {/* Shopping List Picker Bottom Sheet */}
+      <BottomSheetAction
+        sheetRef={listPickerRef}
+        sheetTitle="Add to Shopping List"
+        snapPoints={['50%']}
+        scrollable={false}
+      >
+        <BottomSheetFlatList
+          data={shoppingLists}
+          keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+          renderItem={({ item }: { item: (typeof shoppingLists)[number] }) => (
+            <TouchableOpacity
+              style={styles.listPickerItem}
+              onPress={() => handleListSelected(item.id)}
+            >
+              <View style={styles.listPickerInfo}>
+                <Text style={styles.listPickerName}>{item.name}</Text>
+                <Text style={styles.listPickerCount}>
+                  {item.totalItems ?? 0} items
+                </Text>
+              </View>
+              {item.isDefault && (
+                <View
+                  style={[
+                    styles.defaultBadge,
+                    { backgroundColor: theme.colors.primary + '20' },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.defaultBadgeText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    Default
+                  </Text>
+                </View>
+              )}
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyListPicker}>
+              <Text style={styles.emptyText}>No shopping lists found</Text>
+              <Text style={styles.emptySubtext}>
+                Create a shopping list first
+              </Text>
+            </View>
+          }
+        />
       </BottomSheetAction>
 
       {/* Mark Cooked Modal */}
@@ -361,6 +692,46 @@ const RecipeDetailScreen: React.FC = () => {
         defaultServings={displayData.servings || 1}
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
+      />
+
+      {/* Folder Picker Modal - for editing existing saved recipe folder */}
+      <FolderPicker
+        visible={showFolderPicker}
+        folders={folders}
+        selectedFolder={savedFolder}
+        onSelect={handleUpdateFolder}
+        onCancel={() => setShowFolderPicker(false)}
+        loading={updatingFolderTags}
+      />
+
+      {/* Save Recipe Sheet - Bottom sheet for saving new recipe with folder, tags, and notes */}
+      <SaveRecipeSheet
+        visible={showSaveSheet}
+        onClose={handleCloseSaveSheet}
+        folders={folders}
+        availableTags={availableTags}
+        onSave={handleConfirmSave}
+        saving={saving}
+        recipeName={displayData?.title}
+      />
+
+      {/* Manage Recipe Sheet - Bottom sheet for managing saved recipes */}
+      <ManageRecipeSheet
+        visible={showManageSheet}
+        onClose={handleCloseManageSheet}
+        folders={folders}
+        availableTags={availableTags}
+        currentFolder={savedFolder}
+        currentTags={savedTags}
+        currentNotes={savedNotes}
+        currentRating={savedRating}
+        onUpdateFolder={handleUpdateFolder}
+        onUpdateTags={handleUpdateTags}
+        onUpdateNotes={handleUpdateNotes}
+        onUpdateRating={handleUpdateRating}
+        onRemove={handleUnfavoriteRecipe}
+        updating={updatingFolderTags}
+        recipeName={displayData?.title}
       />
     </View>
   );
@@ -431,10 +802,14 @@ const styles = StyleSheet.create(theme => ({
     shadowRadius: 2.22,
     elevation: 3,
   },
-  favoriteButton: {
+  rightButtons: {
     position: 'absolute',
     top: 48,
     right: 12,
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  actionButton: {
     width: 40,
     height: 40,
     alignItems: 'center',
@@ -469,22 +844,79 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
   },
-  cookedButton: {
+  cookedMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.success,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radii.full,
     gap: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-    alignSelf: 'flex-start',
   },
-  cookedButtonText: {
+  cookedMetadataTextActive: {
+    color: theme.colors.success,
+  },
+  folderTagsSection: {
+    marginBottom: theme.spacing.lg,
+    gap: theme.spacing.xs,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+  },
+  detailLabel: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.textSecondary,
+  },
+  detailValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  detailValueText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  detailValueTextActive: {
+    color: theme.colors.primary,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  tagsDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+  },
+  tagsChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.xs,
+    flex: 1,
+    marginLeft: theme.spacing.md,
+  },
+  tagChip: {
+    backgroundColor: theme.colors.primary + '15',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
+    borderRadius: theme.radii.full,
+  },
+  tagChipText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
+  notesDisplayRow: {
+    paddingVertical: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  notesText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
   tags: {
     flexDirection: 'row',
@@ -633,5 +1065,46 @@ const styles = StyleSheet.create(theme => ({
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
+  },
+  // List picker styles
+  listPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.md,
+  },
+  listPickerInfo: {
+    flex: 1,
+  },
+  listPickerName: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  listPickerCount: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  defaultBadge: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
+  },
+  defaultBadgeText: {
+    fontSize: theme.fonts.size.xs,
+    fontWeight: '600',
+  },
+  emptyListPicker: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptySubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
   },
 }));

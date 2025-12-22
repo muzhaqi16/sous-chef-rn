@@ -30,6 +30,10 @@ interface ShoppingTabProps {
   onSwipeableClose?: () => void;
   onDragBegin?: () => void;
   onDragRelease?: () => void;
+  // Permission flags
+  canRemoveItems?: boolean;
+  canEditItems?: boolean;
+  canMarkPurchased?: boolean;
 }
 
 const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
@@ -49,6 +53,9 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onSwipeableClose,
   onDragBegin,
   onDragRelease,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
 }) => {
   const { theme } = useUnistyles();
 
@@ -113,6 +120,9 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       refreshing={refreshing}
       onDragBegin={onDragBegin}
       onDragRelease={onDragRelease}
+      canRemoveItems={canRemoveItems}
+      canEditItems={canEditItems}
+      canMarkPurchased={canMarkPurchased}
     />
   );
 };
