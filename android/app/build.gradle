@@ -42,8 +42,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 29
-        versionName "2.1.10"
+        versionCode 30
+        versionName "2.1.12"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -145,6 +145,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // AndroidX Photo Picker backport for devices running Android < 30
+    implementation("androidx.activity:activity:1.9.+")
 
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')
