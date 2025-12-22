@@ -69,20 +69,28 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const [newFolderName, setNewFolderName] = useState('');
   const [localFolders, setLocalFolders] = useState<string[]>([]);
 
-  // Sync local state when props change
+  // Show/hide the sheet and reset transient UI when visibility changes
   useEffect(() => {
     if (visible) {
       bottomSheetRef.current?.present();
-      setSelectedFolder(currentFolder ?? null);
-      setTags(currentTags);
-      setNotes(currentNotes ?? '');
-      setRating(currentRating ?? null);
       setShowNewFolder(false);
       setNewFolderName('');
       setLocalFolders([]);
     } else {
       bottomSheetRef.current?.dismiss();
     }
+  }, [visible]);
+
+  // Sync editable values with the latest props while the sheet is open
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+
+    setSelectedFolder(currentFolder ?? null);
+    setTags(currentTags);
+    setNotes(currentNotes ?? '');
+    setRating(currentRating ?? null);
   }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
 
   const handleSelectFolder = useCallback(
@@ -100,7 +108,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
     if (trimmedName) {
       // Add to local folders list so it appears in the UI
       setLocalFolders(prev =>
-        prev.includes(trimmedName) ? prev : [...prev, trimmedName]
+        prev.includes(trimmedName) ? prev : [...prev, trimmedName],
       );
       setSelectedFolder(trimmedName);
       setShowNewFolder(false);
@@ -140,7 +148,10 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
   // Dedupe folders with "Favorites" first, then existing folders, then locally created
   const allFolders = [...new Set([...folders, ...localFolders])];
-  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
+  const displayFolders = [
+    'Favorites',
+    ...allFolders.filter(f => f !== 'Favorites'),
+  ];
 
   return (
     <BottomSheetModal
