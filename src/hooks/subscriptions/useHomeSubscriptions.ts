@@ -70,7 +70,7 @@ export function useHomeSubscriptions(userId?: string) {
   });
 
   useMemberJoinedSubscription({
-    variables: { homeId: selectedHomeId || '' },
+    variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId,
     ...memberJoinedHandlers,
   });
@@ -91,7 +91,7 @@ export function useHomeSubscriptions(userId?: string) {
   });
 
   useMemberLeftSubscription({
-    variables: { homeId: selectedHomeId || '' },
+    variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId,
     ...memberLeftHandlers,
   });

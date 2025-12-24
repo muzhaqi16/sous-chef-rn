@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -59,12 +58,15 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const animationConfigs = useSharedBottomSheetConfigs();
 
   // Local state for editing
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(currentFolder ?? null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(
+    currentFolder ?? null,
+  );
   const [tags, setTags] = useState<string[]>(currentTags);
   const [notes, setNotes] = useState(currentNotes ?? '');
   const [rating, setRating] = useState<number | null>(currentRating ?? null);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [localFolders, setLocalFolders] = useState<string[]>([]);
 
   // Sync local state when props change
   useEffect(() => {
@@ -76,32 +78,43 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setRating(currentRating ?? null);
       setShowNewFolder(false);
       setNewFolderName('');
+      setLocalFolders([]);
     } else {
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
 
-  const handleSelectFolder = useCallback(async (folder: string | null) => {
-    setSelectedFolder(folder);
-    setShowNewFolder(false);
-    setNewFolderName('');
-    await onUpdateFolder(folder);
-  }, [onUpdateFolder]);
-
-  const handleCreateFolder = useCallback(async () => {
-    if (newFolderName.trim()) {
-      const folder = newFolderName.trim();
+  const handleSelectFolder = useCallback(
+    async (folder: string | null) => {
       setSelectedFolder(folder);
       setShowNewFolder(false);
       setNewFolderName('');
       await onUpdateFolder(folder);
+    },
+    [onUpdateFolder],
+  );
+
+  const handleCreateFolder = useCallback(async () => {
+    const trimmedName = newFolderName.trim();
+    if (trimmedName) {
+      // Add to local folders list so it appears in the UI
+      setLocalFolders(prev =>
+        prev.includes(trimmedName) ? prev : [...prev, trimmedName]
+      );
+      setSelectedFolder(trimmedName);
+      setShowNewFolder(false);
+      setNewFolderName('');
+      await onUpdateFolder(trimmedName);
     }
   }, [newFolderName, onUpdateFolder]);
 
-  const handleTagsChange = useCallback(async (newTags: string[]) => {
-    setTags(newTags);
-    await onUpdateTags(newTags);
-  }, [onUpdateTags]);
+  const handleTagsChange = useCallback(
+    async (newTags: string[]) => {
+      setTags(newTags);
+      await onUpdateTags(newTags);
+    },
+    [onUpdateTags],
+  );
 
   const handleNotesBlur = useCallback(async () => {
     if (notes !== (currentNotes ?? '')) {
@@ -109,20 +122,24 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
     }
   }, [notes, currentNotes, onUpdateNotes]);
 
-  const handleRatingPress = useCallback(async (star: number) => {
-    // Toggle off if pressing same rating, otherwise set new rating
-    const newRating = rating === star ? null : star;
-    setRating(newRating);
-    await onUpdateRating(newRating);
-  }, [rating, onUpdateRating]);
+  const handleRatingPress = useCallback(
+    async (star: number) => {
+      // Toggle off if pressing same rating, otherwise set new rating
+      const newRating = rating === star ? null : star;
+      setRating(newRating);
+      await onUpdateRating(newRating);
+    },
+    [rating, onUpdateRating],
+  );
 
   const handleRemove = useCallback(async () => {
     await onRemove();
     onClose();
   }, [onRemove, onClose]);
 
-  // Dedupe folders with "Favorites" first
-  const displayFolders = ['Favorites', ...folders.filter(f => f !== 'Favorites')];
+  // Dedupe folders with "Favorites" first, then existing folders, then locally created
+  const allFolders = [...new Set([...folders, ...localFolders])];
+  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
 
   return (
     <BottomSheetModal
@@ -135,6 +152,8 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -169,10 +188,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               disabled={updating}
             >
-              <Ionicons name="trash-outline" size={22} color={theme.colors.error} />
+              <Ionicons
+                name="trash-outline"
+                size={22}
+                color={theme.colors.error}
+              />
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="close"
+                size={24}
+                color={theme.colors.textPrimary}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -196,123 +226,108 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               disabled={updating}
             >
               <Ionicons
-                name={rating !== null && star <= rating ? 'star' : 'star-outline'}
+                name={
+                  rating !== null && star <= rating ? 'star' : 'star-outline'
+                }
                 size={32}
-                color={rating !== null && star <= rating ? '#FFB800' : theme.colors.textSecondary}
+                color={
+                  rating !== null && star <= rating
+                    ? '#FFB800'
+                    : theme.colors.textSecondary
+                }
               />
             </TouchableOpacity>
           ))}
-          {rating !== null && (
-            <Text style={styles.ratingText}>{rating}/5</Text>
-          )}
+          {rating !== null && <Text style={styles.ratingText}>{rating}/5</Text>}
         </View>
 
         {/* Folder Selection */}
         <Text style={styles.sectionLabel}>Folder</Text>
-        <ScrollView
-          style={styles.folderList}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-        >
-          {/* No Folder Option */}
-          <TouchableOpacity
-            style={[
-              styles.folderOption,
-              !selectedFolder && styles.folderOptionSelected,
-            ]}
-            onPress={() => handleSelectFolder(null)}
-            disabled={updating}
-          >
-            <Ionicons
-              name="folder-outline"
-              size={18}
-              color={!selectedFolder ? theme.colors.primary : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.folderOptionText,
-                !selectedFolder && styles.folderOptionTextSelected,
-              ]}
-            >
-              No Folder
-            </Text>
-            {!selectedFolder && (
-              <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
-            )}
-          </TouchableOpacity>
-
-          {/* Existing Folders */}
-          {displayFolders.map(folder => (
-            <TouchableOpacity
-              key={folder}
-              style={[
-                styles.folderOption,
-                selectedFolder === folder && styles.folderOptionSelected,
-              ]}
-              onPress={() => handleSelectFolder(folder)}
-              disabled={updating}
-            >
-              <Ionicons
-                name="folder"
-                size={18}
-                color={selectedFolder === folder ? theme.colors.primary : theme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.folderOptionText,
-                  selectedFolder === folder && styles.folderOptionTextSelected,
-                ]}
-              >
-                {folder}
-              </Text>
-              {selectedFolder === folder && (
-                <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-
-          {/* Create New Folder */}
-          {showNewFolder ? (
-            <View style={styles.newFolderContainer}>
-              <BottomSheetTextInput
-                style={styles.newFolderInput}
-                placeholder="Enter folder name..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={newFolderName}
-                onChangeText={setNewFolderName}
-                autoFocus
-                autoCapitalize="words"
-                onSubmitEditing={handleCreateFolder}
-              />
+        <View style={styles.folderList}>
+          {[null, ...displayFolders].map(folder => {
+            const isSelected =
+              folder === null ? !selectedFolder : selectedFolder === folder;
+            const isNoFolder = folder === null;
+            return (
               <TouchableOpacity
+                key={folder ?? 'no-folder'}
                 style={[
-                  styles.createButton,
-                  !newFolderName.trim() && styles.createButtonDisabled,
+                  styles.folderOption,
+                  isSelected && styles.folderOptionSelected,
                 ]}
-                onPress={handleCreateFolder}
-                disabled={!newFolderName.trim() || updating}
+                onPress={() => handleSelectFolder(folder)}
+                disabled={updating}
               >
+                <Ionicons
+                  name={isNoFolder ? 'folder-outline' : 'folder'}
+                  size={18}
+                  color={
+                    isSelected
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary
+                  }
+                />
                 <Text
                   style={[
-                    styles.createButtonText,
-                    !newFolderName.trim() && styles.createButtonTextDisabled,
+                    styles.folderOptionText,
+                    isSelected && styles.folderOptionTextSelected,
                   ]}
                 >
-                  Create
+                  {isNoFolder ? 'No Folder' : folder}
                 </Text>
+                {isSelected && (
+                  <Ionicons
+                    name="checkmark"
+                    size={18}
+                    color={theme.colors.primary}
+                  />
+                )}
               </TouchableOpacity>
-            </View>
-          ) : (
+            );
+          })}
+        </View>
+
+        {/* Create New Folder - Outside ScrollView so always visible */}
+        {showNewFolder ? (
+          <View style={styles.newFolderContainer}>
+            <BottomSheetTextInput
+              style={styles.newFolderInput}
+              placeholder="Enter folder name..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              autoFocus
+              autoCapitalize="words"
+              onSubmitEditing={handleCreateFolder}
+            />
             <TouchableOpacity
-              style={styles.newFolderButton}
-              onPress={() => setShowNewFolder(true)}
-              disabled={updating}
+              style={[
+                styles.createButton,
+                !newFolderName.trim() && styles.createButtonDisabled,
+              ]}
+              onPress={handleCreateFolder}
+              disabled={!newFolderName.trim() || updating}
             >
-              <Ionicons name="add" size={18} color={theme.colors.primary} />
-              <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+              <Text
+                style={[
+                  styles.createButtonText,
+                  !newFolderName.trim() && styles.createButtonTextDisabled,
+                ]}
+              >
+                Create
+              </Text>
             </TouchableOpacity>
-          )}
-        </ScrollView>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.newFolderButton}
+            onPress={() => setShowNewFolder(true)}
+            disabled={updating}
+          >
+            <Ionicons name="add" size={18} color={theme.colors.primary} />
+            <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Tags */}
         <Text style={styles.sectionLabel}>Tags</Text>
@@ -439,7 +454,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
   },
   newFolderButtonText: {
     fontSize: theme.fonts.size.base,
@@ -450,7 +465,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
   },
   newFolderInput: {
     flex: 1,

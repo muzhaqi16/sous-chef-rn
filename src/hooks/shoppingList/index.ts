@@ -8,3 +8,8 @@ export {useShoppingListScreen} from './useShoppingListScreen';
 export {useShoppingListsQuery} from './useShoppingListsQuery';
 export {useShoppingListSelection} from './useShoppingListSelection';
 export {useShoppingListTransform} from './useShoppingListTransform';
+export {
+  useShoppingListSuggestions,
+  type ShoppingListSuggestionItem,
+  type GroupedSuggestions,
+} from './useShoppingListSuggestions';

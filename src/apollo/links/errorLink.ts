@@ -5,9 +5,14 @@ import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 
 // Utility functions for error detection
+// Note: FORBIDDEN is intentionally NOT included here - it's a resource access error, not an auth error
+// Treating FORBIDDEN as auth error causes unnecessary token refresh cycles
 const isAuthError = (code: string, msg: string) =>
-  ['UNAUTHENTICATED', 'FORBIDDEN'].includes(code) ||
+  code === 'UNAUTHENTICATED' ||
   ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term => msg.toLowerCase().includes(term));
+
+// FORBIDDEN means user doesn't have access to the resource - not an auth issue
+const isResourceAccessError = (code: string) => code === 'FORBIDDEN';
 
 const isApiKeyError = (code: string, msg: string) =>
   ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
@@ -29,6 +34,13 @@ export const errorLink = onError(({ error, operation, forward }) => {
 
       if (isApiKeyError(code, message)) {
         console.error('API Key error:', message);
+        continue;
+      }
+
+      // Handle FORBIDDEN separately - it's a resource access issue, not an auth problem
+      // This prevents unnecessary token refresh cycles when accessing deleted/unauthorized resources
+      if (isResourceAccessError(code)) {
+        console.warn(`Access denied for ${operation.operationName}: ${message}`);
         continue;
       }
 

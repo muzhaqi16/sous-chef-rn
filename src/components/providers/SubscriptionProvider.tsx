@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { subscriptionService } from '#/services/subscriptions';
+import { enableAutoReconnect, disableAutoReconnect, reconnectWebSocket } from '#/apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 
@@ -45,9 +46,17 @@ interface SubscriptionProviderProps {
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
 
-  // Cleanup subscriptions on logout
+  // Enable/disable auto-reconnect and cleanup subscriptions based on auth state
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isAuthenticated) {
+      // Enable WebSocket auto-reconnection when authenticated
+      enableAutoReconnect();
+      // Ensure WebSocket client is properly initialized after login
+      // This creates a fresh client if the previous one was disposed during logout
+      reconnectWebSocket();
+    } else {
+      // Disable auto-reconnection and cleanup on logout
+      disableAutoReconnect();
       subscriptionService.cleanup();
     }
   }, [isAuthenticated]);

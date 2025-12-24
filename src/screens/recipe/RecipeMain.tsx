@@ -8,7 +8,7 @@ import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#generated';
-import { useSavedRecipes, useRecipeFolders, useRecipeTags } from '#/hooks/recipe';
+import { useSavedRecipes, useRecipeFolders, useRecipeTags, useFolderActions } from '#/hooks/recipe';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils';
@@ -36,6 +36,9 @@ export const RecipeMain: React.FC = React.memo(() => {
   // Fetch folders and tags for filtering
   const { folders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
+
+  // Folder management actions
+  const { renameFolder, deleteFolder, loading: folderActionLoading } = useFolderActions();
 
   // State for random recipes (shown when user has no saved recipes)
   const [randomRecipes, setRandomRecipes] = useState<RecipeInformation[]>([]);
@@ -451,7 +454,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         ListHeaderComponent={FilterHeader}
       />
 
-      {/* Folder Picker Modal - filter only, no folder creation */}
+      {/* Folder Picker Modal - filter only, no folder creation, with rename/delete */}
       <FolderPicker
         visible={showFolderPicker}
         folders={folders}
@@ -462,6 +465,21 @@ export const RecipeMain: React.FC = React.memo(() => {
         }}
         onCancel={() => setShowFolderPicker(false)}
         allowCreate={false}
+        onRenameFolder={async (oldName, newName) => {
+          const success = await renameFolder(oldName, newName);
+          if (success && selectedFolder === oldName) {
+            setSelectedFolder(newName);
+          }
+          return success;
+        }}
+        onDeleteFolder={async folderName => {
+          const success = await deleteFolder(folderName);
+          if (success && selectedFolder === folderName) {
+            setSelectedFolder(null);
+          }
+          return success;
+        }}
+        folderActionLoading={folderActionLoading}
       />
 
       {/* Tag Picker Modal - multi-select filter */}

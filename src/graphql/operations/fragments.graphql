@@ -35,6 +35,7 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
   itemName
   quantity
+  quantityInput
   purchaseInfo {
     isPurchased
   }

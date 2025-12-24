@@ -5,7 +5,6 @@ import {
   useUpdateShoppingListItemMutation,
   useGetShoppingListItemQuery,
   ItemSuggestion,
-  ShoppingListItemFragment,
   ShoppingListItemFragmentDoc,
   CategoryType,
 } from '#generated';
@@ -17,7 +16,7 @@ import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocom
 import { FractionInput } from '#components/molecules/FractionInput';
 import { useAppNavigation } from '#hooks';
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
-import { createAddToKeyedQueryFieldUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
   handleVersionConflict,
@@ -51,11 +50,12 @@ export const AddEditItem: React.FC<{
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
 
-  const addToShoppingListItems = useMemo(
+  const addToShoppingListCache = useMemo(
     () =>
-      createAddToKeyedQueryFieldUpdater<ShoppingListItemFragment>(
-        'shoppingListItems',
-        'shoppingListId',
+      createAddToParentConnectionUpdater(
+        'ShoppingList',
+        'itemsConnection',
+        'ShoppingListItem',
       ),
     [],
   );
@@ -71,7 +71,7 @@ export const AddEditItem: React.FC<{
     update: (cache, { data: mutationData }) => {
       if (!mutationData?.addItemToShoppingList) return;
 
-      addToShoppingListItems(cache, mutationData.addItemToShoppingList, listId);
+      addToShoppingListCache(cache, listId, mutationData.addItemToShoppingList);
     },
     onError: error => {
       console.error('Add item error:', error);

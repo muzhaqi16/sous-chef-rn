@@ -1464,8 +1464,12 @@
           },
           {
             "name": "quantity",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "description": "Accepts: \"1/3\", \"1 1/4\", \"0.5\", \"2\", or numbers like 1, 1.5",
+            "type": {
+              "kind": "SCALAR",
+              "name": "FlexibleQuantity",
+              "ofType": null
+            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -8098,8 +8102,12 @@
           },
           {
             "name": "quantity",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "description": "Accepts: \"1/3\", \"1 1/4\", \"0.5\", \"2\", or numbers like 1, 1.5",
+            "type": {
+              "kind": "SCALAR",
+              "name": "FlexibleQuantity",
+              "ofType": null
+            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -13439,6 +13447,17 @@
             "deprecationReason": null
           }
         ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "SCALAR",
+        "name": "FlexibleQuantity",
+        "description": "Quantity input that accepts both strings and numbers. Strings can be fractions like \"1/3\" or \"1 1/4\".",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
         "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
@@ -27411,6 +27430,43 @@
             "deprecationReason": null
           },
           {
+            "name": "deleteRecipeFolder",
+            "description": null,
+            "args": [
+              {
+                "name": "folder",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "moveTo",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "deleteShoppingList",
             "description": null,
             "args": [
@@ -37663,6 +37719,194 @@
       },
       {
         "kind": "OBJECT",
+        "name": "PantryItemSuggestion",
+        "description": "A suggestion for adding or restocking a pantry item.\nCombines multiple sources: low stock, expiring soon, recently deleted, frequently added, and popular items.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "category",
+            "description": "Primary category name",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "currentQuantity",
+            "description": "Current quantity in pantry (for LOW_STOCK source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "daysUntilExpiry",
+            "description": "Days until expiration (for EXPIRING_SOON source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "defaultUnit",
+            "description": "Default unit object for one-tap add",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "defaultUnitId",
+            "description": "Default unit ID for one-tap add (last used or item default)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "expiresAt",
+            "description": "Expiration date (for EXPIRING_SOON source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "frequencyCount",
+            "description": "Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "id",
+            "description": "Unique suggestion ID (itemId or pantryItemId depending on source)",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "imageUrl",
+            "description": "Primary image URL",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "item",
+            "description": "Full item reference",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Item", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemId",
+            "description": "The catalog Item ID - always present",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastQuantity",
+            "description": "Last quantity used (for RECENTLY_DELETED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastUnitId",
+            "description": "Last unit ID used (for RECENTLY_DELETED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "minQuantity",
+            "description": "Minimum quantity threshold (for LOW_STOCK source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": "Item name for display",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pantryItemId",
+            "description": "Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "popularityRank",
+            "description": "Popularity ranking position (for POPULAR source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "restockQuantity",
+            "description": "Suggested restock quantity (for LOW_STOCK source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "source",
+            "description": "Source of this suggestion",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "PantrySuggestionSource",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "PantryItemUsage",
         "description": null,
         "isOneOf": null,
@@ -38159,6 +38403,48 @@
         "inputFields": null,
         "interfaces": [],
         "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
+        "name": "PantrySuggestionSource",
+        "description": "Source of a pantry item suggestion",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "EXPIRING_SOON",
+            "description": "Item is expiring soon - use it or replace",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "FREQUENTLY_ADDED",
+            "description": "User frequently adds this item to pantries",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "LOW_STOCK",
+            "description": "Item is below minimum stock threshold - needs restocking",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "POPULAR",
+            "description": "Globally popular pantry item",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RECENTLY_DELETED",
+            "description": "Item was recently removed from this pantry",
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
         "possibleTypes": null
       },
       {
@@ -41045,39 +41331,6 @@
             "deprecationReason": null
           },
           {
-            "name": "frequentlyBoughtItems",
-            "description": null,
-            "args": [
-              {
-                "name": "limit",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingListItem",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "getBestDisplayUnit",
             "description": "Get best display unit for a quantity\nAuto-converts to more readable units (1000mL → 1L)",
             "args": [
@@ -42952,6 +43205,79 @@
             "deprecationReason": null
           },
           {
+            "name": "pantryItemSuggestions",
+            "description": "Get smart suggestions for adding or restocking pantry items.\nCombines low stock items, expiring items, recently deleted, user's frequently added items, and popular items.\nResults are deduplicated by itemId across all sources.\nPriority: LOW_STOCK > EXPIRING_SOON > RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR",
+            "args": [
+              {
+                "name": "expirationDays",
+                "description": "Days ahead to check for expiring items (default: 7)",
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "7",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "limit",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "10",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "pantryId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "sources",
+                "description": "Optional: filter to specific sources",
+                "type": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "PantrySuggestionSource",
+                      "ofType": null
+                    }
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "PantryItemSuggestion",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "pantryItemUsage",
             "description": null,
             "args": [
@@ -44227,6 +44553,71 @@
             "deprecationReason": null
           },
           {
+            "name": "shoppingListSuggestions",
+            "description": "Get smart suggestions for adding items to a shopping list.\nCombines recently deleted items, user's frequently added items, and popular items.\nResults are deduplicated by itemId across all sources.\nPriority: RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR",
+            "args": [
+              {
+                "name": "limit",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": "10",
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "shoppingListId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "sources",
+                "description": "Optional: filter to specific sources",
+                "type": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "SuggestionSource",
+                      "ofType": null
+                    }
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ShoppingListSuggestion",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "shoppingLists",
             "description": null,
             "args": [
@@ -44551,43 +44942,6 @@
                 "kind": "OBJECT",
                 "name": "QuantityDisplay",
                 "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "suggestedItemsForList",
-            "description": null,
-            "args": [
-              {
-                "name": "shoppingListId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemSuggestion",
-                    "ofType": null
-                  }
-                }
               }
             },
             "isDeprecated": false,
@@ -51547,6 +51901,154 @@
       },
       {
         "kind": "OBJECT",
+        "name": "ShoppingListSuggestion",
+        "description": "A suggestion for adding an item to a shopping list.\nCombines multiple sources: recently deleted, frequently added, and popular items.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "category",
+            "description": "Primary category name",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "defaultUnit",
+            "description": "Default unit object for one-tap add",
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "defaultUnitId",
+            "description": "Default unit ID for one-tap add (last used or item default)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "frequencyCount",
+            "description": "Frequency count - times user added this item (for FREQUENTLY_ADDED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "id",
+            "description": "Unique suggestion ID (itemId or shoppingListItemId depending on source)",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "imageUrl",
+            "description": "Primary image URL",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "item",
+            "description": "Full item reference",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Item", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemId",
+            "description": "The catalog Item ID - always present",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastQuantity",
+            "description": "Last quantity used (for RECENTLY_DELETED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastUnitId",
+            "description": "Last unit ID used (for RECENTLY_DELETED source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "name",
+            "description": "Item name for display",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "popularityRank",
+            "description": "Popularity ranking position (for POPULAR source)",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "shoppingListItemId",
+            "description": "Shopping list item ID - only present for RECENTLY_DELETED source",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "source",
+            "description": "Source of this suggestion",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "ENUM",
+                "name": "SuggestionSource",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "ShoppingListUpdatedPayload",
         "description": null,
         "isOneOf": null,
@@ -54149,6 +54651,36 @@
         "possibleTypes": null
       },
       {
+        "kind": "ENUM",
+        "name": "SuggestionSource",
+        "description": "Source of a shopping list suggestion",
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "FREQUENTLY_ADDED",
+            "description": "User frequently adds this item to shopping lists",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "POPULAR",
+            "description": "Globally popular item",
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "RECENTLY_DELETED",
+            "description": "Item was recently removed from this shopping list",
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "possibleTypes": null
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "SuspendUserInput",
         "description": null,
@@ -55085,8 +55617,12 @@
           },
           {
             "name": "quantity",
-            "description": "Quantity of the item",
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "description": "Quantity of the item. Accepts: \"1/3\", \"1 1/4\", \"0.5\", \"2\", or numbers like 1, 1.5",
+            "type": {
+              "kind": "INPUT_OBJECT",
+              "name": "QuantityInput",
+              "ofType": null
+            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -59850,8 +60386,12 @@
           },
           {
             "name": "quantity",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "description": "Accepts: \"1/3\", \"1 1/4\", \"0.5\", \"2\", or numbers like 1, 1.5",
+            "type": {
+              "kind": "SCALAR",
+              "name": "FlexibleQuantity",
+              "ofType": null
+            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null

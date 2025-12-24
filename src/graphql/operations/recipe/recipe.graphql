@@ -86,6 +86,10 @@ query MySavedRecipes($folder: String) {
   }
 }
 
+query SavedRecipeFolders {
+  savedRecipeFolders
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -144,6 +148,10 @@ mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
 
 mutation UnfavoriteRecipe($recipeId: ID!) {
   unfavoriteRecipe(recipeId: $recipeId)
+}
+
+mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
+  deleteRecipeFolder(folder: $folder, moveTo: $moveTo)
 }
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {

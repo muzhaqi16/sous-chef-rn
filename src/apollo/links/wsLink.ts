@@ -21,6 +21,54 @@ let isReconnecting = false;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 
+// Auto-reconnection state
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 30000;
+let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let shouldAutoReconnect = true;
+
+/**
+ * Calculate reconnection delay with exponential backoff and jitter
+ */
+const getReconnectDelay = (attempt: number): number => {
+  const delay = Math.min(
+    BASE_RECONNECT_DELAY_MS * Math.pow(2, attempt),
+    MAX_RECONNECT_DELAY_MS
+  );
+  // Add jitter (up to 25% variance) to prevent thundering herd
+  const jitter = delay * 0.25 * Math.random();
+  return delay + jitter;
+};
+
+/**
+ * Schedule a WebSocket reconnection with exponential backoff
+ */
+const scheduleReconnect = () => {
+  // Clear any pending reconnection
+  if (reconnectTimeoutId !== null) {
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
+
+  // Check if we've exceeded max attempts
+  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    logger.error('❌ WebSocket max reconnection attempts reached');
+    reconnectAttempts = 0;
+    return;
+  }
+
+  const delay = getReconnectDelay(reconnectAttempts);
+  logger.info(`🔄 WebSocket scheduling reconnection in ${Math.round(delay)}ms (attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+
+  reconnectTimeoutId = setTimeout(() => {
+    reconnectTimeoutId = null;
+    reconnectAttempts++;
+    reconnectWebSocket();
+  }, delay);
+};
+
 const createWsClient = () => {
   return createClient({
     url: WS_URL,
@@ -48,6 +96,12 @@ const createWsClient = () => {
     on: {
       connected: () => {
         isReconnecting = false;
+        // Reset reconnect attempts on successful connection
+        reconnectAttempts = 0;
+        if (reconnectTimeoutId !== null) {
+          clearTimeout(reconnectTimeoutId);
+          reconnectTimeoutId = null;
+        }
         if (__DEV__) {
           logger.info('🔌 WebSocket connected:', {
             url: WS_URL,
@@ -60,6 +114,7 @@ const createWsClient = () => {
         // Error 4500 is "Invalid or expired JWT token" - expected during token expiration
         // Suppress this specific error to reduce log noise during normal token refresh cycles
         const isAuthError = event?.code === 4500;
+
         if (__DEV__ && !isAuthError) {
           logger.info('🔌 WebSocket closed:', {
             code: event?.code,
@@ -68,6 +123,16 @@ const createWsClient = () => {
             timestamp: new Date().toISOString(),
           });
         }
+
+        // Don't reconnect for auth errors (handled by token refresh) or when explicitly disabled
+        // Note: Code 1000 can occur when all subscriptions skip (e.g., user deleted last home)
+        // In that case we SHOULD reconnect. Logout is handled by disableAutoReconnect() being called first.
+        if (isAuthError || !shouldAutoReconnect) {
+          return;
+        }
+
+        // Schedule automatic reconnection with backoff
+        scheduleReconnect();
       },
       error: (error: any) => {
         isReconnecting = false;
@@ -135,6 +200,12 @@ export const reconnectWebSocket = () => {
     if (wsLink && typeof (wsLink as any).client !== 'undefined') {
       (wsLink as any).client = wsClient;
       logger.info('✅ WebSocket reconnection successful');
+      // Reset reconnect attempts on success
+      reconnectAttempts = 0;
+      if (reconnectTimeoutId !== null) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
     } else {
       throw new Error('Unable to update GraphQLWsLink client - missing client property');
     }
@@ -146,16 +217,42 @@ export const reconnectWebSocket = () => {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
-    // Don't throw - allow app to continue with degraded functionality (no real-time updates)
+    // Schedule another attempt if auto-reconnect is enabled
+    if (shouldAutoReconnect) {
+      scheduleReconnect();
+    }
   }
 };
 
 // Export state checkers for other modules
 export const isWebSocketReconnecting = () => isReconnecting;
 
+/**
+ * Disable automatic WebSocket reconnection.
+ * Call this during logout to prevent reconnection attempts.
+ */
+export const disableAutoReconnect = () => {
+  shouldAutoReconnect = false;
+  if (reconnectTimeoutId !== null) {
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
+  reconnectAttempts = 0;
+};
+
+/**
+ * Enable automatic WebSocket reconnection.
+ * Call this after login to allow reconnection on socket close.
+ */
+export const enableAutoReconnect = () => {
+  shouldAutoReconnect = true;
+};
+
 // Export function to dispose WebSocket for logout cleanup
 export const disposeWebSocket = () => {
   try {
+    // Disable auto-reconnect before disposing
+    disableAutoReconnect();
     if (wsClient) {
       logger.info('🔌 Disposing WebSocket client for logout');
       wsClient.dispose();

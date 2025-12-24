@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -13,20 +14,23 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation, usePopularItems } from '#hooks';
+import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
+import {
+  useShoppingListSuggestions,
+  ShoppingListSuggestionItem,
+} from '#hooks/shoppingList';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { Icon } from '#utils';
 import { useAppStore } from '#store/useAppStore';
 import {
-  useGetRecentlyDeletedShoppingListItemsQuery,
   useAddItemToShoppingListMutation,
   useAutocompleteItemsLazyQuery,
   ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { ItemRecentCard, ItemSuggestionsList } from '#components/molecules';
+import { ItemSuggestionsList } from '#components/molecules';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -63,31 +67,24 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Search input state
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Autocomplete query
+  // Autocomplete query for search
   const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
     useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
 
-  const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
+  const searchSuggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
 
-  // Fetch popular items for auto-suggest when search is empty
-  const { popularItems, loading: loadingPopular } = usePopularItems(10);
-
-  // Fetch recently deleted items
-  // PERFORMANCE: Only fetch when sheet is visible to avoid unnecessary queries on screen mount
-  // NOTE: Subscription handles updates automatically, no manual refetch needed
-  const { data: recentData, loading: loadingRecent } =
-    useGetRecentlyDeletedShoppingListItemsQuery({
-      variables: { shoppingListId: shoppingListId ?? '', limit: 10 },
-      skip: !shoppingListId || !visible,
-      fetchPolicy: 'cache-and-network',
+  // Fetch combined suggestions (recently deleted, frequently added, popular)
+  const { grouped, loading: loadingSuggestions, hasSuggestions, refetch } =
+    useShoppingListSuggestions({
+      shoppingListId,
+      limit: 15,
+      skip: !visible,
     });
 
-  const recentItems = recentData?.recentlyDeletedShoppingListItems ?? [];
-
-  // Add shopping list item mutation with error handling and debug logging
+  // Add shopping list item mutation with error handling
   const [addItemMutation, { loading: adding }] =
     useAddItemToShoppingListMutation({
-      errorPolicy: 'all', // Return partial data + errors for debugging
+      errorPolicy: 'all',
 
       update: (cache, { data }) => {
         if (!data?.addItemToShoppingList || !shoppingListId) return;
@@ -119,13 +116,11 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
   // Debounced autocomplete search (250ms)
   useEffect(() => {
-    // Clear existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
 
-    // Only search when online and query is long enough
     if (searchQuery.length >= 2 && isOnline) {
       debounceTimerRef.current = setTimeout(() => {
         fetchItems({ variables: { input: { query: searchQuery, limit: 10 } } });
@@ -146,14 +141,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   useEffect(() => {
     if (visible && shoppingListId) {
       bottomSheetRef.current?.present();
-      // Only pre-populate on first open, not on every re-render
       if (!hasInitializedRef.current) {
         setSearchQuery(initialSearchQuery);
         hasInitializedRef.current = true;
       }
     } else {
       bottomSheetRef.current?.dismiss();
-      // Reset initialization flag when sheet closes so it can be re-initialized next time
       hasInitializedRef.current = false;
     }
   }, [visible, shoppingListId, initialSearchQuery]);
@@ -167,7 +160,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     });
   }, [onClose, navigateTo, shoppingListId]);
 
-  // Handle add manually press - navigate to AddItem screen
+  // Handle add manually press
   const handleAddManually = useCallback(() => {
     onClose();
     if (shoppingListId) {
@@ -178,8 +171,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     }
   }, [onClose, navigate, shoppingListId, searchQuery]);
 
-  // Handle quick add from autocomplete suggestion
-  const handleQuickAddSuggestion = useCallback(
+  // Handle quick add from search autocomplete suggestion
+  const handleQuickAddSearchSuggestion = useCallback(
     async (item: ItemSuggestion) => {
       if (!shoppingListId || adding) return;
 
@@ -191,75 +184,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
               itemId: item.id,
               itemName: item.name,
               quantity: 1,
+              // Use default unit if available
+              unitId: item.defaultUnit?.id,
             },
           },
         });
 
         toastService.success(`Added ${item.name}`);
-        setSearchQuery(''); // Clear search after adding
-        onItemAdded?.(); // Notify parent to clear main search
-        // NOTE: Removed refetchRecent() - subscription handles updates
-      } catch (error) {
-        toastService.error('Failed to add item. Please try again.');
-      }
-    },
-    [shoppingListId, adding, addItemMutation, onItemAdded],
-  );
-
-  // Handle quick add from recent items
-  const handleQuickAddRecent = useCallback(
-    async (item: (typeof recentItems)[0]) => {
-      if (!shoppingListId || adding) return;
-
-      // Convert null to undefined for GraphQL InputMaybe type
-      const itemId = item.item?.id ?? undefined;
-      const itemName = item.itemName ?? undefined;
-
-      if (!itemName) {
-        toastService.error('Item name is required');
-        return;
-      }
-
-      try {
-        await addItemMutation({
-          variables: {
-            input: {
-              shoppingListId,
-              ...(itemId && { itemId }),
-              itemName,
-              quantity: 1,
-            },
-          },
-        });
-
-        toastService.success(`Added ${itemName}`);
-        onItemAdded?.(); // Notify parent to clear main search
-        // NOTE: Removed refetchRecent() - subscription handles updates
-      } catch (error) {
-        toastService.error('Failed to add item. Please try again.');
-      }
-    },
-    [shoppingListId, adding, addItemMutation, onItemAdded],
-  );
-
-  // Handle quick add from popular items
-  const handleQuickAddPopular = useCallback(
-    async (item: (typeof popularItems)[0]) => {
-      if (!shoppingListId || adding) return;
-
-      try {
-        await addItemMutation({
-          variables: {
-            input: {
-              shoppingListId,
-              itemId: item.id,
-              itemName: item.name,
-              quantity: 1,
-            },
-          },
-        });
-
-        toastService.success(`Added ${item.name}`);
+        setSearchQuery('');
         onItemAdded?.();
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
@@ -268,11 +200,114 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
+  // Handle quick add from suggestion (unified handler for all sources)
+  const handleQuickAddSuggestion = useCallback(
+    async (item: ShoppingListSuggestionItem) => {
+      if (!shoppingListId || adding) return;
+
+      // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
+      const unitId = item.lastUnitId ?? item.defaultUnitId ?? undefined;
+
+      try {
+        await addItemMutation({
+          variables: {
+            input: {
+              shoppingListId,
+              itemId: item.itemId,
+              itemName: item.name,
+              quantity: 1,
+              unitId,
+            },
+          },
+        });
+
+        toastService.success(`Added ${item.name}`);
+        onItemAdded?.();
+        refetch();
+      } catch (error) {
+        toastService.error('Failed to add item. Please try again.');
+      }
+    },
+    [shoppingListId, adding, addItemMutation, onItemAdded, refetch],
+  );
+
   // Determine if we should show search results
   const showSearchResults = searchQuery.length >= 2;
 
-  // Show popular items when search is empty or has few results
-  const showPopularItems = !showSearchResults && popularItems.length > 0;
+  // Show suggestions when search is empty
+  const showSuggestions = !showSearchResults;
+
+  // Render a single suggestion item with image
+  const renderSuggestionItem = (item: ShoppingListSuggestionItem) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.suggestionItem}
+      onPress={() => handleQuickAddSuggestion(item)}
+      disabled={adding}
+    >
+      <View style={styles.suggestionImageContainer}>
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.suggestionImage} />
+        ) : (
+          <View style={styles.suggestionImagePlaceholder}>
+            <Icon
+              name="shopping-cart"
+              size={20}
+              color={theme.colors.primary}
+              library="MaterialIcons"
+            />
+          </View>
+        )}
+      </View>
+      <View style={styles.suggestionItemInfo}>
+        <Text style={styles.suggestionItemName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        {item.category && (
+          <Text style={styles.suggestionItemCategory} numberOfLines={1}>
+            {item.category}
+          </Text>
+        )}
+      </View>
+      <TouchableOpacity
+        style={styles.quickAddButton}
+        onPress={() => handleQuickAddSuggestion(item)}
+        disabled={adding}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Icon
+          name="add"
+          size={20}
+          color={theme.colors.primary}
+          library="MaterialIcons"
+        />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  // Render a suggestion section
+  const renderSection = (
+    title: string,
+    items: ShoppingListSuggestionItem[],
+    emptyMessage?: string,
+  ) => {
+    if (items.length === 0 && !emptyMessage) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {items.length === 0 && emptyMessage ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>{emptyMessage}</Text>
+          </View>
+        ) : (
+          <View style={styles.suggestionList}>
+            {items.map(renderSuggestionItem)}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <BottomSheetModal
@@ -356,13 +391,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         {showSearchResults && (
           <ItemSuggestionsList
             searchQuery={searchQuery}
-            suggestions={suggestions}
+            suggestions={searchSuggestions}
             loading={searchLoading}
             addManuallyPosition="bottom"
             onAddManually={handleAddManually}
-            onSelectSuggestion={handleQuickAddSuggestion}
+            onSelectSuggestion={handleQuickAddSearchSuggestion}
             quickAddDisabled={adding}
             placeholderIcon="shopping-cart"
+            showBrands={false}
           />
         )}
 
@@ -399,82 +435,37 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           </TouchableOpacity>
         </View>
 
-        {/* Popular Items Section - shown when search is empty */}
-        {showPopularItems && (
-          <View style={styles.popularSection}>
-            <Text style={styles.sectionTitle}>POPULAR ITEMS</Text>
-            {loadingPopular ? (
+        {/* Suggestions Sections - shown when not searching */}
+        {showSuggestions && (
+          <>
+            {loadingSuggestions ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               </View>
             ) : (
-              <View style={styles.popularList}>
-                {popularItems.map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.popularItem}
-                    onPress={() => handleQuickAddPopular(item)}
-                    disabled={adding}
-                  >
-                    <View style={styles.popularItemInfo}>
-                      <Text style={styles.popularItemName} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {item.brand && (
-                        <Text style={styles.popularItemBrand} numberOfLines={1}>
-                          {item.brand}
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      style={styles.quickAddButton}
-                      onPress={() => handleQuickAddPopular(item)}
-                      disabled={adding}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Icon
-                        name="add"
-                        size={20}
-                        color={theme.colors.primary}
-                        library="MaterialIcons"
-                      />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <>
+                {/* Add Again - Recently Deleted */}
+                {renderSection('ADD AGAIN', grouped.recentlyDeleted)}
+
+                {/* Your Favorites - Frequently Added */}
+                {renderSection('YOUR FAVORITES', grouped.frequentlyAdded)}
+
+                {/* Popular Items */}
+                {renderSection('POPULAR', grouped.popular)}
+
+                {/* Empty state when no suggestions */}
+                {!hasSuggestions && (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No suggestions yet</Text>
+                    <Text style={styles.emptySubtext}>
+                      Add items to your list and they'll appear here for quick re-adding
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
-          </View>
+          </>
         )}
-
-        {/* Recent Items Section */}
-        <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>RECENT ITEMS</Text>
-
-          {loadingRecent ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            </View>
-          ) : recentItems.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No recent items</Text>
-              <Text style={styles.emptySubtext}>
-                Items you delete will appear here for quick re-adding
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.recentList}>
-              {recentItems.map(item => (
-                <ItemRecentCard
-                  key={item.id}
-                  item={item}
-                  onQuickAdd={handleQuickAddRecent}
-                  disabled={adding}
-                  placeholderIcon="shopping-cart"
-                />
-              ))}
-            </View>
-          )}
-        </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -542,8 +533,8 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
-  recentSection: {
-    flex: 1,
+  section: {
+    marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
     fontSize: theme.fonts.size.sm,
@@ -571,34 +562,46 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
     textAlign: 'center',
   },
-  recentList: {
+  suggestionList: {
     gap: theme.spacing.sm,
   },
-  popularSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  popularList: {
-    gap: theme.spacing.sm,
-  },
-  popularItem: {
+  suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
-  popularItemInfo: {
+  suggestionImageContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.sm,
+    overflow: 'hidden',
+    marginRight: theme.spacing.md,
+  },
+  suggestionImage: {
+    width: 40,
+    height: 40,
+    resizeMode: 'cover',
+  },
+  suggestionImagePlaceholder: {
+    width: 40,
+    height: 40,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  suggestionItemInfo: {
     flex: 1,
     marginRight: theme.spacing.sm,
   },
-  popularItemName: {
+  suggestionItemName: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
-  popularItemBrand: {
+  suggestionItemCategory: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: 2,

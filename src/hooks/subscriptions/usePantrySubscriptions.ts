@@ -127,7 +127,7 @@ export function usePantrySubscriptions(userId?: string) {
   });
 
   usePantryItemsChangedSubscription({
-    variables: { pantryId: selectedPantryId || '' },
+    variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId,
     ...itemsHandlers,
   });
@@ -147,7 +147,7 @@ export function usePantrySubscriptions(userId?: string) {
   });
 
   usePantryUpdatedSubscription({
-    variables: { pantryId: selectedPantryId || '' },
+    variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId,
     ...metadataHandlers,
   });
@@ -167,7 +167,7 @@ export function usePantrySubscriptions(userId?: string) {
   });
 
   usePantryLowStockAlertSubscription({
-    variables: { pantryId: selectedPantryId || '' },
+    variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId,
     ...lowStockHandlers,
   });
@@ -187,7 +187,7 @@ export function usePantrySubscriptions(userId?: string) {
   });
 
   usePantryExpiringItemsAlertSubscription({
-    variables: { pantryId: selectedPantryId || '' },
+    variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId,
     ...expiringHandlers,
   });

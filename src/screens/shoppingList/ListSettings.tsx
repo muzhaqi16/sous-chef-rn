@@ -26,6 +26,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
+import { subscriptionService } from '#/services/subscriptions';
 import {
   isShoppingListOwner,
   getShoppingListRole,
@@ -207,15 +208,23 @@ export const ListSettings: React.FC<{
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteList({ variables: { id: listId! } });
+            // Register parent deletion to prevent subscription race conditions
+            subscriptionService.registerParentDeletion(listId);
 
-            // Find next list to select (default list from remaining lists)
-            const remainingLists = lists.filter(l => l.id !== listId);
-            const defaultList = remainingLists.find(l => l.isDefault);
+            try {
+              await deleteList({ variables: { id: listId! } });
 
-            // Set default list if found, otherwise null to trigger auto-select
-            setSelectedShoppingListId(defaultList?.id || null);
-            navigateTo.shoppingListMain();
+              // Find next list to select (default list from remaining lists)
+              const remainingLists = lists.filter(l => l.id !== listId);
+              const defaultList = remainingLists.find(l => l.isDefault);
+
+              // Set default list if found, otherwise null to trigger auto-select
+              setSelectedShoppingListId(defaultList?.id || null);
+              navigateTo.shoppingListMain();
+            } finally {
+              // Cleanup (timeout in service provides fallback)
+              subscriptionService.unregisterParentDeletion(listId);
+            }
           },
         },
       ],
