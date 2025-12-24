@@ -190,6 +190,28 @@ query GetRecentlyDeletedShoppingListItems($shoppingListId: ID!, $limit: Int) {
   }
 }
 
+query GetShoppingListSuggestions($shoppingListId: ID!, $limit: Int) {
+  shoppingListSuggestions(shoppingListId: $shoppingListId, limit: $limit) {
+    id
+    itemId
+    shoppingListItemId
+    name
+    imageUrl
+    category
+    source
+    defaultUnitId
+    defaultUnit {
+      id
+      name
+      symbol
+    }
+    lastQuantity
+    lastUnitId
+    frequencyCount
+    popularityRank
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================

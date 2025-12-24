@@ -353,6 +353,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               onSelectSuggestion={handleQuickAddSuggestion}
               quickAddDisabled={creating}
               placeholderIcon="inventory-2"
+              showBrands={false}
             />
           )}
 
@@ -410,11 +411,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                         <Text style={styles.popularItemName} numberOfLines={1}>
                           {item.name}
                         </Text>
-                        {item.brand && (
-                          <Text style={styles.popularItemBrand} numberOfLines={1}>
-                            {item.brand}
-                          </Text>
-                        )}
                       </View>
                       <TouchableOpacity
                         style={styles.quickAddButton}
@@ -598,11 +594,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-  },
-  popularItemBrand: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
   },
   quickAddButton: {
     width: 36,

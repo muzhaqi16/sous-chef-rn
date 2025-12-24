@@ -114,8 +114,6 @@ const createWsClient = () => {
         // Error 4500 is "Invalid or expired JWT token" - expected during token expiration
         // Suppress this specific error to reduce log noise during normal token refresh cycles
         const isAuthError = event?.code === 4500;
-        // Normal closure codes (1000 = normal, 1001 = going away)
-        const isNormalClosure = event?.code === 1000 || event?.code === 1001;
 
         if (__DEV__ && !isAuthError) {
           logger.info('🔌 WebSocket closed:', {
@@ -126,8 +124,10 @@ const createWsClient = () => {
           });
         }
 
-        // Don't reconnect for auth errors (handled by token refresh) or normal closures (logout)
-        if (isAuthError || isNormalClosure || !shouldAutoReconnect) {
+        // Don't reconnect for auth errors (handled by token refresh) or when explicitly disabled
+        // Note: Code 1000 can occur when all subscriptions skip (e.g., user deleted last home)
+        // In that case we SHOULD reconnect. Logout is handled by disableAutoReconnect() being called first.
+        if (isAuthError || !shouldAutoReconnect) {
           return;
         }
 

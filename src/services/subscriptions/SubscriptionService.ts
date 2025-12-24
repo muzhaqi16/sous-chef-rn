@@ -321,10 +321,11 @@ export class SubscriptionService {
         errorMessage.includes('websocket');
 
       // Socket closed errors are expected during network transitions
-      // The WebSocket will auto-reconnect, so we only log at DEBUG level
+      // Log at WARN level to make connection issues visible during development
       if (isSocketClosed || isNetworkError) {
-        this.log(config, LogLevel.DEBUG, 'Connection interrupted (will auto-reconnect)', {
+        this.log(config, LogLevel.WARN, 'WebSocket connection interrupted', {
           error: errorMessage,
+          hint: 'WebSocket will attempt auto-reconnect if enabled',
         });
         return; // Don't count as error or call custom handler for expected disconnects
       }

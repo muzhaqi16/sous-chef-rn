@@ -4080,6 +4080,7 @@ type Mutation {
   deletePantryItem(id: ID!): PantryItem!
   deletePurchase(id: ID!): Boolean!
   deleteRecipe(id: ID!): Boolean!
+  deleteRecipeFolder(folder: String!, moveTo: String): Int!
   deleteShoppingList(id: ID!): ShoppingList!
   """
   Delete a storage location (soft delete)
@@ -5093,6 +5094,89 @@ type PantryItemPhoto {
   takenBy: User!
 }
 
+"""
+A suggestion for adding or restocking a pantry item.
+Combines multiple sources: low stock, expiring soon, recently deleted, frequently added, and popular items.
+"""
+type PantryItemSuggestion {
+  """
+  Primary category name
+  """
+  category: String
+  """
+  Current quantity in pantry (for LOW_STOCK source)
+  """
+  currentQuantity: Float
+  """
+  Days until expiration (for EXPIRING_SOON source)
+  """
+  daysUntilExpiry: Int
+  """
+  Default unit object for one-tap add
+  """
+  defaultUnit: Unit
+  """
+  Default unit ID for one-tap add (last used or item default)
+  """
+  defaultUnitId: ID
+  """
+  Expiration date (for EXPIRING_SOON source)
+  """
+  expiresAt: DateTime
+  """
+  Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)
+  """
+  frequencyCount: Int
+  """
+  Unique suggestion ID (itemId or pantryItemId depending on source)
+  """
+  id: ID!
+  """
+  Primary image URL
+  """
+  imageUrl: String
+  """
+  Full item reference
+  """
+  item: Item!
+  """
+  The catalog Item ID - always present
+  """
+  itemId: ID!
+  """
+  Last quantity used (for RECENTLY_DELETED source)
+  """
+  lastQuantity: Float
+  """
+  Last unit ID used (for RECENTLY_DELETED source)
+  """
+  lastUnitId: ID
+  """
+  Minimum quantity threshold (for LOW_STOCK source)
+  """
+  minQuantity: Float
+  """
+  Item name for display
+  """
+  name: String!
+  """
+  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources
+  """
+  pantryItemId: ID
+  """
+  Popularity ranking position (for POPULAR source)
+  """
+  popularityRank: Int
+  """
+  Suggested restock quantity (for LOW_STOCK source)
+  """
+  restockQuantity: Float
+  """
+  Source of this suggestion
+  """
+  source: PantrySuggestionSource!
+}
+
 type PantryItemUsage {
   conversionConfidence: Float
   conversionRatio: Float
@@ -5145,6 +5229,32 @@ type PantryStats {
   lowStockCount: Int!
   totalItems: Int!
   totalValue: Float!
+}
+
+"""
+Source of a pantry item suggestion
+"""
+enum PantrySuggestionSource {
+  """
+  Item is expiring soon - use it or replace
+  """
+  EXPIRING_SOON
+  """
+  User frequently adds this item to pantries
+  """
+  FREQUENTLY_ADDED
+  """
+  Item is below minimum stock threshold - needs restocking
+  """
+  LOW_STOCK
+  """
+  Globally popular pantry item
+  """
+  POPULAR
+  """
+  Item was recently removed from this pantry
+  """
+  RECENTLY_DELETED
 }
 
 type PantryUpdatedPayload {
@@ -5534,7 +5644,6 @@ type Query {
   devices(input: DevicesQueryInput!): DeviceConnection!
   dietaryProfile(userId: ID!): DietaryProfile
   expirationNotification(id: ID!): ExpirationNotification
-  frequentlyBoughtItems(limit: Int): [ShoppingListItem!]!
   """
   Get best display unit for a quantity
   Auto-converts to more readable units (1000mL → 1L)
@@ -5676,6 +5785,24 @@ type Query {
     filter: AnalyticsFilterInput
     pantryItemId: ID!
   ): LedgerSummary!
+  """
+  Get smart suggestions for adding or restocking pantry items.
+  Combines low stock items, expiring items, recently deleted, user's frequently added items, and popular items.
+  Results are deduplicated by itemId across all sources.
+  Priority: LOW_STOCK > EXPIRING_SOON > RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
+  """
+  pantryItemSuggestions(
+    """
+    Days ahead to check for expiring items (default: 7)
+    """
+    expirationDays: Int = 7
+    limit: Int = 10
+    pantryId: ID!
+    """
+    Optional: filter to specific sources
+    """
+    sources: [PantrySuggestionSource!]
+  ): [PantryItemSuggestion!]!
   pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
   """
   Get comprehensive ledger analytics for a pantry showing additions vs consumption over time.
@@ -5781,6 +5908,20 @@ type Query {
   shoppingListByShareCode(shareCode: String!): ShoppingList
   shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!
   shoppingListItem(id: ID!): ShoppingListItem
+  """
+  Get smart suggestions for adding items to a shopping list.
+  Combines recently deleted items, user's frequently added items, and popular items.
+  Results are deduplicated by itemId across all sources.
+  Priority: RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
+  """
+  shoppingListSuggestions(
+    limit: Int = 10
+    shoppingListId: ID!
+    """
+    Optional: filter to specific sources
+    """
+    sources: [SuggestionSource!]
+  ): [ShoppingListSuggestion!]!
   shoppingLists(filters: ShoppingListFilters): [ShoppingList!]!
   """
   Get a single storage location by ID
@@ -5815,7 +5956,6 @@ type Query {
     unitId: ID!
     userId: ID
   ): QuantityDisplay!
-  suggestedItemsForList(shoppingListId: ID!): [ItemSuggestion!]!
   suspiciousInviteActivity(timeWindowHours: Int): [InviteLog!]!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
   unit(id: ID!): Unit
@@ -6702,6 +6842,69 @@ type ShoppingListStatusChangedPayload {
   userId: ID!
 }
 
+"""
+A suggestion for adding an item to a shopping list.
+Combines multiple sources: recently deleted, frequently added, and popular items.
+"""
+type ShoppingListSuggestion {
+  """
+  Primary category name
+  """
+  category: String
+  """
+  Default unit object for one-tap add
+  """
+  defaultUnit: Unit
+  """
+  Default unit ID for one-tap add (last used or item default)
+  """
+  defaultUnitId: ID
+  """
+  Frequency count - times user added this item (for FREQUENTLY_ADDED source)
+  """
+  frequencyCount: Int
+  """
+  Unique suggestion ID (itemId or shoppingListItemId depending on source)
+  """
+  id: ID!
+  """
+  Primary image URL
+  """
+  imageUrl: String
+  """
+  Full item reference
+  """
+  item: Item!
+  """
+  The catalog Item ID - always present
+  """
+  itemId: ID!
+  """
+  Last quantity used (for RECENTLY_DELETED source)
+  """
+  lastQuantity: Float
+  """
+  Last unit ID used (for RECENTLY_DELETED source)
+  """
+  lastUnitId: ID
+  """
+  Item name for display
+  """
+  name: String!
+  """
+  Popularity ranking position (for POPULAR source)
+  """
+  popularityRank: Int
+  """
+  Shopping list item ID - only present for RECENTLY_DELETED source
+  """
+  shoppingListItemId: ID
+  """
+  Source of this suggestion
+  """
+  source: SuggestionSource!
+}
+
 type ShoppingListUpdatedPayload {
   mutation: MutationType!
   node: ShoppingList
@@ -7095,6 +7298,24 @@ type Subscription {
   userProfileChanged(userId: ID): UserProfileChangedPayload!
   userStatusChanged(userId: ID): UserStatusChangedPayload!
   userUpdated(userId: ID): UserUpdatedPayload!
+}
+
+"""
+Source of a shopping list suggestion
+"""
+enum SuggestionSource {
+  """
+  User frequently adds this item to shopping lists
+  """
+  FREQUENTLY_ADDED
+  """
+  Globally popular item
+  """
+  POPULAR
+  """
+  Item was recently removed from this shopping list
+  """
+  RECENTLY_DELETED
 }
 
 input SuspendUserInput {

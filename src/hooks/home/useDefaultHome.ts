@@ -66,6 +66,20 @@ export const useDefaultHome = () => {
     return defaultPantry?.id || null;
   }, [homesList]);
 
+  // Validate that selectedHomeId still exists in the homes list
+  const isSelectedHomeValid = useMemo(() => {
+    if (!selectedHomeId || !homesList || homesList.length === 0) return false;
+    return homesList.some((h: any) => h.id === selectedHomeId);
+  }, [selectedHomeId, homesList]);
+
+  // Clear stale selectedHomeId if home was deleted while app was in background
+  useEffect(() => {
+    if (selectedHomeId && homesList && homesList.length > 0 && !isSelectedHomeValid) {
+      console.warn('[HomeSelector] Selected home no longer exists, clearing selection');
+      setSelectedHomeId(null);
+    }
+  }, [selectedHomeId, homesList, isSelectedHomeValid, setSelectedHomeId]);
+
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
   // cascading re-renders that cause duplicate queries

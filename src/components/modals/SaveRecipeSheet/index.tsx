@@ -4,13 +4,13 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetTextInput,
+  BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -161,107 +161,83 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 
         {/* Folder Selection */}
         <Text style={styles.sectionLabel}>Folder</Text>
-        <ScrollView
+        <BottomSheetFlatList<string | null>
+          data={[null, ...displayFolders]}
+          keyExtractor={(item: string | null) => item ?? 'no-folder'}
           style={styles.folderList}
           showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-        >
-          {/* No Folder Option */}
-          <TouchableOpacity
-            style={[
-              styles.folderOption,
-              !selectedFolder && styles.folderOptionSelected,
-            ]}
-            onPress={() => handleSelectFolder(null)}
-          >
-            <Ionicons
-              name="folder-outline"
-              size={18}
-              color={!selectedFolder ? theme.colors.primary : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.folderOptionText,
-                !selectedFolder && styles.folderOptionTextSelected,
-              ]}
-            >
-              No Folder
-            </Text>
-            {!selectedFolder && (
-              <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
-            )}
-          </TouchableOpacity>
-
-          {/* Existing Folders */}
-          {displayFolders.map(folder => (
-            <TouchableOpacity
-              key={folder}
-              style={[
-                styles.folderOption,
-                selectedFolder === folder && styles.folderOptionSelected,
-              ]}
-              onPress={() => handleSelectFolder(folder)}
-            >
-              <Ionicons
-                name="folder"
-                size={18}
-                color={selectedFolder === folder ? theme.colors.primary : theme.colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.folderOptionText,
-                  selectedFolder === folder && styles.folderOptionTextSelected,
-                ]}
-              >
-                {folder}
-              </Text>
-              {selectedFolder === folder && (
-                <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))}
-
-          {/* Create New Folder */}
-          {showNewFolder ? (
-            <View style={styles.newFolderContainer}>
-              <BottomSheetTextInput
-                style={styles.newFolderInput}
-                placeholder="Enter folder name..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={newFolderName}
-                onChangeText={setNewFolderName}
-                autoFocus
-                autoCapitalize="words"
-                onSubmitEditing={handleCreateFolder}
-              />
+          renderItem={({ item: folder }: { item: string | null }) => {
+            const isSelected = folder === null ? !selectedFolder : selectedFolder === folder;
+            const isNoFolder = folder === null;
+            return (
               <TouchableOpacity
                 style={[
-                  styles.createButton,
-                  !newFolderName.trim() && styles.createButtonDisabled,
+                  styles.folderOption,
+                  isSelected && styles.folderOptionSelected,
                 ]}
-                onPress={handleCreateFolder}
-                disabled={!newFolderName.trim()}
+                onPress={() => handleSelectFolder(folder)}
               >
+                <Ionicons
+                  name={isNoFolder ? 'folder-outline' : 'folder'}
+                  size={18}
+                  color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                />
                 <Text
                   style={[
-                    styles.createButtonText,
-                    !newFolderName.trim() && styles.createButtonTextDisabled,
+                    styles.folderOptionText,
+                    isSelected && styles.folderOptionTextSelected,
                   ]}
                 >
-                  Create
+                  {isNoFolder ? 'No Folder' : folder}
                 </Text>
+                {isSelected && (
+                  <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
+                )}
               </TouchableOpacity>
-            </View>
-          ) : (
+            );
+          }}
+        />
+
+        {/* Create New Folder - Outside ScrollView so always visible */}
+        {showNewFolder ? (
+          <View style={styles.newFolderContainer}>
+            <BottomSheetTextInput
+              style={styles.newFolderInput}
+              placeholder="Enter folder name..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              autoFocus
+              autoCapitalize="words"
+              onSubmitEditing={handleCreateFolder}
+            />
             <TouchableOpacity
-              style={styles.newFolderButton}
-              onPress={() => setShowNewFolder(true)}
+              style={[
+                styles.createButton,
+                !newFolderName.trim() && styles.createButtonDisabled,
+              ]}
+              onPress={handleCreateFolder}
+              disabled={!newFolderName.trim()}
             >
-              <Ionicons name="add" size={18} color={theme.colors.primary} />
-              <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+              <Text
+                style={[
+                  styles.createButtonText,
+                  !newFolderName.trim() && styles.createButtonTextDisabled,
+                ]}
+              >
+                Create
+              </Text>
             </TouchableOpacity>
-          )}
-        </ScrollView>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.newFolderButton}
+            onPress={() => setShowNewFolder(true)}
+          >
+            <Ionicons name="add" size={18} color={theme.colors.primary} />
+            <Text style={styles.newFolderButtonText}>Create New Folder</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Tags */}
         <Text style={styles.sectionLabel}>Tags (optional)</Text>

@@ -127,6 +127,9 @@ export function useRecipeDetail() {
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
+  // Local state to track saved folder for external recipes (since backendRecipe is null)
+  const [savedFolderLocal, setSavedFolderLocal] = useState<string | null>(null);
+
   // Recipe preload hook - preloads recipe to backend and handles favorites
   const {
     preloading,
@@ -362,15 +365,24 @@ export function useRecipeDetail() {
   useEffect(() => {
     if (!externalSource || !externalId || savedRecipes.length === 0) {
       setRecipeSaved(false);
+      setSavedFolderLocal(null); // Reset local folder when recipe is not saved
       return;
     }
 
-    const isAlreadySaved = savedRecipes.some(
+    const savedRecipe = savedRecipes.find(
       (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
     );
-    setRecipeSaved(isAlreadySaved);
+
+    if (savedRecipe) {
+      setRecipeSaved(true);
+      // Try to get folder from the saved recipe data if available
+      setSavedFolderLocal(savedRecipe.savedDetails?.folder ?? null);
+    } else {
+      setRecipeSaved(false);
+      setSavedFolderLocal(null);
+    }
   }, [externalSource, externalId, savedRecipes]);
 
   const isBackendRecipe = !!recipeId && !!backendRecipe;
@@ -398,6 +410,7 @@ export function useRecipeDetail() {
 
         if (result.success) {
           setRecipeSaved(true);
+          setSavedFolderLocal(folder ?? null); // Track the folder locally for external recipes
           // Toast is shown by the hook
         }
       } catch (err: any) {
@@ -796,22 +809,30 @@ export function useRecipeDetail() {
 
   // Unfavorite (remove from saved) recipe
   const handleUnfavoriteRecipe = useCallback(async () => {
-    if (!recipeId) return;
+    // For backend recipes, use recipeId
+    // For external recipes, use preloadedRecipe.id from the preload cache
+    const targetRecipeId = recipeId || preloadedRecipe?.id;
+
+    if (!targetRecipeId) {
+      toastService.error('Cannot remove: recipe ID not found');
+      return;
+    }
 
     setUpdatingFolderTags(true);
 
     try {
       await unfavoriteRecipeMutation({
-        variables: { recipeId },
+        variables: { recipeId: targetRecipeId },
       });
       setRecipeSaved(false);
+      setSavedFolderLocal(null); // Clear local folder tracking
       toastService.success('Recipe removed from saved');
     } catch (err) {
       // Error handled by mutation onError
     } finally {
       setUpdatingFolderTags(false);
     }
-  }, [recipeId, unfavoriteRecipeMutation]);
+  }, [recipeId, preloadedRecipe?.id, unfavoriteRecipeMutation]);
 
   // Normalize recipe data for display
   const displayData = useMemo((): RecipeDisplayData | null => {
@@ -903,7 +924,9 @@ export function useRecipeDetail() {
     handleUpdateTags,
     handleUpdateNotes,
     handleUpdateRating,
-    savedFolder: backendRecipe?.savedDetails?.folder ?? null,
+    savedFolder: isBackendRecipe
+      ? (backendRecipe?.savedDetails?.folder ?? null)
+      : savedFolderLocal,
     savedTags: backendRecipe?.savedDetails?.tags ?? [],
     savedNotes: backendRecipe?.savedDetails?.notes ?? null,
     savedRating: backendRecipe?.savedDetails?.personalRating ?? null,

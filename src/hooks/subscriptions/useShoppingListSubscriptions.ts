@@ -144,7 +144,7 @@ export function useShoppingListSubscriptions(userId?: string) {
   });
 
   useShoppingListItemsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
+    variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...itemsHandlers,
   });
@@ -164,7 +164,7 @@ export function useShoppingListSubscriptions(userId?: string) {
   });
 
   useShoppingListUpdatedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
+    variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...metadataHandlers,
   });
@@ -184,7 +184,7 @@ export function useShoppingListSubscriptions(userId?: string) {
   });
 
   useShoppingListCollaboratorsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
+    variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...collaboratorsHandlers,
   });

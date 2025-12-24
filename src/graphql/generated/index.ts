@@ -3522,6 +3522,7 @@ export type Mutation = {
   deletePantryItem: PantryItem;
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
+  deleteRecipeFolder: Scalars['Int']['output'];
   deleteShoppingList: ShoppingList;
   /**
    * Delete a storage location (soft delete)
@@ -4103,6 +4104,11 @@ export type MutationDeletePurchaseArgs = {
 
 export type MutationDeleteRecipeArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationDeleteRecipeFolderArgs = {
+  folder: Scalars['String']['input'];
+  moveTo?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationDeleteShoppingListArgs = {
@@ -5399,6 +5405,52 @@ export type PantryItemPhoto = {
   takenBy: User;
 };
 
+/**
+ * A suggestion for adding or restocking a pantry item.
+ * Combines multiple sources: low stock, expiring soon, recently deleted, frequently added, and popular items.
+ */
+export type PantryItemSuggestion = {
+  __typename?: 'PantryItemSuggestion';
+  /** Primary category name */
+  category: Maybe<Scalars['String']['output']>;
+  /** Current quantity in pantry (for LOW_STOCK source) */
+  currentQuantity: Maybe<Scalars['Float']['output']>;
+  /** Days until expiration (for EXPIRING_SOON source) */
+  daysUntilExpiry: Maybe<Scalars['Int']['output']>;
+  /** Default unit object for one-tap add */
+  defaultUnit: Maybe<Unit>;
+  /** Default unit ID for one-tap add (last used or item default) */
+  defaultUnitId: Maybe<Scalars['ID']['output']>;
+  /** Expiration date (for EXPIRING_SOON source) */
+  expiresAt: Maybe<Scalars['DateTime']['output']>;
+  /** Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source) */
+  frequencyCount: Maybe<Scalars['Int']['output']>;
+  /** Unique suggestion ID (itemId or pantryItemId depending on source) */
+  id: Scalars['ID']['output'];
+  /** Primary image URL */
+  imageUrl: Maybe<Scalars['String']['output']>;
+  /** Full item reference */
+  item: Item;
+  /** The catalog Item ID - always present */
+  itemId: Scalars['ID']['output'];
+  /** Last quantity used (for RECENTLY_DELETED source) */
+  lastQuantity: Maybe<Scalars['Float']['output']>;
+  /** Last unit ID used (for RECENTLY_DELETED source) */
+  lastUnitId: Maybe<Scalars['ID']['output']>;
+  /** Minimum quantity threshold (for LOW_STOCK source) */
+  minQuantity: Maybe<Scalars['Float']['output']>;
+  /** Item name for display */
+  name: Scalars['String']['output'];
+  /** Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources */
+  pantryItemId: Maybe<Scalars['ID']['output']>;
+  /** Popularity ranking position (for POPULAR source) */
+  popularityRank: Maybe<Scalars['Int']['output']>;
+  /** Suggested restock quantity (for LOW_STOCK source) */
+  restockQuantity: Maybe<Scalars['Float']['output']>;
+  /** Source of this suggestion */
+  source: PantrySuggestionSource;
+};
+
 export type PantryItemUsage = {
   __typename?: 'PantryItemUsage';
   conversionConfidence: Maybe<Scalars['Float']['output']>;
@@ -5456,6 +5508,20 @@ export type PantryStats = {
   totalItems: Scalars['Int']['output'];
   totalValue: Scalars['Float']['output'];
 };
+
+/** Source of a pantry item suggestion */
+export enum PantrySuggestionSource {
+  /** Item is expiring soon - use it or replace */
+  ExpiringSoon = 'EXPIRING_SOON',
+  /** User frequently adds this item to pantries */
+  FrequentlyAdded = 'FREQUENTLY_ADDED',
+  /** Item is below minimum stock threshold - needs restocking */
+  LowStock = 'LOW_STOCK',
+  /** Globally popular pantry item */
+  Popular = 'POPULAR',
+  /** Item was recently removed from this pantry */
+  RecentlyDeleted = 'RECENTLY_DELETED',
+}
 
 export type PantryUpdatedPayload = {
   __typename?: 'PantryUpdatedPayload';
@@ -5792,7 +5858,6 @@ export type Query = {
   devices: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   expirationNotification: Maybe<ExpirationNotification>;
-  frequentlyBoughtItems: Array<ShoppingListItem>;
   /**
    * Get best display unit for a quantity
    * Auto-converts to more readable units (1000mL → 1L)
@@ -5885,6 +5950,13 @@ export type Query = {
    * Handles mixed units by providing breakdown per unit.
    */
   pantryItemLedger: LedgerSummary;
+  /**
+   * Get smart suggestions for adding or restocking pantry items.
+   * Combines low stock items, expiring items, recently deleted, user's frequently added items, and popular items.
+   * Results are deduplicated by itemId across all sources.
+   * Priority: LOW_STOCK > EXPIRING_SOON > RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
+   */
+  pantryItemSuggestions: Array<PantryItemSuggestion>;
   pantryItemUsage: Array<PantryItemUsage>;
   /**
    * Get comprehensive ledger analytics for a pantry showing additions vs consumption over time.
@@ -5953,6 +6025,13 @@ export type Query = {
   shoppingListByShareCode: Maybe<ShoppingList>;
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem: Maybe<ShoppingListItem>;
+  /**
+   * Get smart suggestions for adding items to a shopping list.
+   * Combines recently deleted items, user's frequently added items, and popular items.
+   * Results are deduplicated by itemId across all sources.
+   * Priority: RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
+   */
+  shoppingListSuggestions: Array<ShoppingListSuggestion>;
   shoppingLists: Array<ShoppingList>;
   /**
    * Get a single storage location by ID
@@ -5983,7 +6062,6 @@ export type Query = {
    * Based on unit rules, user preferences, and quantity value
    */
   suggestDisplayFormat: QuantityDisplay;
-  suggestedItemsForList: Array<ItemSuggestion>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
   unit: Maybe<Unit>;
@@ -6135,10 +6213,6 @@ export type QueryDietaryProfileArgs = {
 
 export type QueryExpirationNotificationArgs = {
   id: Scalars['ID']['input'];
-};
-
-export type QueryFrequentlyBoughtItemsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryGetBestDisplayUnitArgs = {
@@ -6345,6 +6419,13 @@ export type QueryPantryItemLedgerArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
 
+export type QueryPantryItemSuggestionsArgs = {
+  expirationDays?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  pantryId: Scalars['ID']['input'];
+  sources?: InputMaybe<Array<PantrySuggestionSource>>;
+};
+
 export type QueryPantryItemUsageArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
@@ -6496,6 +6577,12 @@ export type QueryShoppingListItemArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type QueryShoppingListSuggestionsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+  sources?: InputMaybe<Array<SuggestionSource>>;
+};
+
 export type QueryShoppingListsArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
 };
@@ -6537,10 +6624,6 @@ export type QuerySuggestDisplayFormatArgs = {
   quantity: Scalars['Float']['input'];
   unitId: Scalars['ID']['input'];
   userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type QuerySuggestedItemsForListArgs = {
-  shoppingListId: Scalars['ID']['input'];
 };
 
 export type QuerySuspiciousInviteActivityArgs = {
@@ -7436,6 +7519,42 @@ export type ShoppingListStatusChangedPayload = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A suggestion for adding an item to a shopping list.
+ * Combines multiple sources: recently deleted, frequently added, and popular items.
+ */
+export type ShoppingListSuggestion = {
+  __typename?: 'ShoppingListSuggestion';
+  /** Primary category name */
+  category: Maybe<Scalars['String']['output']>;
+  /** Default unit object for one-tap add */
+  defaultUnit: Maybe<Unit>;
+  /** Default unit ID for one-tap add (last used or item default) */
+  defaultUnitId: Maybe<Scalars['ID']['output']>;
+  /** Frequency count - times user added this item (for FREQUENTLY_ADDED source) */
+  frequencyCount: Maybe<Scalars['Int']['output']>;
+  /** Unique suggestion ID (itemId or shoppingListItemId depending on source) */
+  id: Scalars['ID']['output'];
+  /** Primary image URL */
+  imageUrl: Maybe<Scalars['String']['output']>;
+  /** Full item reference */
+  item: Item;
+  /** The catalog Item ID - always present */
+  itemId: Scalars['ID']['output'];
+  /** Last quantity used (for RECENTLY_DELETED source) */
+  lastQuantity: Maybe<Scalars['Float']['output']>;
+  /** Last unit ID used (for RECENTLY_DELETED source) */
+  lastUnitId: Maybe<Scalars['ID']['output']>;
+  /** Item name for display */
+  name: Scalars['String']['output'];
+  /** Popularity ranking position (for POPULAR source) */
+  popularityRank: Maybe<Scalars['Int']['output']>;
+  /** Shopping list item ID - only present for RECENTLY_DELETED source */
+  shoppingListItemId: Maybe<Scalars['ID']['output']>;
+  /** Source of this suggestion */
+  source: SuggestionSource;
+};
+
 export type ShoppingListUpdatedPayload = {
   __typename?: 'ShoppingListUpdatedPayload';
   mutation: MutationType;
@@ -7874,6 +7993,16 @@ export type SubscriptionUserStatusChangedArgs = {
 export type SubscriptionUserUpdatedArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
+
+/** Source of a shopping list suggestion */
+export enum SuggestionSource {
+  /** User frequently adds this item to shopping lists */
+  FrequentlyAdded = 'FREQUENTLY_ADDED',
+  /** Globally popular item */
+  Popular = 'POPULAR',
+  /** Item was recently removed from this shopping list */
+  RecentlyDeleted = 'RECENTLY_DELETED',
+}
 
 export type SuspendUserInput = {
   reason: Scalars['String']['input'];
@@ -13461,6 +13590,13 @@ export type MySavedRecipesQuery = {
   }>;
 };
 
+export type SavedRecipeFoldersQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SavedRecipeFoldersQuery = {
+  __typename?: 'Query';
+  savedRecipeFolders: Array<string>;
+};
+
 export type CreateRecipeMutationVariables = Exact<{
   input: CreateRecipeInput;
 }>;
@@ -13543,6 +13679,16 @@ export type UnfavoriteRecipeMutationVariables = Exact<{
 export type UnfavoriteRecipeMutation = {
   __typename?: 'Mutation';
   unfavoriteRecipe: boolean;
+};
+
+export type DeleteRecipeFolderMutationVariables = Exact<{
+  folder: Scalars['String']['input'];
+  moveTo?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type DeleteRecipeFolderMutation = {
+  __typename?: 'Mutation';
+  deleteRecipeFolder: number;
 };
 
 export type UpdateFavoriteRecipeMutationVariables = Exact<{
@@ -14246,6 +14392,34 @@ export type GetRecentlyDeletedShoppingListItemsQuery = {
           name: string;
           imageUrl: string | null | undefined;
         }
+      | null
+      | undefined;
+  }>;
+};
+
+export type GetShoppingListSuggestionsQueryVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetShoppingListSuggestionsQuery = {
+  __typename?: 'Query';
+  shoppingListSuggestions: Array<{
+    __typename?: 'ShoppingListSuggestion';
+    id: string;
+    itemId: string;
+    shoppingListItemId: string | null | undefined;
+    name: string;
+    imageUrl: string | null | undefined;
+    category: string | null | undefined;
+    source: SuggestionSource;
+    defaultUnitId: string | null | undefined;
+    lastQuantity: number | null | undefined;
+    lastUnitId: string | null | undefined;
+    frequencyCount: number | null | undefined;
+    popularityRank: number | null | undefined;
+    defaultUnit:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
   }>;
@@ -50771,6 +50945,100 @@ export function refetchMySavedRecipesQuery(
 ) {
   return { query: MySavedRecipesDocument, variables: variables };
 }
+export const SavedRecipeFoldersDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'SavedRecipeFolders' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'savedRecipeFolders' },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useSavedRecipeFoldersQuery__
+ *
+ * To run a query within a React component, call `useSavedRecipeFoldersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSavedRecipeFoldersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSavedRecipeFoldersQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useSavedRecipeFoldersQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >(SavedRecipeFoldersDocument, options);
+}
+export function useSavedRecipeFoldersLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >(SavedRecipeFoldersDocument, options);
+}
+export function useSavedRecipeFoldersSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SavedRecipeFoldersQuery,
+        SavedRecipeFoldersQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >(SavedRecipeFoldersDocument, options);
+}
+export type SavedRecipeFoldersQueryHookResult = ReturnType<
+  typeof useSavedRecipeFoldersQuery
+>;
+export type SavedRecipeFoldersLazyQueryHookResult = ReturnType<
+  typeof useSavedRecipeFoldersLazyQuery
+>;
+export type SavedRecipeFoldersSuspenseQueryHookResult = ReturnType<
+  typeof useSavedRecipeFoldersSuspenseQuery
+>;
+export type SavedRecipeFoldersQueryResult = ApolloReactCommon.QueryResult<
+  SavedRecipeFoldersQuery,
+  SavedRecipeFoldersQueryVariables
+>;
+export function refetchSavedRecipeFoldersQuery(
+  variables?: SavedRecipeFoldersQueryVariables,
+) {
+  return { query: SavedRecipeFoldersDocument, variables: variables };
+}
 export const CreateRecipeDocument = {
   kind: 'Document',
   definitions: [
@@ -51773,6 +52041,112 @@ export type UnfavoriteRecipeMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     UnfavoriteRecipeMutation,
     UnfavoriteRecipeMutationVariables
+  >;
+export const DeleteRecipeFolderDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteRecipeFolder' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'folder' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'String' },
+            },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'moveTo' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deleteRecipeFolder' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'folder' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'folder' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'moveTo' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'moveTo' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeleteRecipeFolderMutationFn = ApolloReactCommon.MutationFunction<
+  DeleteRecipeFolderMutation,
+  DeleteRecipeFolderMutationVariables
+>;
+
+/**
+ * __useDeleteRecipeFolderMutation__
+ *
+ * To run a mutation, you first call `useDeleteRecipeFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteRecipeFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteRecipeFolderMutation, { data, loading, error }] = useDeleteRecipeFolderMutation({
+ *   variables: {
+ *      folder: // value for 'folder'
+ *      moveTo: // value for 'moveTo'
+ *   },
+ * });
+ */
+export function useDeleteRecipeFolderMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteRecipeFolderMutation,
+    DeleteRecipeFolderMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeleteRecipeFolderMutation,
+    DeleteRecipeFolderMutationVariables
+  >(DeleteRecipeFolderDocument, options);
+}
+export type DeleteRecipeFolderMutationHookResult = ReturnType<
+  typeof useDeleteRecipeFolderMutation
+>;
+export type DeleteRecipeFolderMutationResult =
+  ApolloReactCommon.MutationResult<DeleteRecipeFolderMutation>;
+export type DeleteRecipeFolderMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeleteRecipeFolderMutation,
+    DeleteRecipeFolderMutationVariables
   >;
 export const UpdateFavoriteRecipeDocument = {
   kind: 'Document',
@@ -56148,6 +56522,193 @@ export function refetchGetRecentlyDeletedShoppingListItemsQuery(
     query: GetRecentlyDeletedShoppingListItemsDocument,
     variables: variables,
   };
+}
+export const GetShoppingListSuggestionsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetShoppingListSuggestions' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'shoppingListSuggestions' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'shoppingListItemId' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'defaultUnitId' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'defaultUnit' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'symbol' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastQuantity' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastUnitId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'frequencyCount' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'popularityRank' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetShoppingListSuggestionsQuery__
+ *
+ * To run a query within a React component, call `useGetShoppingListSuggestionsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetShoppingListSuggestionsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetShoppingListSuggestionsQuery({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetShoppingListSuggestionsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  > &
+    (
+      | { variables: GetShoppingListSuggestionsQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >(GetShoppingListSuggestionsDocument, options);
+}
+export function useGetShoppingListSuggestionsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >(GetShoppingListSuggestionsDocument, options);
+}
+export function useGetShoppingListSuggestionsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListSuggestionsQuery,
+        GetShoppingListSuggestionsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >(GetShoppingListSuggestionsDocument, options);
+}
+export type GetShoppingListSuggestionsQueryHookResult = ReturnType<
+  typeof useGetShoppingListSuggestionsQuery
+>;
+export type GetShoppingListSuggestionsLazyQueryHookResult = ReturnType<
+  typeof useGetShoppingListSuggestionsLazyQuery
+>;
+export type GetShoppingListSuggestionsSuspenseQueryHookResult = ReturnType<
+  typeof useGetShoppingListSuggestionsSuspenseQuery
+>;
+export type GetShoppingListSuggestionsQueryResult =
+  ApolloReactCommon.QueryResult<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >;
+export function refetchGetShoppingListSuggestionsQuery(
+  variables: GetShoppingListSuggestionsQueryVariables,
+) {
+  return { query: GetShoppingListSuggestionsDocument, variables: variables };
 }
 export const CreateShoppingListDocument = {
   kind: 'Document',

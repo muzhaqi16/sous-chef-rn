@@ -77,28 +77,28 @@ const RecipeDetailScreen: React.FC = () => {
   const { folders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
 
+  // Derive icon visibility state
+  const isInFavorites = isSaved && savedFolder === 'Favorites';
+  const isInOtherFolder = isSaved && !!savedFolder && savedFolder !== 'Favorites';
+  const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
+  const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
+
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
 
-  // Handle heart icon press - quick toggle save/unsave
+  // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = useCallback(() => {
     if (saving || updatingFolderTags) return;
 
-    if (isSaved) {
-      // Already saved - remove from saved
-      handleUnfavoriteRecipe();
+    if (isInFavorites) {
+      // Saved in Favorites - open manage sheet
+      setShowManageSheet(true);
     } else {
       // Not saved - quick save to "Favorites" folder
       handleSaveRecipe('Favorites');
     }
-  }, [
-    saving,
-    updatingFolderTags,
-    isSaved,
-    handleUnfavoriteRecipe,
-    handleSaveRecipe,
-  ]);
+  }, [saving, updatingFolderTags, isInFavorites, handleSaveRecipe]);
 
   // Handle folder icon press - show advanced options
   const handleFolderPress = useCallback(() => {
@@ -203,34 +203,38 @@ const RecipeDetailScreen: React.FC = () => {
             </TouchableOpacity>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
-              {/* Folder button - advanced save options */}
-              <TouchableOpacity
-                onPress={handleFolderPress}
-                style={styles.actionButton}
-                disabled={saving || updatingFolderTags}
-              >
-                <Ionicons
-                  name="folder-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
-              </TouchableOpacity>
-              {/* Heart button - quick toggle save/unsave */}
-              <TouchableOpacity
-                onPress={handleHeartPress}
-                style={styles.actionButton}
-                disabled={saving || updatingFolderTags}
-              >
-                {saving || updatingFolderTags ? (
-                  <ActivityIndicator size="small" color="#E91E63" />
-                ) : (
+              {/* Folder button - shown when not saved or saved to non-Favorites folder */}
+              {showFolderIcon && (
+                <TouchableOpacity
+                  onPress={handleFolderPress}
+                  style={styles.actionButton}
+                  disabled={saving || updatingFolderTags}
+                >
                   <Ionicons
-                    name={isSaved ? 'heart' : 'heart-outline'}
-                    size={24}
-                    color="#E91E63"
+                    name={isInOtherFolder ? 'folder' : 'folder-outline'}
+                    size={22}
+                    color={theme.colors.primary}
                   />
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
+              {/* Heart button - shown when not saved or saved to Favorites */}
+              {showHeartIcon && (
+                <TouchableOpacity
+                  onPress={handleHeartPress}
+                  style={styles.actionButton}
+                  disabled={saving || updatingFolderTags}
+                >
+                  {saving || updatingFolderTags ? (
+                    <ActivityIndicator size="small" color="#E91E63" />
+                  ) : (
+                    <Ionicons
+                      name={isInFavorites ? 'heart' : 'heart-outline'}
+                      size={24}
+                      color="#E91E63"
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}

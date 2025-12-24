@@ -21,6 +21,8 @@ interface ItemSuggestionsListProps {
   quickAddDisabled?: boolean;
   /** Icon to show in suggestion placeholder (default: 'inventory-2') */
   placeholderIcon?: 'inventory-2' | 'shopping-cart';
+  /** Whether to show brand names (default: true) */
+  showBrands?: boolean;
 }
 
 export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
@@ -32,6 +34,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
   onSelectSuggestion,
   quickAddDisabled = false,
   placeholderIcon = 'inventory-2',
+  showBrands = true,
 }) => {
   const { theme } = useUnistyles();
 
@@ -96,7 +99,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
           <Text style={styles.suggestionName} numberOfLines={1}>
             {item.name}
           </Text>
-          {item.brands && item.brands.length > 0 && (
+          {showBrands && item.brands && item.brands.length > 0 && (
             <Text style={styles.suggestionBrands} numberOfLines={1}>
               {item.brands[0].name}
             </Text>
