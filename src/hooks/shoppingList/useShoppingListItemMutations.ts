@@ -1,16 +1,13 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useApolloClient } from '@apollo/client/react';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
-  ShoppingListItemFragmentDoc,
-  ShoppingListItemDisplayFragmentDoc,
   DisplayFormat,
 } from '#generated';
-import type { ShoppingListItemCoreFragment, ShoppingListItemDisplayFragment } from '#generated';
+import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
@@ -18,7 +15,6 @@ import {
 } from '#/utils/errors/versionConflict';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -68,7 +64,6 @@ export function useShoppingListItemMutations(
   items: ShoppingListItemDisplayFragment[],
   refetch: () => Promise<any>,
 ) {
-  const client = useApolloClient();
   const { handleApolloError } = useErrorHandler();
 
   // CRUD operations utilities
@@ -205,20 +200,10 @@ export function useShoppingListItemMutations(
   });
 
   // === UPDATE MUTATION ===
+  // Apollo auto-normalizes the server response by __typename + id
+  // No onCompleted cleanup needed - cache persistence handles this automatically
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
-    onCompleted: data => {
-      if (data?.updateShoppingListItem) {
-        const itemId = data.updateShoppingListItem.id;
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantityInput');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'itemName');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'notes');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'category');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitName');
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitId');
-      }
-    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
@@ -251,20 +236,10 @@ export function useShoppingListItemMutations(
 
       try {
         const itemId = variables.id;
-        optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
         removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
       } catch (error) {
         console.warn('Cache update failed for removeItem, will refetch:', error);
         refetch();
-      }
-    },
-    onCompleted: data => {
-      if (data?.removeItemFromShoppingList) {
-        optimisticDataPersistence.clear(
-          'ShoppingListItem',
-          data.removeItemFromShoppingList.id,
-          '__deleted',
-        );
       }
     },
     onError: error => {
@@ -304,15 +279,6 @@ export function useShoppingListItemMutations(
         },
       });
     },
-    onCompleted: data => {
-      if (data?.toggleShoppingListItemPurchased) {
-        optimisticDataPersistence.clear(
-          'ShoppingListItem',
-          data.toggleShoppingListItemPurchased.id,
-          'isPurchased',
-        );
-      }
-    },
     onError: error => {
       // On error, refetch to restore correct state
       const { message } = handleApolloError(error, {
@@ -341,74 +307,43 @@ export function useShoppingListItemMutations(
     operationName: 'Add Shopping List Item',
   });
 
+  // Simplified updateItem - uses items array instead of cache read
+  // Apollo auto-normalizes the server response, so we just need basic optimistic response
   const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
     if (!listId) return false;
 
     try {
-      const fullItem = client.readFragment<any>({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: itemId,
-        }),
-        fragment: ShoppingListItemFragmentDoc,
-        fragmentName: 'ShoppingListItemFragment',
-      });
+      // Use items array (already in memory) instead of cache read
+      const item = items.find(i => i.id === itemId);
 
-      if (!fullItem) {
-        console.warn('Item not in cache, cannot update optimistically:', itemId);
-        const result = await updateItemMutation({
-          variables: { id: itemId, input: updates },
-        });
-        return result.data?.updateShoppingListItem ?? false;
+      if (!item) {
+        console.warn('Item not found, cannot update:', itemId);
+        return false;
       }
-
-      const coreFields: ShoppingListItemCoreFragment = {
-        __typename: 'ShoppingListItem',
-        id: fullItem.id,
-        itemName: fullItem.itemName,
-        quantity: fullItem.quantity,
-        quantityInput: fullItem.quantityInput,
-        displayFormat: fullItem.displayFormat,
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: fullItem.purchaseInfo?.isPurchased ?? false,
-        },
-        version: fullItem.version,
-        updatedAt: fullItem.updatedAt,
-        category: fullItem.category,
-        notes: fullItem.notes,
-        unitName: fullItem.unitName,
-        unit: fullItem.unit
-          ? {
-              __typename: 'Unit',
-              id: fullItem.unit.id,
-              name: fullItem.unit.name,
-              symbol: fullItem.unit.symbol,
-              displayAsFraction: fullItem.unit.displayAsFraction,
-              minPrecision: fullItem.unit.minPrecision,
-              autoConvertThreshold: fullItem.unit.autoConvertThreshold,
-            }
-          : null,
-      };
-
-      Object.keys(updates).forEach(field => {
-        const value = updates[field as keyof ShoppingListItemUpdate];
-        if (value !== undefined) {
-          optimisticDataPersistence.save('ShoppingListItem', itemId, field, value);
-        }
-      });
 
       const result = await updateItemMutation({
         variables: {
           id: itemId,
-          input: { ...updates, version: coreFields.version },
+          input: { ...updates, version: item.version },
         },
+        // Simple optimistic response - Apollo merges by __typename + id
+        // Only include fields from ShoppingListItemDisplayFragment
         optimisticResponse: {
           __typename: 'Mutation',
           updateShoppingListItem: {
-            ...coreFields,
-            ...updates,
+            __typename: 'ShoppingListItem',
+            id: item.id,
+            itemName: updates.itemName ?? item.itemName,
+            quantity: updates.quantity ?? item.quantity,
+            quantityInput: item.quantityInput,
+            purchaseInfo: item.purchaseInfo,
+            version: item.version,
             updatedAt: new Date().toISOString(),
+            category: updates.category ?? item.category,
+            unitName: updates.unitName ?? item.unitName,
+            unit: item.unit,
+            sortOrder: item.sortOrder,
+            item: item.item,
           } as any,
         },
       });
@@ -437,31 +372,16 @@ export function useShoppingListItemMutations(
     return operation();
   };
 
+  // Simplified toggleItem - uses items array instead of cache read
   const toggleItem = useCallback(
     async (itemId: string) => {
       if (!listId) return false;
 
       try {
-        const cacheId = client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: itemId,
-        });
+        const item = items.find(i => i.id === itemId);
+        if (!item) return false;
 
-        let cachedItem = cacheId
-          ? client.readFragment<any>({
-              id: cacheId,
-              fragment: ShoppingListItemDisplayFragmentDoc,
-              fragmentName: 'ShoppingListItemDisplayFragment',
-            })
-          : null;
-
-        if (!cachedItem) {
-          const fallbackItem = items.find(item => item.id === itemId);
-          if (!fallbackItem) return false;
-          cachedItem = fallbackItem;
-        }
-
-        const newStatus = !cachedItem.purchaseInfo?.isPurchased;
+        const newStatus = !item.purchaseInfo?.isPurchased;
 
         const result = await togglePurchasedMutation({
           variables: { id: itemId, purchased: newStatus },
@@ -473,7 +393,7 @@ export function useShoppingListItemMutations(
         return false;
       }
     },
-    [listId, items, togglePurchasedMutation, client],
+    [listId, items, togglePurchasedMutation],
   );
 
   return {

@@ -14,6 +14,14 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+
+// Cache updater for adding items to Pantry.itemsConnection
+const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
 
 // ============================================
 // Types
@@ -202,52 +210,14 @@ export function usePantryItemFormMutations({
     fetchPolicy: 'cache-first',
   });
 
-  // Create mutation with cache update
+  // Create mutation with cache update using reusable utility
   const [createMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data: mutationData }) => {
       if (!mutationData?.createPantryItem || !pantryId) return;
 
       try {
-        const pantryCacheId = cache.identify({
-          __typename: 'Pantry',
-          id: pantryId,
-        });
-
-        if (!pantryCacheId) return;
-
-        cache.modify({
-          id: pantryCacheId,
-          fields: {
-            itemsConnection(
-              existingConnection = {},
-              { readField, toReference },
-            ) {
-              const newItemRef = toReference(mutationData.createPantryItem);
-              const existingEdges = existingConnection?.edges || [];
-
-              const exists = existingEdges.some(
-                (edge: any) =>
-                  readField('id', edge?.node) ===
-                  mutationData.createPantryItem.id,
-              );
-
-              if (exists) return existingConnection;
-
-              const newEdge = {
-                __typename: 'PantryItemEdge',
-                node: newItemRef,
-                cursor: '',
-              };
-
-              return {
-                ...existingConnection,
-                edges: [newEdge, ...existingEdges],
-                totalCount: (existingConnection?.totalCount || 0) + 1,
-              };
-            },
-          },
-        });
+        addToPantryItemsCache(cache, pantryId, mutationData.createPantryItem);
       } catch (error) {
         console.warn('Cache update failed:', error);
       }
