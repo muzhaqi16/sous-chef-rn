@@ -55,12 +55,6 @@ import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
  * - useShoppingListSelectorModal: List selector modal logic
  */
 const ShoppingListMainScreen: React.FC = React.memo(() => {
-  // DEBUG: Track component mount/unmount to investigate duplicate queries
-  useEffect(() => {
-    console.log('[ShoppingListMain] MOUNTED');
-    return () => console.log('[ShoppingListMain] UNMOUNTED');
-  }, []);
-
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
 

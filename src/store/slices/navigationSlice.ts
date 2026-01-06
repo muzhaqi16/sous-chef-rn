@@ -56,6 +56,10 @@ export interface NavigationState {
   // Home data initialization flag (survives component remounts)
   hasInitializedHomeData: boolean;
 
+  // Home selection ready flag - true when home selection is complete and valid
+  // Gates pantry queries to prevent race conditions on first login
+  isHomeSelectionReady: boolean;
+
   // User-specific navigation states
   userNavigationStates: Record<string, UserNavigationState>;
 
@@ -68,6 +72,7 @@ export interface NavigationState {
   setSelectedPantryId: (id: string | null) => void;
   setSelectedShoppingListId: (id: string | null) => void;
   setHasInitializedHomeData: (value: boolean) => void;
+  setIsHomeSelectionReady: (value: boolean) => void;
   setUserNavigationState: (
     userId: string,
     state: Partial<UserNavigationState>,
@@ -84,6 +89,7 @@ const initialNavigationState = {
   selectedPantryId: null,
   selectedShoppingListId: null,
   hasInitializedHomeData: false,
+  isHomeSelectionReady: false,
   userNavigationStates: {},
   pendingDeepLinkAction: null,
 };
@@ -123,6 +129,12 @@ export const createNavigationSlice: StateCreator<
   setHasInitializedHomeData: value => {
     set(state => {
       state.hasInitializedHomeData = value;
+    });
+  },
+
+  setIsHomeSelectionReady: value => {
+    set(state => {
+      state.isHomeSelectionReady = value;
     });
   },
 
