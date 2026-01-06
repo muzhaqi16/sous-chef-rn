@@ -112,7 +112,7 @@ export const ExpiringItems: React.FC = () => {
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.item?.name}</Text>
                   <Text style={[commonStyles.caption, styles.itemDetails]}>
-                    {item.currentQuantity} {item.unit.symbol} •{' '}
+                    {item.quantity} {item.unit.symbol} •{' '}
                     {item.storageState}
                   </Text>
                   <Text style={[styles.statusText, { color: statusColor }]}>

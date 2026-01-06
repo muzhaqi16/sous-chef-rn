@@ -27,7 +27,9 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         style={styles.touchable}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
-        accessibilityHint={accessibilityHint || 'Swipe left or right for more actions'}
+        accessibilityHint={
+          accessibilityHint || 'Swipe left or right for more actions'
+        }
       >
         {children}
       </TouchableOpacity>

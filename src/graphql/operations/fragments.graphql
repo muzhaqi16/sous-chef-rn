@@ -536,7 +536,7 @@ fragment PantryItemCore on PantryItem {
   pantryId
   itemId
   itemName
-  currentQuantity
+  quantity
   unitId
   unitName
   version
@@ -549,7 +549,7 @@ fragment PantryItemCore on PantryItem {
   __typename
 }
 
-# DISPLAY: List views - Pantry screen cards (25 fields)
+# DISPLAY: List views - Pantry screen cards
 # Contains Core fields + display-critical fields for rendering pantry item cards
 # Used in: GetPantry query (main pantry screen)
 fragment PantryItemDisplay on PantryItem {
@@ -583,20 +583,11 @@ fragment PantryItemDisplay on PantryItem {
     name
     __typename
   }
-  packageWeight
-  packageWeightUnit {
-    id
-    name
-    symbol
-    __typename
-  }
   tags
-  initialQuantity
-  consumedQuantity
   __typename
 }
 
-# FULL: Detail views and analytics (86 fields)
+# FULL: Detail views and analytics
 # Contains all fields including usage records, analytics, and extended metadata
 # Used in: GetPantryItem query (detail screen), analytics queries
 fragment PantryItemFragment on PantryItem {
@@ -616,25 +607,8 @@ fragment PantryItemFragment on PantryItem {
     autoConvertThreshold
   }
   storageNotes
-  normalizedUnitId
-  normalizedUnit {
-    id
-    name
-    symbol
-  }
-  packageWeight
-  packageWeightUnitId
-  packageWeightUnit {
-    id
-    name
-    symbol
-    type
-  }
   createdAt
   restockQuantity
-  wasteAmount
-  wasteDate
-  wasteReason
   store {
     id
     name
@@ -657,6 +631,9 @@ fragment PantryItemFragment on PantryItem {
     usedAt
     purpose
     notes
+    wasteReason
+    isComposted
+    isRecycled
     pantryItem {
       id
     }

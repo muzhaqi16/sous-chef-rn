@@ -26,8 +26,6 @@ interface RestockPantryItemModalProps {
     quantityInput: string,
     notes: string,
     unitId?: string,
-    weight?: number,
-    weightUnitId?: string,
     costPerUnit?: number,
     totalCost?: number,
   ) => void;
@@ -44,7 +42,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   const [quantityInput, setQuantityInput] = useState('1');
-  const [weightInput, setWeightInput] = useState('');
   const [notes, setNotes] = useState('');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
@@ -55,7 +52,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       bottomSheetRef.current?.present();
       // Reset form when modal opens with new item
       setQuantityInput('1');
-      setWeightInput('');
       setNotes('');
       setCostPerUnitInput('');
       setTotalCostInput('');
@@ -68,21 +64,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     if (!pantryItem) return null;
     const addAmount = parseFractionalInput(quantityInput);
     if (addAmount === null || isNaN(addAmount)) return null;
-    const newQuantity = pantryItem.currentQuantity + addAmount;
+    const newQuantity = pantryItem.quantity + addAmount;
     return isNaN(newQuantity) ? null : newQuantity;
   }, [pantryItem, quantityInput]);
-
-  // Calculate new weight for weight-tracked items
-  const calculateNewWeight = useCallback((): number | null => {
-    if (!pantryItem || pantryItem.packageWeight == null) return null;
-    const addWeight = parseFractionalInput(weightInput);
-    if (addWeight === null || isNaN(addWeight)) return null;
-    const newWeight = pantryItem.packageWeight + addWeight;
-    return isNaN(newWeight) ? null : newWeight;
-  }, [pantryItem, weightInput]);
-
-  // Check if this is a weight-tracked item
-  const isWeightTracked = pantryItem?.packageWeight != null && pantryItem.packageWeight > 0;
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -97,12 +81,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     // Use the item's current unit
     const unitId = pantryItem.unit?.id;
 
-    // Parse weight for weight-tracked items
-    const weightValue = weightInput ? parseFractionalInput(weightInput) : undefined;
-    const weightUnitId = weightValue != null && weightValue > 0
-      ? pantryItem.packageWeightUnit?.id
-      : undefined;
-
     // Parse cost values (optional)
     const costPerUnit = costPerUnitInput
       ? parseFloat(costPerUnitInput)
@@ -116,21 +94,18 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       quantityInput,
       notes,
       unitId,
-      weightValue ?? undefined,
-      weightUnitId,
       isNaN(costPerUnit!) ? undefined : costPerUnit,
       isNaN(totalCost!) ? undefined : totalCost,
     );
     onClose();
-  }, [pantryItem, quantityInput, weightInput, notes, costPerUnitInput, totalCostInput, onConfirm, onClose]);
+  }, [pantryItem, quantityInput, notes, costPerUnitInput, totalCostInput, onConfirm, onClose]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
-  const newWeight = pantryItem ? calculateNewWeight() : null;
 
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['60%']}
+      snapPoints={['55%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -165,57 +140,29 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               <Text style={styles.itemName}>{pantryItem.itemName}</Text>
               <View style={styles.availableRow}>
                 <Text style={styles.availableLabel}>Current: </Text>
-                {pantryItem.packageWeight != null && pantryItem.packageWeight > 0 ? (
-                  <Text style={styles.availableValue}>
-                    {pantryItem.packageWeight} {pantryItem.packageWeightUnit?.symbol || 'g'}
-                  </Text>
-                ) : (
-                  <FormattedItemSubtitle
-                    quantity={pantryItem.currentQuantity}
-                    displayAsFraction={pantryItem.unit?.displayAsFraction}
-                    unitSymbol={pantryItem.unit?.symbol}
-                  />
-                )}
+                <FormattedItemSubtitle
+                  quantity={pantryItem.quantity}
+                  displayAsFraction={pantryItem.unit?.displayAsFraction}
+                  unitSymbol={pantryItem.unit?.symbol}
+                />
               </View>
             </View>
 
             {/* Quantity Input */}
             <View style={styles.section}>
               <FractionInput
-                label={
-                  isWeightTracked
-                    ? 'Items to Add *'
-                    : `Quantity to Add (${pantryItem.unit?.symbol || 'item'}) *`
-                }
+                label={`Quantity to Add (${pantryItem.unit?.symbol || 'item'}) *`}
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
                 keyboardType="numeric"
               />
-              {newQuantity !== null && !isWeightTracked && (
+              {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
                   New quantity: {newQuantity.toFixed(2)} {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
-
-            {/* Weight Input - only for weight-tracked items */}
-            {isWeightTracked && (
-              <View style={styles.section}>
-                <FractionInput
-                  label={`Weight to Add (${pantryItem.packageWeightUnit?.symbol || 'g'})`}
-                  value={weightInput}
-                  onChangeText={setWeightInput}
-                  placeholder="e.g., 150"
-                  keyboardType="decimal-pad"
-                />
-                {newWeight !== null && (
-                  <Text style={styles.newQuantityText}>
-                    New total weight: {newWeight.toFixed(0)} {pantryItem.packageWeightUnit?.symbol || 'g'}
-                  </Text>
-                )}
-              </View>
-            )}
 
             {/* Cost Tracking (Optional) */}
             <View style={styles.section}>
@@ -309,11 +256,6 @@ const styles = StyleSheet.create(theme => ({
   availableLabel: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
-  },
-  availableValue: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.semibold,
   },
   section: {
     marginBottom: theme.spacing.xl,

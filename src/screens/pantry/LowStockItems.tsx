@@ -36,7 +36,7 @@ export const LowStockItems: React.FC = () => {
 
     // Match the low stock logic used in usePantryManagement stats
     return items.filter(item => {
-      return item.currentQuantity <= 1 || item.lowStockAlert;
+      return item.quantity <= 1 || item.lowStockAlert;
     });
   }, [items]);
 
@@ -97,7 +97,7 @@ export const LowStockItems: React.FC = () => {
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.item?.name}</Text>
                 <Text style={[commonStyles.caption, styles.itemDetails]}>
-                  {item.currentQuantity} {item.unit.symbol} remaining
+                  {item.quantity} {item.unit.symbol} remaining
                 </Text>
               </View>
               <TouchableOpacity

@@ -182,7 +182,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         size={28}
       />
     );
-  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit, canMarkPurchased]);
+  }, [
+    item.isPurchased,
+    item.id,
+    onTogglePurchase,
+    triggerExit,
+    canMarkPurchased,
+  ]);
 
   return (
     <Animated.View
@@ -197,8 +203,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
-        onEdit={canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined}
-        onDelete={canRemoveItems && onItemDelete ? () => onItemDelete(item.id) : undefined}
+        onEdit={
+          canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
+        }
+        onDelete={
+          canRemoveItems && onItemDelete
+            ? () => onItemDelete(item.id)
+            : undefined
+        }
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
@@ -224,7 +236,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     ...commonStyles.shadow,
     opacity: 1,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing.sm,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },
@@ -247,7 +259,7 @@ const styles = StyleSheet.create(theme => ({
   rightElementContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
 }));
 

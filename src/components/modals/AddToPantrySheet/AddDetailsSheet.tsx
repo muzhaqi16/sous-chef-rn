@@ -137,9 +137,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   );
 
   // Form state - Page 2 (Details)
-  const [packageWeight, setPackageWeight] = useState('');
-  const [weightUnit, setWeightUnit] = useState('');
-  const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
   // Form state - Page 3 (Storage)
@@ -184,9 +181,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setUnit('');
     setUnitId(null);
     setStorageState(StorageState.Ambient);
-    setPackageWeight('');
-    setWeightUnit('');
-    setWeightUnitId(null);
     setExpirationDate(null);
     setStorageLocation('');
     setSelectedStorageLocationId(null);
@@ -218,15 +212,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     (id: string | null, name: string | null) => {
       setUnitId(id);
       if (name) setUnit(name);
-    },
-    [],
-  );
-
-  // Handle weight unit selection
-  const handleWeightUnitSelected = useCallback(
-    (id: string | null, name: string | null) => {
-      setWeightUnitId(id);
-      if (name) setWeightUnit(name);
     },
     [],
   );
@@ -290,13 +275,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           input: {
             pantryId,
             itemName: itemName.trim(),
-            initialQuantity: quantity,
+            quantity,
             unitId: unitId || undefined,
             storageState,
-            packageWeight: packageWeight
-              ? parseFloat(packageWeight)
-              : undefined,
-            packageWeightUnitId: weightUnitId || undefined,
             expiresAt: expirationDate
               ? expirationDate.toISOString().split('T')[0]
               : undefined,
@@ -332,8 +313,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     quantityInput,
     unitId,
     storageState,
-    packageWeight,
-    weightUnitId,
     expirationDate,
     selectedStorageLocationId,
     storageLocation,
@@ -476,25 +455,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Package Weight + Weight Unit */}
-            <FieldRow>
-              <FormInput
-                label="Package Weight"
-                value={packageWeight}
-                onChangeText={setPackageWeight}
-                placeholder="e.g., 300"
-                keyboardType="decimal-pad"
-                useBottomSheetInput
-              />
-              <InlineUnitsAutocomplete
-                label="Weight Unit"
-                value={weightUnit}
-                onChangeText={setWeightUnit}
-                onUnitSelected={handleWeightUnitSelected}
-                placeholder="g, kg, oz"
-              />
-            </FieldRow>
-
             {/* Expiration Date */}
             <DatePickerField
               label="Expiration Date"

@@ -39,7 +39,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
 
     // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
     const formattedQuantity = quantityInput || formatQuantity(quantity);
-    const displayText = unit ? `${formattedQuantity} ${unit}` : formattedQuantity;
+    const accessibilityText = unit ? `${formattedQuantity} ${unit}` : formattedQuantity;
 
     const isDisabled = disabled || isPurchased;
 
@@ -48,7 +48,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
         onPress={onPress}
         disabled={isDisabled}
         accessibilityRole="button"
-        accessibilityLabel={`Quantity: ${displayText}. Tap to edit`}
+        accessibilityLabel={`Quantity: ${accessibilityText}. Tap to edit`}
         accessibilityHint="Opens quantity editor"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
@@ -61,13 +61,24 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
         >
           <Text
             style={[
-              styles.text,
+              styles.quantityText,
               { color: theme.colors.textPrimary },
               isPurchased && styles.purchasedText,
             ]}
           >
-            {displayText}
+            {formattedQuantity}
           </Text>
+          {unit && (
+            <Text
+              style={[
+                styles.unitText,
+                { color: theme.colors.textSecondary },
+                isPurchased && styles.purchasedText,
+              ]}
+            >
+              {unit}
+            </Text>
+          )}
         </View>
       </Pressable>
     );
@@ -76,17 +87,24 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
     borderRadius: theme.radii.md,
-    minWidth: 48,
+    minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  text: {
+  quantityText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 16,
+  },
+  unitText: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 13,
   },
   disabled: {
     opacity: 0.5,

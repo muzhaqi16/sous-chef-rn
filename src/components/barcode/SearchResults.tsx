@@ -107,25 +107,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
     try {
       if (source === 'pantry' && pantryId) {
-        // Build weight input from catalog item if available
-        const weightInput =
-          item.netWeight && item.displayUnit?.id
-            ? {
-                packageWeight: item.netWeight,
-                packageWeightUnitId: item.displayUnit.id,
-              }
-            : {};
-
         await addToPantry({
           variables: {
             input: {
               pantryId,
               itemId: item.id,
-              initialQuantity: 1,
+              quantity: 1,
               itemName: item.name,
-              // unitId removed - API calculates from weight info
               itemUpc: item.upc || item.primaryUpc, // Include UPC from barcode scan
-              ...weightInput, // Include weight info from catalog item
             },
           },
         });

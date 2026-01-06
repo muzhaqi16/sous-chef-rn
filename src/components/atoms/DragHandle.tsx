@@ -40,11 +40,10 @@ export const DragHandle: React.FC<DragHandleProps> = ({
   );
 };
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create(() => ({
   container: {
-    paddingVertical: theme.spacing.xs,
-    paddingLeft: theme.spacing.xs,
-    paddingRight: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

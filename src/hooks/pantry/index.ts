@@ -9,3 +9,7 @@ export {
   emptyUnitSelection,
   type UnitSelection,
 } from './usePantryItemFormMutations';
+export {
+  usePantryItemSuggestions,
+  type PantryItemSuggestion,
+} from './usePantryItemSuggestions';

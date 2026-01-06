@@ -114,6 +114,43 @@ query GetRecentlyDeletedPantryItems($pantryId: ID!, $limit: Int) {
   }
 }
 
+query GetPantryItemSuggestions(
+  $pantryId: ID!
+  $limit: Int = 10
+  $sources: [PantrySuggestionSource!]
+  $expirationDays: Int = 7
+) {
+  pantryItemSuggestions(
+    pantryId: $pantryId
+    limit: $limit
+    sources: $sources
+    expirationDays: $expirationDays
+  ) {
+    id
+    itemId
+    name
+    imageUrl
+    category
+    source
+    defaultUnitId
+    defaultUnit {
+      id
+      name
+      symbol
+    }
+    currentQuantity
+    minQuantity
+    restockQuantity
+    daysUntilExpiry
+    expiresAt
+    lastQuantity
+    lastUnitId
+    frequencyCount
+    popularityRank
+    pantryItemId
+  }
+}
+
 # ============================================
 # ANALYTICS QUERIES
 # ============================================
@@ -364,51 +401,21 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
       name
       symbol
     }
-    weightUsed
-    weightUsedUnitId
-    weightUsedUnit {
-      id
-      name
-      symbol
-    }
     usedAt
     purpose
     notes
+    wasteReason
+    isComposted
+    isRecycled
     pantryItem {
       id
-      currentQuantity
-      packageWeight
-      consumedQuantity
+      quantity
       ...PantryItemFragment
     }
     usedBy {
       id
       email
     }
-  }
-}
-
-mutation RecordPantryItemWaste(
-  $id: ID!
-  $wasteAmount: Float!
-  $wasteReason: WasteReason!
-  $wasteUnitId: String
-  $wasteWeight: Float
-  $wasteWeightUnitId: String
-  $isComposted: Boolean
-  $isRecycled: Boolean
-) {
-  recordPantryItemWaste(
-    id: $id
-    wasteAmount: $wasteAmount
-    wasteReason: $wasteReason
-    wasteUnitId: $wasteUnitId
-    wasteWeight: $wasteWeight
-    wasteWeightUnitId: $wasteWeightUnitId
-    isComposted: $isComposted
-    isRecycled: $isRecycled
-  ) {
-    ...PantryItemFragment
   }
 }
 
@@ -594,7 +601,7 @@ subscription PantryWasteAlert($pantryId: ID!) {
       itemId
       itemName
       pantryId
-      currentQuantity
+      quantity
       unit {
         id
         name

@@ -32,13 +32,13 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   const { theme } = useUnistyles();
 
   // Check if this is a partially consumed single item
-  // When initialQuantity is 1 and 0 < currentQuantity < 1, display as "1" with remaining weight
+  // When initialQuantity is 1 and 0 < quantity < 1, display as "1" with remaining weight
   const isPartialSingleItem =
     initialQuantity === 1 && quantity != null && quantity > 0 && quantity < 1;
 
   // For partial single items, display quantity as 1 and use the actual weight from the server
   const displayQuantity = isPartialSingleItem ? 1 : quantity;
-  // netWeight already contains the actual remaining weight from the server (packageWeight)
+  // netWeight already contains the actual remaining weight from the server
   const displayWeight = netWeight;
 
   // Handle edge cases
@@ -50,7 +50,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (hasQuantity && hasWeight && hasUnit) {
     // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
     // Use tolerance for floating point comparison
-    // This also applies to partial single items (initialQuantity=1, currentQuantity<1)
+    // This also applies to partial single items (initialQuantity=1, quantity<1)
     const isQuantityOne = displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
     if (isQuantityOne) {
       return (

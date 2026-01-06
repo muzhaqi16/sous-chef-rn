@@ -9,9 +9,7 @@ interface UnitLike {
 }
 
 interface PantryItemUnitSource {
-  /** User-set package weight unit override (highest priority) */
-  packageWeightUnit?: UnitLike | null;
-  /** Pantry item's assigned unit (second priority) */
+  /** Pantry item's assigned unit (primary) */
   unit?: UnitLike | null;
   /** Base catalog item data */
   item?: {
@@ -22,11 +20,10 @@ interface PantryItemUnitSource {
 
 /**
  * Gets the effective unit for a pantry item with correct priority:
- * 1. packageWeightUnit - User-set package weight unit override
- * 2. unit - Pantry item's assigned unit
- * 3. item.displayUnit - Base catalog item's default unit (fallback)
+ * 1. unit - Pantry item's assigned unit
+ * 2. item.displayUnit - Base catalog item's default unit (fallback)
  *
- * @param source - Object containing packageWeightUnit, unit, and item.displayUnit
+ * @param source - Object containing unit and item.displayUnit
  * @returns The effective unit object or undefined
  */
 export function getEffectiveUnit(
@@ -35,7 +32,6 @@ export function getEffectiveUnit(
   if (!source) return undefined;
 
   return (
-    source.packageWeightUnit ??
     source.unit ??
     source.item?.displayUnit ??
     undefined
@@ -44,11 +40,10 @@ export function getEffectiveUnit(
 
 /**
  * Gets the effective unit symbol for a pantry item with correct priority:
- * 1. packageWeightUnit.symbol - User-set package weight unit override
- * 2. unit.symbol - Pantry item's assigned unit
- * 3. item.displayUnit.symbol - Base catalog item's default unit (fallback)
+ * 1. unit.symbol - Pantry item's assigned unit
+ * 2. item.displayUnit.symbol - Base catalog item's default unit (fallback)
  *
- * @param source - Object containing packageWeightUnit, unit, and item.displayUnit
+ * @param source - Object containing unit and item.displayUnit
  * @returns The effective unit symbol or undefined
  */
 export function getEffectiveUnitSymbol(

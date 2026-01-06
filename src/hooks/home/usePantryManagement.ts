@@ -27,6 +27,7 @@ import {
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { subscriptionService } from '#/services/subscriptions';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 // Cache updater utilities for pantry items
 const addToPantryItemsCache = createAddToParentConnectionUpdater(
@@ -58,7 +59,7 @@ export interface PantryItemInput {
 }
 
 export interface PantryItemUpdate extends Partial<PantryItemInput> {
-  currentQuantity?: number;
+  quantity?: number;
 }
 
 /**
@@ -103,11 +104,15 @@ export function usePantryManagement(pantryId: string | undefined) {
     [data?.pantry],
   );
 
+  // Preserve pantry items across network failures using usePreservedArrayData
+  // This prevents the UI from showing empty state when offline or on network errors
+  const preservedItems = usePreservedArrayData(normalizedPantry?.items);
+
   // Filter out items that are pending deletion to prevent flicker
   // during the race condition between optimistic delete and subscription auto-normalization
   const pantryItems = useMemo(
-    () => subscriptionService.filterPendingDeletes(normalizedPantry?.items || []),
-    [normalizedPantry],
+    () => subscriptionService.filterPendingDeletes(preservedItems),
+    [preservedItems],
   );
 
   // Search functionality - using reusable search utility
@@ -145,7 +150,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
     const lowStock = pantryItems.filter(item => {
       // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
-      return item.currentQuantity <= 1 || item.lowStockAlert;
+      return item.quantity <= 1 || item.lowStockAlert;
     }).length;
 
     return {
@@ -249,7 +254,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         createPantryItem: {
           ...createOptimisticEntity('PantryItem', tempId, {
             itemName: variables.input.itemName,
-            currentQuantity: variables.input.initialQuantity,
+            quantity: variables.input.quantity || variables.input.initialQuantity,
             storageState: variables.input.storageState,
             storageLocation: variables.input.storageLocation || null,
             storageNotes: variables.input.storageNotes || null,
@@ -377,7 +382,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     parentId: () => pantryId,
     transformInput: (input: PantryItemInput) => ({
       pantryId,
-      initialQuantity: input.quantity,
+      quantity: input.quantity,
       itemName: input.itemName,
       unitId: input.unitId,
       storageState: input.storageState,
@@ -492,7 +497,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     getLowStockItems: () =>
       pantryItems.filter(item => {
         // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
-        return item.currentQuantity <= 1 || item.lowStockAlert;
+        return item.quantity <= 1 || item.lowStockAlert;
       }),
     getExpiredItems: () => {
       const now = new Date();

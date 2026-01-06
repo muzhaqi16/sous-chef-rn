@@ -1485,7 +1485,6 @@ input CreatePantryItemInput {
   condition: ItemCondition
   costPerUnit: Float
   expiresAt: String
-  initialQuantity: Float
   itemBrand: String
   itemCategory: String
   itemDescription: String
@@ -1496,10 +1495,9 @@ input CreatePantryItemInput {
   itemUpc: String
   lastUsedAt: DateTime
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageLocationName: String
@@ -4208,16 +4206,6 @@ type Mutation {
   openPantryItem(id: ID!, version: Int): PantryItem!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
-  recordPantryItemWaste(
-    id: ID!
-    isComposted: Boolean
-    isRecycled: Boolean
-    wasteAmount: Float!
-    wasteReason: WasteReason!
-    wasteUnitId: String
-    wasteWeight: Float
-    wasteWeightUnitId: String
-  ): PantryItem!
   """
   Manually record pantry item usage
   """
@@ -4957,14 +4945,11 @@ type PantryItem {
   addedBy: User
   brand: Brand
   condition: ItemCondition!
-  consumedQuantity: Float!
   costPerUnit: Float
   createdAt: DateTime!
-  currentQuantity: Float!
   expirationAlert: Boolean!
   expiresAt: DateTime
   id: ID!
-  initialQuantity: Float!
   isComposted: Boolean!
   isLowStock: Boolean!
   isRecycled: Boolean!
@@ -4976,17 +4961,12 @@ type PantryItem {
   lastUsedAt: DateTime
   lowStockAlert: Boolean!
   minQuantity: Float
-  normalizedQuantity: Float
-  normalizedUnit: Unit
-  normalizedUnitId: String
-  packageWeight: Float
-  packageWeightUnit: Unit
-  packageWeightUnitId: String
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
   purchase: Purchase
   purchaseId: String
+  quantity: Float!
   restockQuantity: Float
   storageLocation: StorageLocation
   storageNotes: String
@@ -5001,7 +4981,6 @@ type PantryItem {
   updatedAt: DateTime
   usageRecords: [PantryItemUsage!]!
   version: Int
-  wasteAmount: Float!
   wasteDate: DateTime
   wasteReason: WasteReason
 }
@@ -5178,13 +5157,12 @@ type PantryItemSuggestion {
 }
 
 type PantryItemUsage {
-  conversionConfidence: Float
-  conversionRatio: Float
-  conversionSource: String
   cookingLog: CookingLog
   cookingLogId: String
   costPerUnit: Float
   id: ID!
+  isComposted: Boolean
+  isRecycled: Boolean
   mealPlanItem: MealPlanItem
   mealPlanItemId: String
   notes: String
@@ -5201,9 +5179,7 @@ type PantryItemUsage {
   usageUnitId: String
   usedAt: DateTime!
   usedBy: User
-  weightUsed: Float
-  weightUsedUnit: Unit
-  weightUsedUnitId: String
+  wasteReason: WasteReason
 }
 
 type PantryItemUsageChangedPayload {
@@ -6226,6 +6202,8 @@ enum RecipeStatus {
 
 input RecordPantryItemUsageInput {
   cookingLogId: String
+  isComposted: Boolean
+  isRecycled: Boolean
   mealPlanItemId: String
   notes: String
   pantryItemId: ID!
@@ -6233,8 +6211,7 @@ input RecordPantryItemUsageInput {
   quantityUsed: Float!
   recipeId: String
   usageUnitId: String
-  weightUsed: Float
-  weightUsedUnitId: String
+  wasteReason: WasteReason
 }
 
 """
@@ -6339,8 +6316,6 @@ input RestockPantryItemInput {
   storeId: String
   totalCost: Float
   unitId: String
-  weight: Float
-  weightUnitId: String
 }
 
 enum RestrictionSeverity {
@@ -7379,10 +7354,8 @@ input SyncPantryItemInput {
   acquisitionMethod: AcquisitionMethod
   condition: ItemCondition
   costPerUnit: Float
-  currentQuantity: Float
   expirationAlert: Boolean
   expiresAt: String
-  initialQuantity: Float
   isComposted: Boolean
   isRecycled: Boolean
   itemBrand: String
@@ -7396,10 +7369,9 @@ input SyncPantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageNotes: String
@@ -7411,7 +7383,6 @@ input SyncPantryItemInput {
   unitName: String
   unitSymbol: String
   version: Int
-  wasteAmount: Float
   wasteReason: WasteReason
 }
 
@@ -8095,7 +8066,6 @@ input UpdatePantryInput {
 
 input UpdatePantryItemInput {
   condition: ItemCondition
-  currentQuantity: Float
   expirationAlert: Boolean
   expiresAt: String
   isComposted: Boolean
@@ -8103,8 +8073,7 @@ input UpdatePantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageNotes: String
@@ -8113,7 +8082,6 @@ input UpdatePantryItemInput {
   unitId: String
   unitName: String
   version: Int
-  wasteAmount: Float
   wasteReason: WasteReason
 }
 

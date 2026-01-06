@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Image, Text } from 'react-native';
 import { getItemImageUrl } from '#utils/imageUtils';
-import { getEffectiveUnitSymbol } from '#utils/pantryItemUtils';
 import { commonStyles } from '#/styles';
 import { StorageState } from '#generated';
 
@@ -20,8 +19,7 @@ interface PantryItem {
   id: string;
   expiresAt?: string | null;
   createdAt?: string | null;
-  currentQuantity: number;
-  initialQuantity?: number | null;
+  quantity: number;
   autoReorderPoint?: number | null;
   storageState?: string | null;
   storageLocation?: {
@@ -30,11 +28,6 @@ interface PantryItem {
     type?: string;
   } | null;
   lowStockAlert?: boolean | null;
-  // Pantry item's own weight (override)
-  packageWeight?: number | null;
-  packageWeightUnit?: {
-    symbol?: string;
-  } | null;
   item?: {
     name?: string;
     netWeight?: number | null;
@@ -197,25 +190,6 @@ const formatQuantityAsFraction = (qty: number): string => {
   return formatted || '0';
 };
 
-// Helper to build stacked quantity + weight display
-// Returns { qty, weight } where either can be null
-const buildStackedDisplay = (
-  qty: number,
-  weight: number | null | undefined,
-  weightUnit: string | null | undefined,
-): { qtyDisplay: string | null; weightDisplay: string | null } => {
-  const isOne = Math.abs(qty - 1) < 0.001;
-  const hasWeight = weight != null && weight > 0 && weightUnit;
-
-  // Quantity display: hide "1" for single items
-  const qtyDisplay = isOne ? null : formatQuantityAsFraction(qty);
-
-  // Weight display: show if available
-  const weightDisplay = hasWeight ? `${weight} ${weightUnit}` : null;
-
-  return { qtyDisplay, weightDisplay };
-};
-
 interface ThemeColors {
   surface: string;
   error: string;
@@ -239,7 +213,7 @@ interface TransformedItem {
   location: PantryLocation;
   emoji: string;
   expirationStatus: ExpirationStatus;
-  currentQuantity: number;
+  quantity: number;
   unitSymbol?: string;
   storageStateDisplay: string;
 }
@@ -300,22 +274,14 @@ export function usePantryItemTransformation<T extends PantryItem>(
       // Get image URL for the item
       const imageUrl = getItemImageUrl(item.item);
 
-      // Use packageWeight if set (user override), otherwise fall back to catalog item weight
-      const effectiveNetWeight = item.packageWeight ?? item.item?.netWeight;
-      const effectiveWeightUnitSymbol = getEffectiveUnitSymbol(item);
-
       // Format storage state (Fridge/Freezer/Dry pantry) for right element
       const storageStateDisplay = formatStorageState(item.storageState);
 
       // Get user-defined storage location name (e.g., "Top shelf", "Pantry drawer")
       const storageLocationName = item.storageLocation?.name || null;
 
-      // Build stacked quantity + weight display for right element
-      const { qtyDisplay, weightDisplay } = buildStackedDisplay(
-        item.currentQuantity,
-        effectiveNetWeight,
-        effectiveWeightUnitSymbol,
-      );
+      // Format quantity for display
+      const qtyDisplay = formatQuantityAsFraction(item.quantity);
 
       // Subtitle: show storage location and expiry warnings (no category - too cluttered)
       const buildSubtitle = () => {
@@ -366,38 +332,23 @@ export function usePantryItemTransformation<T extends PantryItem>(
         subtitle: buildSubtitle(),
         rightElement: (
           <View style={{ alignItems: 'flex-end' }}>
-            {/* Line 1: Quantity (hidden for single items) */}
-            {qtyDisplay ? (
-              <Text
-                style={{
-                  fontWeight: '600',
-                  fontSize: 15,
-                  color: theme.colors.textPrimary,
-                }}
-              >
-                {qtyDisplay}
-              </Text>
-            ) : null}
-            {/* Line 2: Weight */}
-            {weightDisplay ? (
-              <Text
-                style={{
-                  fontWeight: '400',
-                  fontSize: 13,
-                  color: theme.colors.textSecondary,
-                  marginTop: qtyDisplay ? 1 : 0,
-                }}
-              >
-                {weightDisplay}
-              </Text>
-            ) : null}
-            {/* Line 3: Storage state - ONLY if no user-defined storage location */}
+            {/* Line 1: Quantity */}
+            <Text
+              style={{
+                fontWeight: '600',
+                fontSize: 15,
+                color: theme.colors.textPrimary,
+              }}
+            >
+              {qtyDisplay} {item.unit?.symbol || ''}
+            </Text>
+            {/* Line 2: Storage state - ONLY if no user-defined storage location */}
             {!storageLocationName && storageStateDisplay ? (
               <Text
                 style={{
                   color: theme.colors.textSecondary,
                   fontSize: 12,
-                  marginTop: qtyDisplay || weightDisplay ? 2 : 0,
+                  marginTop: 2,
                 }}
               >
                 {storageStateDisplay}
@@ -428,8 +379,8 @@ export function usePantryItemTransformation<T extends PantryItem>(
         location,
         emoji,
         expirationStatus,
-        currentQuantity: item.currentQuantity,
-        unitSymbol: item.unit?.symbol || effectiveWeightUnitSymbol,
+        quantity: item.quantity,
+        unitSymbol: item.unit?.symbol,
         storageStateDisplay,
       };
     });

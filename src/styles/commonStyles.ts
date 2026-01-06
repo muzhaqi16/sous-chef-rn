@@ -318,7 +318,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   listItemImageContainer: {
     width: theme.sizes.listImage.width,
     height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.md,
+    marginRight: theme.spacing.sm,
     borderRadius: theme.radii.md,
     overflow: 'hidden',
     alignItems: 'center',
