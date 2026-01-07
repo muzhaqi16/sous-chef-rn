@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -7,12 +7,13 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { FormattedItemSubtitle, BottomSheetHeader } from '#components/atoms';
 import { Icon, parseFractionalInput } from '#/utils';
 import { UsagePurpose, PantryItemFragment } from '#generated';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
@@ -24,30 +25,7 @@ interface ConsumePantryItemModalProps {
     purpose: UsagePurpose,
     notes: string,
     usageUnitId?: string,
-    weightUsed?: number,
-    weightUsedUnitId?: string,
   ) => void;
-}
-
-type TrackingMode = 'count' | 'weight' | 'both';
-
-/**
- * Determines the tracking mode based on item properties:
- * - No weight → count only
- * - Count = 1 → weight only
- * - Count > 1 AND has weight → let user choose
- *
- * Uses pantryItem.packageWeight (user's actual weight), not item.netWeight (catalog)
- */
-function determineTrackingMode(pantryItem: PantryItemFragment): TrackingMode {
-  // Only require packageWeight to be set (unit can fall back to 'g')
-  const hasWeight = pantryItem.packageWeight != null && pantryItem.packageWeight > 0;
-  const count = pantryItem.currentQuantity;
-
-  if (!hasWeight) return 'count';
-  // Use tolerance for floating point comparison
-  if (Math.abs(count - 1) < 0.001) return 'weight';
-  return 'both';
 }
 
 const PURPOSE_OPTIONS: Array<{ label: string; value: UsagePurpose }> = [
@@ -57,7 +35,6 @@ const PURPOSE_OPTIONS: Array<{ label: string; value: UsagePurpose }> = [
   { label: 'General', value: UsagePurpose.General },
   { label: 'Gift', value: UsagePurpose.Gift },
   { label: 'Transfer', value: UsagePurpose.Transfer },
-  // Note: WASTE removed - use dedicated recordPantryItemWaste mutation instead
 ];
 
 export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
@@ -73,21 +50,6 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
   const [notes, setNotes] = useState('');
-  const [trackingUnit, setTrackingUnit] = useState<'count' | 'weight'>('count');
-
-  // Determine tracking mode based on item properties
-  const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
-
-  /**
-   * Get the total weight for an item.
-   * Only uses pantryItem.packageWeight (user's actual weight), not catalog data.
-   */
-  const getEffectiveTotalWeight = useCallback(
-    (item: PantryItemFragment): number => {
-      return item.packageWeight ?? 0;
-    },
-    [],
-  );
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -97,14 +59,6 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       setQuantityInput('1');
       setPurpose(UsagePurpose.General);
       setNotes('');
-      // Set default tracking unit based on mode
-      const mode = determineTrackingMode(pantryItem);
-      if (mode === 'count') {
-        setTrackingUnit('count');
-      } else {
-        // Default to weight when available
-        setTrackingUnit('weight');
-      }
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -115,17 +69,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     const consumeAmount = parseFractionalInput(quantityInput);
     if (consumeAmount === null || isNaN(consumeAmount)) return null;
 
-    if (trackingUnit === 'weight') {
-      // Calculate remaining weight
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      const remaining = totalWeight - consumeAmount;
-      return isNaN(remaining) ? null : remaining;
-    } else {
-      // Calculate remaining count
-      const remaining = pantryItem.currentQuantity - consumeAmount;
-      return isNaN(remaining) ? null : remaining;
-    }
-  }, [pantryItem, quantityInput, trackingUnit, getEffectiveTotalWeight]);
+    const remaining = pantryItem.quantity - consumeAmount;
+    return isNaN(remaining) ? null : remaining;
+  }, [pantryItem, quantityInput]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -137,47 +83,14 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       return;
     }
 
-    // Validate based on tracking unit
-    if (trackingUnit === 'weight') {
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      if (quantityValue > totalWeight) {
-        Alert.alert(
-          'Error',
-          `Cannot consume more than available weight (${totalWeight} ${
-            pantryItem.packageWeightUnit?.symbol || 'g'
-          })`,
-        );
-        return;
-      }
-    } else {
-      if (quantityValue > pantryItem.currentQuantity) {
-        Alert.alert(
-          'Error',
-          `Cannot consume more than available quantity (${
-            pantryItem.currentQuantity
-          } ${pantryItem.unit?.symbol || ''})`,
-        );
-        return;
-      }
-    }
-
-    // Determine the unit ID to send
-    const usageUnitId =
-      trackingUnit === 'weight'
-        ? pantryItem.packageWeightUnit?.id
-        : pantryItem.unit?.id;
-
-    // Calculate weight values when tracking by count
-    let weightUsed: number | undefined;
-    let weightUsedUnitId: string | undefined;
-
-    if (trackingUnit === 'count') {
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      if (totalWeight > 0) {
-        const perItemWeight = totalWeight / pantryItem.currentQuantity;
-        weightUsed = quantityValue * perItemWeight;
-        weightUsedUnitId = pantryItem.packageWeightUnit?.id;
-      }
+    if (quantityValue > pantryItem.quantity) {
+      Alert.alert(
+        'Error',
+        `Cannot consume more than available quantity (${pantryItem.quantity} ${
+          pantryItem.unit?.symbol || ''
+        })`,
+      );
+      return;
     }
 
     onConfirm(
@@ -185,21 +98,10 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       quantityInput,
       purpose,
       notes,
-      usageUnitId,
-      weightUsed,
-      weightUsedUnitId,
+      pantryItem.unit?.id,
     );
     onClose();
-  }, [
-    pantryItem,
-    quantityInput,
-    purpose,
-    notes,
-    onConfirm,
-    onClose,
-    trackingUnit,
-    getEffectiveTotalWeight,
-  ]);
+  }, [pantryItem, quantityInput, purpose, notes, onConfirm, onClose]);
 
   const remaining = pantryItem ? calculateRemaining() : null;
 
@@ -214,6 +116,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -224,145 +128,85 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       )}
     >
       <BottomSheetScrollView
-        style={styles.scrollView}
+        style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
-          styles.contentContainer,
+          commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>Consume Item</Text>
+        <BottomSheetHeader
+          title="Consume Item"
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Confirm"
+        />
 
         {pantryItem && (
           <>
             {/* Item Info */}
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{pantryItem.itemName}</Text>
-              <View style={styles.availableRow}>
-                <Text style={styles.availableLabel}>Available: </Text>
-                {trackingMode === 'count' ? (
-                  <FormattedItemSubtitle
-                    quantity={pantryItem.currentQuantity}
-                    displayAsFraction={pantryItem.unit?.displayAsFraction}
-                    unitSymbol={pantryItem.unit?.symbol}
-                  />
-                ) : (
-                  <Text style={styles.availableValue}>
-                    {getEffectiveTotalWeight(pantryItem)}{' '}
-                    {pantryItem.packageWeightUnit?.symbol || 'g'}
-                  </Text>
-                )}
+            <View style={commonStyles.bottomSheetItemInfo}>
+              <Text style={commonStyles.bottomSheetItemName}>
+                {pantryItem.itemName}
+              </Text>
+              <View style={commonStyles.bottomSheetItemRow}>
+                <Text style={commonStyles.bottomSheetItemLabel}>
+                  Available:{' '}
+                </Text>
+                <FormattedItemSubtitle
+                  quantity={pantryItem.quantity}
+                  displayAsFraction={pantryItem.unit?.displayAsFraction}
+                  unitSymbol={pantryItem.unit?.symbol}
+                />
               </View>
             </View>
 
-            {/* Unit Toggle - only show when both count and weight are available */}
-            {trackingMode === 'both' && (
-              <View style={styles.section}>
-                <Text style={styles.label}>Track by</Text>
-                <View style={styles.unitToggleContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.unitToggleOption,
-                      trackingUnit === 'count' &&
-                        styles.unitToggleOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setTrackingUnit('count');
-                      setQuantityInput('1');
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.unitToggleText,
-                        trackingUnit === 'count' &&
-                          styles.unitToggleTextSelected,
-                      ]}
-                    >
-                      Count ({pantryItem.unit?.symbol || 'item'})
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.unitToggleOption,
-                      trackingUnit === 'weight' &&
-                        styles.unitToggleOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setTrackingUnit('weight');
-                      setQuantityInput('1');
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.unitToggleText,
-                        trackingUnit === 'weight' &&
-                          styles.unitToggleTextSelected,
-                      ]}
-                    >
-                      Weight ({pantryItem.packageWeightUnit?.symbol || 'g'})
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
             {/* Quantity Input */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={
-                  trackingUnit === 'weight'
-                    ? `Weight to Consume (${
-                        pantryItem.packageWeightUnit?.symbol || 'g'
-                      }) *`
-                    : `Quantity to Consume (${
-                        pantryItem.unit?.symbol || 'item'
-                      }) *`
-                }
+                label={`Quantity to Consume (${
+                  pantryItem.unit?.symbol || 'item'
+                }) *`}
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType={
-                  trackingUnit === 'weight'
-                    ? Platform.OS === 'ios'
-                      ? 'numbers-and-punctuation'
-                      : 'decimal-pad'
-                    : 'numeric'
-                }
+                keyboardType="numeric"
               />
               {remaining !== null && (
                 <Text
                   style={[
-                    styles.remainingText,
-                    remaining < 0 && styles.remainingTextError,
+                    commonStyles.bottomSheetHelperText,
+                    remaining < 0 && commonStyles.bottomSheetHelperTextError,
                   ]}
                 >
                   Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
-                  {trackingUnit === 'weight'
-                    ? pantryItem.packageWeightUnit?.symbol || 'g'
-                    : pantryItem.unit?.symbol || ''}
+                  {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
 
             {/* Purpose Selection */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Purpose *</Text>
-              <View style={styles.purposeOptions}>
+            <View style={commonStyles.bottomSheetSection}>
+              <Text style={commonStyles.bottomSheetSectionLabel}>
+                Purpose *
+              </Text>
+              <View style={commonStyles.bottomSheetOptionContainer}>
                 {PURPOSE_OPTIONS.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
-                      styles.purposeOption,
-                      purpose === option.value && styles.purposeOptionSelected,
+                      commonStyles.bottomSheetOption,
+                      purpose === option.value &&
+                        commonStyles.bottomSheetOptionSelected,
                     ]}
                     onPress={() => setPurpose(option.value)}
                   >
                     <Text
                       style={[
-                        styles.purposeOptionText,
+                        commonStyles.bottomSheetOptionText,
                         purpose === option.value &&
-                          styles.purposeOptionTextSelected,
+                          commonStyles.bottomSheetOptionTextSelected,
                       ]}
                     >
                       {option.label}
@@ -381,7 +225,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
             </View>
 
             {/* Notes (Optional) */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FormInput
                 label="Notes (Optional)"
                 value={notes}
@@ -391,167 +235,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 numberOfLines={3}
               />
             </View>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-              >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  itemInfo: {
-    marginBottom: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  itemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  availableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availableLabel: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-  availableValue: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  remainingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  remainingTextError: {
-    color: theme.colors.error,
-  },
-  unitToggleContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  unitToggleOption: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-  },
-  unitToggleOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  unitToggleText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  unitToggleTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  purposeOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  purposeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  purposeOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  purposeOptionText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  purposeOptionTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
-  },
-}));

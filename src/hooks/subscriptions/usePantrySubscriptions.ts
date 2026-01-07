@@ -103,15 +103,16 @@ export function usePantrySubscriptions(userId?: string) {
         mutation === 'UPDATED' ||
         mutation === 'ITEM_UPDATED'
       ) {
-        // Check if item exists in cache
+        // Write updated item to cache
+        // Note: When using onData callback, Apollo doesn't auto-normalize
+        // so we must explicitly write the fragment
         const cacheId = client.cache.identify({
           __typename: 'PantryItem',
           id: item.id,
         });
 
         if (cacheId) {
-          // Item exists in cache - update it with writeFragment
-          // Use PantryItemDisplay fragment to match subscription payload
+          // Item exists - update it
           client.cache.writeFragment({
             id: cacheId,
             fragment: PantryItemDisplayFragmentDoc,
@@ -119,7 +120,7 @@ export function usePantrySubscriptions(userId?: string) {
             data: item,
           });
         } else {
-          // Item not in cache - add to connection (could be from another user's create)
+          // Item not in cache - add to connection (another user created it)
           addToPantryItemsConnection(client.cache, selectedPantryId, item);
         }
       }

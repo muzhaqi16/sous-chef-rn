@@ -12,6 +12,7 @@ import { commonStyles } from '#/styles';
 import { HapticService } from '#services/haptic';
 import { Icon } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
+import { useSortableListActions } from './SortableListActionsContext';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -28,41 +29,38 @@ interface SimpleDraggableItemProps {
     leftElement?: React.ReactNode;
     leftElementConfig?: ImageElementConfig; // Config-based element creation
   };
-  onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
-  onMoveToPantry?: (id: string) => void;
-  onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
   drag?: () => void;
   isActive?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
-  // Permission flags for conditional rendering
-  canRemoveItems?: boolean;
-  canEditItems?: boolean;
-  canMarkPurchased?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onTogglePurchase,
-  onMoveToPantry,
-  onQuantityPress,
   drag,
   isActive,
-  onSwipeableWillOpen,
-  onSwipeableClose,
-  canRemoveItems = true,
-  canEditItems = true,
-  canMarkPurchased = true,
 }) => {
   const { theme } = useUnistyles();
 
-  // ANIMATION: Exit animation using reusable hook
+  // Get actions and permissions from context (stable references)
+  const { actions, permissionsRef } = useSortableListActions();
+  const {
+    onItemPress,
+    onItemEdit,
+    onItemDelete,
+    onTogglePurchase,
+    onMoveToPantry,
+    onQuantityPress,
+    onSwipeableWillOpen,
+    onSwipeableClose,
+  } = actions;
+  // Read permissions from ref to always get latest values
+  const {
+    canRemoveItems = true,
+    canEditItems = true,
+    canMarkPurchased = true,
+  } = permissionsRef.current;
+
+  // ANIMATION: Manual exit animation triggered on checkbox press
+  // Animation plays first, then mutation fires in the callback
   const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
 
   // Handle long press for drag activation with haptic feedback
@@ -161,9 +159,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [item.leftElement, item.leftElementConfig]);
 
   // Create checkbox element for marking items as purchased
-  // Uses onToggleComplete so animation plays BEFORE mutation moves item
-  // When marking as purchased: slide right + fade out + height collapse
-  // When unmarking: slide left + fade out + height collapse
+  // Triggers exit animation immediately, mutation fires after animation completes
+  // This creates a clean visual sequence: slide out → then list reflows
   // Only shown if user has permission to mark items as purchased
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
@@ -171,10 +168,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     return (
       <AnimatedCheckbox
         checked={!!item.isPurchased}
-        onToggleComplete={() => {
+        onPress={() => {
+          // Immediate tactile feedback
+          HapticService.light();
+          // Trigger exit animation, mutation fires in callback after animation completes
           // Direction: 1 = right (marking purchased), -1 = left (unmarking)
           const direction = item.isPurchased ? -1 : 1;
-          // triggerExit handles animation + calls onComplete via runOnJS
           triggerExit(direction, () => {
             onTogglePurchase(item.id);
           });
@@ -186,19 +185,21 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        isActive && styles.activeContainer,
-        exitAnimatedStyle,
-      ]}
+      style={[styles.container, isActive && styles.activeContainer, exitAnimatedStyle]}
     >
       <SwipeableItem
-        onPress={() => onItemPress(item.id)}
+        onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
-        onEdit={canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined}
-        onDelete={canRemoveItems && onItemDelete ? () => onItemDelete(item.id) : undefined}
+        onEdit={
+          canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
+        }
+        onDelete={
+          canRemoveItems && onItemDelete
+            ? () => onItemDelete(item.id)
+            : undefined
+        }
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
@@ -224,7 +225,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     ...commonStyles.shadow,
     opacity: 1,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing.sm,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },
@@ -247,46 +248,38 @@ const styles = StyleSheet.create(theme => ({
   rightElementContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
 // Only re-render when item data or drag state changes
-// Callbacks are stable (from context/useCallback) so no need to compare them
+// Actions & permissions come from context (stable) so no need to compare them
 const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Fast path: same item reference + same drag state + same permissions = definitely equal
-  if (
-    prev.item === next.item &&
-    prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress &&
-    prev.canRemoveItems === next.canRemoveItems &&
-    prev.canEditItems === next.canEditItems &&
-    prev.canMarkPurchased === next.canMarkPurchased
-  ) {
+  // Fast path: same item reference + same drag state = definitely equal
+  if (prev.item === next.item && prev.isActive === next.isActive) {
     return true;
   }
 
   // Compare item fields that affect rendering
+  const prevConfig = prev.item.rightElementConfig;
+  const nextConfig = next.item.rightElementConfig;
+
   return (
     prev.item.id === next.item.id &&
     prev.item.title === next.item.title &&
     prev.item.subtitle === next.item.subtitle &&
     prev.item.isPurchased === next.item.isPurchased &&
-    prev.item.rightElementConfig === next.item.rightElementConfig &&
     prev.item.leftElementConfig === next.item.leftElementConfig &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress &&
-    prev.canRemoveItems === next.canRemoveItems &&
-    prev.canEditItems === next.canEditItems &&
-    prev.canMarkPurchased === next.canMarkPurchased
+    // Deep compare quantity config since it affects display
+    prevConfig?.quantity === nextConfig?.quantity &&
+    prevConfig?.quantityInput === nextConfig?.quantityInput &&
+    prevConfig?.unit === nextConfig?.unit &&
+    prevConfig?.disabled === nextConfig?.disabled
   );
 };
 

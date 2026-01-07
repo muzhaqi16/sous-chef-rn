@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { SettingsSection } from '#components';
 import { ProfileScreenWrapper } from '#components/templates';
-import { useProfileData } from '#hooks';
+import { useProfileData, useAuth } from '#hooks';
 import { PERSONAL_INFO_CONFIG } from '#config';
 import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
 import { useApolloClient } from '@apollo/client/react';
@@ -10,6 +10,7 @@ import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 
 export const PersonalInformationScreen: React.FC = () => {
   const { profile } = useProfileData();
+  const { user } = useAuth();
   const client = useApolloClient();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
 
@@ -60,6 +61,10 @@ export const PersonalInformationScreen: React.FC = () => {
       };
 
       switch (config.key) {
+        case 'email':
+          baseItem.value = user?.email || '';
+          break;
+
         case 'firstName':
           baseItem.value = profile?.firstName || '';
           baseItem.onSave = (value: string) => updateProfile({ firstName: value });
@@ -118,7 +123,7 @@ export const PersonalInformationScreen: React.FC = () => {
 
       return baseItem;
     },
-    [profile, updateProfile],
+    [profile, user, updateProfile],
   );
 
   const sections = useMemo(() => {

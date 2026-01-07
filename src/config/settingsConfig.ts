@@ -4,6 +4,11 @@ export const PERSONAL_INFO_CONFIG = [
     title: 'Personal Information',
     items: [
       {
+        key: 'email',
+        label: 'Email',
+        type: 'info',
+      },
+      {
         key: 'firstName',
         label: 'First Name',
         type: 'text',

@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useCreatePantryItemUsageMutation,
-  useRecordPantryItemWasteMutation,
   useRestockPantryItemMutation,
   UsagePurpose,
   WasteReason,
@@ -56,26 +55,14 @@ export function usePantryItemActions({
   const [selectedItemForRestock, setSelectedItemForRestock] =
     useState<PantryItemFragment | null>(null);
 
-  // Consume item mutation
+  // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
     errorPolicy: 'all',
     onError: error => {
       console.error('Failed to create pantry item usage:', error);
       Alert.alert(
         'Error',
-        error.message || 'Failed to record item consumption. Please try again.',
-      );
-    },
-  });
-
-  // Waste item mutation
-  const [recordPantryItemWaste] = useRecordPantryItemWasteMutation({
-    errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to record pantry item waste:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to record waste. Please try again.',
+        error.message || 'Failed to record item usage. Please try again.',
       );
     },
   });
@@ -100,8 +87,6 @@ export function usePantryItemActions({
       purpose: UsagePurpose,
       notes: string,
       usageUnitId?: string,
-      weightUsed?: number,
-      weightUsedUnitId?: string,
     ) => {
       if (!selectedItemForConsume) return;
 
@@ -114,8 +99,6 @@ export function usePantryItemActions({
               purpose,
               notes: notes || undefined,
               usageUnitId,
-              weightUsed,
-              weightUsedUnitId,
             },
           },
         });
@@ -139,31 +122,31 @@ export function usePantryItemActions({
     setSelectedItemForConsume(null);
   }, []);
 
-  // Handler to confirm waste recording
+  // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
   const handleConfirmWaste = useCallback(
     async (
       wasteAmount: number,
       wasteReason: WasteReason,
       isComposted: boolean,
       isRecycled: boolean,
-      _notes: string,
+      notes: string,
       wasteUnitId?: string,
-      wasteWeight?: number,
-      wasteWeightUnitId?: string,
     ) => {
       if (!selectedItemForWaste) return;
 
       try {
-        await recordPantryItemWaste({
+        await createPantryItemUsage({
           variables: {
-            id: selectedItemForWaste.id,
-            wasteAmount,
-            wasteReason,
-            wasteUnitId,
-            wasteWeight,
-            wasteWeightUnitId,
-            isComposted,
-            isRecycled,
+            input: {
+              pantryItemId: selectedItemForWaste.id,
+              quantityUsed: wasteAmount,
+              purpose: UsagePurpose.Waste,
+              notes: notes || undefined,
+              usageUnitId: wasteUnitId,
+              wasteReason,
+              isComposted,
+              isRecycled,
+            },
           },
         });
 
@@ -177,7 +160,7 @@ export function usePantryItemActions({
         console.error('Error recording pantry item waste:', error);
       }
     },
-    [selectedItemForWaste, recordPantryItemWaste, refetch],
+    [selectedItemForWaste, createPantryItemUsage, refetch],
   );
 
   // Handler to close waste modal
@@ -193,8 +176,6 @@ export function usePantryItemActions({
       _quantityInput: string,
       notes: string,
       unitId?: string,
-      weight?: number,
-      weightUnitId?: string,
       costPerUnit?: number,
       totalCost?: number,
     ) => {
@@ -207,8 +188,6 @@ export function usePantryItemActions({
             input: {
               quantity,
               unitId,
-              weight,
-              weightUnitId,
               notes: notes || undefined,
               costPerUnit,
               totalCost,

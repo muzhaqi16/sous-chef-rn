@@ -899,6 +899,20 @@ type Category {
   visibility: Visibility!
 }
 
+type CategoryConnection {
+  edges: [CategoryEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Category connection for pagination (Relay spec)
+"""
+type CategoryEdge {
+  cursor: String!
+  node: Category!
+}
+
 input CategoryInput {
   level: Int
   name: String!
@@ -1485,7 +1499,6 @@ input CreatePantryItemInput {
   condition: ItemCondition
   costPerUnit: Float
   expiresAt: String
-  initialQuantity: Float
   itemBrand: String
   itemCategory: String
   itemDescription: String
@@ -1496,10 +1509,9 @@ input CreatePantryItemInput {
   itemUpc: String
   lastUsedAt: DateTime
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageLocationName: String
@@ -2897,6 +2909,14 @@ input ItemFilters {
   createdAfter: DateTime
   createdBefore: DateTime
   """
+  Filter by creator user ID
+  """
+  createdById: ID
+  """
+  Items that have NONE of these tags
+  """
+  excludeTags: [String!]
+  """
   External ID from a provider (e.g., Kroger product ID)
   """
   externalId: String
@@ -2907,6 +2927,10 @@ input ItemFilters {
   hasAllergens: Boolean
   hasNutrition: Boolean
   hasOffers: Boolean
+  """
+  Items that have ALL of these tags
+  """
+  hasTags: [String!]
   inventoryStatus: String
   isDairyFree: Boolean
   isGlutenFree: Boolean
@@ -2914,8 +2938,16 @@ input ItemFilters {
   isPopular: Boolean
   isRecent: Boolean
   isTrending: Boolean
+  """
+  Filter user-created items
+  """
+  isUserCreated: Boolean
   isVegan: Boolean
   limit: Int
+  """
+  Filter items that need admin approval
+  """
+  needsApproval: Boolean
   priceRange: PriceRangeInput
   showInOnboarding: Boolean
   """
@@ -3031,6 +3063,8 @@ type ItemUnit {
   createdAt: DateTime!
   deletedAt: DateTime
   displayFormat: DisplayFormat!
+  displayNamePlural: String
+  displayNameSingular: String
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
@@ -4208,16 +4242,6 @@ type Mutation {
   openPantryItem(id: ID!, version: Int): PantryItem!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
-  recordPantryItemWaste(
-    id: ID!
-    isComposted: Boolean
-    isRecycled: Boolean
-    wasteAmount: Float!
-    wasteReason: WasteReason!
-    wasteUnitId: String
-    wasteWeight: Float
-    wasteWeightUnitId: String
-  ): PantryItem!
   """
   Manually record pantry item usage
   """
@@ -4280,7 +4304,7 @@ type Mutation {
   revokeHomeInvite(id: ID!): Boolean!
   sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): Notification!
-  setDefaultHome(homeId: ID!): UserSettings!
+  setDefaultHome(homeId: ID!): SetDefaultHomePayload!
   setDefaultPantry(id: ID!): Pantry!
   setDefaultShoppingList(id: ID!): ShoppingList!
   """
@@ -4957,14 +4981,11 @@ type PantryItem {
   addedBy: User
   brand: Brand
   condition: ItemCondition!
-  consumedQuantity: Float!
   costPerUnit: Float
   createdAt: DateTime!
-  currentQuantity: Float!
   expirationAlert: Boolean!
   expiresAt: DateTime
   id: ID!
-  initialQuantity: Float!
   isComposted: Boolean!
   isLowStock: Boolean!
   isRecycled: Boolean!
@@ -4976,18 +4997,14 @@ type PantryItem {
   lastUsedAt: DateTime
   lowStockAlert: Boolean!
   minQuantity: Float
-  normalizedQuantity: Float
-  normalizedUnit: Unit
-  normalizedUnitId: String
-  packageWeight: Float
-  packageWeightUnit: Unit
-  packageWeightUnitId: String
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
   purchase: Purchase
   purchaseId: String
+  quantity: Float!
   restockQuantity: Float
+  sourceShoppingListItemId: String
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -5001,7 +5018,6 @@ type PantryItem {
   updatedAt: DateTime
   usageRecords: [PantryItemUsage!]!
   version: Int
-  wasteAmount: Float!
   wasteDate: DateTime
   wasteReason: WasteReason
 }
@@ -5178,13 +5194,12 @@ type PantryItemSuggestion {
 }
 
 type PantryItemUsage {
-  conversionConfidence: Float
-  conversionRatio: Float
-  conversionSource: String
   cookingLog: CookingLog
   cookingLogId: String
   costPerUnit: Float
   id: ID!
+  isComposted: Boolean
+  isRecycled: Boolean
   mealPlanItem: MealPlanItem
   mealPlanItemId: String
   notes: String
@@ -5201,9 +5216,7 @@ type PantryItemUsage {
   usageUnitId: String
   usedAt: DateTime!
   usedBy: User
-  weightUsed: Float
-  weightUsedUnit: Unit
-  weightUsedUnitId: String
+  wasteReason: WasteReason
 }
 
 type PantryItemUsageChangedPayload {
@@ -5596,7 +5609,14 @@ type Query {
     toUnitId: ID!
   ): ConversionAvailability!
   canDeleteAccount: CanDeleteAccountResult!
-  categories(parentId: String, type: CategoryType): [Category!]!
+  categories(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    parentId: String
+    type: CategoryType
+  ): CategoryConnection!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
@@ -5836,6 +5856,15 @@ type Query {
   Handles "1/4", "1 1/4", "0.25" formats
   """
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
+  """
+  Get items pending admin approval.
+  Returns items where needsApproval=true, ordered by creation date.
+  """
+  pendingApprovalItems(
+    after: String
+    first: Int
+    sort: ItemSortInput
+  ): ItemConnection!
   popularBrands(limit: Int = 10): [Brand!]!
   popularCategories(limit: Int, type: CategoryType): [Category!]!
   popularStores(limit: Int): [Store!]!
@@ -5967,6 +5996,14 @@ type Query {
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   unreadNotificationCount: Int!
   user(id: ID!): User
+  """
+  Get items created by users (for admin review).
+  """
+  userCreatedItems(
+    after: String
+    first: Int
+    sort: ItemSortInput
+  ): ItemConnection!
   userModeration(userId: ID!): UserModeration
   userProfile: UserProfile
   userSettings(userId: String): UserSettings
@@ -6226,6 +6263,8 @@ enum RecipeStatus {
 
 input RecordPantryItemUsageInput {
   cookingLogId: String
+  isComposted: Boolean
+  isRecycled: Boolean
   mealPlanItemId: String
   notes: String
   pantryItemId: ID!
@@ -6233,8 +6272,7 @@ input RecordPantryItemUsageInput {
   quantityUsed: Float!
   recipeId: String
   usageUnitId: String
-  weightUsed: Float
-  weightUsedUnitId: String
+  wasteReason: WasteReason
 }
 
 """
@@ -6339,8 +6377,6 @@ input RestockPantryItemInput {
   storeId: String
   totalCost: Float
   unitId: String
-  weight: Float
-  weightUnitId: String
 }
 
 enum RestrictionSeverity {
@@ -6423,6 +6459,11 @@ input SearchItemsInput {
   pagination: PaginationInput
   query: String!
   sort: ItemSortInput
+}
+
+type SetDefaultHomePayload {
+  defaultPantry: Pantry
+  settings: UserSettings!
 }
 
 input SetReminderInput {
@@ -7379,10 +7420,8 @@ input SyncPantryItemInput {
   acquisitionMethod: AcquisitionMethod
   condition: ItemCondition
   costPerUnit: Float
-  currentQuantity: Float
   expirationAlert: Boolean
   expiresAt: String
-  initialQuantity: Float
   isComposted: Boolean
   isRecycled: Boolean
   itemBrand: String
@@ -7396,10 +7435,9 @@ input SyncPantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageNotes: String
@@ -7411,7 +7449,6 @@ input SyncPantryItemInput {
   unitName: String
   unitSymbol: String
   version: Int
-  wasteAmount: Float
   wasteReason: WasteReason
 }
 
@@ -8095,7 +8132,6 @@ input UpdatePantryInput {
 
 input UpdatePantryItemInput {
   condition: ItemCondition
-  currentQuantity: Float
   expirationAlert: Boolean
   expiresAt: String
   isComposted: Boolean
@@ -8103,8 +8139,7 @@ input UpdatePantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
-  packageWeight: Float
-  packageWeightUnitId: String
+  quantity: Float
   restockQuantity: Float
   storageLocationId: String
   storageNotes: String
@@ -8113,7 +8148,6 @@ input UpdatePantryItemInput {
   unitId: String
   unitName: String
   version: Int
-  wasteAmount: Float
   wasteReason: WasteReason
 }
 

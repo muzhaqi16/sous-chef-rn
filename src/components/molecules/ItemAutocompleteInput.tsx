@@ -16,6 +16,8 @@ interface ItemAutocompleteInputProps {
   onSelectItem?: (item: ItemSuggestion) => void;
   autoFocus?: boolean;
   testID?: string;
+  /** Show brand name when item has exactly one brand. Default: false */
+  showBrand?: boolean;
 }
 
 export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
@@ -27,6 +29,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   error,
   onSelectItem,
   testID,
+  showBrand = false,
 }) => {
   const [fetchItems, { data, loading }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
@@ -80,13 +83,11 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
               }}
             />
           ) : (
-            <View style={styles.itemImagePlaceholder}>
-              <Text style={styles.itemImagePlaceholderText}>📦</Text>
-            </View>
+            <View style={styles.itemImagePlaceholder} />
           )}
           <View style={styles.itemDetails}>
             <Text style={styles.itemName}>{item.name}</Text>
-            {item.brands && item.brands.length === 1 && (
+            {showBrand && item.brands && item.brands.length === 1 && (
               <Text style={styles.itemBrand}>{item.brands[0].name}</Text>
             )}
           </View>
@@ -143,14 +144,7 @@ const styles = StyleSheet.create(theme => ({
   itemImagePlaceholder: {
     width: 44,
     height: 44,
-    borderRadius: theme.radii.sm,
-    backgroundColor: theme.colors.surfaceVariant,
     marginRight: theme.spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemImagePlaceholderText: {
-    fontSize: theme.typography.fontSize.lg,
   },
   itemDetails: {
     flex: 1,

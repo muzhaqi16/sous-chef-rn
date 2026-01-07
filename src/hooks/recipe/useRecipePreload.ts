@@ -13,7 +13,9 @@ import {
   useUpsertExternalRecipeMutation,
   ExternalSource,
   MySavedRecipesDocument,
+  SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
+  type SavedRecipeFoldersQuery,
 } from '#generated';
 import { RecipeInformation } from '#/services/recipeApi/types';
 import { toastService } from '#/services/toastService';
@@ -95,6 +97,28 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           };
         },
       );
+
+      // Update SavedRecipeFolders cache if a folder was specified
+      const folder = data.favoriteRecipe.folder;
+      if (folder) {
+        cache.updateQuery<SavedRecipeFoldersQuery>(
+          { query: SavedRecipeFoldersDocument },
+          existing => {
+            if (!existing) return existing;
+
+            // Check if folder already exists
+            if (existing.savedRecipeFolders.includes(folder)) {
+              return existing;
+            }
+
+            // Add the new folder to the list
+            return {
+              ...existing,
+              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+            };
+          },
+        );
+      }
     },
   });
   const [upsertRecipe] = useUpsertExternalRecipeMutation();

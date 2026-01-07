@@ -14,6 +14,14 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+
+// Cache updater for adding items to Pantry.itemsConnection
+const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
 
 // ============================================
 // Types
@@ -43,8 +51,6 @@ interface FormDataInput {
   brand?: string;
   quantityInput?: string;
   unit: string;
-  itemWeight?: number;
-  weightUnit?: string;
   minQuantity?: string;
   restockQuantity?: string;
   storageState: StorageState;
@@ -62,7 +68,6 @@ interface CreatePantryItemParams<T extends FormDataInput = FormDataInput> {
   unitId: string | null;
   selectedLocationId: string | null;
   selectedCategoryId: string | null;
-  selectedWeightUnitId: string | null;
 }
 
 interface UpdatePantryItemParams<T extends FormDataInput = FormDataInput> {
@@ -73,7 +78,6 @@ interface UpdatePantryItemParams<T extends FormDataInput = FormDataInput> {
   quantityValue: number;
   unitId: string | null;
   trackingUnit: UnitSelection;
-  weightUnit: UnitSelection;
   selectedLocationId: string | null;
 }
 
@@ -120,42 +124,12 @@ function buildOptimisticUnit(
 }
 
 /**
- * Build optimistic Unit object for packageWeightUnit (has fewer fields).
- */
-function buildOptimisticWeightUnit(
-  newUnit: UnitSelection,
-  currentUnit?: {
-    id?: string;
-    name?: string;
-    symbol?: string;
-    type?: string;
-  } | null,
-): {
-  __typename: 'Unit';
-  id: string;
-  name: string;
-  symbol: string;
-  type: string | null;
-} | null {
-  if (!newUnit.id) return null;
-
-  return {
-    __typename: 'Unit',
-    id: newUnit.id,
-    symbol: newUnit.symbol || currentUnit?.symbol || '',
-    name: newUnit.name || currentUnit?.name || newUnit.symbol || '',
-    type: newUnit.type || currentUnit?.type || null,
-  };
-}
-
-/**
  * Build dirty input for update mutation (only changed fields)
  */
 function buildDirtyUpdateInput(
   data: FormDataInput,
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
-  weightUnitId: string | null,
 ): Record<string, any> {
   const input: Record<string, any> = {};
 
@@ -177,14 +151,6 @@ function buildDirtyUpdateInput(
 
   if (dirtyFields.tags) {
     input.tags = data.tags || [];
-  }
-
-  // Weight changes - MUST send both packageWeight and packageWeightUnitId together
-  if (dirtyFields.itemWeight || dirtyFields.weightUnit) {
-    input.packageWeight = data.itemWeight ?? null;
-    // Always send packageWeightUnitId when weight fields are dirty
-    // This allows clearing both weight and unit by sending null
-    input.packageWeightUnitId = weightUnitId ?? null;
   }
 
   if (dirtyFields.minQuantity) {
@@ -244,52 +210,14 @@ export function usePantryItemFormMutations({
     fetchPolicy: 'cache-first',
   });
 
-  // Create mutation with cache update
+  // Create mutation with cache update using reusable utility
   const [createMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data: mutationData }) => {
       if (!mutationData?.createPantryItem || !pantryId) return;
 
       try {
-        const pantryCacheId = cache.identify({
-          __typename: 'Pantry',
-          id: pantryId,
-        });
-
-        if (!pantryCacheId) return;
-
-        cache.modify({
-          id: pantryCacheId,
-          fields: {
-            itemsConnection(
-              existingConnection = {},
-              { readField, toReference },
-            ) {
-              const newItemRef = toReference(mutationData.createPantryItem);
-              const existingEdges = existingConnection?.edges || [];
-
-              const exists = existingEdges.some(
-                (edge: any) =>
-                  readField('id', edge?.node) ===
-                  mutationData.createPantryItem.id,
-              );
-
-              if (exists) return existingConnection;
-
-              const newEdge = {
-                __typename: 'PantryItemEdge',
-                node: newItemRef,
-                cursor: '',
-              };
-
-              return {
-                ...existingConnection,
-                edges: [newEdge, ...existingEdges],
-                totalCount: (existingConnection?.totalCount || 0) + 1,
-              };
-            },
-          },
-        });
+        addToPantryItemsCache(cache, pantryId, mutationData.createPantryItem);
       } catch (error) {
         console.warn('Cache update failed:', error);
       }
@@ -368,7 +296,6 @@ export function usePantryItemFormMutations({
       unitId,
       selectedLocationId,
       selectedCategoryId,
-      selectedWeightUnitId,
     }: CreatePantryItemParams): Promise<boolean> => {
       if (!input.itemName?.trim()) {
         Alert.alert('Error', 'Please enter an item name');
@@ -384,7 +311,7 @@ export function usePantryItemFormMutations({
       const baseInput = {
         pantryId: targetPantryId,
         unitId: unitId || '',
-        initialQuantity: quantityValue,
+        quantity: quantityValue,
         storageState: input.storageState,
         expiresAt: input.expirationDate?.toISOString() || null,
         storageNotes: input.notes.trim() || null,
@@ -401,18 +328,9 @@ export function usePantryItemFormMutations({
 
       if (input.selectedItemId) {
         // Linking to existing catalog item
-        const weightInput =
-          input.itemWeight && selectedWeightUnitId
-            ? {
-                packageWeight: input.itemWeight,
-                packageWeightUnitId: selectedWeightUnitId,
-              }
-            : {};
-
         mutationInput = {
           ...baseInput,
           itemId: input.selectedItemId,
-          ...weightInput,
         };
       } else {
         // Creating new item
@@ -422,21 +340,12 @@ export function usePantryItemFormMutations({
           ? { itemCategory: input.category.trim() }
           : {};
 
-        const weightInput =
-          input.itemWeight && selectedWeightUnitId
-            ? {
-                itemNetWeight: input.itemWeight,
-                itemDisplayUnitId: selectedWeightUnitId,
-              }
-            : {};
-
         mutationInput = {
           ...baseInput,
           itemName: input.itemName.trim(),
           itemDescription: input.notes.trim() || null,
           itemBrand: input.brand?.trim() || null,
           ...categoryInput,
-          ...weightInput,
         };
       }
 
@@ -466,7 +375,6 @@ export function usePantryItemFormMutations({
       quantityValue,
       unitId,
       trackingUnit,
-      weightUnit,
       selectedLocationId,
     }: UpdatePantryItemParams): Promise<boolean> => {
       const quantityOrUnitChanged =
@@ -489,7 +397,7 @@ export function usePantryItemFormMutations({
           optimisticResponse: {
             __typename: 'Mutation',
             updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
-              currentQuantity: newQuantity,
+              quantity: newQuantity,
               unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
               unitId: unitId || currentItem.unitId,
               unitName: input.unit || currentItem.unitName,
@@ -506,21 +414,10 @@ export function usePantryItemFormMutations({
         input,
         dirtyFields,
         selectedLocationId,
-        weightUnit.id,
       );
 
       // Update other fields if any changed
       if (Object.keys(updateInput).length > 0) {
-        const optimisticInput: Record<string, any> = { ...updateInput };
-
-        // Include full packageWeightUnit object for cache
-        if (updateInput.packageWeightUnitId) {
-          optimisticInput.packageWeightUnit = buildOptimisticWeightUnit(
-            weightUnit,
-            currentItem.packageWeightUnit,
-          );
-        }
-
         // Fire mutation asynchronously - don't await to allow immediate navigation
         updateMutation({
           variables: { id: itemId, input: updateInput },
@@ -528,7 +425,7 @@ export function usePantryItemFormMutations({
             __typename: 'Mutation',
             updatePantryItem: enhanceWithVersion(
               currentItem as any,
-              optimisticInput,
+              updateInput,
             ),
           },
         }).catch(error => {

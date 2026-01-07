@@ -15,7 +15,9 @@ import {
   useUpdateFavoriteRecipeMutation,
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
+  SavedRecipeFoldersDocument,
   type MySavedRecipesQuery,
+  type SavedRecipeFoldersQuery,
   type BatchAddShoppingListItemInput,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
@@ -248,6 +250,43 @@ export function useRecipeDetail() {
   });
 
   const [updateFavoriteRecipeMutation] = useUpdateFavoriteRecipeMutation({
+    update: (cache, { data }) => {
+      if (!data?.updateFavoriteRecipe) return;
+
+      // Update SavedRecipeFolders cache if a folder was set
+      const folder = data.updateFavoriteRecipe.folder;
+      if (folder) {
+        cache.updateQuery<SavedRecipeFoldersQuery>(
+          { query: SavedRecipeFoldersDocument },
+          existing => {
+            if (!existing) return existing;
+            if (existing.savedRecipeFolders.includes(folder)) {
+              return existing;
+            }
+            return {
+              ...existing,
+              savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+            };
+          },
+        );
+      }
+
+      // Update the saved recipe in MySavedRecipes cache
+      cache.updateQuery<MySavedRecipesQuery>(
+        { query: MySavedRecipesDocument },
+        existing => {
+          if (!existing) return existing;
+          return {
+            ...existing,
+            mySavedRecipes: existing.mySavedRecipes.map(sr =>
+              sr.id === data.updateFavoriteRecipe.id
+                ? { ...sr, ...data.updateFavoriteRecipe }
+                : sr,
+            ),
+          };
+        },
+      );
+    },
     onError: err => {
       console.error('Update favorite recipe error:', err);
       toastService.error(err.message || 'Failed to update recipe');

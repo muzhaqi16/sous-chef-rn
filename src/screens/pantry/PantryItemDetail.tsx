@@ -224,7 +224,7 @@ export const PantryItemDetail: React.FC<{
           input: {
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
-            quantity: data?.pantryItem?.currentQuantity || 1,
+            quantity: data?.pantryItem?.quantity || 1,
             unitId: data?.pantryItem?.unit.id ?? '',
             itemName: data?.pantryItem?.item?.name || '',
           },
@@ -273,7 +273,7 @@ export const PantryItemDetail: React.FC<{
 
   if (!item) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <Header variant="detail" onBack={goBack} borderless />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -283,7 +283,7 @@ export const PantryItemDetail: React.FC<{
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Header */}
       <Header
         variant="detail"
@@ -382,11 +382,8 @@ export const PantryItemDetail: React.FC<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
-              {item.packageWeight != null && item.packageWeight > 0
-                ? `${item.packageWeight} ${
-                    item.packageWeightUnit?.symbol || 'g'
-                  }`
-                : `${item.currentQuantity} ${item.unit?.symbol ?? item.unitName}`}
+              {/* unitName from server includes item-specific display name */}
+              {item.quantity} {item.unitName ?? item.unit?.symbol}
             </Text>
           </View>
         </View>
@@ -397,14 +394,12 @@ export const PantryItemDetail: React.FC<{
             <Text style={styles.nutritionTitle}>Nutrition</Text>
             <NutritionSummary
               nutritions={itemNutritions}
-              actualServingGrams={item.packageWeight ?? undefined}
               showHighlights
               onPress={() =>
                 navigateTo.nutritionScreen({
                   itemId: item.id,
                   itemName: item.item?.name || item.itemName,
                   nutritions: item.item?.nutritions,
-                  actualServingGrams: item.packageWeight ?? undefined,
                 })
               }
             />
@@ -424,7 +419,8 @@ export const PantryItemDetail: React.FC<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {item.currentQuantity} {item.unit?.name ?? item.unitName}
+              {/* unitName from server includes item-specific display name */}
+              {item.quantity} {item.unitName ?? item.unit?.name}
             </Text>
           </View>
         </View>
@@ -464,26 +460,6 @@ export const PantryItemDetail: React.FC<{
                 {typeof item.storageLocation === 'string'
                   ? item.storageLocation
                   : item.storageLocation.name}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Weight Row */}
-        {item.packageWeight != null && item.packageWeight > 0 && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Weight</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="scale-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-                  library="Ionicons"
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {item.packageWeight} {item.packageWeightUnit?.symbol || 'g'}
               </Text>
             </View>
           </View>
@@ -611,7 +587,8 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit?.symbol ?? item.unitName}
+                {/* unitName from server includes item-specific display name */}
+                {item.minQuantity} {item.unitName ?? item.unit?.symbol}
               </Text>
             </View>
           </View>
@@ -631,32 +608,12 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit?.symbol ?? item.unitName}
+                {/* unitName from server includes item-specific display name */}
+                {item.restockQuantity} {item.unitName ?? item.unit?.symbol}
               </Text>
             </View>
           </View>
         )}
-
-        {/* Started With Row - only show if different from current */}
-        {item.initialQuantity != null &&
-          item.initialQuantity !== item.currentQuantity && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Started With</Text>
-              <View style={styles.infoValueContainer}>
-                <View style={styles.infoIcon}>
-                  <Icon
-                    name="enter-outline"
-                    size={16}
-                    color={theme.colors.textSecondary}
-                    library="Ionicons"
-                  />
-                </View>
-                <Text style={styles.infoValue}>
-                  {item.initialQuantity} {item.unit?.symbol ?? item.unitName}
-                </Text>
-              </View>
-            </View>
-          )}
 
         {/* Purchase Date Row */}
         {item.purchase?.purchaseDate && (
@@ -681,10 +638,10 @@ export const PantryItemDetail: React.FC<{
           </View>
         )}
 
-        {/* Usage Info Row */}
-        {(item.lastUsedAt || item.consumedQuantity > 0) && (
+        {/* Usage Info Row - show last used date if available */}
+        {item.lastUsedAt && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Usage</Text>
+            <Text style={styles.infoLabel}>Last Used</Text>
             <View style={styles.infoValueContainer}>
               <View style={styles.infoIcon}>
                 <Icon
@@ -695,31 +652,7 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.consumedQuantity > 0 && `Used ${item.consumedQuantity}`}
-                {item.consumedQuantity > 0 && item.lastUsedAt && ' • '}
-                {item.lastUsedAt && `Last: ${formatDate(item.lastUsedAt)}`}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Waste Info Row */}
-        {item.wasteAmount > 0 && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Waste</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="trash-outline"
-                  size={16}
-                  color={theme.colors.error}
-                  library="Ionicons"
-                />
-              </View>
-              <Text style={[styles.infoValue, styles.infoValueError]}>
-                {item.wasteAmount} wasted
-                {item.wasteReason &&
-                  ` (${item.wasteReason.toLowerCase().replace('_', ' ')})`}
+                {formatDate(item.lastUsedAt)}
               </Text>
             </View>
           </View>

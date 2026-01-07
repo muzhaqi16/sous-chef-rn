@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { View, LayoutAnimation, Platform, UIManager } from 'react-native';
 
 // Enable LayoutAnimation on Android
@@ -24,8 +24,13 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
-import { useRenderTime, useProgressiveList } from '#hooks/performance';
+import { useProgressiveList } from '#hooks/performance';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
+import {
+  SortableListActionsProvider,
+  type SortableListActions,
+  type SortableListPermissions,
+} from './SortableListActionsContext';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -52,9 +57,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   canMarkPurchased = true,
   ...flatListProps
 }) => {
-  // Track render performance
-  useRenderTime('SortableShoppingList');
-
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
 
@@ -157,6 +159,42 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     // No-op: swipe state tracking removed to prevent first-swipe re-render issue
   }, []);
 
+  // PERFORMANCE: Memoize actions object for context provider
+  // This object reference changes rarely, only when prop functions change
+  const actions = useMemo<SortableListActions>(
+    () => ({
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
+      onSwipeableWillOpen: handleSwipeableWillOpen,
+      onSwipeableClose: handleSwipeableClose,
+    }),
+    [
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
+      handleSwipeableWillOpen,
+      handleSwipeableClose,
+    ],
+  );
+
+  // PERFORMANCE: Memoize permissions object for context provider
+  const permissions = useMemo<SortableListPermissions>(
+    () => ({
+      canRemoveItems,
+      canEditItems,
+      canMarkPurchased,
+      disabled,
+    }),
+    [canRemoveItems, canEditItems, canMarkPurchased, disabled],
+  );
+
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
     async (data: SortableShoppingListItem[]) => {
@@ -253,47 +291,20 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate],
   );
 
-  // Render item with ScaleDecorator for drag feedback
-  // ALWAYS wrap in ScaleDecorator to maintain consistent component tree
-  // This prevents flicker when isActive changes (component tree stays the same)
-  // activeScale=1 when not dragging means no visual effect but stable tree
+  // PERFORMANCE: Simplified renderItem - actions come from context
+  // Empty dependency array = callback never recreates = no cascade re-renders
+  // ScaleDecorator provides visual feedback during drag
   const renderItem = useCallback(
-    ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
-      return (
-        <ScaleDecorator activeScale={isActive ? 1.03 : 1}>
-          <SimpleDraggableItem
-            item={item}
-            onItemPress={onItemPress}
-            onItemEdit={onItemEdit}
-            onItemDelete={onItemDelete}
-            onTogglePurchase={onTogglePurchase}
-            onMoveToPantry={onMoveToPantry}
-            onQuantityPress={onQuantityPress}
-            drag={disabled ? undefined : drag}
-            isActive={isActive}
-            onSwipeableWillOpen={handleSwipeableWillOpen}
-            onSwipeableClose={handleSwipeableClose}
-            canRemoveItems={canRemoveItems}
-            canEditItems={canEditItems}
-            canMarkPurchased={canMarkPurchased}
-          />
-        </ScaleDecorator>
-      );
-    },
-    [
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onMoveToPantry,
-      onQuantityPress,
-      disabled,
-      handleSwipeableWillOpen,
-      handleSwipeableClose,
-      canRemoveItems,
-      canEditItems,
-      canMarkPurchased,
-    ],
+    ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => (
+      <ScaleDecorator activeScale={isActive ? 1.03 : 1}>
+        <SimpleDraggableItem
+          item={item}
+          drag={disabled ? undefined : drag}
+          isActive={isActive}
+        />
+      </ScaleDecorator>
+    ),
+    [disabled],
   );
 
   // Early validation
@@ -342,50 +353,52 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
    * Manual setNativeProps({ scrollEnabled }) can leave scroll stuck if drag aborts - avoid it.
    */
   return (
-    <View style={styles.container}>
-      <DraggableFlatList
-        data={progressiveItems}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        getItemLayout={(_, index) => ({
-          length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
-          offset: 103 * index,
-          index,
-        })}
-        // Very fast spring animation to minimize flicker on drop
-        // High stiffness + high damping = nearly instant transition
-        animationConfig={{
-          damping: 50,
-          stiffness: 500,
-        }}
-        activationDistance={isDragging ? 1 : 20}
-        onDragBegin={handleDragBegin}
-        onDragEnd={({ data }) => {
-          handleDragRelease();
-          handleDragEnd(data);
-        }}
-        onRelease={handleDragRelease}
-        showsVerticalScrollIndicator={
-          flatListProps.showsVerticalScrollIndicator ?? true
-        }
-        contentContainerStyle={{
-          paddingTop: 8, // Match item's marginVertical for consistent spacing from tabs
-          paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
-        }}
-        ListFooterComponent={ListFooterComponent}
-        // NOTE: RefreshControl disabled due to fundamental gesture conflicts
-        // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
-        // Either break normal scroll or cause VirtualizedList nesting warnings
-        // Alternative: Add manual refresh button to tab bar or header
-        // PERFORMANCE: Optimized for smooth scrolling
-        // Trade-off: Higher memory usage for smoother scroll experience
-        initialNumToRender={12} // Fill viewport on larger screens
-        maxToRenderPerBatch={8} // Larger batches = faster scroll item rendering
-        windowSize={7} // 7 viewports (3 above + current + 3 below) for smooth scrolling
-        updateCellsBatchingPeriod={100} // Longer batching period to reduce jank
-        removeClippedSubviews={true} // Reduce memory on large lists
-      />
-    </View>
+    <SortableListActionsProvider actions={actions} permissions={permissions}>
+      <View style={styles.container}>
+        <DraggableFlatList
+          data={progressiveItems}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          getItemLayout={(_, index) => ({
+            length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
+            offset: 103 * index,
+            index,
+          })}
+          // Very fast spring animation to minimize flicker on drop
+          // High stiffness + high damping = nearly instant transition
+          animationConfig={{
+            damping: 50,
+            stiffness: 500,
+          }}
+          activationDistance={isDragging ? 1 : 20}
+          onDragBegin={handleDragBegin}
+          onDragEnd={({ data }) => {
+            handleDragRelease();
+            handleDragEnd(data);
+          }}
+          onRelease={handleDragRelease}
+          showsVerticalScrollIndicator={
+            flatListProps.showsVerticalScrollIndicator ?? true
+          }
+          contentContainerStyle={{
+            paddingTop: 8, // Match item's marginVertical for consistent spacing from tabs
+            paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
+          }}
+          ListFooterComponent={ListFooterComponent}
+          // NOTE: RefreshControl disabled due to fundamental gesture conflicts
+          // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
+          // Either break normal scroll or cause VirtualizedList nesting warnings
+          // Alternative: Add manual refresh button to tab bar or header
+          // PERFORMANCE: Optimized for smooth scrolling
+          // Trade-off: Higher memory usage for smoother scroll experience
+          initialNumToRender={12} // Fill viewport on larger screens
+          maxToRenderPerBatch={8} // Larger batches = faster scroll item rendering
+          windowSize={7} // 7 viewports (3 above + current + 3 below) for smooth scrolling
+          updateCellsBatchingPeriod={100} // Longer batching period to reduce jank
+          removeClippedSubviews={true} // Reduce memory on large lists
+        />
+      </View>
+    </SortableListActionsProvider>
   );
 };
 

@@ -1,24 +1,17 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
-  BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation, usePopularItems } from '#hooks';
+import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
+import { usePantryItemSuggestions, type PantryItemSuggestion } from '#hooks/pantry';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
-import { Icon } from '#utils';
 import { useAppStore } from '#store/useAppStore';
 import {
-  useGetRecentlyDeletedPantryItemsQuery,
   useCreatePantryItemMutation,
   useAutocompleteItemsLazyQuery,
   useGetPantryQuery,
@@ -26,7 +19,13 @@ import {
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
-import { ItemRecentCard, ItemSuggestionsList } from '#components/molecules';
+import {
+  ItemSuggestionsList,
+  BottomSheetSearchBar,
+  ActionCard,
+  SuggestionListItem,
+  type BottomSheetSearchBarRef,
+} from '#components/molecules';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
 interface AddToPantrySheetProps {
@@ -43,16 +42,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   const { navigateTo } = useAppNavigation();
 
   // Online status for autocomplete
   const isOnline = useAppStore(state => state.isOnline);
 
-  // Debounce timer ref
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Search input state
+  // Search input state (updated after debounce)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Add details sheet state
@@ -63,24 +60,20 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
     useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
 
-  const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
+  const searchSuggestions =
+    autocompleteData?.autocompleteItems?.suggestions ?? [];
 
-  // Fetch popular items for auto-suggest when search is empty
-  const { popularItems, loading: loadingPopular } = usePopularItems(10);
-
-  // Fetch recently deleted items
-  // PERFORMANCE: Only fetch when sheet is visible to avoid stale cache data
+  // Fetch pantry item suggestions (replaces popular items and recently deleted)
   const {
-    data: recentData,
-    loading: loadingRecent,
-    refetch: refetchRecent,
-  } = useGetRecentlyDeletedPantryItemsQuery({
-    variables: { pantryId: pantryId ?? '', limit: 10 },
-    skip: !pantryId || !visible,
-    fetchPolicy: 'cache-and-network',
+    grouped: suggestionGroups,
+    loading: loadingSuggestions,
+    hasSuggestions,
+    refetch: refetchSuggestions,
+  } = usePantryItemSuggestions({
+    pantryId,
+    limit: 15,
+    skip: !visible,
   });
-
-  const recentItems = recentData?.recentlyDeletedPantryItems ?? [];
 
   // Fetch pantry to get storage locations
   // PERFORMANCE: Only query when sheet is visible to prevent query from Shopping List screen
@@ -115,32 +108,25 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     },
   );
 
-  // Debounced autocomplete search (250ms)
-  useEffect(() => {
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
+  // Search handler - called after BottomSheetSearchBar debounce
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
 
-    // Only search when online and query is long enough
-    if (searchQuery.length >= 2 && isOnline) {
-      debounceTimerRef.current = setTimeout(() => {
-        fetchItems({ variables: { input: { query: searchQuery, limit: 10 } } });
-      }, 250);
-    }
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+      // Only search when online and query is long enough
+      if (text.length >= 2 && isOnline) {
+        fetchItems({ variables: { input: { query: text, limit: 10 } } });
       }
-    };
-  }, [searchQuery, isOnline, fetchItems]);
+    },
+    [isOnline, fetchItems],
+  );
 
   // Control bottom sheet visibility
   useEffect(() => {
     if (visible && pantryId) {
       bottomSheetRef.current?.present();
+      // Clear search bar and state
+      searchBarRef.current?.clear();
       setSearchQuery('');
       setShowAddDetails(false);
       setPrefilledItemName('');
@@ -161,12 +147,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Handle add manually press
   const handleAddManually = useCallback(() => {
     bottomSheetRef.current?.dismiss(); // Close main sheet first
-    setPrefilledItemName(searchQuery);
+    // Use ref value for immediate access (not debounced state)
+    setPrefilledItemName(searchBarRef.current?.getValue() || '');
     setShowAddDetails(true);
-  }, [searchQuery]);
+  }, []);
 
   // Handle quick add from autocomplete suggestion
-  const handleQuickAddSuggestion = useCallback(
+  const handleQuickAddSearchSuggestion = useCallback(
     async (item: ItemSuggestion) => {
       if (!pantryId || creating) return;
 
@@ -177,24 +164,26 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               pantryId,
               itemId: item.id,
               itemName: item.name,
-              initialQuantity: 1,
+              quantity: 1,
             },
           },
         });
 
         toastService.success(`Added ${item.name} (Qty: 1)`);
-        setSearchQuery(''); // Clear search after adding
-        refetchRecent();
+        // Clear search after adding
+        searchBarRef.current?.clear();
+        setSearchQuery('');
+        refetchSuggestions();
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [pantryId, creating, createPantryItem, refetchRecent],
+    [pantryId, creating, createPantryItem, refetchSuggestions],
   );
 
-  // Handle quick add from recent items
-  const handleQuickAddRecent = useCallback(
-    async (item: (typeof recentItems)[0]) => {
+  // Handle quick add from pantry item suggestion
+  const handleQuickAddSuggestion = useCallback(
+    async (item: PantryItemSuggestion) => {
       if (!pantryId || creating) return;
 
       try {
@@ -203,29 +192,29 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             input: {
               pantryId,
               itemId: item.itemId,
-              itemName: item.itemName,
-              initialQuantity: 1,
+              itemName: item.name,
+              quantity: 1,
             },
           },
         });
 
-        toastService.success(`Added ${item.itemName} (Qty: 1)`);
-        refetchRecent();
+        toastService.success(`Added ${item.name} (Qty: 1)`);
+        refetchSuggestions();
       } catch (error) {
         toastService.error('Failed to add item. Please try again.');
       }
     },
-    [pantryId, creating, createPantryItem, refetchRecent],
+    [pantryId, creating, createPantryItem, refetchSuggestions],
   );
 
   // Handle successful add from details sheet
   const handleAddSuccess = useCallback(() => {
     setShowAddDetails(false);
     setSearchQuery('');
-    refetchRecent();
+    refetchSuggestions();
 
     toastService.success('Item added to pantry');
-  }, [refetchRecent]);
+  }, [refetchSuggestions]);
 
   // Handle close details sheet
   const handleCloseDetails = useCallback(() => {
@@ -233,37 +222,43 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     setPrefilledItemName('');
   }, []);
 
-  // Handle quick add from popular items
-  const handleQuickAddPopular = useCallback(
-    async (item: (typeof popularItems)[0]) => {
-      if (!pantryId || creating) return;
-
-      try {
-        await createPantryItem({
-          variables: {
-            input: {
-              pantryId,
-              itemId: item.id,
-              itemName: item.name,
-              initialQuantity: 1,
-            },
-          },
-        });
-
-        toastService.success(`Added ${item.name} (Qty: 1)`);
-        refetchRecent();
-      } catch (error) {
-        toastService.error('Failed to add item. Please try again.');
-      }
-    },
-    [pantryId, creating, createPantryItem, refetchRecent],
-  );
-
   // Determine if we should show search results
   const showSearchResults = searchQuery.length >= 2;
 
-  // Show popular items when search is empty or has few results
-  const showPopularItems = !showSearchResults && popularItems.length > 0;
+  // Show suggestions when search is empty
+  const showSuggestions = !showSearchResults;
+
+  // Render a suggestion item with image
+  const renderSuggestionItem = useCallback(
+    (item: PantryItemSuggestion) => (
+      <SuggestionListItem
+        key={item.id}
+        imageUrl={item.imageUrl}
+        title={item.name}
+        subtitle={item.category}
+        placeholderIcon="inventory-2"
+        onQuickAdd={() => handleQuickAddSuggestion(item)}
+        quickAddDisabled={creating}
+      />
+    ),
+    [creating, handleQuickAddSuggestion],
+  );
+
+  // Render a section of suggestions
+  const renderSuggestionSection = useCallback(
+    (title: string, items: PantryItemSuggestion[]) => {
+      if (items.length === 0) return null;
+      return (
+        <View style={styles.suggestionSection}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <View style={styles.suggestionList}>
+            {items.map(renderSuggestionItem)}
+          </View>
+        </View>
+      );
+    },
+    [renderSuggestionItem],
+  );
 
   return (
     <>
@@ -299,58 +294,28 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           <Text style={styles.title}>Add to Pantry</Text>
 
           {/* Search Input */}
-          <View style={styles.searchContainer}>
-            <Icon
-              name="search"
-              size={20}
-              color={theme.colors.textSecondary}
-              library="MaterialIcons"
-            />
-            <BottomSheetTextInput
-              style={styles.searchInput}
-              placeholder="Search or scan item..."
-              placeholderTextColor={theme.colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setSearchQuery('')}
-              >
-                <Icon
-                  name="close"
-                  size={20}
-                  color={theme.colors.textSecondary}
-                  library="MaterialIcons"
-                />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.scanIconButton}
-              onPress={handleScanPress}
-            >
-              <Icon
-                name="qr-code-scanner"
-                size={24}
-                color={theme.colors.primary}
-                library="MaterialIcons"
-              />
-            </TouchableOpacity>
-          </View>
+          <BottomSheetSearchBar
+            ref={searchBarRef}
+            placeholder="Search or scan item..."
+            onChangeText={handleSearchChange}
+            onClear={() => setSearchQuery('')}
+            rightActions={[
+              {
+                icon: 'qr-code-scanner',
+                onPress: handleScanPress,
+              },
+            ]}
+          />
 
           {/* Search Results */}
           {showSearchResults && (
             <ItemSuggestionsList
               searchQuery={searchQuery}
-              suggestions={suggestions}
+              suggestions={searchSuggestions}
               loading={searchLoading}
               addManuallyPosition="top"
               onAddManually={handleAddManually}
-              onSelectSuggestion={handleQuickAddSuggestion}
+              onSelectSuggestion={handleQuickAddSearchSuggestion}
               quickAddDisabled={creating}
               placeholderIcon="inventory-2"
               showBrands={false}
@@ -359,108 +324,44 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.actionButton}
+            <ActionCard
+              icon="qr-code-scanner"
+              label="Scan Barcode"
               onPress={handleScanPress}
-            >
-              <View style={styles.actionIconContainer}>
-                <Icon
-                  name="qr-code-scanner"
-                  size={32}
-                  color={theme.colors.primary}
-                  library="MaterialIcons"
-                />
-              </View>
-              <Text style={styles.actionButtonText}>Scan Barcode</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
+            />
+            <ActionCard
+              icon="add"
+              label="Add Manually"
               onPress={handleAddManually}
-            >
-              <View style={styles.actionIconContainer}>
-                <Icon
-                  name="add"
-                  size={32}
-                  color={theme.colors.primary}
-                  library="MaterialIcons"
-                />
-              </View>
-              <Text style={styles.actionButtonText}>Add Manually</Text>
-            </TouchableOpacity>
+            />
           </View>
 
-          {/* Popular Items Section - shown when search is empty */}
-          {showPopularItems && (
-            <View style={styles.popularSection}>
-              <Text style={styles.sectionTitle}>POPULAR ITEMS</Text>
-              {loadingPopular ? (
+          {/* Suggestions Sections - shown when search is empty */}
+          {showSuggestions && (
+            <>
+              {loadingSuggestions ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color={theme.colors.primary} />
                 </View>
-              ) : (
-                <View style={styles.popularList}>
-                  {popularItems.map(item => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.popularItem}
-                      onPress={() => handleQuickAddPopular(item)}
-                      disabled={creating}
-                    >
-                      <View style={styles.popularItemInfo}>
-                        <Text style={styles.popularItemName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.quickAddButton}
-                        onPress={() => handleQuickAddPopular(item)}
-                        disabled={creating}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Icon
-                          name="add"
-                          size={20}
-                          color={theme.colors.primary}
-                          library="MaterialIcons"
-                        />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  ))}
+              ) : !hasSuggestions ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No suggestions yet</Text>
+                  <Text style={styles.emptySubtext}>
+                    Add items to your pantry to get personalized suggestions
+                  </Text>
                 </View>
+              ) : (
+                <>
+                  {/* Priority order: LOW_STOCK > EXPIRING_SOON > RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR */}
+                  {renderSuggestionSection('LOW STOCK', suggestionGroups.lowStock)}
+                  {renderSuggestionSection('EXPIRING SOON', suggestionGroups.expiringSoon)}
+                  {renderSuggestionSection('ADD AGAIN', suggestionGroups.recentlyDeleted)}
+                  {renderSuggestionSection('YOUR FAVORITES', suggestionGroups.frequentlyAdded)}
+                  {renderSuggestionSection('POPULAR', suggestionGroups.popular)}
+                </>
               )}
-            </View>
+            </>
           )}
-
-          {/* Recent Items Section */}
-          <View style={styles.recentSection}>
-            <Text style={styles.sectionTitle}>RECENT ITEMS</Text>
-
-            {loadingRecent ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              </View>
-            ) : recentItems.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No recent items</Text>
-                <Text style={styles.emptySubtext}>
-                  Items you delete will appear here for quick re-adding
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.recentList}>
-                {recentItems.map(item => (
-                  <ItemRecentCard
-                    key={item.id}
-                    item={item}
-                    onQuickAdd={handleQuickAddRecent}
-                    disabled={creating}
-                    placeholderIcon="inventory-2"
-                  />
-                ))}
-              </View>
-            )}
-          </View>
         </BottomSheetScrollView>
       </BottomSheetModal>
 
@@ -490,57 +391,10 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    marginLeft: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-  },
-  clearButton: {
-    padding: theme.spacing.xs,
-  },
-  scanIconButton: {
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
   actionButtons: {
     flexDirection: 'row',
     gap: theme.spacing.md,
     marginBottom: theme.spacing.xl,
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.lg,
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  actionButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  recentSection: {
-    flex: 1,
   },
   sectionTitle: {
     fontSize: theme.fonts.size.sm,
@@ -568,39 +422,10 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
     textAlign: 'center',
   },
-  recentList: {
-    gap: theme.spacing.sm,
+  suggestionSection: {
+    marginBottom: theme.spacing.lg,
   },
-  popularSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  popularList: {
-    gap: theme.spacing.sm,
-  },
-  popularItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  popularItemInfo: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  popularItemName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+  suggestionList: {
+    gap: theme.spacing.xs,
   },
 }));

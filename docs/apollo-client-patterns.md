@@ -1091,14 +1091,140 @@ const [deleteItemMutation] = useDeleteItemMutation({
 
 ---
 
+## Simplified Patterns (2025 Update)
+
+This section documents simplified patterns adopted to reduce complexity and improve consistency.
+
+### Use Items Array Instead of Cache Reads
+
+When you need to access an item before a mutation, prefer using the items array already in memory over reading from the cache.
+
+**Old Pattern (avoid):**
+```typescript
+const cachedItem = client.readFragment<ItemFragment>({
+  id: cache.identify({ __typename: 'Item', id: itemId }),
+  fragment: ItemFragmentDoc,
+  fragmentName: 'ItemFragment',
+});
+```
+
+**New Pattern (preferred):**
+```typescript
+// Items array is already in memory from the query
+const item = items.find(i => i.id === itemId);
+if (!item) return false;
+
+// Use item directly for optimistic response
+optimisticResponse: {
+  __typename: 'Mutation',
+  updateItem: {
+    ...item,
+    ...updates,
+  },
+}
+```
+
+**Why:** The items array is already in memory from the query. Reading from cache adds complexity without benefit and can fail if the item isn't in cache.
+
+### When to Use Each Cache Update Approach
+
+| Operation | Cache Update Needed? | Use This |
+|-----------|---------------------|----------|
+| **Create/Add** | YES | `createAddToParentConnectionUpdater()` |
+| **Update** | NO | Apollo auto-normalizes by `__typename` + `id` |
+| **Delete/Remove** | YES | `createRemoveFromParentConnectionUpdater()` |
+| **Toggle field** | Optional | `cache.modify()` for instant UI (Pattern 5) |
+
+### When to Use optimisticDataPersistence
+
+**Only use for rapid UI operations** like quantity steppers where:
+- User makes multiple rapid changes (increment/decrement)
+- Changes happen faster than network round-trips
+- Field-level persistence is needed for offline support
+
+**Current valid usage:** `useShoppingListActions.ts` for quantity increment/decrement.
+
+**Don't use for:** Standard CRUD operations (Apollo cache persistence handles this).
+
+### When Subscriptions Need Manual writeFragment
+
+When using custom `onData` callbacks in subscriptions, Apollo doesn't auto-normalize the data. You must explicitly write to cache:
+
+```typescript
+customOnData: (payload, client) => {
+  if (mutation === 'UPDATE') {
+    // Required: Apollo doesn't auto-normalize in onData callbacks
+    client.cache.writeFragment({
+      id: client.cache.identify({ __typename: 'Item', id: item.id }),
+      fragment: ItemFragmentDoc,
+      data: item,
+    });
+  }
+}
+```
+
+If you don't use custom `onData` (let Apollo handle it with `CacheStrategy.AUTOMATIC`), this isn't needed.
+
+---
+
+## Reusable Utilities Reference
+
+### Cache Updaters (`src/apollo/utils/cacheUpdaters.ts`)
+
+Use these utilities instead of writing inline `cache.modify()` logic.
+
+| Utility | Use Case |
+|---------|----------|
+| `createAddToParentConnectionUpdater` | Add item to parent.connectionField (e.g., Pantry.itemsConnection) |
+| `createRemoveFromParentConnectionUpdater` | Remove item from parent.connectionField + optional eviction |
+| `createAddToQueryFieldUpdater` | Add item to Query.fieldName array |
+| `createRemoveFromQueryFieldUpdater` | Remove item from Query.fieldName array |
+
+**Example Usage:**
+```typescript
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+
+const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
+
+// In mutation update function:
+update: (cache, { data }) => {
+  if (!data?.createPantryItem || !pantryId) return;
+  addToPantryItemsCache(cache, pantryId, data.createPantryItem);
+}
+```
+
+### Optimistic Response Helpers (`src/apollo/utils/createOptimisticResponse.ts`)
+
+| Utility | Use Case |
+|---------|----------|
+| `createOptimisticEntity(typename, tempId, fields)` | Create temp entity for add mutations |
+| `enhanceWithVersion(currentItem, updates)` | Add version/timestamp to update mutations |
+
+### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
+
+Provides standardized CRUD operation wrappers with built-in validation and error handling.
+
+| Helper | Provides |
+|--------|----------|
+| `createAddOperation` | Input validation, parent ID validation, error alerts |
+| `createUpdateOperation` | Version conflict handling, refetch on conflict |
+| `createRemoveOperation` | Confirmation dialogs, cleanup |
+
+---
+
 ## Need Help?
 
-- **Questions about patterns**: Check examples in `src/hooks/shoppingList/useShoppingListManagement.ts` (reference implementation)
-- **Subscription setup**: See `src/hooks/apollo/useStandardSubscription.ts`
-- **Fetch policies**: See `src/apollo/policies/offlineFetchPolicies.ts`
+- **Questions about patterns**: Check examples in `src/hooks/shoppingList/useShoppingListItemMutations.ts` (reference implementation)
+- **Cache updater utilities**: See `src/apollo/utils/cacheUpdaters.ts`
+- **Subscription setup**: See `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
+- **Fetch policies**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
 - **Error handling**: See `src/utils/errorHandling.ts` and `src/utils/errors/versionConflict.ts`
 
 ---
 
-**Last Updated**: 2025-11-03
+**Last Updated**: 2026-01-06
 **Maintainers**: Development Team

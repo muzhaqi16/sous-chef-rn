@@ -26,3 +26,4 @@ export { HomeAvatar } from './HomeAvatar';
 export { default as Loader } from './Loader';
 export { FormFieldWrapper } from './FormFieldWrapper';
 export { PressableRow } from './PressableRow';
+export { BottomSheetHeader } from './BottomSheetHeader';

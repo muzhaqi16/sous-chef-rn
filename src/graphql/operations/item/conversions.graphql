@@ -196,7 +196,7 @@ query CalculateRecipePantryDeficit(
     availableItems {
       id
       itemName
-      currentQuantity
+      quantity
       unit {
         id
         name

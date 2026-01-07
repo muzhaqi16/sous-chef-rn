@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -11,9 +11,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { FormattedItemSubtitle, BottomSheetHeader } from '#components/atoms';
 import { Icon, parseFractionalInput } from '#/utils';
 import { WasteReason, PantryItemFragment } from '#generated';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -26,30 +27,7 @@ interface RecordWastePantryItemModalProps {
     isRecycled: boolean,
     notes: string,
     wasteUnitId?: string,
-    wasteWeight?: number,
-    wasteWeightUnitId?: string,
   ) => void;
-}
-
-type TrackingMode = 'count' | 'weight' | 'both';
-
-/**
- * Determines the tracking mode based on item properties:
- * - No weight → count only
- * - Count = 1 → weight only
- * - Count > 1 AND has weight → let user choose
- *
- * Uses pantryItem.packageWeight (user's actual weight), not item.netWeight (catalog)
- */
-function determineTrackingMode(pantryItem: PantryItemFragment): TrackingMode {
-  // Only require packageWeight to be set (unit can fall back to 'g')
-  const hasWeight = pantryItem.packageWeight != null && pantryItem.packageWeight > 0;
-  const count = pantryItem.currentQuantity;
-
-  if (!hasWeight) return 'count';
-  // Use tolerance for floating point comparison
-  if (Math.abs(count - 1) < 0.001) return 'weight';
-  return 'both';
 }
 
 const WASTE_REASON_OPTIONS: Array<{ label: string; value: WasteReason }> = [
@@ -77,37 +55,13 @@ export const RecordWastePantryItemModal: React.FC<
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
   const [notes, setNotes] = useState('');
-  const [trackingUnit, setTrackingUnit] = useState<'count' | 'weight'>('count');
-
-  // Determine tracking mode based on item properties
-  const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
-
-  /**
-   * Get the total weight for an item.
-   * Only uses pantryItem.packageWeight (user's actual weight), not catalog data.
-   */
-  const getEffectiveTotalWeight = useCallback(
-    (item: PantryItemFragment): number => {
-      return item.packageWeight ?? 0;
-    },
-    [],
-  );
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
     if (visible && pantryItem) {
       bottomSheetRef.current?.present();
-      // Reset form when modal opens with new item
-      const mode = determineTrackingMode(pantryItem);
-      if (mode === 'count') {
-        setTrackingUnit('count');
-        setWasteAmountInput(pantryItem.currentQuantity.toString());
-      } else {
-        // Default to weight when available
-        setTrackingUnit('weight');
-        const totalWeight = getEffectiveTotalWeight(pantryItem);
-        setWasteAmountInput(totalWeight.toString());
-      }
+      // Reset form when modal opens with new item - default to full quantity
+      setWasteAmountInput(pantryItem.quantity.toString());
       setWasteReason(WasteReason.Expired);
       setIsComposted(false);
       setIsRecycled(false);
@@ -115,24 +69,16 @@ export const RecordWastePantryItemModal: React.FC<
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, pantryItem, getEffectiveTotalWeight]);
+  }, [visible, pantryItem]);
 
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const wasteAmount = parseFractionalInput(wasteAmountInput);
     if (wasteAmount === null || isNaN(wasteAmount)) return null;
 
-    if (trackingUnit === 'weight') {
-      // Calculate remaining weight using effective total weight
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      const remaining = totalWeight - wasteAmount;
-      return isNaN(remaining) ? null : remaining;
-    } else {
-      // Calculate remaining count
-      const remaining = pantryItem.currentQuantity - wasteAmount;
-      return isNaN(remaining) ? null : remaining;
-    }
-  }, [pantryItem, wasteAmountInput, trackingUnit, getEffectiveTotalWeight]);
+    const remaining = pantryItem.quantity - wasteAmount;
+    return isNaN(remaining) ? null : remaining;
+  }, [pantryItem, wasteAmountInput]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -144,49 +90,14 @@ export const RecordWastePantryItemModal: React.FC<
       return;
     }
 
-    // Validate based on tracking unit
-    if (trackingUnit === 'weight') {
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      if (wasteValue > totalWeight) {
-        Alert.alert(
-          'Error',
-          `Cannot waste more than available weight (${totalWeight} ${
-            pantryItem.packageWeightUnit?.symbol || 'g'
-          })`,
-        );
-        return;
-      }
-    } else {
-      if (wasteValue > pantryItem.currentQuantity) {
-        Alert.alert(
-          'Error',
-          `Cannot waste more than available quantity (${
-            pantryItem.currentQuantity
-          } ${pantryItem.unit?.symbol || ''})`,
-        );
-        return;
-      }
-    }
-
-    // Determine the unit ID to send
-    const wasteUnitId =
-      trackingUnit === 'weight'
-        ? pantryItem.packageWeightUnit?.id
-        : pantryItem.unit?.id;
-
-    // Calculate proportional weight when tracking by count and item has weight
-    let wasteWeight: number | undefined;
-    let wasteWeightUnitId: string | undefined;
-
-    if (trackingUnit === 'count') {
-      const totalWeight = getEffectiveTotalWeight(pantryItem);
-      if (totalWeight > 0) {
-        // Calculate per-item weight and multiply by waste quantity
-        const perItemWeight = totalWeight / pantryItem.currentQuantity;
-        wasteWeight = wasteValue * perItemWeight;
-        wasteWeightUnitId = pantryItem.packageWeightUnit?.id;
-      }
-      // If no weight tracking, wasteWeight and wasteWeightUnitId remain undefined
+    if (wasteValue > pantryItem.quantity) {
+      Alert.alert(
+        'Error',
+        `Cannot waste more than available quantity (${pantryItem.quantity} ${
+          pantryItem.unit?.symbol || ''
+        })`,
+      );
+      return;
     }
 
     onConfirm(
@@ -195,9 +106,7 @@ export const RecordWastePantryItemModal: React.FC<
       isComposted,
       isRecycled,
       notes,
-      wasteUnitId,
-      wasteWeight,
-      wasteWeightUnitId,
+      pantryItem.unit?.id,
     );
     onClose();
   }, [
@@ -209,8 +118,6 @@ export const RecordWastePantryItemModal: React.FC<
     notes,
     onConfirm,
     onClose,
-    trackingUnit,
-    getEffectiveTotalWeight,
   ]);
 
   const remaining = pantryItem ? calculateRemaining() : null;
@@ -226,6 +133,8 @@ export const RecordWastePantryItemModal: React.FC<
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -236,148 +145,84 @@ export const RecordWastePantryItemModal: React.FC<
       )}
     >
       <BottomSheetScrollView
-        style={styles.scrollView}
+        style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
-          styles.contentContainer,
+          commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>Record Waste</Text>
+        <BottomSheetHeader
+          title="Record Waste"
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Record Waste"
+          confirmColor="warning"
+        />
 
         {pantryItem && (
           <>
             {/* Item Info */}
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{pantryItem.itemName}</Text>
-              <View style={styles.availableRow}>
-                <Text style={styles.availableLabel}>Available: </Text>
-                {trackingMode === 'count' ? (
-                  <FormattedItemSubtitle
-                    quantity={pantryItem.currentQuantity}
-                    displayAsFraction={pantryItem.unit?.displayAsFraction}
-                    unitSymbol={pantryItem.unit?.symbol}
-                  />
-                ) : (
-                  <Text style={styles.availableValue}>
-                    {getEffectiveTotalWeight(pantryItem)}{' '}
-                    {pantryItem.packageWeightUnit?.symbol || 'g'}
-                  </Text>
-                )}
+            <View style={commonStyles.bottomSheetItemInfo}>
+              <Text style={commonStyles.bottomSheetItemName}>
+                {pantryItem.itemName}
+              </Text>
+              <View style={commonStyles.bottomSheetItemRow}>
+                <Text style={commonStyles.bottomSheetItemLabel}>
+                  Available:{' '}
+                </Text>
+                <FormattedItemSubtitle
+                  quantity={pantryItem.quantity}
+                  displayAsFraction={pantryItem.unit?.displayAsFraction}
+                  unitSymbol={pantryItem.unit?.symbol}
+                />
               </View>
             </View>
 
-            {/* Unit Toggle - only show when both count and weight are available */}
-            {trackingMode === 'both' && (
-              <View style={styles.section}>
-                <Text style={styles.label}>Track by</Text>
-                <View style={styles.unitToggleContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.unitToggleOption,
-                      trackingUnit === 'count' &&
-                        styles.unitToggleOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setTrackingUnit('count');
-                      setWasteAmountInput(
-                        pantryItem.currentQuantity.toString(),
-                      );
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.unitToggleText,
-                        trackingUnit === 'count' &&
-                          styles.unitToggleTextSelected,
-                      ]}
-                    >
-                      Count ({pantryItem.unit?.symbol || 'item'})
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.unitToggleOption,
-                      trackingUnit === 'weight' &&
-                        styles.unitToggleOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setTrackingUnit('weight');
-                      setWasteAmountInput(
-                        getEffectiveTotalWeight(pantryItem).toString(),
-                      );
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.unitToggleText,
-                        trackingUnit === 'weight' &&
-                          styles.unitToggleTextSelected,
-                      ]}
-                    >
-                      Weight ({pantryItem.packageWeightUnit?.symbol || 'g'})
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
             {/* Waste Amount Input */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={
-                  trackingUnit === 'weight'
-                    ? `Waste Amount (${
-                        pantryItem.packageWeightUnit?.symbol || 'g'
-                      }) *`
-                    : `Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`
-                }
+                label={`Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`}
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType={
-                  trackingUnit === 'weight'
-                    ? Platform.OS === 'ios'
-                      ? 'numbers-and-punctuation'
-                      : 'decimal-pad'
-                    : 'numeric'
-                }
+                keyboardType="numeric"
               />
               {remaining !== null && (
                 <Text
                   style={[
-                    styles.remainingText,
-                    remaining < 0 && styles.remainingTextError,
+                    commonStyles.bottomSheetHelperText,
+                    remaining < 0 && commonStyles.bottomSheetHelperTextError,
                   ]}
                 >
                   Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
-                  {trackingUnit === 'weight'
-                    ? pantryItem.packageWeightUnit?.symbol || 'g'
-                    : pantryItem.unit?.symbol || ''}
+                  {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
 
             {/* Waste Reason Selection */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Waste Reason *</Text>
-              <View style={styles.reasonOptions}>
+            <View style={commonStyles.bottomSheetSection}>
+              <Text style={commonStyles.bottomSheetSectionLabel}>
+                Waste Reason *
+              </Text>
+              <View style={commonStyles.bottomSheetOptionContainer}>
                 {WASTE_REASON_OPTIONS.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
-                      styles.reasonOption,
+                      commonStyles.bottomSheetOption,
                       wasteReason === option.value &&
-                        styles.reasonOptionSelected,
+                        commonStyles.bottomSheetOptionSelected,
                     ]}
                     onPress={() => setWasteReason(option.value)}
                   >
                     <Text
                       style={[
-                        styles.reasonOptionText,
+                        commonStyles.bottomSheetOptionText,
                         wasteReason === option.value &&
-                          styles.reasonOptionTextSelected,
+                          commonStyles.bottomSheetOptionTextSelected,
                       ]}
                     >
                       {option.label}
@@ -396,8 +241,10 @@ export const RecordWastePantryItemModal: React.FC<
             </View>
 
             {/* Sustainability Tracking */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Sustainability</Text>
+            <View style={commonStyles.bottomSheetSection}>
+              <Text style={commonStyles.bottomSheetSectionLabel}>
+                Sustainability
+              </Text>
               <View style={styles.checkboxContainer}>
                 <FormCheckbox
                   label="Composted"
@@ -415,7 +262,7 @@ export const RecordWastePantryItemModal: React.FC<
             </View>
 
             {/* Notes (Optional) */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FormInput
                 label="Notes (Optional)"
                 value={notes}
@@ -425,22 +272,6 @@ export const RecordWastePantryItemModal: React.FC<
                 numberOfLines={3}
               />
             </View>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-              >
-                <Text style={styles.confirmButtonText}>Record Waste</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </BottomSheetScrollView>
@@ -449,146 +280,7 @@ export const RecordWastePantryItemModal: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  itemInfo: {
-    marginBottom: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  itemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  availableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availableLabel: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-  availableValue: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  remainingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  remainingTextError: {
-    color: theme.colors.error,
-  },
-  unitToggleContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  unitToggleOption: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-  },
-  unitToggleOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  unitToggleText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  unitToggleTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  reasonOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  reasonOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  reasonOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  reasonOptionText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  reasonOptionTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
   checkboxContainer: {
     marginBottom: theme.spacing.sm,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.warning,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
   },
 }));

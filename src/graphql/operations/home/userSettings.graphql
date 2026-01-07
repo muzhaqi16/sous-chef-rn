@@ -1,5 +1,12 @@
 mutation SetDefaultHome($homeId: ID!) {
   setDefaultHome(homeId: $homeId) {
-    id
+    settings {
+      id
+    }
+    defaultPantry {
+      id
+      name
+      isDefault
+    }
   }
 }

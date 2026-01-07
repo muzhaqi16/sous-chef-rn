@@ -21,23 +21,19 @@ export type ShoppingListDetail = NonNullable<GetShoppingListQuery['shoppingList'
 export function useShoppingListItemsQuery(listId: string | null | undefined) {
   const { isLoggedOut } = useAuth();
 
-  const shouldSkip = !listId || isLoggedOut;
+  // Explicit validation - only execute query when listId is genuinely valid
+  const hasValidListId = !!listId && !isLoggedOut;
 
-  // PERFORMANCE: cache-and-network shows cached data immediately, fetches fresh in background
-  // - cache-and-network: Instant UI from cache + background fetch for fresh data
-  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders/tab switches
+  // PERFORMANCE: cache-and-network shows cached data immediately + fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders (fixes infinite loop)
   // - errorPolicy: 'all' returns cached data when network fails (offline graceful degradation)
-  // Note: Pull-to-refresh uses explicit refetch() for fresh data
-
-  // Watch cache for updates from mutations and subscriptions
-  // Uses GetShoppingList with itemsConnection as single source of truth
-  // PERFORMANCE: Include previousData to prevent UI flash during refetch
+  // - skip controls execution - when skip is false, listId is guaranteed valid
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListQuery({
       variables: {
-        id: listId ?? '',
+        id: listId!,
       },
-      skip: shouldSkip,
+      skip: !hasValidListId,
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',

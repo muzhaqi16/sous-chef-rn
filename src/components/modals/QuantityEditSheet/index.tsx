@@ -20,6 +20,9 @@ interface ItemUnit {
   name: string;
   isDefault?: boolean;
   isPreferred?: boolean;
+  // Item-specific unit display names for better UX
+  displayNameSingular?: string | null;
+  displayNamePlural?: string | null;
 }
 
 interface QuantityEditSheetItem {
@@ -416,12 +419,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           </Text>
 
           {/* Item-specific Units Chips - only show if available */}
+          {/* Use displayNamePlural for better UX (e.g., "pineapples" instead of "count") */}
           {itemUnits.length > 0 && (
             <View style={styles.chipsContainer}>
               {itemUnits.map(unit => (
                 <Chip
                   key={unit.id}
-                  label={unit.symbol}
+                  label={unit.displayNamePlural || unit.symbol}
                   selected={unitName === unit.symbol}
                   onPress={() => handleUnitChipPress(unit)}
                 />

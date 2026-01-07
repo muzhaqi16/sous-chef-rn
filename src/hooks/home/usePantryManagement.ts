@@ -27,6 +27,7 @@ import {
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { subscriptionService } from '#/services/subscriptions';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 // Cache updater utilities for pantry items
 const addToPantryItemsCache = createAddToParentConnectionUpdater(
@@ -58,7 +59,7 @@ export interface PantryItemInput {
 }
 
 export interface PantryItemUpdate extends Partial<PantryItemInput> {
-  currentQuantity?: number;
+  quantity?: number;
 }
 
 /**
@@ -77,14 +78,15 @@ export function usePantryManagement(pantryId: string | undefined) {
   // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders
   // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
-  // Single source of truth: Apollo cache - now using Connection-based query
+  // Simple Apollo query with skip - works correctly when upstream data is valid
+  // The skip option prevents the query from firing when pantryId is invalid
   const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
-    variables: hasValidPantryId ? {
-      id: pantryId,
+    variables: {
+      id: pantryId || '',
       itemsFirst: 25, // Initial page size
       storageLocationsFirst: 50,
-    } : undefined as any,
-    skip: !hasValidPantryId, // Query only executes when pantryId is valid
+    },
+    skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
@@ -103,11 +105,15 @@ export function usePantryManagement(pantryId: string | undefined) {
     [data?.pantry],
   );
 
+  // Preserve pantry items across network failures using usePreservedArrayData
+  // This prevents the UI from showing empty state when offline or on network errors
+  const preservedItems = usePreservedArrayData(normalizedPantry?.items);
+
   // Filter out items that are pending deletion to prevent flicker
   // during the race condition between optimistic delete and subscription auto-normalization
   const pantryItems = useMemo(
-    () => subscriptionService.filterPendingDeletes(normalizedPantry?.items || []),
-    [normalizedPantry],
+    () => subscriptionService.filterPendingDeletes(preservedItems),
+    [preservedItems],
   );
 
   // Search functionality - using reusable search utility
@@ -145,7 +151,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
     const lowStock = pantryItems.filter(item => {
       // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
-      return item.currentQuantity <= 1 || item.lowStockAlert;
+      return item.quantity <= 1 || item.lowStockAlert;
     }).length;
 
     return {
@@ -206,10 +212,15 @@ export function usePantryManagement(pantryId: string | undefined) {
       return expirationDate >= now && expirationDate <= threeDaysFromNow;
     });
 
+    // normalItems includes everything except "expiring soon" items
+    // This includes: items without expiry, expired items, and items expiring after 3 days
+    // Expired items will be visually distinguished by card variant in UI
     const normalItems = pantryItems.filter(item => {
       if (!item.expiresAt) return true; // Items without expiry go to normal
       const expirationDate = new Date(item.expiresAt);
-      return expirationDate > threeDaysFromNow;
+      // Exclude only items expiring in the next 0-3 days (those go to expiringSoon)
+      const isExpiringSoon = expirationDate >= now && expirationDate <= threeDaysFromNow;
+      return !isExpiringSoon;
     });
 
     return {
@@ -249,7 +260,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         createPantryItem: {
           ...createOptimisticEntity('PantryItem', tempId, {
             itemName: variables.input.itemName,
-            currentQuantity: variables.input.initialQuantity,
+            quantity: variables.input.quantity || variables.input.initialQuantity,
             storageState: variables.input.storageState,
             storageLocation: variables.input.storageLocation || null,
             storageNotes: variables.input.storageNotes || null,
@@ -377,7 +388,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     parentId: () => pantryId,
     transformInput: (input: PantryItemInput) => ({
       pantryId,
-      initialQuantity: input.quantity,
+      quantity: input.quantity,
       itemName: input.itemName,
       unitId: input.unitId,
       storageState: input.storageState,
@@ -492,7 +503,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     getLowStockItems: () =>
       pantryItems.filter(item => {
         // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
-        return item.currentQuantity <= 1 || item.lowStockAlert;
+        return item.quantity <= 1 || item.lowStockAlert;
       }),
     getExpiredItems: () => {
       const now = new Date();

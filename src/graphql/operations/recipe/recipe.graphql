@@ -316,7 +316,7 @@ mutation RecordPantryUsage(
     pantryItem {
       id
       itemName
-      currentQuantity
+      quantity
     }
   }
 }

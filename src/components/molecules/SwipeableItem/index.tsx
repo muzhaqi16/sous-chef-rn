@@ -138,5 +138,4 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize to prevent unnecessary re-renders
 export const SwipeableItem = React.memo(SwipeableItemComponent);

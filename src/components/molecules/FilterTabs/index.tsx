@@ -1,9 +1,10 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils';
 import type { FilterTabConfig, FilterTabsProps } from './types';
 
-export type { FilterTabConfig, FilterTabsProps } from './types';
+export type { FilterTabConfig, FilterTabsProps, FilterTabActionButton } from './types';
 
 /**
  * Generic configurable tab filter component
@@ -28,6 +29,7 @@ export function FilterTabs<T extends string = string>({
   showCounts = true,
   variant = 'default',
   testIDPrefix = 'filter-tab',
+  actionButton,
 }: FilterTabsProps<T>): React.ReactElement {
   const { theme } = useUnistyles();
 
@@ -117,6 +119,24 @@ export function FilterTabs<T extends string = string>({
             </Pressable>
           );
         })}
+        {actionButton && (
+          <Pressable
+            onPress={actionButton.onPress}
+            testID={actionButton.testID || `${testIDPrefix}-action`}
+            style={[
+              styles.actionButton,
+              isCompact && styles.actionButtonCompact,
+              { backgroundColor: theme.colors.filterTab.inactiveBg },
+            ]}
+          >
+            <Icon
+              name={actionButton.icon}
+              size={isCompact ? 16 : 20}
+              color={theme.colors.primary}
+              library={actionButton.iconLibrary || 'MaterialIcons'}
+            />
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -173,5 +193,17 @@ const styles = StyleSheet.create(theme => ({
   },
   countTextCompact: {
     fontSize: theme.typography.fontSize.xs - 2,
+  },
+  actionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.xl,
+  },
+  actionButtonCompact: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 2,
+    borderRadius: theme.radii.lg,
   },
 }));

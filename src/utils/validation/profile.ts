@@ -14,10 +14,22 @@ const displayNameRule = yup
 // bio rule
 const bioRule = yup.string().max(500, 'Bio must be less than 500 characters');
 
-// phone rule
+// phone rule - flexible format allowing spaces, dashes, parentheses
 const phoneRule = yup
   .string()
-  .matches(/^[+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number');
+  .test('valid-phone', 'Please enter a valid phone number', value => {
+    if (!value) return true; // Allow empty (optional field)
+    // Strip all non-digit characters except leading +
+    const hasPlus = value.startsWith('+');
+    const digitsOnly = value.replace(/\D/g, '');
+    // Must have 7-15 digits (international numbers vary in length)
+    if (digitsOnly.length < 7 || digitsOnly.length > 15) return false;
+    // Only allow valid characters: digits, spaces, dashes, parentheses, plus
+    if (!/^[+]?[\d\s\-().]+$/.test(value)) return false;
+    // Plus sign only allowed at the start
+    if (!hasPlus && value.includes('+')) return false;
+    return true;
+  });
 
 // website/URL rule
 const urlRule = yup

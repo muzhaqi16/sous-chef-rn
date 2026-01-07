@@ -4,19 +4,19 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetTextInput,
-  BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { TagInput } from '#components';
+import { Icon } from '#utils';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -150,37 +150,44 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               {saving ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
-                <Ionicons name="checkmark" size={24} color={theme.colors.primary} />
+                <Icon name="checkmark" size={24} color={theme.colors.primary} library="Ionicons" />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              <Icon name="close" size={24} color={theme.colors.textPrimary} library="Ionicons" />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Folder Selection */}
         <Text style={styles.sectionLabel}>Folder</Text>
-        <BottomSheetFlatList<string | null>
-          data={[null, ...displayFolders]}
-          keyExtractor={(item: string | null) => item ?? 'no-folder'}
+        <ScrollView
           style={styles.folderList}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item: folder }: { item: string | null }) => {
-            const isSelected = folder === null ? !selectedFolder : selectedFolder === folder;
+          nestedScrollEnabled={true}
+        >
+          {[null, ...displayFolders].map(folder => {
+            const isSelected =
+              folder === null ? !selectedFolder : selectedFolder === folder;
             const isNoFolder = folder === null;
             return (
               <TouchableOpacity
+                key={folder ?? 'no-folder'}
                 style={[
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
                 ]}
                 onPress={() => handleSelectFolder(folder)}
               >
-                <Ionicons
+                <Icon
                   name={isNoFolder ? 'folder-outline' : 'folder'}
                   size={18}
-                  color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                  color={
+                    isSelected
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary
+                  }
+                  library="Ionicons"
                 />
                 <Text
                   style={[
@@ -191,12 +198,17 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
                 {isSelected && (
-                  <Ionicons name="checkmark" size={18} color={theme.colors.primary} />
+                  <Icon
+                    name="checkmark"
+                    size={18}
+                    color={theme.colors.primary}
+                    library="Ionicons"
+                  />
                 )}
               </TouchableOpacity>
             );
-          }}
-        />
+          })}
+        </ScrollView>
 
         {/* Create New Folder - Outside ScrollView so always visible */}
         {showNewFolder ? (
@@ -234,7 +246,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             style={styles.newFolderButton}
             onPress={() => setShowNewFolder(true)}
           >
-            <Ionicons name="add" size={18} color={theme.colors.primary} />
+            <Icon name="add" size={18} color={theme.colors.primary} library="Ionicons" />
             <Text style={styles.newFolderButtonText}>Create New Folder</Text>
           </TouchableOpacity>
         )}

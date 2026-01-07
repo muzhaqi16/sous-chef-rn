@@ -117,6 +117,9 @@ export const selectPantryState = (state: RootState) => ({
   setSelectedHomeId: state.setSelectedHomeId,
 });
 
+// Atomic home+pantry action selector - prevents race conditions during home switch
+export const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
+
 // PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
 // Note: selectedHomeId removed - shopping lists are independent of homes
 export const selectShoppingListState = (state: RootState) => ({
@@ -133,6 +136,10 @@ export const selectHomeState = (state: RootState) => ({
 // Home initialization flag selector (for useDefaultHome)
 export const selectHasInitializedHomeData = (state: RootState) => state.hasInitializedHomeData;
 export const selectSetHasInitializedHomeData = (state: RootState) => state.setHasInitializedHomeData;
+
+// Home selection ready flag selectors - gates pantry queries until home selection is complete
+export const selectIsHomeSelectionReady = (state: RootState) => state.isHomeSelectionReady;
+export const selectSetIsHomeSelectionReady = (state: RootState) => state.setIsHomeSelectionReady;
 
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({

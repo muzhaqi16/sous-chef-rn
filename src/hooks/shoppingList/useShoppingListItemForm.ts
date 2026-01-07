@@ -10,6 +10,7 @@ type FormState = {
   selectedUnitId: string | null;
   notes: string;
   category: string;
+  estimatedPrice: string;
 };
 
 type DirtyFields = {
@@ -19,6 +20,7 @@ type DirtyFields = {
   selectedUnitId: boolean;
   notes: boolean;
   category: boolean;
+  estimatedPrice: boolean;
 };
 
 const DEFAULT_FORM_STATE: FormState = {
@@ -28,6 +30,7 @@ const DEFAULT_FORM_STATE: FormState = {
   selectedUnitId: null,
   notes: '',
   category: '',
+  estimatedPrice: '',
 };
 
 const DEFAULT_DIRTY_FIELDS: DirtyFields = {
@@ -37,6 +40,7 @@ const DEFAULT_DIRTY_FIELDS: DirtyFields = {
   selectedUnitId: false,
   notes: false,
   category: false,
+  estimatedPrice: false,
 };
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
@@ -58,6 +62,7 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       selectedUnitId: formState.selectedUnitId !== savedInitialState.selectedUnitId,
       notes: formState.notes !== savedInitialState.notes,
       category: formState.category !== savedInitialState.category,
+      estimatedPrice: formState.estimatedPrice !== savedInitialState.estimatedPrice,
     };
   }, [formState, savedInitialState]);
 
@@ -81,6 +86,7 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       notes: item.notes || '',
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
+      estimatedPrice: item.priceEstimate?.estimated?.toString() || '',
     };
     setFormState(state);
     setSavedInitialState(state); // Save initial state for dirty comparison
@@ -94,38 +100,41 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   }, [formState.selectedUnitId, formState.unit]);
 
   // Build partial input with only dirty fields (for edit mode)
-  const buildDirtyInput = useCallback(
-    (quantityValue: number) => {
-      const input: Record<string, any> = {};
+  // Sends raw quantityInput string - server handles conversion via FlexibleQuantity
+  const buildDirtyInput = useCallback(() => {
+    const input: Record<string, any> = {};
 
-      if (dirtyFields.itemName) {
-        input.itemName = formState.itemName;
+    if (dirtyFields.itemName) {
+      input.itemName = formState.itemName;
+    }
+
+    if (dirtyFields.quantityInput) {
+      // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+      input.quantity = formState.quantityInput;
+    }
+
+    // Send unit fields together if either changed
+    if (dirtyFields.unit || dirtyFields.selectedUnitId) {
+      input.unitName = formState.unit;
+      if (formState.selectedUnitId) {
+        input.unitId = formState.selectedUnitId;
       }
+    }
 
-      if (dirtyFields.quantityInput) {
-        input.quantity = quantityValue;
-      }
+    if (dirtyFields.notes) {
+      input.notes = formState.notes;
+    }
 
-      // Send unit fields together if either changed
-      if (dirtyFields.unit || dirtyFields.selectedUnitId) {
-        input.unitName = formState.unit;
-        if (formState.selectedUnitId) {
-          input.unitId = formState.selectedUnitId;
-        }
-      }
+    if (dirtyFields.category) {
+      input.category = formState.category;
+    }
 
-      if (dirtyFields.notes) {
-        input.notes = formState.notes;
-      }
+    if (dirtyFields.estimatedPrice && formState.estimatedPrice) {
+      input.estimatedPrice = parseFloat(formState.estimatedPrice);
+    }
 
-      if (dirtyFields.category) {
-        input.category = formState.category;
-      }
-
-      return input;
-    },
-    [dirtyFields, formState],
-  );
+    return input;
+  }, [dirtyFields, formState]);
 
   const parseQuantityInput = useCallback(() => {
     const result = parseFractionalInput(formState.quantityInput);
