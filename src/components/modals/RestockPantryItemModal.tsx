@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
 import {
-  Button,
   FractionInput,
   FormInput,
   FormattedItemSubtitle,
+  BottomSheetHeader,
 } from '#components';
 import {
   BottomSheetModal,
@@ -16,6 +16,7 @@ import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils';
 import { PantryItemFragment } from '#generated';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -85,9 +86,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     const costPerUnit = costPerUnitInput
       ? parseFloat(costPerUnitInput)
       : undefined;
-    const totalCost = totalCostInput
-      ? parseFloat(totalCostInput)
-      : undefined;
+    const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
     onConfirm(
       quantityValue,
@@ -98,7 +97,15 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       isNaN(totalCost!) ? undefined : totalCost,
     );
     onClose();
-  }, [pantryItem, quantityInput, notes, costPerUnitInput, totalCostInput, onConfirm, onClose]);
+  }, [
+    pantryItem,
+    quantityInput,
+    notes,
+    costPerUnitInput,
+    totalCostInput,
+    onConfirm,
+    onClose,
+  ]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
 
@@ -113,6 +120,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -123,23 +132,30 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       )}
     >
       <BottomSheetScrollView
-        style={styles.scrollView}
+        style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
-          styles.contentContainer,
+          commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>Restock Item</Text>
+        <BottomSheetHeader
+          title="Restock Item"
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Restock"
+        />
 
         {pantryItem && (
           <>
             {/* Item Info */}
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{pantryItem.itemName}</Text>
-              <View style={styles.availableRow}>
-                <Text style={styles.availableLabel}>Current: </Text>
+            <View style={commonStyles.bottomSheetItemInfo}>
+              <Text style={commonStyles.bottomSheetItemName}>
+                {pantryItem.itemName}
+              </Text>
+              <View style={commonStyles.bottomSheetItemRow}>
+                <Text style={commonStyles.bottomSheetItemLabel}>Current: </Text>
                 <FormattedItemSubtitle
                   quantity={pantryItem.quantity}
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
@@ -149,9 +165,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
             </View>
 
             {/* Quantity Input */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={`Quantity to Add (${pantryItem.unit?.symbol || 'item'}) *`}
+                label={`Quantity to Add (${
+                  pantryItem.unit?.symbol || 'item'
+                }) *`}
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
@@ -159,13 +177,14 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               />
               {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
-                  New quantity: {newQuantity.toFixed(2)} {pantryItem.unit?.symbol || ''}
+                  New quantity: {newQuantity.toFixed(2)}{' '}
+                  {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
 
             {/* Cost Tracking (Optional) */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <Text style={styles.sectionLabel}>Cost (Optional)</Text>
               <View style={styles.costRow}>
                 <View style={styles.costField}>
@@ -190,7 +209,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
             </View>
 
             {/* Notes (Optional) */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FormInput
                 label="Notes (Optional)"
                 value={notes}
@@ -198,22 +217,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                 placeholder="Add any notes about this restock..."
                 multiline
                 numberOfLines={3}
-              />
-            </View>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                onPress={onClose}
-                fullWidth
-              />
-              <Button
-                title="Restock"
-                variant="primary"
-                onPress={handleConfirm}
-                fullWidth
               />
             </View>
           </>
@@ -224,42 +227,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  itemInfo: {
-    marginBottom: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  itemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  availableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availableLabel: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
@@ -278,10 +245,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     marginTop: theme.spacing.xs,
     fontWeight: theme.fonts.weight.medium,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
   },
 }));

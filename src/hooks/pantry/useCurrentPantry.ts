@@ -41,14 +41,17 @@ export function useCurrentPantry() {
   );
 
   // Helper to get default pantry from a home
+  // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
   const getDefaultPantry = useCallback((homeData: any) => {
-    const normalizedHome = normalizeHome(homeData?.home ?? homeData);
-    if (!normalizedHome?.pantries?.length) {
+    const home = homeData?.home ?? homeData;
+    const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
+
+    if (!pantries.length) {
       return null;
     }
     return (
-      normalizedHome.pantries.find((pantry: any) => pantry.isDefault) ||
-      normalizedHome.pantries[0] ||
+      pantries.find((pantry: any) => pantry.isDefault) ||
+      pantries[0] ||
       null
     );
   }, []);

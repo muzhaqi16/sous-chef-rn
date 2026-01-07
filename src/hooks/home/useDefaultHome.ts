@@ -14,8 +14,12 @@ import { usePreservedArrayData } from '#/hooks/apollo';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
-  const {selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId} =
-    useAppStore(useShallow(selectPantryState));
+  const {
+    selectedHomeId,
+    setSelectedHomeId,
+    selectedPantryId,
+    setSelectedPantryId,
+  } = useAppStore(useShallow(selectPantryState));
   const { canAttemptQueries } = useAuth();
 
   // Track if we've already initialized defaults to prevent cascading re-renders
@@ -26,7 +30,9 @@ export const useDefaultHome = () => {
   // PERFORMANCE: Use Zustand to track if data has been fetched
   // This survives component remounts (unlike refs) and prevents duplicate queries
   const hasInitializedHomeData = useAppStore(selectHasInitializedHomeData);
-  const setHasInitializedHomeData = useAppStore(selectSetHasInitializedHomeData);
+  const setHasInitializedHomeData = useAppStore(
+    selectSetHasInitializedHomeData,
+  );
 
   // Home selection ready state - gates pantry queries
   const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
@@ -40,11 +46,12 @@ export const useDefaultHome = () => {
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
   // on network status changes which caused query cascades
-  const [getHomes, { data: homes, loading, error, called }] = useGetHomesLazyQuery({
-    fetchPolicy: 'cache-first',
-    nextFetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
+  const [getHomes, { data: homes, loading, error, called }] =
+    useGetHomesLazyQuery({
+      fetchPolicy: 'cache-first',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'ignore',
+    });
 
   // Execute query ONCE when authenticated to populate Apollo cache
   // This runs on every app startup (hasInitializedHomeData resets) to ensure
@@ -87,14 +94,27 @@ export const useDefaultHome = () => {
   // Clear stale selectedHomeId if home was deleted while app was in background
   // Also reset ready state to force re-initialization
   useEffect(() => {
-    if (selectedHomeId && homesList && homesList.length > 0 && !isSelectedHomeValid) {
-      console.warn('[HomeSelector] Selected home no longer exists, clearing selection');
+    if (
+      selectedHomeId &&
+      homesList &&
+      homesList.length > 0 &&
+      !isSelectedHomeValid
+    ) {
+      console.warn(
+        '[HomeSelector] Selected home no longer exists, clearing selection',
+      );
       setSelectedHomeId(null);
       setIsHomeSelectionReady(false);
       hasInitializedRef.current = false;
       hasAutoSelectedRef.current = false;
     }
-  }, [selectedHomeId, homesList, isSelectedHomeValid, setSelectedHomeId, setIsHomeSelectionReady]);
+  }, [
+    selectedHomeId,
+    homesList,
+    isSelectedHomeValid,
+    setSelectedHomeId,
+    setIsHomeSelectionReady,
+  ]);
 
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
@@ -124,10 +144,20 @@ export const useDefaultHome = () => {
 
     // Mark as initialized once we've processed
     // Either we made updates, or selections already exist
-    if (didUpdate || (selectedHomeId && (selectedPantryId || !defaultPantryId))) {
+    if (
+      didUpdate ||
+      (selectedHomeId && (selectedPantryId || !defaultPantryId))
+    ) {
       hasInitializedRef.current = true;
     }
-  }, [remoteDefaultHomeId, defaultPantryId, selectedHomeId, selectedPantryId, setSelectedHomeId, setSelectedPantryId]);
+  }, [
+    remoteDefaultHomeId,
+    defaultPantryId,
+    selectedHomeId,
+    selectedPantryId,
+    setSelectedHomeId,
+    setSelectedPantryId,
+  ]);
 
   // AUTO-SELECT FIRST HOME: When no server default exists but homes are available
   // This handles the case where user has homes but none is marked as default
@@ -143,7 +173,10 @@ export const useDefaultHome = () => {
 
     // Auto-select first home
     const firstHome = homesList[0];
-    console.log('🏠 No default home on server, auto-selecting first home:', firstHome.id);
+    console.log(
+      '🏠 No default home on server, auto-selecting first home:',
+      firstHome.id,
+    );
 
     hasAutoSelectedRef.current = true;
     setSelectedHomeId(firstHome.id);
@@ -152,35 +185,46 @@ export const useDefaultHome = () => {
     // The mutation returns the default pantry, which we use to set selectedPantryId
     setDefaultHomeMutation({
       variables: { homeId: firstHome.id },
-    }).then(result => {
-      // Use pantry from mutation response (eliminates race condition)
-      const returnedPantry = result.data?.setDefaultHome?.defaultPantry;
-      if (returnedPantry?.id && !selectedPantryId) {
-        setSelectedPantryId(returnedPantry.id);
-        console.log('🏠 Set pantry from SetDefaultHome response:', returnedPantry.id);
-      } else if (!selectedPantryId) {
-        // Fallback: Get default pantry from first home data if mutation didn't return one
-        const firstHomePantry =
-          firstHome.pantries?.find((p: any) => p.isDefault) ||
-          firstHome.pantries?.[0];
-        if (firstHomePantry?.id) {
-          setSelectedPantryId(firstHomePantry.id);
-          console.log('🏠 Auto-selected first home pantry (fallback):', firstHomePantry.id);
+    })
+      .then(result => {
+        // Use pantry from mutation response (eliminates race condition)
+        const returnedPantry = result.data?.setDefaultHome?.defaultPantry;
+        if (returnedPantry?.id && !selectedPantryId) {
+          setSelectedPantryId(returnedPantry.id);
+          console.log(
+            '🏠 Set pantry from SetDefaultHome response:',
+            returnedPantry.id,
+          );
+        } else if (!selectedPantryId) {
+          // Fallback: Get default pantry from first home data if mutation didn't return one
+          const firstHomePantry =
+            firstHome.pantries?.find((p: any) => p.isDefault) ||
+            firstHome.pantries?.[0];
+          if (firstHomePantry?.id) {
+            setSelectedPantryId(firstHomePantry.id);
+            console.log(
+              '🏠 Auto-selected first home pantry (fallback):',
+              firstHomePantry.id,
+            );
+          }
         }
-      }
-    }).catch(err => {
-      console.warn('Failed to set first home as default on server:', err);
-      // Fallback on error: try to set pantry from home data
-      if (!selectedPantryId) {
-        const firstHomePantry =
-          firstHome.pantries?.find((p: any) => p.isDefault) ||
-          firstHome.pantries?.[0];
-        if (firstHomePantry?.id) {
-          setSelectedPantryId(firstHomePantry.id);
-          console.log('🏠 Auto-selected first home pantry (error fallback):', firstHomePantry.id);
+      })
+      .catch(err => {
+        console.warn('Failed to set first home as default on server:', err);
+        // Fallback on error: try to set pantry from home data
+        if (!selectedPantryId) {
+          const firstHomePantry =
+            firstHome.pantries?.find((p: any) => p.isDefault) ||
+            firstHome.pantries?.[0];
+          if (firstHomePantry?.id) {
+            setSelectedPantryId(firstHomePantry.id);
+            console.log(
+              '🏠 Auto-selected first home pantry (error fallback):',
+              firstHomePantry.id,
+            );
+          }
         }
-      }
-    });
+      });
 
     hasInitializedRef.current = true;
   }, [
@@ -207,17 +251,16 @@ export const useDefaultHome = () => {
     // Case 1: No homes exist - ready with no selection
     if (!homesList || homesList.length === 0) {
       if (!isHomeSelectionReady) {
-        console.log('🏠 Home selection ready: no homes');
         setIsHomeSelectionReady(true);
       }
       return;
     }
 
     // Case 2: Valid home is selected - ready
-    const hasValidSelection = selectedHomeId && homesList.some((h: any) => h.id === selectedHomeId);
+    const hasValidSelection =
+      selectedHomeId && homesList.some((h: any) => h.id === selectedHomeId);
     if (hasValidSelection) {
       if (!isHomeSelectionReady) {
-        console.log('🏠 Home selection ready: valid home selected');
         setIsHomeSelectionReady(true);
       }
       return;
@@ -235,16 +278,16 @@ export const useDefaultHome = () => {
   ]);
 
   // Helper function to get the default pantry from a home
+  // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
   const getDefaultPantry = (homeData: any) => {
-    const normalizedHome = normalizeHome(homeData?.home ?? homeData);
-    if (!normalizedHome?.pantries?.length) {
+    const home = homeData?.home ?? homeData;
+    const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
+
+    if (!pantries.length) {
       return null;
     }
-
     return (
-      normalizedHome.pantries.find((pantry: any) => pantry.isDefault) ||
-      normalizedHome.pantries[0] ||
-      null
+      pantries.find((pantry: any) => pantry.isDefault) || pantries[0] || null
     );
   };
 

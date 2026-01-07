@@ -73,6 +73,7 @@ export interface NavigationState {
   setSelectedShoppingListId: (id: string | null) => void;
   setHasInitializedHomeData: (value: boolean) => void;
   setIsHomeSelectionReady: (value: boolean) => void;
+  setHomeAndPantry: (homeId: string | null, pantryId: string | null) => void;
   setUserNavigationState: (
     userId: string,
     state: Partial<UserNavigationState>,
@@ -123,6 +124,15 @@ export const createNavigationSlice: StateCreator<
   setSelectedShoppingListId: id => {
     set(state => {
       state.selectedShoppingListId = id;
+    });
+  },
+
+  // Atomic update for home and pantry to prevent race conditions
+  // When switching homes, both values must update in a single re-render
+  setHomeAndPantry: (homeId, pantryId) => {
+    set(state => {
+      state.selectedHomeId = homeId;
+      state.selectedPantryId = pantryId;
     });
   },
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -10,16 +10,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Controller, useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
 import { ValueText } from '../atoms/ValueText';
 import {
-  getInputComponentForField,
   getInputLabelForField,
   getPlaceholderForField,
 } from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils';
+import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet';
 
 export interface SettingRowProps {
   item: any;
@@ -35,62 +33,51 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const { theme } = useUnistyles();
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [textEditModalVisible, setTextEditModalVisible] = useState(false);
+  const [textEditVisible, setTextEditVisible] = useState(false);
 
-  // Form setup for text inputs with validation
-  const form = useForm({
-    resolver: yupResolver(getValidationSchemaForField(item.key)),
-    defaultValues: {
-      [item.key]: (item.value as string) || '',
-    },
-  });
+  // Get field metadata
+  const inputLabel = getInputLabelForField(item.key);
+  const placeholder = getPlaceholderForField(item.key);
 
-  const handlePress = () => {
+  const handlePress = useCallback(() => {
     if (item.type === 'modal') {
       setModalVisible(true);
     } else if (item.type === 'text') {
-      // Reset form with current value and open modal
-      form.reset({
-        [item.key]: (item.value as string) || '',
-      });
-      setTextEditModalVisible(true);
+      setTextEditVisible(true);
     } else if (item.onPress) {
       item.onPress();
     }
-  };
+  }, [item]);
 
-  const handleSwitchChange = () => {
+  const handleSwitchChange = useCallback(() => {
     if (item.type !== 'switch') return;
-    console.log('Switch changed:', item.key);
     if (item.onPress) {
       item.onPress();
     }
-  };
+  }, [item]);
 
-  const handleModalOptionPress = (optionValue: string) => () => {
-    if (item.onSave) {
-      item.onSave(optionValue);
-    }
-    setModalVisible(false);
-  };
+  const handleModalOptionPress = useCallback(
+    (optionValue: string) => () => {
+      if (item.onSave) {
+        item.onSave(optionValue);
+      }
+      setModalVisible(false);
+    },
+    [item],
+  );
 
-  const handleTextSave = (data: any) => {
-    const value = data[item.key];
-    if (item.onSave) {
-      item.onSave(value);
-    }
-    setTextEditModalVisible(false);
-  };
+  const handleTextSave = useCallback(
+    (value: string) => {
+      if (item.onSave) {
+        item.onSave(value);
+      }
+    },
+    [item],
+  );
 
-  const handleTextCancel = () => {
-    form.reset();
-    setTextEditModalVisible(false);
-  };
-
-  // Get the appropriate input component
-  const InputComponent = getInputComponentForField(item.key);
-  const inputLabel = getInputLabelForField(item.key);
-  const placeholder = getPlaceholderForField(item.key);
+  const handleTextEditClose = useCallback(() => {
+    setTextEditVisible(false);
+  }, []);
 
   // Build accessibility label based on setting type
   const getAccessibilityLabel = () => {
@@ -103,6 +90,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         'Select';
       return `${baseLabel}, currently ${selectedOption}`;
     } else if (item.type === 'text') {
+      return `${baseLabel}, ${item.value || 'not set'}`;
+    } else if (item.type === 'info') {
       return `${baseLabel}, ${item.value || 'not set'}`;
     }
     return baseLabel;
@@ -125,22 +114,27 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     <>
       <TouchableOpacity
         testID={item.testID || `profile-${item.key}-button`}
-        activeOpacity={0.7}
-        onPress={handlePress}
+        activeOpacity={item.type === 'info' ? 1 : 0.7}
+        onPress={item.type === 'info' ? undefined : handlePress}
+        disabled={item.type === 'info'}
         style={[
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
         ]}
-        accessibilityRole="button"
+        accessibilityRole={item.type === 'info' ? 'text' : 'button'}
         accessibilityLabel={getAccessibilityLabel()}
         accessibilityHint={getAccessibilityHint()}
-        accessibilityState={{ disabled: item.disabled }}
+        accessibilityState={{ disabled: item.disabled || item.type === 'info' }}
       >
         <View style={styles.row}>
           {item.icon}
           <Text style={styles.rowLabel}>{item.label}</Text>
           <View style={styles.rowSpacer} />
+
+          {item.type === 'info' && (
+            <ValueText>{item.value as string}</ValueText>
+          )}
 
           {item.type === 'text' && (
             <>
@@ -217,54 +211,21 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Text Edit Modal */}
-      <Modal
-        visible={textEditModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={handleTextCancel}
-              style={styles.modalCloseButton}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-              accessibilityHint="Discard changes and close"
-            >
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{inputLabel}</Text>
-            <TouchableOpacity
-              onPress={form.handleSubmit(handleTextSave)}
-              style={styles.modalSaveButton}
-              accessibilityRole="button"
-              accessibilityLabel="Save"
-              accessibilityHint={`Save changes to ${inputLabel}`}
-            >
-              <Text style={styles.modalSaveText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.textInputContainer}>
-            <Controller
-              control={form.control}
-              name={item.key}
-              render={({ field, fieldState }) => (
-                <InputComponent
-                  label={inputLabel}
-                  placeholder={placeholder}
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  onBlur={field.onBlur}
-                  errorMessage={fieldState.error?.message}
-                  autoFocus
-                />
-              )}
-            />
-          </View>
-        </SafeAreaView>
-      </Modal>
+      {/* Text Edit Bottom Sheet */}
+      <TextEditBottomSheet
+        visible={textEditVisible}
+        title={inputLabel}
+        label={inputLabel}
+        placeholder={placeholder}
+        initialValue={(item.value as string) || ''}
+        fieldKey={item.key}
+        // @ts-expect-error - yup schema type compatibility
+        validationSchema={getValidationSchemaForField(item.key)}
+        onSave={handleTextSave}
+        onClose={handleTextEditClose}
+        multiline={item.key === 'bio'}
+        keyboardType={item.key === 'phone' ? 'phone-pad' : 'default'}
+      />
 
       {/* Selection Modal */}
       {item.type === 'modal' && item.options && (
@@ -336,7 +297,11 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  rowLabel: { marginLeft: theme.spacing.sm, fontSize: theme.typography.fontSize.md, color: theme.colors.textPrimary },
+  rowLabel: {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.textPrimary,
+  },
   rowSpacer: { flex: 1 },
   modalValueContainer: {
     flexDirection: 'row',
@@ -372,25 +337,8 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
     minWidth: 60,
   },
-  modalCancelText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-  },
-  modalSaveButton: {
-    padding: theme.spacing.xs,
-    minWidth: 60,
-    alignItems: 'flex-end',
-  },
-  modalSaveText: {
-    fontSize: theme.typography.fontSize.md,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
   modalHeaderSpacer: {
     width: theme.sizes.button.sm,
-  },
-  textInputContainer: {
-    padding: theme.spacing.xl,
   },
   modalOption: {
     flexDirection: 'row',

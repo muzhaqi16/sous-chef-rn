@@ -162,11 +162,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    paddingTop: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
-    paddingBottom: {
+    paddingVertical: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,
     },
@@ -404,6 +400,96 @@ export const commonStyles = StyleSheet.create(theme => ({
 
   modalContent: {
     padding: theme.spacing.md,
+  },
+
+  // ============= BOTTOM SHEET ITEM MODALS =============
+  // Shared styles for pantry item modals (Consume, Restock, Waste)
+
+  bottomSheetScrollView: {
+    flex: 1,
+  },
+
+  bottomSheetContent: {
+    padding: theme.spacing.md,
+  },
+
+  bottomSheetItemInfo: {
+    marginBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: theme.radii.md,
+  },
+
+  bottomSheetItemName: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+
+  bottomSheetItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  bottomSheetItemLabel: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textSecondary,
+  },
+
+  bottomSheetSection: {
+    marginBottom: theme.spacing.xl,
+  },
+
+  bottomSheetSectionLabel: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
+
+  bottomSheetHelperText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
+
+  bottomSheetHelperTextError: {
+    color: theme.colors.error,
+  },
+
+  // Chip/Option selection (for purpose, waste reason, etc.)
+  bottomSheetOptionContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+
+  bottomSheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    gap: theme.spacing.xs,
+  },
+
+  bottomSheetOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surfaceVariant,
+  },
+
+  bottomSheetOptionText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+
+  bottomSheetOptionTextSelected: {
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.semibold,
   },
 
   // ============= BADGES & CHIPS =============

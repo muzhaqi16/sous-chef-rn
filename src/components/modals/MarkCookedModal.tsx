@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -10,6 +10,7 @@ import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
+import { BottomSheetHeader } from '#components/atoms';
 import { parseFractionalInput } from '#/utils';
 
 interface MarkCookedModalProps {
@@ -79,6 +80,8 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -97,7 +100,13 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>I Cooked This!</Text>
+        <BottomSheetHeader
+          title="I Cooked This!"
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Mark Cooked"
+          confirmColor="success"
+        />
 
         {/* Recipe Info */}
         <View style={styles.recipeInfo}>
@@ -142,22 +151,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             numberOfLines={2}
           />
         </View>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={onClose}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.confirmButton]}
-            onPress={handleConfirm}
-          >
-            <Text style={styles.confirmButtonText}>Mark as Cooked</Text>
-          </TouchableOpacity>
-        </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -169,13 +162,6 @@ const styles = StyleSheet.create(theme => ({
   },
   contentContainer: {
     padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
   },
   recipeInfo: {
     marginBottom: theme.spacing.xl,
@@ -216,35 +202,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.success,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
   },
 }));

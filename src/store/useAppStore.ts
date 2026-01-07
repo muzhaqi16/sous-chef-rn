@@ -117,6 +117,9 @@ export const selectPantryState = (state: RootState) => ({
   setSelectedHomeId: state.setSelectedHomeId,
 });
 
+// Atomic home+pantry action selector - prevents race conditions during home switch
+export const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
+
 // PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
 // Note: selectedHomeId removed - shopping lists are independent of homes
 export const selectShoppingListState = (state: RootState) => ({

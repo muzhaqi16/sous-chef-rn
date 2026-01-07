@@ -138,33 +138,4 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   );
 };
 
-// PERFORMANCE: Custom comparator for React.memo
-// Focus on props that actually affect rendering
-// Callbacks should be stable (from context refs) so we use reference equality
-const arePropsEqual = (
-  prev: SwipeableItemProps,
-  next: SwipeableItemProps,
-): boolean => {
-  // Fast path: same children reference = definitely equal for content
-  if (prev.children === next.children && prev.isPurchased === next.isPurchased) {
-    // Check other visual props
-    return (
-      prev.swipeMode === next.swipeMode &&
-      prev.enableSwipeToDelete === next.enableSwipeToDelete &&
-      // Callback reference equality (stable from context)
-      prev.onPress === next.onPress &&
-      prev.onLongPress === next.onLongPress &&
-      prev.onDelete === next.onDelete &&
-      prev.onEdit === next.onEdit &&
-      prev.onTogglePurchase === next.onTogglePurchase &&
-      prev.onConsume === next.onConsume &&
-      prev.onWaste === next.onWaste &&
-      prev.onRestock === next.onRestock
-    );
-  }
-
-  return false;
-};
-
-// PERFORMANCE: Memoize with custom comparison to prevent unnecessary re-renders
-export const SwipeableItem = React.memo(SwipeableItemComponent, arePropsEqual);
+export const SwipeableItem = React.memo(SwipeableItemComponent);
