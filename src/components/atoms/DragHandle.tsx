@@ -11,11 +11,12 @@ interface DragHandleProps {
 /**
  * Drag handle component for reordering list items.
  * Shows a drag indicator icon that activates drag-to-reorder on long-press.
+ * Memoized to prevent unnecessary re-renders when parent re-renders.
  */
-export const DragHandle: React.FC<DragHandleProps> = ({
+export const DragHandle = React.memo(function DragHandle({
   onLongPress,
   disabled = false,
-}) => {
+}: DragHandleProps) {
   const { theme } = useUnistyles();
 
   if (disabled) {
@@ -38,7 +39,7 @@ export const DragHandle: React.FC<DragHandleProps> = ({
       />
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create(() => ({
   container: {

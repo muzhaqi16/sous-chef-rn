@@ -20,13 +20,13 @@ export type ShoppingListFromQuery = GetShoppingListsLiteQuery['shoppingLists'][n
  * - NO home.membersConnection/myMembership (fetched via GetShoppingList)
  *
  * Note: For detailed list data (items, permissions, collaborators), use
- * useShoppingListDetailQuery with the current list ID.
+ * useShoppingListItemsQuery with the current list ID.
  */
 export function useShoppingListsQuery() {
-  // PERFORMANCE: Uses lightweight query - metadata only, no items/collaborators
-  // - cache-and-network: Shows cached data immediately, fetches fresh in background
-  // - nextFetchPolicy: Prevents re-fetches on subsequent renders/list switches
-  // - No homeId: shopping lists are independent of homes
+  // PERFORMANCE: cache-and-network shows cached data immediately + fetches fresh in background
+  // - nextFetchPolicy: 'cache-first' prevents re-fetches on subsequent renders (fixes infinite loop)
+  // - Pull-to-refresh calls refetch() for fresh data
+  // - Fetches ALL user's lists (home-based and personal) - filtering happens in useShoppingListSelection
   const { data, previousData, loading, error, refetch } =
     useGetShoppingListsLiteQuery({
       variables: {},

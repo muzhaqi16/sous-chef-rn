@@ -134,6 +134,10 @@ export const selectHomeState = (state: RootState) => ({
 export const selectHasInitializedHomeData = (state: RootState) => state.hasInitializedHomeData;
 export const selectSetHasInitializedHomeData = (state: RootState) => state.setHasInitializedHomeData;
 
+// Home selection ready flag selectors - gates pantry queries until home selection is complete
+export const selectIsHomeSelectionReady = (state: RootState) => state.isHomeSelectionReady;
+export const selectSetIsHomeSelectionReady = (state: RootState) => state.setIsHomeSelectionReady;
+
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({
   theme: state.theme,

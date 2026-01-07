@@ -88,13 +88,17 @@ const PantryMainScreen: React.FC = React.memo(() => {
     });
 
   // Centralized pantry selection with fallback chain
-  const { pantry, pantries, currentHome, selectedHomeId, setSelectedPantryId } =
+  const { pantry, pantries, currentHome, selectedHomeId, setSelectedPantryId, isReady } =
     useCurrentPantry();
 
   // Keep query for pull-to-refresh
+  // Gate query with isReady and isFocused to prevent firing:
+  // - before home selection is complete (isReady)
+  // - when screen loses focus during navigation (isFocused)
+  const shouldFetchHome = isFocused && isReady && !!selectedHomeId && !currentHome;
   const { refetch: refetchHome } = useGetHomeBasicQuery({
-    variables: { homeId: selectedHomeId ?? '' },
-    skip: !selectedHomeId || !!currentHome,
+    variables: { homeId: selectedHomeId! },
+    skip: !shouldFetchHome,
     fetchPolicy: 'cache-and-network',
   });
 
@@ -236,8 +240,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner
+  // Also show loading while home selection is initializing
   const isLoadingInitial =
-    loading &&
+    (!isReady || loading) &&
     !pantryError &&
     locationFilteredItems.length === 0 &&
     !allItems?.length;

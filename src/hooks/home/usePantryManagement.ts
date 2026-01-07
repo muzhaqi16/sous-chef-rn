@@ -79,12 +79,13 @@ export function usePantryManagement(pantryId: string | undefined) {
   // - errorPolicy: 'ignore' returns cached data when network fails (offline graceful degradation)
 
   // Single source of truth: Apollo cache - now using Connection-based query
+  // skip controls execution - when skip is false, pantryId is guaranteed valid
   const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
-    variables: hasValidPantryId ? {
-      id: pantryId,
+    variables: {
+      id: pantryId!,
       itemsFirst: 25, // Initial page size
       storageLocationsFirst: 50,
-    } : undefined as any,
+    },
     skip: !hasValidPantryId, // Query only executes when pantryId is valid
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',

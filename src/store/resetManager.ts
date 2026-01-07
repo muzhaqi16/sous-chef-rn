@@ -63,6 +63,8 @@ export const createResetManager = (
         selectedShoppingListId: null,
         // Reset home data initialization flag to allow re-fetch on next login
         hasInitializedHomeData: false,
+        // Reset home selection ready flag to prevent stale pantry queries on next login
+        isHomeSelectionReady: false,
       });
     }
 
@@ -198,6 +200,8 @@ const clearAuthFromStorage = async () => {
         delete parsedData.state.selectedShoppingListId;
         // Reset home data initialization flag
         delete parsedData.state.hasInitializedHomeData;
+        // Reset home selection ready flag
+        delete parsedData.state.isHomeSelectionReady;
 
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
       }

@@ -1,72 +1,87 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
   useAppStore,
   selectShoppingListState,
+  selectSelectedHomeId,
 } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
 /**
- * useShoppingListSelection - List selection with auto-select fallback
+ * useShoppingListSelection - Simple list selection with home context
  *
- * Single responsibility:
- * - Manage which shopping list is currently selected
- * - Derive current list from selection or default
- * - Auto-select default list when no valid selection exists
+ * Filters lists to show:
+ * - Lists belonging to current selected home
+ * - Personal lists (no home)
+ * - Shared lists without a home
  *
- * This hook is pure selection logic - no data fetching or transformation.
+ * Uses one-time auto-select to prevent infinite re-render loops.
  */
 export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
-  // Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
   const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
     useShallow(selectShoppingListState),
   );
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
 
-  // Derive: default list (first with isDefault flag, or first in array)
+  // One-time initialization flag
+  const didInitRef = useRef(false);
+
+  // Filter lists relevant to current home context:
+  // - Lists belonging to current home
+  // - Personal lists (no home)
+  // - Shared lists without a home
+  const relevantLists = useMemo(() => {
+    return lists.filter(
+      list =>
+        list.homeId === selectedHomeId || // Belongs to current home
+        !list.homeId, // Personal or shared without home
+    );
+  }, [lists, selectedHomeId]);
+
+  // Default: first with isDefault flag from relevant lists, or first relevant list
   const defaultList = useMemo(
-    () => lists.find(list => list.isDefault) || lists[0] || undefined,
-    [lists],
+    () => relevantLists.find(list => list.isDefault) || relevantLists[0],
+    [relevantLists],
   );
 
-  // Check if selected list still exists in the lists array
-  const selectedListExists = useMemo(
-    () =>
-      selectedShoppingListId
-        ? lists.some(list => list.id === selectedShoppingListId)
-        : false,
-    [selectedShoppingListId, lists],
-  );
-
-  // Derive: current list ID (only use selectedShoppingListId if it exists in lists)
-  // This prevents querying deleted lists during race conditions after delete
+  // Derive currentListId: use selected if valid, otherwise use default
   const currentListId = useMemo(() => {
-    if (selectedShoppingListId && selectedListExists) {
+    if (
+      selectedShoppingListId &&
+      relevantLists.some(l => l.id === selectedShoppingListId)
+    ) {
       return selectedShoppingListId;
     }
-    return defaultList?.id || undefined;
-  }, [selectedShoppingListId, selectedListExists, defaultList?.id]);
+    return defaultList?.id;
+  }, [selectedShoppingListId, relevantLists, defaultList?.id]);
 
-  // Derive: current list object
+  // Current list object
   const currentList = useMemo(
-    () => lists.find(list => list.id === currentListId) || defaultList,
-    [lists, currentListId, defaultList],
+    () => relevantLists.find(list => list.id === currentListId) || defaultList,
+    [relevantLists, currentListId, defaultList],
   );
 
-  // Auto-select: ONLY when no selection exists OR selected list was deleted
-  // Key fix: Don't include defaultList?.id in dependencies - it changes on every lists update
-  // Instead, calculate fallback list inside the effect to prevent infinite loops
+  // ONE-TIME auto-select
   useEffect(() => {
-    // Only auto-select if we have lists but no valid selection
-    if (lists.length > 0 && (!selectedShoppingListId || !selectedListExists)) {
-      const fallbackList = lists.find(list => list.isDefault) || lists[0];
-      if (fallbackList?.id) {
-        setSelectedShoppingListId(fallbackList.id);
-      }
+    if (didInitRef.current) return;
+    if (relevantLists.length === 0) return;
+
+    // Already have valid selection in relevant lists
+    if (
+      selectedShoppingListId &&
+      relevantLists.some(l => l.id === selectedShoppingListId)
+    ) {
+      didInitRef.current = true;
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedShoppingListId, selectedListExists, lists.length]);
-  // NOTE: Deliberately NOT including setSelectedShoppingListId, defaultList?.id or lists
-  // to prevent infinite loop when lists change
+
+    // Select first relevant list
+    const firstList = relevantLists.find(l => l.isDefault) || relevantLists[0];
+    if (firstList?.id) {
+      setSelectedShoppingListId(firstList.id);
+    }
+    didInitRef.current = true;
+  }); // NO DEPENDENCIES - runs on every render until didInitRef is true
 
   return {
     currentListId,

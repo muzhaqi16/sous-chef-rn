@@ -29988,7 +29988,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "UserSettings",
+                "name": "SetDefaultHomePayload",
                 "ofType": null
               }
             },
@@ -36663,6 +36663,14 @@
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sourceShoppingListItemId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -48775,6 +48783,42 @@
           }
         ],
         "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "SetDefaultHomePayload",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "defaultPantry",
+            "description": null,
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Pantry", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "settings",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UserSettings",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
         "enumValues": null,
         "possibleTypes": null
       },

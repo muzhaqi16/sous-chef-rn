@@ -11,7 +11,6 @@ import {
   useSetDefaultHomeMutation,
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
-  useGetDefaultPantryLazyQuery,
 } from '#generated';
 import { useShallow } from 'zustand/shallow';
 import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
@@ -60,8 +59,13 @@ export function useHomeManagement() {
     optimisticResponse: variables => ({
       __typename: 'Mutation',
       setDefaultHome: {
-        __typename: 'UserSettings',
-        id: variables.homeId,
+        __typename: 'SetDefaultHomePayload',
+        settings: {
+          __typename: 'UserSettings',
+          id: variables.homeId,
+        },
+        // defaultPantry will be returned by server, null in optimistic response
+        defaultPantry: null,
       },
     }),
 
@@ -402,11 +406,6 @@ export function useHomeManagement() {
       fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
     });
 
-  // Get default pantry for a home
-  const [getDefaultPantry] = useGetDefaultPantryLazyQuery({
-    fetchPolicy: 'network-only', // Always fetch fresh default pantry (one-time operation)
-  });
-
   // Helper functions using CRUD utilities
   const createHomeOperation = createAddOperation({
     mutation: createHomeMutation,
@@ -500,22 +499,14 @@ export function useHomeManagement() {
         variables: { homeId },
       });
 
-      if (result.data) {
+      if (result.data?.setDefaultHome) {
         // Immediately update local state for instant UI feedback
         setSelectedHomeId(homeId);
 
-        // Auto-select the default pantry using server query
-        try {
-          const { data: pantryData } = await getDefaultPantry({
-            variables: { homeId },
-          });
-
-          if (pantryData?.defaultPantry?.id) {
-            setSelectedPantryId(pantryData.defaultPantry.id);
-          }
-        } catch (error) {
-          console.warn('Failed to get default pantry:', error);
-          // Non-critical - user can manually select pantry if needed
+        // Use the default pantry from mutation response - atomic, no race condition
+        const defaultPantry = result.data.setDefaultHome.defaultPantry;
+        if (defaultPantry?.id) {
+          setSelectedPantryId(defaultPantry.id);
         }
 
         return true;
