@@ -13,7 +13,7 @@ import { Input } from '#components/base/Input';
 import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
 import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocompleteInput';
-import { FractionInput } from '#components/molecules/FractionInput';
+import { EditableCounter, FieldRow } from '#components/molecules';
 import { useAppNavigation } from '#hooks';
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
@@ -37,9 +37,8 @@ export const AddEditItem: React.FC<{
   const isEdit = !!itemId;
 
   const {
-    formState: { itemName, quantityInput, unit, notes, category },
+    formState: { itemName, quantityInput, unit, notes, category, estimatedPrice },
     updateField,
-    parseQuantityInput,
     setFromItem,
     buildUnitInput,
     buildDirtyInput,
@@ -139,15 +138,13 @@ export const AddEditItem: React.FC<{
       return;
     }
 
+    if (!quantityInput.trim()) {
+      Alert.alert('Error', 'Please enter a quantity');
+      return;
+    }
+
     setSaving(true);
     try {
-      const quantityValue = parseQuantityInput();
-
-      if (!quantityValue) {
-        Alert.alert('Error', 'Please enter a valid quantity');
-        return;
-      }
-
       const unitData = buildUnitInput();
 
       let result;
@@ -158,8 +155,8 @@ export const AddEditItem: React.FC<{
           return;
         }
 
-        // Only send changed fields
-        const input = buildDirtyInput(quantityValue);
+        // Only send changed fields - sends raw quantityInput string
+        const input = buildDirtyInput();
         result = await updateItem({
           variables: {
             id: itemId,
@@ -176,10 +173,12 @@ export const AddEditItem: React.FC<{
             input: {
               shoppingListId: listId,
               itemName,
-              quantity: quantityValue,
+              // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
+              quantity: quantityInput,
               ...unitData,
               notes,
               category,
+              ...(estimatedPrice && { estimatedPrice: parseFloat(estimatedPrice) }),
             },
           },
         });
@@ -298,24 +297,23 @@ export const AddEditItem: React.FC<{
         />
       )}
 
-      {/* Quantity */}
-      <FractionInput
-        label="Quantity"
-        value={quantityInput}
-        onChangeText={text => updateField('quantityInput', text)}
-        placeholder="e.g., 1 1/4, 2.5, or 3"
-        testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
-      />
-
-      {/* Unit */}
-      <UnitsAutocompleteInput
-        label="Unit"
-        value={unit}
-        onChangeText={text => updateField('unit', text)}
-        onUnitSelected={handleUnitSelect}
-        placeholder="kg, lbs, pcs, etc."
-        testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
-      />
+      {/* Quantity + Unit (inline) */}
+      <FieldRow>
+        <EditableCounter
+          label="Quantity"
+          required
+          value={quantityInput}
+          onChangeText={text => updateField('quantityInput', text)}
+          placeholder="1"
+        />
+        <UnitsAutocompleteInput
+          label="Unit"
+          value={unit}
+          onChangeText={text => updateField('unit', text)}
+          onUnitSelected={handleUnitSelect}
+          placeholder="pcs, kg, etc."
+        />
+      </FieldRow>
 
       {/* Category Field */}
       <CategoryAutocompleteInput
@@ -324,6 +322,15 @@ export const AddEditItem: React.FC<{
         onChangeText={text => updateField('category', text)}
         placeholder="e.g., Dairy, Produce"
         categoryType={CategoryType.General}
+      />
+
+      {/* Estimated Price Field */}
+      <Input
+        label="Estimated Price"
+        value={estimatedPrice}
+        onChangeText={text => updateField('estimatedPrice', text)}
+        placeholder="e.g., 4.99"
+        keyboardType="numeric"
       />
 
       {/* Notes Field */}
