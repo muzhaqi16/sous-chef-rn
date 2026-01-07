@@ -57,3 +57,6 @@ export * from './ImageGalleryTabs';
 export * from './FolderPicker';
 export * from './TagPicker';
 export * from './TagInput';
+export * from './BottomSheetSearchBar';
+export * from './ActionCard';
+export * from './SuggestionListItem';

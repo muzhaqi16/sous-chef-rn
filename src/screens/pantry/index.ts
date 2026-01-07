@@ -1,4 +1,3 @@
-export {ExpiringItems} from './ExpiringItems';
 export {PantryMain} from './PantryMain';
 export {PantryItemDetail} from './PantryItemDetail';
 export {PantryItemScreen} from './PantryItemScreen';

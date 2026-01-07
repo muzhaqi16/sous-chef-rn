@@ -20,6 +20,25 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+
+// Helper to detect if error is network-related (skip alerts, let queue handle retry)
+const isNetworkError = (error: any): boolean => {
+  const message = (error?.message || error?.networkError?.message || '').toLowerCase();
+  const networkPatterns = [
+    'network request failed',
+    'network error',
+    'connection refused',
+    'timeout',
+    'enotfound',
+    'econnrefused',
+    'econnreset',
+    'unable to reach',
+    'no internet',
+    'offline',
+  ];
+  return networkPatterns.some(pattern => message.includes(pattern)) || !!error?.networkError;
+};
 
 // Cache updater utilities for shopping list items connection
 // Uses parent connection pattern for ShoppingList.itemsConnection
@@ -251,19 +270,43 @@ export function useShoppingListItemMutations(
   });
 
   // === TOGGLE MUTATION ===
-  // Uses cache.modify() pattern (Pattern 5 from Apollo patterns doc) for instant UI updates
-  // This avoids "Missing field" warnings from partial optimistic responses
+  // Uses optimisticResponse for instant UI feedback when toggling purchase status
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    // Use cache.modify for instant UI updates - no optimistic response needed
+    // Optimistic response ensures update() runs immediately (not after network response)
+    optimisticResponse: variables => {
+      const item = items.find(i => i.id === variables.id);
+      return {
+        __typename: 'Mutation',
+        toggleShoppingListItemPurchased: {
+          __typename: 'ShoppingListItem',
+          id: variables.id,
+          itemName: item?.itemName ?? null,
+          quantity: item?.quantity ?? null,
+          quantityInput: item?.quantityInput ?? null,
+          normalizedQuantity: null,
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: variables.purchased,
+            purchasedQuantity: null,
+            purchasedPrice: null,
+            purchaseDate: variables.purchased ? new Date().toISOString() : null,
+          },
+          updatedAt: new Date().toISOString(),
+          version: item?.version ?? 0,
+          category: item?.category ?? null,
+          unitName: item?.unitName ?? null,
+          unit: item?.unit ?? null,
+        },
+      };
+    },
     update(cache, _result, { variables }) {
       if (!variables) return;
 
       const itemId = variables.id;
       const newStatus = variables.purchased;
 
-      // Directly modify the cached item's purchaseInfo.isPurchased field
-      // This executes immediately, providing instant UI feedback
+      // Also use cache.modify for belt-and-suspenders instant update
       cache.modify({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fields: {
@@ -278,9 +321,34 @@ export function useShoppingListItemMutations(
           },
         },
       });
+
+      // Persist optimistic isPurchased to survive app restarts while offline
+      optimisticDataPersistence.save(
+        'ShoppingListItem',
+        itemId,
+        'isPurchased',
+        newStatus,
+      );
+    },
+    onCompleted: data => {
+      // Clear persisted optimistic data on successful server sync
+      if (data?.toggleShoppingListItemPurchased?.id) {
+        optimisticDataPersistence.clear(
+          'ShoppingListItem',
+          data.toggleShoppingListItemPurchased.id,
+          'isPurchased',
+        );
+      }
     },
     onError: error => {
-      // On error, refetch to restore correct state
+      // For network errors, don't show alert or refetch - queue will handle retry
+      // This keeps the optimistic UI intact while offline
+      if (isNetworkError(error)) {
+        console.log('Toggle purchase queued for retry (network error)');
+        return;
+      }
+
+      // For server/validation errors, show alert and refetch to restore correct state
       const { message } = handleApolloError(error, {
         operation: 'Toggle Item Purchased',
       });

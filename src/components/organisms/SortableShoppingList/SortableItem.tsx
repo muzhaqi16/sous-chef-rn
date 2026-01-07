@@ -59,7 +59,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     canMarkPurchased = true,
   } = permissionsRef.current;
 
-  // ANIMATION: Exit animation using reusable hook
+  // ANIMATION: Manual exit animation triggered on checkbox press
+  // Animation plays first, then mutation fires in the callback
   const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
 
   // Handle long press for drag activation with haptic feedback
@@ -158,9 +159,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [item.leftElement, item.leftElementConfig]);
 
   // Create checkbox element for marking items as purchased
-  // Uses onToggleComplete so animation plays BEFORE mutation moves item
-  // When marking as purchased: slide right + fade out + height collapse
-  // When unmarking: slide left + fade out + height collapse
+  // Triggers exit animation immediately, mutation fires after animation completes
+  // This creates a clean visual sequence: slide out → then list reflows
   // Only shown if user has permission to mark items as purchased
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
@@ -168,10 +168,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     return (
       <AnimatedCheckbox
         checked={!!item.isPurchased}
-        onToggleComplete={() => {
+        onPress={() => {
+          // Immediate tactile feedback
+          HapticService.light();
+          // Trigger exit animation, mutation fires in callback after animation completes
           // Direction: 1 = right (marking purchased), -1 = left (unmarking)
           const direction = item.isPurchased ? -1 : 1;
-          // triggerExit handles animation + calls onComplete via runOnJS
           triggerExit(direction, () => {
             onTogglePurchase(item.id);
           });
@@ -179,21 +181,11 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         size={28}
       />
     );
-  }, [
-    item.isPurchased,
-    item.id,
-    onTogglePurchase,
-    triggerExit,
-    canMarkPurchased,
-  ]);
+  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit, canMarkPurchased]);
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        isActive && styles.activeContainer,
-        exitAnimatedStyle,
-      ]}
+      style={[styles.container, isActive && styles.activeContainer, exitAnimatedStyle]}
     >
       <SwipeableItem
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}

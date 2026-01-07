@@ -35,31 +35,32 @@ export const formAnimationPreset = {
  * Animation preset for list item exit transitions
  * Used when items are toggled between purchased/unpurchased states
  *
- * Timeline:
- * - 0-350ms: Slide (300px left/right)
- * - 100-300ms: Scale (0.95)
- * - 200-350ms: Fade out
- * - 350-550ms: Height collapse
+ * Timeline (300ms total):
+ * - 0-300ms: Slide (300px right)
+ * - 50-300ms: Scale to 0.95
+ * - 100-300ms: Fade out
+ * - 300ms: Mutation fires, list reflows
  *
- * Total duration: ~550ms
+ * The removalDelay matches slide duration so animation completes
+ * before the item is removed and list reflows.
  */
 export const listItemExitAnimation = {
   slide: {
-    duration: 1000,
+    duration: 300,
     distance: 300,
   },
   fade: {
-    delay: 600,
-    duration: 300,
+    delay: 100,
+    duration: 200,
   },
   scale: {
-    delay: 300,
-    duration: 400,
+    delay: 50,
+    duration: 250,
     toValue: 0.95,
   },
   // When to trigger item removal and layout shift
-  // Set to overlap with fade for smooth transition
-  removalDelay: 650,
+  // Must match slide duration so animation completes before removal
+  removalDelay: 300,
   layoutAnimation: {
     duration: 200,
   },

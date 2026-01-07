@@ -1,17 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Image,
-} from 'react-native';
+import { View, Text, ActivityIndicator, Alert } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetBackdrop,
-  BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
@@ -21,7 +13,6 @@ import {
 } from '#hooks/shoppingList';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
-import { Icon } from '#utils';
 import { useAppStore } from '#store/useAppStore';
 import {
   useAddItemToShoppingListMutation,
@@ -30,7 +21,13 @@ import {
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { ItemSuggestionsList } from '#components/molecules';
+import {
+  ItemSuggestionsList,
+  BottomSheetSearchBar,
+  ActionCard,
+  SuggestionListItem,
+  type BottomSheetSearchBarRef,
+} from '#components/molecules';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -52,6 +49,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   const { navigate, navigateTo } = useAppNavigation();
 
@@ -60,9 +58,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
   // Error handler for Apollo mutations
   const { handleApolloError } = useErrorHandler();
-
-  // Debounce timer ref
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,42 +109,30 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       },
     });
 
-  // Debounced autocomplete search (250ms)
-  useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
+  // Search handler - called after BottomSheetSearchBar debounce
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
 
-    if (searchQuery.length >= 2 && isOnline) {
-      debounceTimerRef.current = setTimeout(() => {
-        fetchItems({ variables: { input: { query: searchQuery, limit: 10 } } });
-      }, 250);
-    }
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
+      // Only search when online and query is long enough
+      if (text.length >= 2 && isOnline) {
+        fetchItems({ variables: { input: { query: text, limit: 10 } } });
       }
-    };
-  }, [searchQuery, isOnline, fetchItems]);
-
-  // Track if we've initialized from the initial search query
-  const hasInitializedRef = useRef(false);
+    },
+    [isOnline, fetchItems],
+  );
 
   // Control bottom sheet visibility
   useEffect(() => {
     if (visible && shoppingListId) {
       bottomSheetRef.current?.present();
-      if (!hasInitializedRef.current) {
-        setSearchQuery(initialSearchQuery);
-        hasInitializedRef.current = true;
-      }
     } else {
       bottomSheetRef.current?.dismiss();
-      hasInitializedRef.current = false;
+      // Clear search when closing
+      searchBarRef.current?.clear();
+      setSearchQuery('');
     }
-  }, [visible, shoppingListId, initialSearchQuery]);
+  }, [visible, shoppingListId]);
 
   // Handle scan barcode press
   const handleScanPress = useCallback(() => {
@@ -166,10 +149,10 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     if (shoppingListId) {
       navigate('AddItem', {
         listId: shoppingListId,
-        initialItemName: searchQuery.trim() || undefined,
+        initialItemName: searchBarRef.current?.getValue()?.trim() || undefined,
       });
     }
-  }, [onClose, navigate, shoppingListId, searchQuery]);
+  }, [onClose, navigate, shoppingListId]);
 
   // Handle quick add from search autocomplete suggestion
   const handleQuickAddSearchSuggestion = useCallback(
@@ -191,6 +174,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         });
 
         toastService.success(`Added ${item.name}`);
+        searchBarRef.current?.clear();
         setSearchQuery('');
         onItemAdded?.();
       } catch (error) {
@@ -238,51 +222,19 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const showSuggestions = !showSearchResults;
 
   // Render a single suggestion item with image
-  const renderSuggestionItem = (item: ShoppingListSuggestionItem) => (
-    <TouchableOpacity
-      key={item.id}
-      style={styles.suggestionItem}
-      onPress={() => handleQuickAddSuggestion(item)}
-      disabled={adding}
-    >
-      <View style={styles.suggestionImageContainer}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.suggestionImage} />
-        ) : (
-          <View style={styles.suggestionImagePlaceholder}>
-            <Icon
-              name="shopping-cart"
-              size={20}
-              color={theme.colors.primary}
-              library="MaterialIcons"
-            />
-          </View>
-        )}
-      </View>
-      <View style={styles.suggestionItemInfo}>
-        <Text style={styles.suggestionItemName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        {item.category && (
-          <Text style={styles.suggestionItemCategory} numberOfLines={1}>
-            {item.category}
-          </Text>
-        )}
-      </View>
-      <TouchableOpacity
-        style={styles.quickAddButton}
-        onPress={() => handleQuickAddSuggestion(item)}
-        disabled={adding}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Icon
-          name="add"
-          size={20}
-          color={theme.colors.primary}
-          library="MaterialIcons"
-        />
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const renderSuggestionItem = useCallback(
+    (item: ShoppingListSuggestionItem) => (
+      <SuggestionListItem
+        key={item.id}
+        imageUrl={item.imageUrl}
+        title={item.name}
+        subtitle={item.category}
+        placeholderIcon="shopping-cart"
+        onQuickAdd={() => handleQuickAddSuggestion(item)}
+        quickAddDisabled={adding}
+      />
+    ),
+    [adding, handleQuickAddSuggestion],
   );
 
   // Render a suggestion section
@@ -342,50 +294,20 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         <Text style={styles.title}>Add to Shopping List</Text>
 
         {/* Search Input */}
-        <View style={styles.searchContainer}>
-          <Icon
-            name="search"
-            size={20}
-            color={theme.colors.textSecondary}
-            library="MaterialIcons"
-          />
-          <BottomSheetTextInput
-            style={styles.searchInput}
-            placeholder="Search or scan item..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => setSearchQuery('')}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              testID="add-sheet-search-clear"
-            >
-              <Icon
-                name="close"
-                size={20}
-                color={theme.colors.textSecondary}
-                library="MaterialIcons"
-              />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.scanIconButton}
-            onPress={handleScanPress}
-          >
-            <Icon
-              name="qr-code-scanner"
-              size={24}
-              color={theme.colors.primary}
-              library="MaterialIcons"
-            />
-          </TouchableOpacity>
-        </View>
+        <BottomSheetSearchBar
+          ref={searchBarRef}
+          placeholder="Search or scan item..."
+          onChangeText={handleSearchChange}
+          onClear={() => setSearchQuery('')}
+          initialValue={initialSearchQuery}
+          autoCapitalize="none"
+          rightActions={[
+            {
+              icon: 'qr-code-scanner',
+              onPress: handleScanPress,
+            },
+          ]}
+        />
 
         {/* Search Results */}
         {showSearchResults && (
@@ -404,35 +326,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.actionButton}
+          <ActionCard
+            icon="qr-code-scanner"
+            label="Scan Barcode"
             onPress={handleScanPress}
-          >
-            <View style={styles.actionIconContainer}>
-              <Icon
-                name="qr-code-scanner"
-                size={32}
-                color={theme.colors.primary}
-                library="MaterialIcons"
-              />
-            </View>
-            <Text style={styles.actionButtonText}>Scan Barcode</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
+          />
+          <ActionCard
+            icon="add"
+            label="Add Manually"
             onPress={handleAddManually}
-          >
-            <View style={styles.actionIconContainer}>
-              <Icon
-                name="add"
-                size={32}
-                color={theme.colors.primary}
-                library="MaterialIcons"
-              />
-            </View>
-            <Text style={styles.actionButtonText}>Add Manually</Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Suggestions Sections - shown when not searching */}
@@ -484,54 +387,10 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.lg,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    marginLeft: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-  },
-  clearButton: {
-    padding: theme.spacing.xs,
-  },
-  scanIconButton: {
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
   actionButtons: {
     flexDirection: 'row',
     gap: theme.spacing.md,
     marginBottom: theme.spacing.xl,
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.lg,
-  },
-  actionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  actionButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
   },
   section: {
     marginBottom: theme.spacing.lg,
@@ -564,54 +423,5 @@ const styles = StyleSheet.create(theme => ({
   },
   suggestionList: {
     gap: theme.spacing.sm,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  suggestionImageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  suggestionImage: {
-    width: 40,
-    height: 40,
-    resizeMode: 'cover',
-  },
-  suggestionImagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionItemInfo: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  suggestionItemName: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  suggestionItemCategory: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 }));

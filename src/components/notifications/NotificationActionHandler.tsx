@@ -79,15 +79,13 @@ export const NotificationActionHandler: React.FC<
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
-        // Navigate to pantry expiring items view
+        // Navigate to main pantry - expired items now shown inline
         try {
-          navigate('ExpiringItems', {
-            itemId: notification.payload.itemId,
-          });
+          navigate('Pantry');
         } catch (error) {
           Alert.alert(
             'Navigation Error',
-            'Could not navigate to expiring items.',
+            'Could not navigate to pantry.',
           );
         }
         break;

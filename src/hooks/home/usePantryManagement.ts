@@ -212,10 +212,15 @@ export function usePantryManagement(pantryId: string | undefined) {
       return expirationDate >= now && expirationDate <= threeDaysFromNow;
     });
 
+    // normalItems includes everything except "expiring soon" items
+    // This includes: items without expiry, expired items, and items expiring after 3 days
+    // Expired items will be visually distinguished by card variant in UI
     const normalItems = pantryItems.filter(item => {
       if (!item.expiresAt) return true; // Items without expiry go to normal
       const expirationDate = new Date(item.expiresAt);
-      return expirationDate > threeDaysFromNow;
+      // Exclude only items expiring in the next 0-3 days (those go to expiringSoon)
+      const isExpiringSoon = expirationDate >= now && expirationDate <= threeDaysFromNow;
+      return !isExpiringSoon;
     });
 
     return {

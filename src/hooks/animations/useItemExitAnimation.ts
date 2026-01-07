@@ -1,9 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withDelay,
+  runOnJS,
 } from 'react-native-reanimated';
 import {
   listItemExitAnimation,
@@ -40,6 +41,18 @@ export const useItemExitAnimation = () => {
   const exitDirection = useSharedValue(0);
   const isAnimating = useSharedValue(false);
 
+  // Refs for callback management and unmount safety
+  const onCompleteRef = useRef<(() => void) | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount to prevent callback firing on unmounted component
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      onCompleteRef.current = null;
+    };
+  }, []);
+
   // Exit animated style (slide, fade, scale)
   const exitAnimatedStyle = useAnimatedStyle(() => {
     const isActive = exitDirection.value !== 0;
@@ -68,10 +81,20 @@ export const useItemExitAnimation = () => {
     };
   });
 
+  // Helper function to safely call the completion callback
+  // Must be defined outside worklet to be called via runOnJS
+  const safeCallComplete = useCallback(() => {
+    if (isMountedRef.current && onCompleteRef.current) {
+      onCompleteRef.current();
+      onCompleteRef.current = null;
+    }
+  }, []);
+
   /**
    * Trigger exit animation with direction and completion callback
+   * Uses Reanimated's runOnJS for frame-accurate callback timing
    * @param direction - 1 for right (marking purchased), -1 for left (unmarking)
-   * @param onComplete - Callback fired during animation (overlaps with fade)
+   * @param onComplete - Callback fired when animation completes
    */
   const triggerExit = useCallback(
     (direction: 1 | -1, onComplete: () => void) => {
@@ -79,22 +102,24 @@ export const useItemExitAnimation = () => {
       if (isAnimating.value) return;
 
       isAnimating.value = true;
-      exitDirection.value = direction;
+      onCompleteRef.current = onComplete;
 
-      const { slide, removalDelay } = listItemExitAnimation;
+      const { slide } = listItemExitAnimation;
 
-      // Start the slide animation
-      exitDirection.value = withTiming(direction * slide.distance, {
-        duration: slide.duration,
-        easing: standardEasing,
-      });
-
-      // Trigger removal during the fade animation (not after slide completes)
-      // This creates overlap: item fades while others move up
-      // LayoutAnimation is handled by SortableList when items prop changes
-      setTimeout(onComplete, removalDelay);
+      // Start the slide animation with completion callback
+      // runOnJS ensures callback fires on JS thread after animation completes
+      exitDirection.value = withTiming(
+        direction * slide.distance,
+        { duration: slide.duration, easing: standardEasing },
+        finished => {
+          'worklet';
+          if (finished) {
+            runOnJS(safeCallComplete)();
+          }
+        },
+      );
     },
-    [exitDirection, isAnimating],
+    [exitDirection, isAnimating, safeCallComplete],
   );
 
   /**

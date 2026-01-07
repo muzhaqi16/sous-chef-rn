@@ -16,7 +16,7 @@ import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useGetHomeBasicQuery } from '#generated';
+import { useGetHomeBasicQuery, GetStorageLocationsQuery } from '#generated';
 import { useTabBarActions } from '#context';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
@@ -30,8 +30,11 @@ import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModa
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
 import { AddToPantrySheet } from '#components/modals/AddToPantrySheet';
+import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
+import { useStorageLocationManagement } from '#hooks';
+import type { FilterTabConfig } from '#components/molecules';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 const PantryMainScreen: React.FC = React.memo(() => {
@@ -80,6 +83,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Add to pantry sheet state
   const [addSheetVisible, setAddSheetVisible] = useState(false);
 
+  // Add storage location sheet state
+  const [addLocationSheetVisible, setAddLocationSheetVisible] = useState(false);
+
   // Manage selector with overlay coordination
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
     useSelectorManagement({
@@ -90,6 +96,13 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Centralized pantry selection with fallback chain
   const { pantry, pantries, currentHome, selectedHomeId, setSelectedPantryId, isReady } =
     useCurrentPantry();
+
+  // Storage locations for custom filter tabs
+  const {
+    locations: storageLocations,
+    createLocation,
+    creating: creatingLocation,
+  } = useStorageLocationManagement(selectedHomeId ?? undefined);
 
   // Keep query for pull-to-refresh
   // Gate query with isReady and isFocused to prevent firing:
@@ -128,7 +141,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     allItems,
     searchQuery,
     setSearchQuery,
-    stats,
     removeItem,
     refetch,
     loading,
@@ -193,6 +205,51 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Handle location filter change
   const handleLocationFilterChange = useCallback((filter: LocationFilter) => {
     setLocationFilter(filter);
+  }, []);
+
+  // Build combined tabs: default temperature tabs + custom storage locations
+  const combinedTabs = useMemo((): FilterTabConfig<LocationFilter>[] => {
+    // Default temperature-based tabs
+    const defaultTabs: FilterTabConfig<LocationFilter>[] = [
+      { id: 'all', label: 'All' },
+      { id: 'fridge', label: 'Fridge', icon: '🧊' },
+      { id: 'freezer', label: 'Freezer', icon: '❄️' },
+      { id: 'pantry', label: 'Pantry', icon: '🗄️' },
+    ];
+
+    // Add custom storage locations as tabs
+    type StorageLocation = GetStorageLocationsQuery['storageLocations'][number];
+    const customTabs: FilterTabConfig<LocationFilter>[] = storageLocations.map(
+      (location: StorageLocation) => ({
+        id: location.id,
+        label: location.name,
+        icon: location.icon || '📍',
+      }),
+    );
+
+    return [...defaultTabs, ...customTabs];
+  }, [storageLocations]);
+
+  // Compute extended location counts including custom locations
+  const extendedLocationCounts = useMemo(() => {
+    type StorageLocation = GetStorageLocationsQuery['storageLocations'][number];
+
+    // Start with default counts from the hook
+    const counts: Record<string, number> = { ...locationCounts };
+
+    // Add counts for each custom storage location
+    storageLocations.forEach((location: StorageLocation) => {
+      counts[location.id] = pantryItems.filter(
+        item => item.storageLocation?.id === location.id,
+      ).length;
+    });
+
+    return counts;
+  }, [locationCounts, storageLocations, pantryItems]);
+
+  // Handle add storage location
+  const handleAddLocationPress = useCallback(() => {
+    setAddLocationSheetVisible(true);
   }, []);
 
   // Track screen view on mount
@@ -276,12 +333,13 @@ const PantryMainScreen: React.FC = React.memo(() => {
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
         items={locationFilteredItems}
-        expiredCount={stats.expired}
         expiringSoonItems={filteredExpiringSoonItems}
         normalItems={filteredNormalItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
-        locationCounts={locationCounts}
+        locationCounts={extendedLocationCounts}
+        tabs={combinedTabs}
+        onAddLocation={handleAddLocationPress}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         initialSortOption={pantrySortOption}
@@ -293,7 +351,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
-        onExpiredBannerPress={() => navigate('ExpiringItems')}
         onAvatarPress={() => navigate('Notifications')}
         onHomePress={() =>
           navigate('HomeManagement', { homeId: selectedHomeId })
@@ -335,6 +392,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
         visible={addSheetVisible}
         pantryId={pantry?.id}
         onClose={() => setAddSheetVisible(false)}
+      />
+
+      {/* Add Storage Location Sheet */}
+      <AddStorageLocationSheet
+        visible={addLocationSheetVisible}
+        onClose={() => setAddLocationSheetVisible(false)}
+        onCreateLocation={createLocation}
+        creating={creatingLocation}
       />
 
       {/* Home switch hint overlay */}

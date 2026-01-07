@@ -382,7 +382,8 @@ export const PantryItemDetail: React.FC<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
-              {item.quantity} {item.unit?.symbol ?? item.unitName}
+              {/* unitName from server includes item-specific display name */}
+              {item.quantity} {item.unitName ?? item.unit?.symbol}
             </Text>
           </View>
         </View>
@@ -418,7 +419,8 @@ export const PantryItemDetail: React.FC<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {item.quantity} {item.unit?.name ?? item.unitName}
+              {/* unitName from server includes item-specific display name */}
+              {item.quantity} {item.unitName ?? item.unit?.name}
             </Text>
           </View>
         </View>
@@ -585,7 +587,8 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit?.symbol ?? item.unitName}
+                {/* unitName from server includes item-specific display name */}
+                {item.minQuantity} {item.unitName ?? item.unit?.symbol}
               </Text>
             </View>
           </View>
@@ -605,7 +608,8 @@ export const PantryItemDetail: React.FC<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit?.symbol ?? item.unitName}
+                {/* unitName from server includes item-specific display name */}
+                {item.restockQuantity} {item.unitName ?? item.unit?.symbol}
               </Text>
             </View>
           </View>

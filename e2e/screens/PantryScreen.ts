@@ -21,7 +21,6 @@ export class PantryScreen extends BaseScreen {
   private readonly emptyState = 'pantry-empty-state';
   private readonly loadingIndicator = 'pantry-loading';
   private readonly refreshControl = 'pantry-refresh-control';
-  private readonly expiringItemsButton = 'pantry-expiring-items-button';
   private readonly lowStockButton = 'pantry-low-stock-button';
 
   /**
@@ -246,16 +245,6 @@ export class PantryScreen extends BaseScreen {
   async swipeToDeleteItem(index: number) {
     await this.getItemByIndex(index).swipe('left', 'fast');
     await this.getItemDeleteButtonByIndex(index).tap();
-  }
-
-  /**
-   * Navigate to expiring items view
-   */
-  async navigateToExpiringItems() {
-    await this.tapByID(this.expiringItemsButton);
-    await waitFor(element(by.id('expiring-items-screen')))
-      .toBeVisible()
-      .withTimeout(3000);
   }
 
   /**

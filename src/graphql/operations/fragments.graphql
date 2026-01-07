@@ -63,6 +63,9 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
       id
       isDefault
       isPreferred
+      # Item-specific unit display names for better UX
+      displayNameSingular
+      displayNamePlural
       unit {
         id
         name
@@ -392,6 +395,10 @@ fragment UnitFragment on ItemUnit {
   createdAt
   updatedAt
   version
+  # Item-specific unit display names for better UX
+  # e.g., "pineapple" / "pineapples" instead of generic "count"
+  displayNameSingular
+  displayNamePlural
 }
 fragment BrandFragment on ItemBrand {
   id

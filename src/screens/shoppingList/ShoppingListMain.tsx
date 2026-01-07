@@ -5,6 +5,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
+
+// PERFORMANCE: Stable array for optimistic data restoration
+// Prevents infinite loop from effect re-running due to new array reference
+const OPTIMISTIC_ENTITY_TYPES: string[] = ['ShoppingList', 'ShoppingListItem'];
 import { Alert, View, Pressable } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
@@ -56,7 +60,7 @@ import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
  */
 const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Restore optimistic data on mount (offline changes that haven't synced)
-  useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
+  useOptimisticDataRestorationMultiple(OPTIMISTIC_ENTITY_TYPES);
 
   // Feature hint for swipe gesture (shows once, after items load)
   const swipeHint = useFeatureHint({
@@ -652,6 +656,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
                       name: iu.unit?.name || '',
                       isDefault: iu.isDefault,
                       isPreferred: iu.isPreferred,
+                      // Item-specific display names for better UX
+                      displayNameSingular: iu.displayNameSingular,
+                      displayNamePlural: iu.displayNamePlural,
                     }))
                     .filter(
                       u =>

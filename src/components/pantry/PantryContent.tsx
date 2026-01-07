@@ -16,7 +16,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
-import { AlertBanner, SearchBar } from '../molecules';
+import { SearchBar } from '../molecules';
 import { PantrySectionHeader } from './PantrySectionHeader';
 import { PantryItemCard, ItemVariant } from './PantryItemCard';
 import {
@@ -25,7 +25,7 @@ import {
   calculateExpiresIn,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
-import { FilterTabs } from '../molecules';
+import { FilterTabs, FilterTabConfig } from '../molecules';
 
 // Sort types (same as in preferencesSlice)
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
@@ -71,19 +71,17 @@ interface PantryContentProps {
 
   // Items
   items: PantryItem[];
-  expiredCount: number;
   expiringSoonItems: PantryItem[];
   normalItems: PantryItem[];
 
   // Location filter
   locationFilter: LocationFilter;
   onLocationFilterChange: (filter: LocationFilter) => void;
-  locationCounts: {
-    all: number;
-    fridge: number;
-    freezer: number;
-    pantry: number;
-  };
+  locationCounts: Record<string, number>;
+
+  // Dynamic filter tabs (optional - falls back to default tabs if not provided)
+  tabs?: FilterTabConfig<LocationFilter>[];
+  onAddLocation?: () => void;
 
   // Search
   searchQuery: string;
@@ -101,7 +99,6 @@ interface PantryContentProps {
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
   onItemRestock?: (id: string) => void;
-  onExpiredBannerPress: () => void;
   onAvatarPress?: () => void;
   onHomePress?: () => void;
   onSettingsPress?: () => void;
@@ -113,18 +110,27 @@ interface PantryContentProps {
   loading?: boolean;
 }
 
+// Default filter tabs for pantry (fallback if none provided)
+const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
+  { id: 'all', label: 'All' },
+  { id: 'fridge', label: 'Fridge', icon: '🧊' },
+  { id: 'freezer', label: 'Freezer', icon: '❄️' },
+  { id: 'pantry', label: 'Pantry', icon: '🗄️' },
+];
+
 export const PantryContent: React.FC<PantryContentProps> = ({
   userName,
   householdName,
   avatarUrl,
   notificationCount = 0,
   items: _items,
-  expiredCount,
   expiringSoonItems,
   normalItems,
   locationFilter,
   onLocationFilterChange,
   locationCounts,
+  tabs = DEFAULT_PANTRY_TABS,
+  onAddLocation,
   searchQuery,
   onSearchChange,
   initialSortOption = 'recent',
@@ -136,7 +142,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   onItemConsume,
   onItemWaste,
   onItemRestock,
-  onExpiredBannerPress,
   onAvatarPress,
   onHomePress,
   onSettingsPress,
@@ -354,13 +359,14 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           );
         case 'item':
           if (!item.data) return null;
-          // Check if this is an expiring soon item
+          // Check expiration status for card variant
           const expiresIn = calculateExpiresIn(item.data.expiresAt);
+          const isExpired = expiresIn !== null && expiresIn < 0;
           const isExpiringSoon =
             expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
           return renderItemCard(
             item.data,
-            isExpiringSoon ? 'warning' : 'normal',
+            isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal',
           );
         default:
           return null;
@@ -379,38 +385,30 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     () => (
       <View>
         {/* Location filter tabs */}
-        <FilterTabs
-          tabs={[
-            { id: 'all', label: 'All' },
-            { id: 'fridge', label: 'Fridge', icon: '🧊' },
-            { id: 'freezer', label: 'Freezer', icon: '❄️' },
-            { id: 'pantry', label: 'Pantry', icon: '🗄️' },
-          ]}
+        <FilterTabs<LocationFilter>
+          tabs={tabs}
           activeTabId={locationFilter}
           onTabChange={onLocationFilterChange}
           counts={locationCounts}
           testIDPrefix="pantry-location-tab"
+          actionButton={
+            onAddLocation
+              ? {
+                  icon: 'add',
+                  onPress: onAddLocation,
+                  testID: 'pantry-add-location',
+                }
+              : undefined
+          }
         />
-
-        {/* Expired banner */}
-        {expiredCount > 0 && (
-          <AlertBanner
-            title={`${expiredCount} item${expiredCount > 1 ? 's' : ''} expired`}
-            subtitle="Tap to review and remove"
-            icon="⚠️"
-            variant="error"
-            onPress={onExpiredBannerPress}
-            testID="expired-banner"
-          />
-        )}
       </View>
     ),
     [
+      tabs,
       locationFilter,
       onLocationFilterChange,
       locationCounts,
-      expiredCount,
-      onExpiredBannerPress,
+      onAddLocation,
     ],
   );
 

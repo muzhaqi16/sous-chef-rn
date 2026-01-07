@@ -18,6 +18,17 @@ export interface FilterTabConfig<T extends string = string> {
   iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
 }
 
+export interface FilterTabActionButton {
+  /** Icon name to display */
+  icon: string;
+  /** Icon library (default: MaterialIcons) */
+  iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  /** Callback when button is pressed */
+  onPress: () => void;
+  /** Test ID for accessibility */
+  testID?: string;
+}
+
 export interface FilterTabsProps<T extends string = string> {
   /** Array of tab configurations */
   tabs: FilterTabConfig<T>[];
@@ -33,4 +44,6 @@ export interface FilterTabsProps<T extends string = string> {
   variant?: 'default' | 'compact';
   /** Test ID prefix for accessibility */
   testIDPrefix?: string;
+  /** Optional action button at the end of tabs (e.g., "+" to add new) */
+  actionButton?: FilterTabActionButton;
 }

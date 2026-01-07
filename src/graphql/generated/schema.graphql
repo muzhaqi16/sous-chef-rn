@@ -899,6 +899,20 @@ type Category {
   visibility: Visibility!
 }
 
+type CategoryConnection {
+  edges: [CategoryEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Category connection for pagination (Relay spec)
+"""
+type CategoryEdge {
+  cursor: String!
+  node: Category!
+}
+
 input CategoryInput {
   level: Int
   name: String!
@@ -2895,6 +2909,14 @@ input ItemFilters {
   createdAfter: DateTime
   createdBefore: DateTime
   """
+  Filter by creator user ID
+  """
+  createdById: ID
+  """
+  Items that have NONE of these tags
+  """
+  excludeTags: [String!]
+  """
   External ID from a provider (e.g., Kroger product ID)
   """
   externalId: String
@@ -2905,6 +2927,10 @@ input ItemFilters {
   hasAllergens: Boolean
   hasNutrition: Boolean
   hasOffers: Boolean
+  """
+  Items that have ALL of these tags
+  """
+  hasTags: [String!]
   inventoryStatus: String
   isDairyFree: Boolean
   isGlutenFree: Boolean
@@ -2912,8 +2938,16 @@ input ItemFilters {
   isPopular: Boolean
   isRecent: Boolean
   isTrending: Boolean
+  """
+  Filter user-created items
+  """
+  isUserCreated: Boolean
   isVegan: Boolean
   limit: Int
+  """
+  Filter items that need admin approval
+  """
+  needsApproval: Boolean
   priceRange: PriceRangeInput
   showInOnboarding: Boolean
   """
@@ -3029,6 +3063,8 @@ type ItemUnit {
   createdAt: DateTime!
   deletedAt: DateTime
   displayFormat: DisplayFormat!
+  displayNamePlural: String
+  displayNameSingular: String
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
@@ -5573,7 +5609,14 @@ type Query {
     toUnitId: ID!
   ): ConversionAvailability!
   canDeleteAccount: CanDeleteAccountResult!
-  categories(parentId: String, type: CategoryType): [Category!]!
+  categories(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    parentId: String
+    type: CategoryType
+  ): CategoryConnection!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
@@ -5813,6 +5856,15 @@ type Query {
   Handles "1/4", "1 1/4", "0.25" formats
   """
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
+  """
+  Get items pending admin approval.
+  Returns items where needsApproval=true, ordered by creation date.
+  """
+  pendingApprovalItems(
+    after: String
+    first: Int
+    sort: ItemSortInput
+  ): ItemConnection!
   popularBrands(limit: Int = 10): [Brand!]!
   popularCategories(limit: Int, type: CategoryType): [Category!]!
   popularStores(limit: Int): [Store!]!
@@ -5944,6 +5996,14 @@ type Query {
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
   unreadNotificationCount: Int!
   user(id: ID!): User
+  """
+  Get items created by users (for admin review).
+  """
+  userCreatedItems(
+    after: String
+    first: Int
+    sort: ItemSortInput
+  ): ItemConnection!
   userModeration(userId: ID!): UserModeration
   userProfile: UserProfile
   userSettings(userId: String): UserSettings

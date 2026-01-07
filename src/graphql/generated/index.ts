@@ -498,6 +498,20 @@ export type Category = {
   visibility: Visibility;
 };
 
+export type CategoryConnection = {
+  __typename?: 'CategoryConnection';
+  edges: Array<CategoryEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Category connection for pagination (Relay spec) */
+export type CategoryEdge = {
+  __typename?: 'CategoryEdge';
+  cursor: Scalars['String']['output'];
+  node: Category;
+};
+
 export type CategoryInput = {
   level?: InputMaybe<Scalars['Int']['input']>;
   name: Scalars['String']['input'];
@@ -2442,6 +2456,10 @@ export type ItemFilters = {
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   createdAfter?: InputMaybe<Scalars['DateTime']['input']>;
   createdBefore?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Filter by creator user ID */
+  createdById?: InputMaybe<Scalars['ID']['input']>;
+  /** Items that have NONE of these tags */
+  excludeTags?: InputMaybe<Array<Scalars['String']['input']>>;
   /** External ID from a provider (e.g., Kroger product ID) */
   externalId?: InputMaybe<Scalars['String']['input']>;
   /** Provider type for external ID lookup */
@@ -2449,6 +2467,8 @@ export type ItemFilters = {
   hasAllergens?: InputMaybe<Scalars['Boolean']['input']>;
   hasNutrition?: InputMaybe<Scalars['Boolean']['input']>;
   hasOffers?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Items that have ALL of these tags */
+  hasTags?: InputMaybe<Array<Scalars['String']['input']>>;
   inventoryStatus?: InputMaybe<Scalars['String']['input']>;
   isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
   isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2456,8 +2476,12 @@ export type ItemFilters = {
   isPopular?: InputMaybe<Scalars['Boolean']['input']>;
   isRecent?: InputMaybe<Scalars['Boolean']['input']>;
   isTrending?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Filter user-created items */
+  isUserCreated?: InputMaybe<Scalars['Boolean']['input']>;
   isVegan?: InputMaybe<Scalars['Boolean']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+  /** Filter items that need admin approval */
+  needsApproval?: InputMaybe<Scalars['Boolean']['input']>;
   priceRange?: InputMaybe<PriceRangeInput>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   /** SKU to search for */
@@ -2567,6 +2591,8 @@ export type ItemUnit = {
   createdAt: Scalars['DateTime']['output'];
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   displayFormat: DisplayFormat;
+  displayNamePlural: Maybe<Scalars['String']['output']>;
+  displayNameSingular: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
   isDefault: Scalars['Boolean']['output'];
@@ -5798,7 +5824,7 @@ export type Query = {
    */
   canConvert: ConversionAvailability;
   canDeleteAccount: CanDeleteAccountResult;
-  categories: Array<Category>;
+  categories: CategoryConnection;
   category: Maybe<Category>;
   categoryBySlug: Maybe<Category>;
   checkItemAvailability: Maybe<Array<ItemAvailability>>;
@@ -5954,6 +5980,11 @@ export type Query = {
    * Handles "1/4", "1 1/4", "0.25" formats
    */
   parseQuantityInput: QuantityDisplay;
+  /**
+   * Get items pending admin approval.
+   * Returns items where needsApproval=true, ordered by creation date.
+   */
+  pendingApprovalItems: ItemConnection;
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
   popularStores: Array<Store>;
@@ -6048,6 +6079,8 @@ export type Query = {
   units: Array<Unit>;
   unreadNotificationCount: Scalars['Int']['output'];
   user: Maybe<User>;
+  /** Get items created by users (for admin review). */
+  userCreatedItems: ItemConnection;
   userModeration: Maybe<UserModeration>;
   userProfile: Maybe<UserProfile>;
   userSettings: Maybe<UserSettings>;
@@ -6102,6 +6135,10 @@ export type QueryCanConvertArgs = {
 };
 
 export type QueryCategoriesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<CategoryType>;
 };
@@ -6431,6 +6468,12 @@ export type QueryParseQuantityInputArgs = {
   unitId: Scalars['ID']['input'];
 };
 
+export type QueryPendingApprovalItemsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  sort?: InputMaybe<ItemSortInput>;
+};
+
 export type QueryPopularBrandsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -6626,6 +6669,12 @@ export type QueryUnitsArgs = {
 
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryUserCreatedItemsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  sort?: InputMaybe<ItemSortInput>;
 };
 
 export type QueryUserModerationArgs = {
@@ -10297,6 +10346,8 @@ export type ShoppingListItemDisplayFragment = {
           id: string;
           isDefault: boolean;
           isPreferred: boolean;
+          displayNameSingular: string | null | undefined;
+          displayNamePlural: string | null | undefined;
           unit:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
@@ -10653,6 +10704,8 @@ export type UnitFragment = {
   createdAt: string;
   updatedAt: string;
   version: number;
+  displayNameSingular: string | null | undefined;
+  displayNamePlural: string | null | undefined;
 };
 
 export type BrandFragment = {
@@ -15562,6 +15615,14 @@ export const ShoppingListItemDisplayFragmentDoc = {
                       },
                       {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'displayNameSingular' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayNamePlural' },
+                      },
+                      {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'unit' },
                         selectionSet: {
                           kind: 'SelectionSet',
@@ -18071,6 +18132,11 @@ export const UnitFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -18246,6 +18312,11 @@ export const ItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -18548,6 +18619,11 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -18981,6 +19057,11 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -19775,6 +19856,11 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -25816,6 +25902,11 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -28290,6 +28381,11 @@ export const GetHomeByJoinCodeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -29441,6 +29537,11 @@ export const CreateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -30571,6 +30672,11 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -40752,6 +40858,11 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -43667,6 +43778,11 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -44264,6 +44380,11 @@ export const DeletePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -44918,6 +45039,11 @@ export const CreatePantryItemUsageDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -45554,6 +45680,11 @@ export const RestockPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -46208,6 +46339,11 @@ export const UpdatePantryItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -46884,6 +47020,11 @@ export const SyncPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },
@@ -53603,6 +53744,14 @@ export const GetShoppingListDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'isPreferred' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayNameSingular' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayNamePlural' },
                       },
                       {
                         kind: 'Field',
@@ -61392,6 +61541,11 @@ export const MoveShoppingItemToPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'displayNameSingular' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
         ],
       },
     },

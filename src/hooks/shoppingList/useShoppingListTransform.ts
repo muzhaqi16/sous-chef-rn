@@ -29,11 +29,13 @@ export function useShoppingListTransform(
       const imageUrl = getItemImageUrl(item.item);
 
       // Create quantity config
+      // unitName from server now includes item-specific display name
+      // (e.g., "pineapples" instead of generic "count")
       const rightElementConfig: QuantityElementConfig = {
         type: 'quantity',
         quantity: item.quantity || 0,
         quantityInput: item.quantityInput,
-        unit: item.unit?.symbol || item.unitName || undefined,
+        unit: item.unitName || item.unit?.symbol || undefined,
         itemId: item.id,
         disabled: item.purchaseInfo?.isPurchased ?? false,
       };

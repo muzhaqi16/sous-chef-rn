@@ -94,7 +94,8 @@ export const NotificationListScreen: React.FC<{
             navigateTo.shoppingListMain();
             break;
           case 'VIEW_EXPIRING_ITEMS':
-            navigate('ExpiringItems', notification.actionData);
+            // Navigate to main pantry - expired items now shown inline
+            navigate('Pantry');
             break;
           case 'REVIEW_SECURITY':
             navigateTo.profile();

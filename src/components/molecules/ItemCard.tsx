@@ -37,13 +37,11 @@ const ItemCard: React.FC<ItemCardProps> = ({
           onIncrement={onIncrement}
           onDecrement={onDecrement}
         />
-        {item?.unitName &&
-          // if quantity is higher than 1, show plural unit symbol
-          (item?.quantity > 1 ? (
-            <Text style={styles.cardDescription}>{item?.unitName}s</Text>
-          ) : (
-            <Text style={styles.cardDescription}>{item?.unitName}</Text>
-          ))}
+        {/* unitName from server already includes item-specific display name
+            with proper singular/plural form based on quantity */}
+        {item?.unitName && (
+          <Text style={styles.cardDescription}>{item?.unitName}</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
