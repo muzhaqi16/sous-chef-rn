@@ -7,12 +7,13 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { FormattedItemSubtitle, BottomSheetHeader } from '#components/atoms';
 import { Icon, parseFractionalInput } from '#/utils';
 import { UsagePurpose, PantryItemFragment } from '#generated';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
@@ -115,6 +116,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -125,23 +128,32 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       )}
     >
       <BottomSheetScrollView
-        style={styles.scrollView}
+        style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
-          styles.contentContainer,
+          commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Text style={styles.title}>Consume Item</Text>
+        <BottomSheetHeader
+          title="Consume Item"
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Confirm"
+        />
 
         {pantryItem && (
           <>
             {/* Item Info */}
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{pantryItem.itemName}</Text>
-              <View style={styles.availableRow}>
-                <Text style={styles.availableLabel}>Available: </Text>
+            <View style={commonStyles.bottomSheetItemInfo}>
+              <Text style={commonStyles.bottomSheetItemName}>
+                {pantryItem.itemName}
+              </Text>
+              <View style={commonStyles.bottomSheetItemRow}>
+                <Text style={commonStyles.bottomSheetItemLabel}>
+                  Available:{' '}
+                </Text>
                 <FormattedItemSubtitle
                   quantity={pantryItem.quantity}
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
@@ -151,7 +163,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
             </View>
 
             {/* Quantity Input */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FractionInput
                 label={`Quantity to Consume (${
                   pantryItem.unit?.symbol || 'item'
@@ -164,8 +176,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
               {remaining !== null && (
                 <Text
                   style={[
-                    styles.remainingText,
-                    remaining < 0 && styles.remainingTextError,
+                    commonStyles.bottomSheetHelperText,
+                    remaining < 0 && commonStyles.bottomSheetHelperTextError,
                   ]}
                 >
                   Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
@@ -175,23 +187,26 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
             </View>
 
             {/* Purpose Selection */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Purpose *</Text>
-              <View style={styles.purposeOptions}>
+            <View style={commonStyles.bottomSheetSection}>
+              <Text style={commonStyles.bottomSheetSectionLabel}>
+                Purpose *
+              </Text>
+              <View style={commonStyles.bottomSheetOptionContainer}>
                 {PURPOSE_OPTIONS.map(option => (
                   <TouchableOpacity
                     key={option.value}
                     style={[
-                      styles.purposeOption,
-                      purpose === option.value && styles.purposeOptionSelected,
+                      commonStyles.bottomSheetOption,
+                      purpose === option.value &&
+                        commonStyles.bottomSheetOptionSelected,
                     ]}
                     onPress={() => setPurpose(option.value)}
                   >
                     <Text
                       style={[
-                        styles.purposeOptionText,
+                        commonStyles.bottomSheetOptionText,
                         purpose === option.value &&
-                          styles.purposeOptionTextSelected,
+                          commonStyles.bottomSheetOptionTextSelected,
                       ]}
                     >
                       {option.label}
@@ -210,7 +225,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
             </View>
 
             {/* Notes (Optional) */}
-            <View style={styles.section}>
+            <View style={commonStyles.bottomSheetSection}>
               <FormInput
                 label="Notes (Optional)"
                 value={notes}
@@ -220,136 +235,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 numberOfLines={3}
               />
             </View>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={onClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleConfirm}
-              >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  itemInfo: {
-    marginBottom: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  itemName: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  availableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availableLabel: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textSecondary,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  remainingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-  remainingTextError: {
-    color: theme.colors.error,
-  },
-  purposeOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-  },
-  purposeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  purposeOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  purposeOptionText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  purposeOptionTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  actions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
-  },
-}));

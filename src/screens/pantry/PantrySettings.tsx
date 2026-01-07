@@ -43,18 +43,18 @@ export const PantrySettings: React.FC<{
   // Explicit validation - only execute query when pantryId is genuinely valid
   const hasValidPantryId = !!pantryId?.trim();
 
-  // Simplified query configuration - let Apollo handle caching naturally
+  // skip controls execution - when skip is false, pantryId is guaranteed valid
   const {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
   } = useGetPantryQuery({
-    variables: hasValidPantryId ? {
-      id: pantryId,
+    variables: {
+      id: pantryId!,
       itemsFirst: 25,
       storageLocationsFirst: 50,
-    } : undefined as any,
-    skip: !hasValidPantryId, // Query only executes when pantryId is valid
+    },
+    skip: !hasValidPantryId,
   });
 
   // Memoize normalized pantry to prevent re-creating on every render

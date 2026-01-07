@@ -4268,7 +4268,7 @@ type Mutation {
   revokeHomeInvite(id: ID!): Boolean!
   sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): Notification!
-  setDefaultHome(homeId: ID!): UserSettings!
+  setDefaultHome(homeId: ID!): SetDefaultHomePayload!
   setDefaultPantry(id: ID!): Pantry!
   setDefaultShoppingList(id: ID!): ShoppingList!
   """
@@ -4968,6 +4968,7 @@ type PantryItem {
   purchaseId: String
   quantity: Float!
   restockQuantity: Float
+  sourceShoppingListItemId: String
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -6398,6 +6399,11 @@ input SearchItemsInput {
   pagination: PaginationInput
   query: String!
   sort: ItemSortInput
+}
+
+type SetDefaultHomePayload {
+  defaultPantry: Pantry
+  settings: UserSettings!
 }
 
 input SetReminderInput {

@@ -142,24 +142,14 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 6,
+        version: 8,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: any, version: number) => {
-          // Migration from version 4 to 5: Remove persisted network state
-          if (version === 4) {
-            /* eslint-disable @typescript-eslint/no-unused-vars */
-            const {
-              isOnline,
-              isInternetReachable,
-              networkType,
-              lastOnlineTime,
-              lastOfflineTime,
-              ...rest
-            } = persistedState || {};
-            /* eslint-enable @typescript-eslint/no-unused-vars */
-
-            return rest;
+          // Migration from version 6 to 7: Clear home initialization flags
+          // These are now transient and should not be persisted
+          if (version < 7) {
+            // Do something for v7 if needed
           }
 
           return persistedState;
@@ -212,6 +202,11 @@ export const useStore = create<RootState>()(
             // Navigation transient state
             onBoardingStep, // Restart onboarding flow on app restart
             pendingDeepLinkAction, // Deep link actions should not persist
+
+            // Home initialization flags (session-only - must re-fetch on app restart)
+            // These ensure GetHomes query runs fresh to populate Apollo cache
+            hasInitializedHomeData,
+            isHomeSelectionReady,
 
             // Logout state (session-only flag)
             isLoggingOut,

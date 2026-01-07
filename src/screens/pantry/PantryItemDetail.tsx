@@ -273,7 +273,7 @@ export const PantryItemDetail: React.FC<{
 
   if (!item) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <Header variant="detail" onBack={goBack} borderless />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -283,7 +283,7 @@ export const PantryItemDetail: React.FC<{
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Header */}
       <Header
         variant="detail"

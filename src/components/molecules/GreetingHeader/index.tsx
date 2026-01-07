@@ -1,7 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils';
 import type { GreetingHeaderProps } from './types';
 
@@ -48,7 +47,6 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
   testIDPrefix = 'greeting-header',
 }) => {
   const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
 
   const handleClearSearch = useCallback(() => {
     if (search?.onClear) {
@@ -65,7 +63,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top + (isCompact ? 4 : 8) },
+        { paddingTop: isCompact ? 4 : 8 },
       ]}
       testID={testIDPrefix}
     >

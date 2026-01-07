@@ -12,6 +12,7 @@ import { commonStyles } from '#/styles';
 import { HapticService } from '#services/haptic';
 import { Icon } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
+import { useSortableListActions } from './SortableListActionsContext';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -28,39 +29,35 @@ interface SimpleDraggableItemProps {
     leftElement?: React.ReactNode;
     leftElementConfig?: ImageElementConfig; // Config-based element creation
   };
-  onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
-  onMoveToPantry?: (id: string) => void;
-  onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
   drag?: () => void;
   isActive?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
-  // Permission flags for conditional rendering
-  canRemoveItems?: boolean;
-  canEditItems?: boolean;
-  canMarkPurchased?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onTogglePurchase,
-  onMoveToPantry,
-  onQuantityPress,
   drag,
   isActive,
-  onSwipeableWillOpen,
-  onSwipeableClose,
-  canRemoveItems = true,
-  canEditItems = true,
-  canMarkPurchased = true,
 }) => {
   const { theme } = useUnistyles();
+
+  // Get actions and permissions from context (stable references)
+  const { actions, permissionsRef } = useSortableListActions();
+  const {
+    onItemPress,
+    onItemEdit,
+    onItemDelete,
+    onTogglePurchase,
+    onMoveToPantry,
+    onQuantityPress,
+    onSwipeableWillOpen,
+    onSwipeableClose,
+  } = actions;
+  // Read permissions from ref to always get latest values
+  const {
+    canRemoveItems = true,
+    canEditItems = true,
+    canMarkPurchased = true,
+  } = permissionsRef.current;
 
   // ANIMATION: Exit animation using reusable hook
   const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
@@ -199,7 +196,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       ]}
     >
       <SwipeableItem
-        onPress={() => onItemPress(item.id)}
+        onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
@@ -265,40 +262,32 @@ const styles = StyleSheet.create(theme => ({
 
 // PERFORMANCE: Custom comparator for React.memo
 // Only re-render when item data or drag state changes
-// Callbacks are stable (from context/useCallback) so no need to compare them
+// Actions & permissions come from context (stable) so no need to compare them
 const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Fast path: same item reference + same drag state + same permissions = definitely equal
-  if (
-    prev.item === next.item &&
-    prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress &&
-    prev.canRemoveItems === next.canRemoveItems &&
-    prev.canEditItems === next.canEditItems &&
-    prev.canMarkPurchased === next.canMarkPurchased
-  ) {
+  // Fast path: same item reference + same drag state = definitely equal
+  if (prev.item === next.item && prev.isActive === next.isActive) {
     return true;
   }
 
   // Compare item fields that affect rendering
+  const prevConfig = prev.item.rightElementConfig;
+  const nextConfig = next.item.rightElementConfig;
+
   return (
     prev.item.id === next.item.id &&
     prev.item.title === next.item.title &&
     prev.item.subtitle === next.item.subtitle &&
     prev.item.isPurchased === next.item.isPurchased &&
-    prev.item.rightElementConfig === next.item.rightElementConfig &&
     prev.item.leftElementConfig === next.item.leftElementConfig &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.onMoveToPantry === next.onMoveToPantry &&
-    prev.onQuantityPress === next.onQuantityPress &&
-    prev.canRemoveItems === next.canRemoveItems &&
-    prev.canEditItems === next.canEditItems &&
-    prev.canMarkPurchased === next.canMarkPurchased
+    // Deep compare quantity config since it affects display
+    prevConfig?.quantity === nextConfig?.quantity &&
+    prevConfig?.quantityInput === nextConfig?.quantityInput &&
+    prevConfig?.unit === nextConfig?.unit &&
+    prevConfig?.disabled === nextConfig?.disabled
   );
 };
 

@@ -3635,7 +3635,7 @@ export type Mutation = {
   revokeHomeInvite: Scalars['Boolean']['output'];
   sendBulkNotifications: BulkNotificationResult;
   sendTestNotification: Notification;
-  setDefaultHome: UserSettings;
+  setDefaultHome: SetDefaultHomePayload;
   setDefaultPantry: Pantry;
   setDefaultShoppingList: ShoppingList;
   /**
@@ -5280,6 +5280,7 @@ export type PantryItem = {
   purchaseId: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
   restockQuantity: Maybe<Scalars['Float']['output']>;
+  sourceShoppingListItemId: Maybe<Scalars['String']['output']>;
   storageLocation: Maybe<StorageLocation>;
   storageNotes: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -7088,6 +7089,12 @@ export type SearchItemsInput = {
   pagination?: InputMaybe<PaginationInput>;
   query: Scalars['String']['input'];
   sort?: InputMaybe<ItemSortInput>;
+};
+
+export type SetDefaultHomePayload = {
+  __typename?: 'SetDefaultHomePayload';
+  defaultPantry: Maybe<Pantry>;
+  settings: UserSettings;
 };
 
 export type SetReminderInput = {
@@ -11690,7 +11697,14 @@ export type SetDefaultHomeMutationVariables = Exact<{
 
 export type SetDefaultHomeMutation = {
   __typename?: 'Mutation';
-  setDefaultHome: { __typename?: 'UserSettings'; id: string };
+  setDefaultHome: {
+    __typename?: 'SetDefaultHomePayload';
+    settings: { __typename?: 'UserSettings'; id: string };
+    defaultPantry:
+      | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
+      | null
+      | undefined;
+  };
 };
 
 export type CreateImageUploadUrlMutationVariables = Exact<{
@@ -33219,7 +33233,31 @@ export const SetDefaultHomeDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'settings' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'defaultPantry' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isDefault' },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },

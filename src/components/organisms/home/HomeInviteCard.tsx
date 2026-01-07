@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
-import { formatInviteStatus } from '#utils/formatters';
+import { formatInviteStatus, getInviteStatusColor } from '#utils/formatters';
 
 interface Invite {
   id: string;
@@ -25,17 +25,26 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   displayName,
   onRevoke,
 }) => {
+  const { theme } = useUnistyles();
   const statusText = formatInviteStatus(invite.status);
+  const statusColor = getInviteStatusColor(invite.status, theme);
 
   return (
-    <View style={styles.inviteCard}>
+    <View style={[styles.inviteCard, { borderColor: statusColor }]}>
       <View style={styles.inviteInfo}>
         <Text style={styles.inviteName}>{displayName}</Text>
         <Text style={styles.inviteEmail}>{invite.email}</Text>
       </View>
       <View style={styles.inviteActions}>
-        <View style={styles.inviteStatusBadge}>
-          <Text style={styles.inviteStatusText}>{statusText}</Text>
+        <View
+          style={[
+            styles.inviteStatusBadge,
+            { backgroundColor: statusColor + '20' },
+          ]}
+        >
+          <Text style={[styles.inviteStatusText, { color: statusColor }]}>
+            {statusText}
+          </Text>
         </View>
         {invite.status === 'PENDING' && (
           <TouchableOpacity style={styles.revokeButton} onPress={onRevoke}>
@@ -57,7 +66,7 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.xs,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: theme.colors.status.pending,
+    // borderColor applied dynamically based on status
     backgroundColor: theme.colors.surface,
   },
   inviteInfo: {
@@ -82,12 +91,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
-    backgroundColor: theme.colors.status.pending + '20',
+    // backgroundColor applied dynamically based on status
   },
   inviteStatusText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.status.pending,
+    // color applied dynamically based on status
   },
   revokeButton: {
     padding: theme.spacing.xs,
