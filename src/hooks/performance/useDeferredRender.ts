@@ -1,21 +1,19 @@
 import { useState, useEffect } from 'react';
-import { InteractionManager } from 'react-native';
 
 /**
- * Hook to defer heavy rendering until after interactions complete.
+ * Hook to defer heavy rendering until after the runtime is idle.
  *
- * Uses InteractionManager to wait until navigation animations and other
- * interactions have finished before signaling that the component is ready
- * to render heavy content. This prevents janky animations during screen
- * transitions.
+ * Uses requestIdleCallback to wait until the JavaScript runtime is idle
+ * before signaling that the component is ready to render heavy content.
+ * This prevents janky animations during screen transitions.
  *
- * @param delay - Optional additional delay in ms after interactions complete (default: 150ms)
+ * @param delay - Timeout in ms to guarantee callback execution (default: 150ms)
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
  * ```tsx
  * const MyComponent = ({ items }) => {
- *   const isReady = useDeferredRender(); // Default 250ms delay
+ *   const isReady = useDeferredRender(); // Default 150ms timeout
  *
  *   if (!isReady) {
  *     return <SkeletonPlaceholder />;
@@ -24,35 +22,26 @@ import { InteractionManager } from 'react-native';
  *   return <HeavyListComponent items={items} />;
  * };
  * ```
+ *
+ * @note If requestIdleCallback causes issues, can switch to useDeferredValue:
+ * ```tsx
+ * return useDeferredValue(true, false); // React 19 initialValue
+ * ```
  */
 export function useDeferredRender(delay = 150): boolean {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    let timerId: ReturnType<typeof setTimeout> | undefined;
-
-    // Use InteractionManager to wait for navigation animations to complete
-    // This is critical for smooth screen transitions with heavy list components
-    const interactionHandle = InteractionManager.runAfterInteractions(() => {
-      if (cancelled) return;
-
-      if (delay > 0) {
-        // Additional delay after interactions complete
-        // This gives extra buffer for the UI to settle
-        timerId = setTimeout(() => {
-          if (!cancelled) setIsReady(true);
-        }, delay);
-      } else {
+    // requestIdleCallback runs when the runtime is idle
+    // timeout ensures callback fires within (delay + 150)ms max
+    const id = requestIdleCallback(
+      () => {
         setIsReady(true);
-      }
-    });
+      },
+      { timeout: delay + 150 },
+    );
 
-    return () => {
-      cancelled = true;
-      interactionHandle.cancel();
-      if (timerId) clearTimeout(timerId);
-    };
+    return () => cancelIdleCallback(id);
   }, [delay]);
 
   return isReady;

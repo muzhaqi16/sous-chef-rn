@@ -1,5 +1,5 @@
 import React from 'react';
-import Reanimated from 'react-native-reanimated';
+import { Animated } from 'react-native';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { useUnistyles } from 'react-native-unistyles';
 import { styles } from './styles';
@@ -21,7 +21,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
       if (!onDelete) return null;
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.actionsContainer, { width: getContainerWidth(1) }]}
           pointerEvents="box-none"
         >
@@ -34,7 +34,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={0}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
 
@@ -46,7 +46,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
     if (buttonCount === 0) return null;
 
     return (
-      <Reanimated.View
+      <Animated.View
         style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
         pointerEvents="box-none"
       >
@@ -72,7 +72,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
             index={hasEdit ? 1 : 0}
           />
         )}
-      </Reanimated.View>
+      </Animated.View>
     );
   },
 );

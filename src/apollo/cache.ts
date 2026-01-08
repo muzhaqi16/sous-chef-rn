@@ -340,6 +340,18 @@ export function makeCache(): InMemoryCache {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
       },
+      User: {
+        keyFields: ['id'],
+        fields: {
+          profile: {
+            // Merge profile fields to prevent data loss when partial updates arrive
+            // e.g., one query returns {displayName, avatar}, another returns {firstName, lastName}
+            merge(existing, incoming, { mergeObjects }) {
+              return mergeObjects(existing, incoming);
+            },
+          },
+        },
+      },
       Query: {
         fields: {
           // List-level queries (return collections of lists/homes)

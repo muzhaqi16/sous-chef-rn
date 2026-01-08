@@ -1,13 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, LayoutAnimation, Platform, UIManager } from 'react-native';
-
-// Enable LayoutAnimation on Android
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { View, LayoutAnimation, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -34,6 +26,11 @@ import {
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
+
+// PERF DIAGNOSTICS: Constants for performance tracking
+const ITEM_HEIGHT = 103; // 87px item + 16px margin
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const EXPECTED_VISIBLE_ITEMS = Math.ceil(SCREEN_HEIGHT / ITEM_HEIGHT);
 
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
@@ -63,11 +60,12 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   // PERFORMANCE: Progressive rendering - spread item initialization across multiple frames
   // Each item creates ~8-10 Reanimated shared values + gesture handlers
   // Rendering all at once blocks JS thread for 4-5 seconds
-  // Progressive loading renders 6 items, yields, renders 3 more, etc.
+  // Progressive loading renders items in batches, yields, then continues
+  // TUNED: Increased batch sizes to reduce visible empty scroll areas
   const progressiveItems = useProgressiveList(localItems, {
-    initialBatch: 8, // Show 8 items immediately (fills viewport)
-    batchSize: 4, // Add 4 items per batch after initial
-    batchDelay: 16, // ~1 frame at 60fps - quick batching
+    initialBatch: 16, // Show 16 items immediately for better initial UX (was 8)
+    batchSize: 8, // Add 8 items per batch for faster loading (was 4)
+    batchDelay: 8, // ~0.5 frame for quicker batching (was 16)
     enabled: true, // Enable progressive rendering to reduce JS thread blocking
   });
   // Track if we're currently updating the sort order
@@ -79,6 +77,21 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
+
+  // PERF DIAGNOSTICS: Track component mount time and scroll metrics
+  const mountTimeRef = useRef(Date.now());
+  const lastScrollLogRef = useRef(0);
+  const blankCellCountRef = useRef(0);
+  const scrollFrameCountRef = useRef(0);
+
+  // PERF DIAGNOSTICS: Log mount completion time
+  useEffect(() => {
+    if (__DEV__) {
+      const mountDuration = Date.now() - mountTimeRef.current;
+      console.log(`[PERF] Mount: ${mountDuration}ms, ${items.length} items`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only run on mount
+  }, []);
 
   // Keep itemsRef in sync with latest items prop
   useEffect(() => {
@@ -291,6 +304,37 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate],
   );
 
+  // PERF DIAGNOSTICS: Track viewable items to detect blank cells during scroll
+  const viewabilityConfig = useMemo(() => ({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 100,
+  }), []);
+
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: Array<{ item: SortableShoppingListItem }> }) => {
+    if (!__DEV__) return;
+
+    const visibleCount = viewableItems.length;
+    const totalItems = progressiveItems.length;
+
+    // Only log every 500ms to avoid spam
+    const now = Date.now();
+    if (now - lastScrollLogRef.current > 500) {
+      lastScrollLogRef.current = now;
+
+      // Detect blank cells (less than 80% of expected visible items)
+      if (totalItems > EXPECTED_VISIBLE_ITEMS && visibleCount < EXPECTED_VISIBLE_ITEMS * 0.8) {
+        blankCellCountRef.current++;
+        console.log(`[PERF] Blank cells: ${visibleCount}/${EXPECTED_VISIBLE_ITEMS}`);
+      }
+
+      // Log scroll performance periodically
+      scrollFrameCountRef.current++;
+      if (scrollFrameCountRef.current % 10 === 0) {
+        console.log(`[PERF] Scroll: ${visibleCount} visible, ${blankCellCountRef.current} blanks`);
+      }
+    }
+  }, [progressiveItems.length]);
+
   // PERFORMANCE: Simplified renderItem - actions come from context
   // Empty dependency array = callback never recreates = no cascade re-renders
   // ScaleDecorator provides visual feedback during drag
@@ -391,11 +435,15 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           // Alternative: Add manual refresh button to tab bar or header
           // PERFORMANCE: Optimized for smooth scrolling
           // Trade-off: Higher memory usage for smoother scroll experience
-          initialNumToRender={12} // Fill viewport on larger screens
-          maxToRenderPerBatch={8} // Larger batches = faster scroll item rendering
-          windowSize={7} // 7 viewports (3 above + current + 3 below) for smooth scrolling
-          updateCellsBatchingPeriod={100} // Longer batching period to reduce jank
+          // TUNED: Increased values to reduce blank cells during fast scrolling
+          initialNumToRender={20} // Fill viewport + buffer (was 12)
+          maxToRenderPerBatch={12} // Render more cells per batch (was 8)
+          windowSize={9} // 9 viewports for more buffer (was 7)
+          updateCellsBatchingPeriod={30} // Faster cell updates during scroll (was 100)
           removeClippedSubviews={true} // Reduce memory on large lists
+          // PERF DIAGNOSTICS: Track visible items to detect blank cells
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
         />
       </View>
     </SortableListActionsProvider>

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated from 'react-native-reanimated';
@@ -38,6 +38,31 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   drag,
   isActive,
 }) => {
+  // PERF DIAGNOSTICS: Track render time for this item
+  const renderStartRef = useRef(Date.now());
+  const renderCountRef = useRef(0);
+
+  // Log slow renders in development
+  useEffect(() => {
+    if (__DEV__) {
+      const renderTime = Date.now() - renderStartRef.current;
+      renderCountRef.current++;
+
+      // Only log slow renders (>16ms = dropped frame potential)
+      if (renderTime > 16) {
+        console.log(`[PERF] Slow render: "${item.title.slice(0, 15)}" ${renderTime}ms`);
+      }
+
+      // Log excessive re-renders
+      if (renderCountRef.current > 5 && renderCountRef.current % 5 === 0) {
+        console.log(`[PERF] Re-renders: "${item.title.slice(0, 15)}" x${renderCountRef.current}`);
+      }
+    }
+  });
+
+  // Reset render start time for next render measurement
+  renderStartRef.current = Date.now();
+
   const { theme } = useUnistyles();
 
   // Get actions and permissions from context (stable references)

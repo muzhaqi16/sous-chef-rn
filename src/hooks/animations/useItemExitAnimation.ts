@@ -5,6 +5,7 @@ import {
   withTiming,
   withDelay,
   runOnJS,
+  runOnUI,
 } from 'react-native-reanimated';
 import {
   listItemExitAnimation,
@@ -16,6 +17,10 @@ import {
  *
  * Provides coordinated slide, fade, and scale animations
  * for when items are toggled between purchased/unpurchased states.
+ *
+ * PERFORMANCE: Uses useRef for isAnimating state to avoid blocking the JS thread.
+ * Reading/writing SharedValue.value on JS thread triggers executeOnUIRuntimeSync
+ * which blocks execution. Using useRef + runOnUI avoids this blocking.
  *
  * Uses runOnJS for accurate animation completion callbacks instead of setTimeout.
  *
@@ -39,7 +44,10 @@ import {
 export const useItemExitAnimation = () => {
   // 0 = no animation, 1 = exiting right (marking purchased), -1 = exiting left (unmarking)
   const exitDirection = useSharedValue(0);
-  const isAnimating = useSharedValue(false);
+
+  // PERFORMANCE: Use useRef instead of useSharedValue for isAnimating flag
+  // This avoids blocking the JS thread when checking/setting animation state
+  const isAnimatingRef = useRef(false);
 
   // Refs for callback management and unmount safety
   const onCompleteRef = useRef<(() => void) | null>(null);
@@ -81,54 +89,66 @@ export const useItemExitAnimation = () => {
     };
   });
 
-  // Helper function to safely call the completion callback
+  // Helper function to safely call the completion callback and reset state
   // Must be defined outside worklet to be called via runOnJS
   const safeCallComplete = useCallback(() => {
     if (isMountedRef.current && onCompleteRef.current) {
       onCompleteRef.current();
       onCompleteRef.current = null;
     }
+    // Reset animating state on JS thread (non-blocking)
+    isAnimatingRef.current = false;
   }, []);
 
   /**
    * Trigger exit animation with direction and completion callback
-   * Uses Reanimated's runOnJS for frame-accurate callback timing
+   * PERFORMANCE: Uses runOnUI to schedule animation without blocking JS thread
    * @param direction - 1 for right (marking purchased), -1 for left (unmarking)
    * @param onComplete - Callback fired when animation completes
    */
   const triggerExit = useCallback(
     (direction: 1 | -1, onComplete: () => void) => {
-      // Guard against rapid toggling
-      if (isAnimating.value) return;
+      // Guard against rapid toggling - non-blocking ref read
+      if (isAnimatingRef.current) return;
 
-      isAnimating.value = true;
+      // Set animating state - non-blocking ref write
+      isAnimatingRef.current = true;
       onCompleteRef.current = onComplete;
 
       const { slide } = listItemExitAnimation;
 
-      // Start the slide animation with completion callback
-      // runOnJS ensures callback fires on JS thread after animation completes
-      exitDirection.value = withTiming(
-        direction * slide.distance,
-        { duration: slide.duration, easing: standardEasing },
-        finished => {
-          'worklet';
-          if (finished) {
-            runOnJS(safeCallComplete)();
-          }
-        },
-      );
+      // PERFORMANCE: Schedule animation on UI thread without blocking JS thread
+      // This avoids executeOnUIRuntimeSync which would block the JS thread
+      runOnUI(() => {
+        'worklet';
+        exitDirection.value = withTiming(
+          direction * slide.distance,
+          { duration: slide.duration, easing: standardEasing },
+          finished => {
+            'worklet';
+            if (finished) {
+              runOnJS(safeCallComplete)();
+            }
+          },
+        );
+      })();
     },
-    [exitDirection, isAnimating, safeCallComplete],
+    [exitDirection, safeCallComplete],
   );
 
   /**
    * Reset animation state (for reuse or error recovery)
    */
   const resetAnimation = useCallback(() => {
-    exitDirection.value = 0;
-    isAnimating.value = false;
-  }, [exitDirection, isAnimating]);
+    // Reset ref state (non-blocking)
+    isAnimatingRef.current = false;
+
+    // Schedule shared value reset on UI thread (non-blocking)
+    runOnUI(() => {
+      'worklet';
+      exitDirection.value = 0;
+    })();
+  }, [exitDirection]);
 
   return {
     exitAnimatedStyle,
