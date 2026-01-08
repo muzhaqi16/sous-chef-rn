@@ -525,6 +525,13 @@ type AdditionCostAnalytics {
   totalSpent: Float!
 }
 
+input AdminDeleteUserInput {
+  """
+  If true, permanently deletes the user (SuperAdmin only)
+  """
+  hard: Boolean
+}
+
 """
 Result of quantity aggregation (add/subtract)
 """
@@ -761,6 +768,10 @@ type Brand {
   deletedAt: DateTime
   description: String
   id: ID!
+  """
+  Denormalized count of items associated with this brand
+  """
+  itemCount: Int!
   name: String!
   parent: Brand
   updatedAt: DateTime!
@@ -2925,6 +2936,10 @@ input ItemFilters {
   """
   externalProvider: ProviderType
   hasAllergens: Boolean
+  """
+  Filter items that have a default unit assigned
+  """
+  hasDefaultUnit: Boolean
   hasNutrition: Boolean
   hasOffers: Boolean
   """
@@ -3305,6 +3320,10 @@ type LoginHistory {
   flaggedById: String
   flaggedReason: String
   id: ID!
+  ipAddress: String
+  ipCity: String
+  ipCountry: String
+  ipRegion: String
   isApiLogin: Boolean!
   isAutomated: Boolean!
   isMobileApp: Boolean!
@@ -3959,7 +3978,7 @@ type Mutation {
   addTemplateItem(input: AddTemplateItemInput!): MealTemplateItem!
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
-  adminDeleteUser(id: ID!): Boolean!
+  adminDeleteUser(id: ID!, input: AdminDeleteUserInput): Boolean!
   """
   Approve a user-created item for public visibility
   """
@@ -5615,6 +5634,7 @@ type Query {
     first: Int
     last: Int
     parentId: String
+    search: String
     type: CategoryType
   ): CategoryConnection!
   category(id: ID!): Category
@@ -6007,7 +6027,7 @@ type Query {
   userModeration(userId: ID!): UserModeration
   userProfile: UserProfile
   userSettings(userId: String): UserSettings
-  users(search: String, skip: Int, take: Int): [User!]!
+  users(search: String, skip: Int, take: Int): UserConnection!
   validateUpc(upc: String!): UpcValidation!
   __schema: __Schema!
   __type(name: String!): __Type
@@ -6154,6 +6174,7 @@ type RecipeIngredient {
   item: Item
   name: String!
   notes: String
+  order: Int @deprecated(reason: "Use sortOrder instead")
   preparation: String
   quantity: Float!
   recipe: Recipe!
@@ -7897,6 +7918,7 @@ Consolidated input for updating items.
 Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
 """
 input UpdateItemInput {
+  addBrandIds: [String!]
   addCategoryIds: [String!]
   addStoreSkus: [StoreSkuInput!]
   addTags: [String!]
@@ -7942,6 +7964,7 @@ input UpdateItemInput {
   priceStoreId: String
   primaryCategoryId: String
   primaryUpc: String
+  removeBrandIds: [String!]
   removeCategoryIds: [String!]
   """
   Remove the item image (replaces removeItemImage)
@@ -8615,6 +8638,20 @@ type UserAuthPayload {
   deviceInfo: JSON
   timestamp: DateTime!
   userId: String!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+User connection for pagination (admin only)
+"""
+type UserEdge {
+  cursor: String!
+  node: User!
 }
 
 type UserModeration {
