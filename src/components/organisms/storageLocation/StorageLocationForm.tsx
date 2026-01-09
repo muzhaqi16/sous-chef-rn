@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { ScrollView } from 'react-native-gesture-handler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#styles';
+
+export interface StorageLocationFormRef {
+  submit: () => void;
+  isValid: () => boolean;
+}
 
 const STORAGE_TYPES = [
   { label: 'Refrigerator', value: 'REFRIGERATOR', icon: '🧊' },
@@ -32,15 +37,18 @@ interface StorageLocationFormProps {
   onCancel: () => void;
   isSubmitting: boolean;
   availableLocations?: Array<{ id: string; name: string; type: string }>;
+  hideActions?: boolean;
 }
 
-export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
+export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLocationFormProps>(({
   initialData,
   onSubmit,
   onCancel,
   isSubmitting,
   availableLocations = [],
-}) => {
+  hideActions = false,
+}, ref) => {
+  const { theme } = useUnistyles();
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     type: initialData?.type || 'PANTRY_SHELF',
@@ -79,6 +87,13 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
     onSubmit(finalData);
   };
 
+  const isValid = () => formData.name.trim().length > 0;
+
+  useImperativeHandle(ref, () => ({
+    submit: handleSubmit,
+    isValid,
+  }));
+
   return (
     <View style={styles.container}>
       <View style={commonStyles.inputGroup}>
@@ -94,32 +109,49 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
 
       <View style={commonStyles.inputGroup}>
         <Text style={commonStyles.label}>Type</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.typeScroll}
-        >
-          {STORAGE_TYPES.map(type => (
-            <TouchableOpacity
-              key={type.value}
-              style={[
-                styles.typeButton,
-                formData.type === type.value && styles.typeButtonSelected,
-              ]}
-              onPress={() => setFormData({ ...formData, type: type.value })}
-            >
-              <Text style={styles.typeIcon}>{type.icon}</Text>
-              <Text
+        <View style={styles.carouselContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeScroll}
+            contentContainerStyle={styles.typeScrollContent}
+          >
+            {STORAGE_TYPES.map(type => (
+              <TouchableOpacity
+                key={type.value}
                 style={[
-                  styles.typeLabel,
-                  formData.type === type.value && styles.typeLabelSelected,
+                  styles.typeButton,
+                  formData.type === type.value && styles.typeButtonSelected,
                 ]}
+                onPress={() => setFormData({ ...formData, type: type.value, icon: type.icon })}
               >
-                {type.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text style={styles.typeIcon}>{type.icon}</Text>
+                <Text
+                  style={[
+                    styles.typeLabel,
+                    formData.type === type.value && styles.typeLabelSelected,
+                  ]}
+                >
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View
+            style={[
+              styles.fadeLeft,
+              { backgroundColor: theme.colors.background },
+            ]}
+            pointerEvents="none"
+          />
+          <View
+            style={[
+              styles.fadeRight,
+              { backgroundColor: theme.colors.background },
+            ]}
+            pointerEvents="none"
+          />
+        </View>
       </View>
 
       <View style={commonStyles.inputGroup}>
@@ -193,39 +225,66 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
         </View>
       )}
 
-      <View style={styles.formActions}>
-        <TouchableOpacity
-          style={[commonStyles.button, commonStyles.buttonSecondary]}
-          onPress={onCancel}
-          disabled={isSubmitting}
-        >
-          <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[commonStyles.button, commonStyles.buttonPrimary]}
-          onPress={handleSubmit}
-          disabled={isSubmitting || !formData.name.trim()}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={commonStyles.buttonTextPrimary}>
-              {initialData ? 'Update' : 'Create'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {!hideActions && (
+        <View style={styles.formActions}>
+          <TouchableOpacity
+            style={[commonStyles.button, commonStyles.buttonSecondary]}
+            onPress={onCancel}
+            disabled={isSubmitting}
+          >
+            <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[commonStyles.button, commonStyles.buttonPrimary]}
+            onPress={handleSubmit}
+            disabled={isSubmitting || !formData.name.trim()}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={commonStyles.buttonTextPrimary}>
+                {initialData ? 'Update' : 'Create'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
   },
-  typeScroll: {
+  carouselContainer: {
+    marginHorizontal: -theme.spacing.lg,
     marginTop: theme.spacing.xs,
+  },
+  typeScroll: {
+    flexGrow: 0,
+  },
+  typeScrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+  },
+  fadeLeft: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 24,
+    backgroundColor: theme.colors.background,
+    opacity: 0.9,
+  },
+  fadeRight: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 24,
+    backgroundColor: theme.colors.background,
+    opacity: 0.9,
   },
   parentScroll: {
     marginTop: theme.spacing.xs,

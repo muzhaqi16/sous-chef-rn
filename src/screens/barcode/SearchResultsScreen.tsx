@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { View, Dimensions } from 'react-native';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation, useCrossTabNavigation, type CrossTabSource } from '#hooks';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
@@ -26,7 +26,8 @@ export const SearchResultsScreen: React.FC<{
 }> = ({ route }) => {
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
-  const { navigate, navigateTo, navigateToNested } = useAppNavigation();
+  const { navigate, navigateTo } = useAppNavigation();
+  const { goBackToSource } = useCrossTabNavigation('BarcodeScanner');
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -79,15 +80,18 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const handleBackPress = () => {
-    // Navigate back to the appropriate screen based on source
-    if (source === 'pantry') {
-      navigateToNested('Home', 'Pantry');
-    } else if (source === 'shoppingList') {
-      navigateToNested('Home', 'ShoppingList');
-    } else {
-      // Fallback to normal back navigation
+    if (!source) {
+      // Fallback to barcode scanner if no source
       navigateTo.barcodeScanner();
+      return;
     }
+
+    // Use cross-tab navigation hook for proper stack cleanup
+    const sourceData: CrossTabSource = {
+      sourceTab: source === 'pantry' ? 'Pantry' : 'ShoppingList',
+    };
+
+    goBackToSource(sourceData);
   };
 
   const handleShowAddItemForm = () => {

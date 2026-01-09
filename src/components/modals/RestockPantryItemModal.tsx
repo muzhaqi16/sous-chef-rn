@@ -5,14 +5,14 @@ import {
   FormInput,
   FormattedItemSubtitle,
   BottomSheetHeader,
+  BottomSheetKeyboardAwareScrollView,
 } from '#components';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils';
 import { PantryItemFragment } from '#generated';
@@ -42,6 +42,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
   const [quantityInput, setQuantityInput] = useState('1');
   const [notes, setNotes] = useState('');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
@@ -112,7 +113,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['55%']}
+      snapPoints={['55%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -120,8 +121,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -131,13 +133,14 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
         />
       )}
     >
-      <BottomSheetScrollView
+      <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         {/* Header */}
         <BottomSheetHeader
@@ -174,6 +177,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
                 keyboardType="numeric"
+                useBottomSheetInput
               />
               {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
@@ -194,6 +198,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                     onChangeText={setCostPerUnitInput}
                     placeholder="0.00"
                     keyboardType="decimal-pad"
+                    useBottomSheetInput
                   />
                 </View>
                 <View style={styles.costField}>
@@ -203,6 +208,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                     onChangeText={setTotalCostInput}
                     placeholder="0.00"
                     keyboardType="decimal-pad"
+                    useBottomSheetInput
                   />
                 </View>
               </View>
@@ -217,11 +223,12 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                 placeholder="Add any notes about this restock..."
                 multiline
                 numberOfLines={3}
+                useBottomSheetInput
               />
             </View>
           </>
         )}
-      </BottomSheetScrollView>
+      </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
 };

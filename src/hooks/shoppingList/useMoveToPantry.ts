@@ -14,11 +14,11 @@ import {
 export interface MoveToPantryInput {
   pantryId: string;
   actualQuantity: number;
+  actualUnitId?: string;
   storageState?: StorageState;
   expiresAt?: string;
   removeFromList: boolean;
-  costPerUnit?: number;
-  totalCost?: number;
+  actualPrice?: number;
   notes?: string;
 }
 
@@ -127,11 +127,11 @@ export function useMoveToPantry({
               shoppingListItemId: item.id,
               pantryId: input.pantryId,
               actualQuantity: input.actualQuantity,
+              actualUnitId: input.actualUnitId,
               storageState: input.storageState,
               expiresAt: input.expiresAt,
               removeFromList: input.removeFromList,
-              costPerUnit: input.costPerUnit,
-              totalCost: input.totalCost,
+              actualPrice: input.actualPrice,
               notes: input.notes,
             },
           },

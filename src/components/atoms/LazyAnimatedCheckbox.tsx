@@ -9,6 +9,9 @@ interface LazyAnimatedCheckboxProps {
   onPress?: () => void;
   size?: number;
   disabled?: boolean;
+  // PERFORMANCE: Optional color props passed from parent to avoid useUnistyles call
+  primaryColor?: string;
+  borderColor?: string;
 }
 
 /**
@@ -21,8 +24,14 @@ interface LazyAnimatedCheckboxProps {
  * For screens where animation is important, use AnimatedCheckbox instead.
  */
 export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
-  React.memo(({ checked, onPress, size = 24, disabled = false }) => {
+  React.memo(({ checked, onPress, size = 24, disabled = false, primaryColor, borderColor }) => {
+    // PERFORMANCE: Only call useUnistyles if color props not provided
+    // When used in shopping list, parent provides colors to avoid repeated hook calls
     const { theme } = useUnistyles();
+    const colors = {
+      primary: primaryColor ?? theme.colors.primary,
+      border: borderColor ?? theme.colors.border,
+    };
 
     const handlePress = useCallback(() => {
       if (disabled) return;
@@ -44,8 +53,8 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
               width: size,
               height: size,
               borderRadius: 6,
-              backgroundColor: checked ? theme.colors.primary : 'transparent',
-              borderColor: checked ? theme.colors.primary : theme.colors.border,
+              backgroundColor: checked ? colors.primary : 'transparent',
+              borderColor: checked ? colors.primary : colors.border,
             },
           ]}
         >

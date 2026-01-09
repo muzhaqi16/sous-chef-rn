@@ -32,7 +32,7 @@ import {
  * Configuration for create operation
  */
 export interface CreateOperationConfig<TInput, TResult> {
-  mutation: (variables: any) => Promise<{ data?: TResult }>;
+  mutation: (variables: any) => Promise<{ data?: TResult; errors?: readonly any[] }>;
   parentId?: string | null | (() => string | null | undefined);
   transformInput?: (input: TInput) => any;
   validateInput?: (input: TInput) => boolean | string;
@@ -135,6 +135,19 @@ export function useCrudOperations() {
             : { input };
 
           const result = await mutation({ variables });
+
+          // DEBUG: Log the full result to understand its structure
+          console.log('CRUD createAddOperation result:', JSON.stringify(result, null, 2));
+          console.log('result.data:', result.data);
+          console.log('result.errors:', result.errors);
+
+          // Handle GraphQL errors returned with errorPolicy: 'all'
+          // Check errors FIRST because result.data may be { mutationName: null } even on error
+          if (result.errors && result.errors.length > 0) {
+            const errorMessage = result.errors[0].message || `Failed to ${operationName.toLowerCase()}`;
+            Alert.alert('Error', errorMessage);
+            return false;
+          }
 
           if (result.data) {
             onSuccess?.(result.data);

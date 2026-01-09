@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, TextStyle } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
+import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
 
 interface ListItemProps {
   title: string;
@@ -18,6 +19,8 @@ interface ListItemProps {
   leftElement?: React.ReactNode; // Optional left element for image or icon
   checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
   isPurchased?: boolean; // For strikethrough styling
+  // PERFORMANCE: Optional theme colors passed from parent to avoid useUnistyles call
+  themeColors?: SortableListThemeColors | null;
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({
@@ -31,8 +34,12 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   leftElement,
   checkboxElement,
   isPurchased = false,
+  themeColors,
 }) => {
+  // PERFORMANCE: Only call useUnistyles if themeColors not provided
+  // When used in shopping list, parent provides colors to avoid repeated hook calls
   const { theme } = useUnistyles();
+  const iconColor = themeColors?.textSecondary ?? theme.colors.textSecondary;
 
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
@@ -47,7 +54,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {leftElement}
       {leftIcon && (
         <View style={styles.leftIcon}>
-          <Icon name={leftIcon} size={24} color={theme.colors.textSecondary} />
+          <Icon name={leftIcon} size={24} color={iconColor} />
         </View>
       )}
       <View style={styles.content}>
@@ -77,7 +84,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
       {rightIcon && !rightElement && (
-        <Icon name={rightIcon} size={24} color={theme.colors.textSecondary} />
+        <Icon name={rightIcon} size={24} color={iconColor} />
       )}
     </>
   );

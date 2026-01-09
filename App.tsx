@@ -26,6 +26,7 @@ import {
   initAppStateTokenRefresh,
   cleanupAppStateTokenRefresh,
 } from '#store/slices/authSlice';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 // Enable native screens for better performance
 enableScreens();
@@ -142,7 +143,8 @@ const App = () => {
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={styles.container}>
-        <ApolloProvider client={client}>
+        <KeyboardProvider>
+          <ApolloProvider client={client}>
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
@@ -163,7 +165,8 @@ const App = () => {
               </SafeAreaProvider>
             </SubscriptionProvider>
           </DataProvider>
-        </ApolloProvider>
+          </ApolloProvider>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>
   );

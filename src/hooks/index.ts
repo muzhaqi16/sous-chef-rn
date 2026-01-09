@@ -29,3 +29,4 @@ export { useArrayManager } from './utils/useArrayManager';
 export { useModalManager } from './utils/useModalManager';
 export { useUnitConverter } from './useUnitConverter';
 export { useSharedBottomSheetConfigs } from './useSharedBottomSheetConfigs';
+export { useBottomSheetBackHandler } from './useBottomSheetBackHandler';

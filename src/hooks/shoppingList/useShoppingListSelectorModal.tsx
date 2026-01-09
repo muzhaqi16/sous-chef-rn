@@ -7,6 +7,7 @@ import { Icon } from '#utils';
 import { ShoppingListAvatar } from '#components/atoms';
 import { useSelectorManagement } from '#hooks/ui';
 import { IconLibrary } from '#/utils/iconUtils';
+import { useStore } from '#store';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -17,6 +18,15 @@ interface UseShoppingListSelectorOptions {
   currentListId: string | undefined;
   setSelectedShoppingListId: (id: string) => void;
 }
+
+// Type for section headers in the grouped list
+interface SectionHeader {
+  _isHeader: true;
+  id: string;
+  title: string;
+}
+
+type ListItemOrHeader = any | SectionHeader;
 
 /**
  * Shopping List Selector Modal Hook
@@ -32,7 +42,7 @@ interface UseShoppingListSelectorOptions {
 export function useShoppingListSelectorModal({
   listDataWithOwnership,
   currentListId,
-  setSelectedShoppingListId,
+  setSelectedShoppingListId: _setSelectedShoppingListId,
 }: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
   const { setOverlayOpen } = useTabBarActions();
@@ -54,49 +64,100 @@ export function useShoppingListSelectorModal({
     baseOpenSelector();
   }, [baseOpenSelector]);
 
+  // Group lists by home with section headers
+  const groupedData = useMemo((): ListItemOrHeader[] => {
+    const result: ListItemOrHeader[] = [];
+
+    // Personal lists (no home)
+    const personalLists = listDataWithOwnership.filter(
+      (l: any) => !l.homeId,
+    );
+    if (personalLists.length > 0) {
+      result.push({
+        _isHeader: true,
+        id: 'header-personal',
+        title: 'Personal Lists',
+      });
+      result.push(...personalLists);
+    }
+
+    // Group by home
+    const homeGroups = new Map<string, any[]>();
+    listDataWithOwnership
+      .filter((l: any) => l.homeId)
+      .forEach((list: any) => {
+        const homeId = list.homeId as string;
+        if (!homeGroups.has(homeId)) {
+          homeGroups.set(homeId, []);
+        }
+        homeGroups.get(homeId)!.push(list);
+      });
+
+    homeGroups.forEach((lists, homeId) => {
+      const homeName = lists[0]?.home?.name || 'Unknown Home';
+      result.push({
+        _isHeader: true,
+        id: `header-${homeId}`,
+        title: homeName,
+      });
+      result.push(...lists);
+    });
+
+    return result;
+  }, [listDataWithOwnership]);
+
   // PERFORMANCE: Memoize render function to prevent recreation
   const renderListItem = useCallback(
-    (list: any, isSelected: boolean, onPress: () => void) => (
-      <TouchableOpacity
-        style={[
-          styles.selectorItemContainer,
-          isSelected && styles.selectorItemSelected,
-        ]}
-        onPress={onPress}
-      >
-        <ShoppingListAvatar list={list} size={40} />
-        <View style={styles.selectorItemInfo}>
-          <Text style={styles.selectorItemName}>{list.name}</Text>
-          {list.home?.name ? (
-            <View style={styles.homeIndicator}>
-              <Icon
-                name="home"
-                size={12}
-                color={colors.textTertiary}
-                library="MaterialIcons"
-              />
-              <Text style={styles.homeIndicatorText}>{list.home.name}</Text>
-            </View>
-          ) : !list._isOwner ? (
-            <Text style={styles.selectorItemSubtext}>
-              {`Shared by ${
-                list.ownerships?.[0]?.user?.profile?.displayName ||
-                list.ownerships?.[0]?.user?.email ||
-                'someone'
-              }`}
-            </Text>
-          ) : null}
-        </View>
-        {isSelected && (
-          <Icon
-            name="check"
-            size={20}
-            color={colors.primary}
-            library="MaterialIcons"
-          />
-        )}
-      </TouchableOpacity>
-    ),
+    (item: ListItemOrHeader, isSelected: boolean, onPress: () => void) => {
+      // Render section header (non-selectable)
+      if ('_isHeader' in item && item._isHeader) {
+        return (
+          <View style={styles.sectionHeader}>
+            <Icon
+              name={item.title === 'Personal Lists' ? 'person' : 'home'}
+              size={14}
+              color={colors.textTertiary}
+              library="MaterialIcons"
+            />
+            <Text style={styles.sectionHeaderText}>{item.title}</Text>
+          </View>
+        );
+      }
+
+      // Render normal list item
+      const list = item;
+      return (
+        <TouchableOpacity
+          style={[
+            styles.selectorItemContainer,
+            isSelected && styles.selectorItemSelected,
+          ]}
+          onPress={onPress}
+        >
+          <ShoppingListAvatar list={list} size={40} />
+          <View style={styles.selectorItemInfo}>
+            <Text style={styles.selectorItemName}>{list.name}</Text>
+            {!list._isOwner && (
+              <Text style={styles.selectorItemSubtext}>
+                {`Shared by ${
+                  list.ownerships?.[0]?.user?.profile?.displayName ||
+                  list.ownerships?.[0]?.user?.email ||
+                  'someone'
+                }`}
+              </Text>
+            )}
+          </View>
+          {isSelected && (
+            <Icon
+              name="check"
+              size={20}
+              color={colors.primary}
+              library="MaterialIcons"
+            />
+          )}
+        </TouchableOpacity>
+      );
+    },
     [colors],
   );
 
@@ -146,10 +207,13 @@ export function useShoppingListSelectorModal({
   const listConfig: SelectorConfig<any> = useMemo(
     () => ({
       title: 'Select Shopping List',
-      data: listDataWithOwnership,
+      data: groupedData,
       selectedId: currentListId,
       onSelect: (id: string) => {
-        setSelectedShoppingListId(id);
+        // Skip selection for section headers
+        if (id.startsWith('header-')) return;
+        // Use direct store access to bypass any potential stale closure issues
+        useStore.getState().setSelectedShoppingListId(id);
         selectorRef.current?.close();
       },
       displayProperty: 'name',
@@ -159,9 +223,8 @@ export function useShoppingListSelectorModal({
       actions: listActions,
     }),
     [
-      listDataWithOwnership,
+      groupedData,
       currentListId,
-      setSelectedShoppingListId,
       renderListItem,
       listActions,
     ],
@@ -207,13 +270,19 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
   },
-  homeIndicator: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
-  homeIndicatorText: {
+  sectionHeaderText: {
     fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 }));

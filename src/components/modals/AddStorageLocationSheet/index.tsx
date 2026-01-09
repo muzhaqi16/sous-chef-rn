@@ -7,7 +7,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { StorageType } from '#generated';
 
@@ -38,6 +38,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const inputRef = useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +110,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['30%']}
+      snapPoints={['30%', '50%']}
       index={0}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
@@ -117,8 +118,9 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
       <BottomSheetView
         style={[styles.content, { paddingBottom: insets.bottom + 16 }]}

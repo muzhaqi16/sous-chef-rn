@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { View, LayoutAnimation, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
@@ -23,6 +23,10 @@ import {
   type SortableListActions,
   type SortableListPermissions,
 } from './SortableListActionsContext';
+import {
+  SortableListThemeContext,
+  type SortableListThemeColors,
+} from './SortableListThemeContext';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -56,6 +60,29 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
 }) => {
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
+
+  // PERFORMANCE: Single useUnistyles call for entire list
+  // Theme colors are passed via context to all child components
+  // This eliminates 7-8 useUnistyles calls per item (major bottleneck)
+  const { theme } = useUnistyles();
+  const themeColors = useMemo<SortableListThemeColors>(
+    () => ({
+      primary: theme.colors.primary,
+      textPrimary: theme.colors.textPrimary,
+      textSecondary: theme.colors.textSecondary,
+      surfaceVariant: theme.colors.surfaceVariant,
+      surface: theme.colors.surface,
+      border: theme.colors.border,
+    }),
+    [
+      theme.colors.primary,
+      theme.colors.textPrimary,
+      theme.colors.textSecondary,
+      theme.colors.surfaceVariant,
+      theme.colors.surface,
+      theme.colors.border,
+    ],
+  );
 
   // PERFORMANCE: Progressive rendering - spread item initialization across multiple frames
   // Each item creates ~8-10 Reanimated shared values + gesture handlers
@@ -405,9 +432,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
    * Manual setNativeProps({ scrollEnabled }) can leave scroll stuck if drag aborts - avoid it.
    */
   return (
-    <SortableListActionsProvider actions={actions} permissions={permissions}>
-      <View style={styles.container}>
-        <DraggableFlatList
+    <SortableListThemeContext.Provider value={themeColors}>
+      <SortableListActionsProvider actions={actions} permissions={permissions}>
+        <View style={styles.container}>
+          <DraggableFlatList
           data={progressiveItems}
           renderItem={renderItem}
           keyExtractor={item => item.id}
@@ -452,9 +480,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           // PERF DIAGNOSTICS: Track visible items to detect blank cells
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-        />
-      </View>
-    </SortableListActionsProvider>
+          />
+        </View>
+      </SortableListActionsProvider>
+    </SortableListThemeContext.Provider>
   );
 };
 

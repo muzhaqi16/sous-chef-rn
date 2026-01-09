@@ -7,7 +7,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FormInput,
@@ -123,6 +123,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const pagerRef = useRef<PagerView>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Page state
   const [currentPage, setCurrentPage] = useState(0);

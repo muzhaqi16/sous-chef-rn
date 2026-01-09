@@ -6,18 +6,14 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks';
-import {
-  StorageLocationCard,
-  StorageLocationForm,
-} from '#components/organisms/storageLocation';
+import { StorageLocationCard } from '#components/organisms/storageLocation';
+import { StorageLocationSheet } from '#components/modals/StorageLocationSheet';
 import { commonStyles } from '#styles';
 import { Icon } from '#utils';
-import { formAnimationPreset } from '#/constants/animations';
 
 type RouteParams = {
   homeId: string;
@@ -29,8 +25,8 @@ export const StorageLocationsScreen: React.FC<{
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -47,13 +43,25 @@ export const StorageLocationsScreen: React.FC<{
     refetch,
   } = useStorageLocationManagement(homeId);
 
+  // Open sheet for editing
+  const handleOpenEdit = (location: any) => {
+    setEditingLocation(location);
+    setSheetVisible(true);
+  };
+
+  // Close sheet
+  const handleCloseSheet = () => {
+    setSheetVisible(false);
+    setEditingLocation(null);
+  };
+
   // Recursive component to render tree structure
   const renderTreeNode = (node: any, depth: number = 0): React.ReactElement => (
     <View key={node.id} style={{ marginLeft: depth * 16 }}>
       <StorageLocationCard
         location={node}
         isDefault={node.isDefault}
-        onEdit={() => setEditingId(node.id)}
+        onEdit={() => handleOpenEdit(node)}
         onDelete={() => handleDelete(node.id, node.name)}
         onSetDefault={() => handleSetDefault(node.id)}
       />
@@ -65,16 +73,19 @@ export const StorageLocationsScreen: React.FC<{
 
   const handleCreate = async (formData: any) => {
     const result = await createLocation(formData);
-    if (result) {
-      setShowCreateForm(false);
-    }
+    return !!result;
   };
 
   const handleUpdate = async (id: string, formData: any) => {
     const result = await updateLocation(id, formData);
-    if (result) {
-      setEditingId(null);
+    return !!result;
+  };
+
+  const handleSubmit = async (formData: any) => {
+    if (editingLocation) {
+      return handleUpdate(editingLocation.id, formData);
     }
+    return handleCreate(formData);
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -97,10 +108,6 @@ export const StorageLocationsScreen: React.FC<{
   const handleSetDefault = async (id: string) => {
     await setDefaultLocation(id);
   };
-
-  const editingLocation = editingId
-    ? locations.find(loc => loc.id === editingId)
-    : null;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -146,29 +153,6 @@ export const StorageLocationsScreen: React.FC<{
             </View>
           )}
 
-          {/* Create/Edit Form - Shows inline at top when active */}
-          {(showCreateForm || editingLocation) && (
-            <Animated.View
-              {...formAnimationPreset}
-              style={[commonStyles.shadow, styles.inlineForm]}
-            >
-              <StorageLocationForm
-                initialData={editingLocation || undefined}
-                onSubmit={
-                  editingLocation
-                    ? data => handleUpdate(editingLocation.id, data)
-                    : handleCreate
-                }
-                onCancel={() => {
-                  setShowCreateForm(false);
-                  setEditingId(null);
-                }}
-                isSubmitting={creating}
-                availableLocations={locations}
-              />
-            </Animated.View>
-          )}
-
           {/* View Mode Toggle */}
           {locations.length > 0 && (
             <View style={styles.viewModeToggle}>
@@ -209,7 +193,7 @@ export const StorageLocationsScreen: React.FC<{
             </View>
           )}
 
-          {locations.length === 0 && !showCreateForm ? (
+          {locations.length === 0 ? (
             <View style={commonStyles.emptyState}>
               <Icon
                 name="storage"
@@ -234,7 +218,7 @@ export const StorageLocationsScreen: React.FC<{
                 key={location.id}
                 location={location}
                 isDefault={location.isDefault}
-                onEdit={() => setEditingId(location.id)}
+                onEdit={() => handleOpenEdit(location)}
                 onDelete={() => handleDelete(location.id, location.name)}
                 onSetDefault={() => handleSetDefault(location.id)}
               />
@@ -246,27 +230,33 @@ export const StorageLocationsScreen: React.FC<{
   ];
 
   return (
-    <DetailTemplate
-      title="Storage Locations"
-      onBack={goBack}
-      headerActions={[
-        {
-          icon: showCreateForm || editingId ? 'close' : 'add',
-          onPress: () => {
-            if (showCreateForm || editingId) {
-              setShowCreateForm(false);
-              setEditingId(null);
-            } else {
-              setShowCreateForm(true);
-            }
+    <>
+      <DetailTemplate
+        title="Storage Locations"
+        onBack={goBack}
+        headerActions={[
+          {
+            icon: 'add',
+            onPress: () => {
+              setEditingLocation(null);
+              setSheetVisible(true);
+            },
+            variant: 'primary',
           },
-          variant: 'primary',
-        },
-      ]}
-      sections={sections}
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-    />
+        ]}
+        sections={sections}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
+      <StorageLocationSheet
+        visible={sheetVisible}
+        onClose={handleCloseSheet}
+        onSubmit={handleSubmit}
+        initialData={editingLocation}
+        availableLocations={locations}
+        isSubmitting={creating}
+      />
+    </>
   );
 };
 
@@ -288,24 +278,6 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     color: theme.colors.error,
     fontSize: theme.fonts.size.sm,
-  },
-  formOverlay: {
-    position: 'absolute',
-    top: 80,
-    left: theme.spacing.md,
-    right: theme.spacing.md,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.background,
-    zIndex: 1000,
-    maxHeight: '80%',
-  },
-  inlineForm: {
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.background,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   viewModeToggle: {
     flexDirection: 'row',

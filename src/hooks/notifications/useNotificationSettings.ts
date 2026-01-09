@@ -102,7 +102,7 @@ export const useNotificationSettings = () => {
     return {
       // Core toggles
       emailEnabled: preferences?.emailEnabled ?? true,
-      pushEnabled: preferences?.pushEnabled ?? true,
+      pushEnabled: preferences?.pushEnabled ?? false,
       smsEnabled: preferences?.smsEnabled ?? false,
 
       // Pantry notifications
@@ -184,7 +184,7 @@ export const useNotificationSettings = () => {
   const resetToDefaults = useCallback(async () => {
     const defaultSettings: Partial<NotificationSettings> = {
       emailEnabled: true,
-      pushEnabled: true,
+      pushEnabled: false,
       smsEnabled: false,
       expirationNotifications: true,
       expirationNotificationFrequency: ExpirationFrequency.DailyMorning,

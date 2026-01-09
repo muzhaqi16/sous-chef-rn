@@ -2,15 +2,18 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { FormattedItemSubtitle, BottomSheetHeader } from '#components/atoms';
+import {
+  FormattedItemSubtitle,
+  BottomSheetHeader,
+  BottomSheetKeyboardAwareScrollView,
+} from '#components/atoms';
 import { Icon, parseFractionalInput } from '#/utils';
 import { UsagePurpose, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
@@ -47,6 +50,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
   const [notes, setNotes] = useState('');
@@ -108,7 +112,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['75%']}
+      snapPoints={['75%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -116,8 +120,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -127,13 +132,14 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
         />
       )}
     >
-      <BottomSheetScrollView
+      <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
           { paddingBottom: insets.bottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         {/* Header */}
         <BottomSheetHeader
@@ -172,6 +178,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
                 keyboardType="numeric"
+                useBottomSheetInput
               />
               {remaining !== null && (
                 <Text
@@ -233,11 +240,12 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 placeholder="Add any notes about this usage..."
                 multiline
                 numberOfLines={3}
+                useBottomSheetInput
               />
             </View>
           </>
         )}
-      </BottomSheetScrollView>
+      </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
 };

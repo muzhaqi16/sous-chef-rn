@@ -11,6 +11,8 @@ export type RecipeStackParamList = {
     recipeId?: string;         // Backend-saved recipe ID
     externalSource?: string;   // External source (SPOONACULAR, EDAMAM, TASTY, etc.)
     externalId?: string;       // External recipe ID
+    sourceTab?: 'Pantry' | 'ShoppingList' | 'Recipe';  // Source tab for cross-tab navigation
+    sourcePantryItemId?: string;  // Source pantry item ID for back navigation
   };
   RecipeSearch: {ingredients?: string[]};
 };

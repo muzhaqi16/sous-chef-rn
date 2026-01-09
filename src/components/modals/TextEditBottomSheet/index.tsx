@@ -7,7 +7,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -61,6 +61,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Default schema if none provided
   const schema = validationSchema || yup.object({ [fieldKey]: yup.string() });
@@ -109,7 +110,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['25%', '45%']}
+      snapPoints={['25%', '50%']}
       index={0}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
@@ -117,8 +118,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
       <BottomSheetView
         style={[styles.content, { paddingBottom: insets.bottom + 16 }]}

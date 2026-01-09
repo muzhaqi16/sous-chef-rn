@@ -3867,6 +3867,12 @@ Creates a PantryItem from a ShoppingListItem after purchase.
 """
 input MoveShoppingItemToPantryInput {
   """
+  Actual per-unit price paid (optional).
+  If not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.
+  Server calculates totalCost = actualPrice × actualQuantity for analytics.
+  """
+  actualPrice: Float
+  """
   Actual quantity purchased (may differ from planned)
   """
   actualQuantity: Float!
@@ -3874,10 +3880,6 @@ input MoveShoppingItemToPantryInput {
   Unit ID for the quantity (defaults to shopping item's unit)
   """
   actualUnitId: ID
-  """
-  Cost per unit (optional)
-  """
-  costPerUnit: Float
   """
   Expiration date (optional)
   """
@@ -3906,10 +3908,6 @@ input MoveShoppingItemToPantryInput {
   Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)
   """
   storageState: StorageState
-  """
-  Total cost paid (optional)
-  """
-  totalCost: Float
 }
 
 input MoveShoppingListItemInput {

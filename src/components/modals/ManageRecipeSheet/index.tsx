@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { TagInput } from '#components';
 
 export interface ManageRecipeSheetProps {
@@ -56,6 +56,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -144,7 +145,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['85%']}
+      snapPoints={['85%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -152,8 +153,9 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -287,7 +289,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           })}
         </View>
 
-        {/* Create New Folder - Outside ScrollView so always visible */}
+        {/* Create New Folder */}
         {showNewFolder ? (
           <View style={styles.newFolderContainer}>
             <BottomSheetTextInput
@@ -424,9 +426,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
   },
-  folderList: {
-    maxHeight: 180,
-  },
+  folderList: {},
   folderOption: {
     flexDirection: 'row',
     alignItems: 'center',

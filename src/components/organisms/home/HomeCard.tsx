@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
@@ -68,134 +69,108 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  // Animated values for highlight effect
+  // Animated value for highlight effect
   const highlightOpacity = useSharedValue(0);
-  const shadowOpacity = useSharedValue(0.05);
-  const scale = useSharedValue(1);
 
   // Trigger highlight animation when isHighlighted changes
   useEffect(() => {
-    if (isHighlighted) {
-      // Animate in
-      highlightOpacity.value = withSpring(1, {
-        damping: 25,
-        stiffness: 200,
-        mass: 1.2,
-      });
-      shadowOpacity.value = withSpring(0.2, {
-        damping: 25,
-        stiffness: 200,
-        mass: 1.2,
-      });
-      scale.value = withSpring(1.02, {
-        damping: 30,
-        stiffness: 180,
-        mass: 1.5,
-      });
-    } else {
-      // Animate out
-      highlightOpacity.value = withSpring(0, {
-        damping: 25,
-        stiffness: 200,
-        mass: 1.2,
-      });
-      shadowOpacity.value = withSpring(0.05, {
-        damping: 25,
-        stiffness: 200,
-        mass: 1.2,
-      });
-      scale.value = withSpring(1, {
-        damping: 30,
-        stiffness: 180,
-        mass: 1.5,
-      });
-    }
-  }, [isHighlighted, highlightOpacity, shadowOpacity, scale]);
+    highlightOpacity.value = withTiming(isHighlighted ? 1 : 0, {
+      duration: 150, // Fast - matches slide animation
+      easing: Easing.out(Easing.ease),
+    });
+  }, [isHighlighted, highlightOpacity]);
 
-  const animatedCardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      shadowOpacity: shadowOpacity.value,
-    };
-  });
+  // Static card style - backgroundColor doesn't animate
+  const cardStyle = {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    overflow: 'hidden' as const,
+  };
 
-  const animatedHighlightStyle = useAnimatedStyle(() => {
-    return {
-      opacity: highlightOpacity.value,
-    };
-  });
+  // Animated highlight overlay - only opacity animates
+  const animatedHighlightStyle = useAnimatedStyle(() => ({
+    opacity: highlightOpacity.value,
+  }));
 
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
-  // Uses single style with shadow included to avoid "2 unistyles styles" warning
+  // Wrapper pattern: static Unistyles on outer View for margin/shadow,
+  // static card style with animated highlight overlay for smooth animation
   return (
-    <View style={styles.homeCard}>
-      <Animated.View style={animatedCardStyle}>
-        <View style={styles.highlightOverlay}>
-          <Animated.View style={[{ width: '100%', height: '100%' }, animatedHighlightStyle]} />
-        </View>
-      <TouchableOpacity
-        style={styles.homeHeader}
-        onPress={() => onPress?.(home.id)}
-        activeOpacity={onPress ? 0.7 : 1}
-        accessibilityRole="button"
-        accessibilityLabel={`${home.name}, ${home.members?.length || 0} ${(home.members?.length || 0) === 1 ? 'member' : 'members'}, ${home.pantries?.length || 0} ${(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}${isDefault ? ', default home' : ''}`}
-        accessibilityHint="Tap to view home details"
-        disabled={!onPress}
-      >
-        <View style={styles.homeInfo}>
-          <Text style={styles.homeName}>{home.name}</Text>
+    <View style={styles.homeCardWrapper}>
+      <View style={cardStyle}>
+        {/* Highlight overlay - only opacity animates, no color interpolation */}
+        <Animated.View
+          style={[styles.highlightOverlay, animatedHighlightStyle]}
+        />
 
-          <Text style={styles.homeDetails}>
-            {home.members?.length || 0}{' '}
-            {(home.members?.length || 0) === 1 ? 'member' : 'members'} •{' '}
-            {home.pantries?.length || 0}{' '}
-            {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
-          </Text>
-        </View>
-        {isDefault && (
-          <View style={styles.defaultBadge}>
-            <Text style={styles.defaultText}>Default</Text>
+        <TouchableOpacity
+          style={styles.homeHeader}
+          onPress={() => onPress?.(home.id)}
+          activeOpacity={onPress ? 0.7 : 1}
+          accessibilityRole="button"
+          accessibilityLabel={`${home.name}, ${home.members?.length || 0} ${
+            (home.members?.length || 0) === 1 ? 'member' : 'members'
+          }, ${home.pantries?.length || 0} ${
+            (home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'
+          }${isDefault ? ', default home' : ''}`}
+          accessibilityHint="Tap to view home details"
+          disabled={!onPress}
+        >
+          <View style={styles.homeInfo}>
+            <Text style={styles.homeName}>{home.name}</Text>
+
+            <Text style={styles.homeDetails}>
+              {home.members?.length || 0}{' '}
+              {(home.members?.length || 0) === 1 ? 'member' : 'members'} •{' '}
+              {home.pantries?.length || 0}{' '}
+              {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
+            </Text>
           </View>
-        )}
-        {onPress && (
-          <Icon
-            name="chevron-forward"
-            size={20}
-            color={theme.colors.textSecondary}
-            library="Ionicons"
-          />
-        )}
-      </TouchableOpacity>
+          {isDefault && (
+            <View style={styles.defaultBadge}>
+              <Text style={styles.defaultText}>Default</Text>
+            </View>
+          )}
+          {onPress && (
+            <Icon
+              name="chevron-forward"
+              size={20}
+              color={theme.colors.textSecondary}
+              library="Ionicons"
+            />
+          )}
+        </TouchableOpacity>
 
-      <HomeActions
-        homeId={home.id}
-        isDefault={isDefault}
-        canInvite={canInvite}
-        canDelete={canDelete}
-        onSetDefault={onSetDefault}
-        onInvite={onInvite}
-        onDelete={handleDelete}
-      />
+        <HomeActions
+          homeId={home.id}
+          isDefault={isDefault}
+          canInvite={canInvite}
+          canDelete={canDelete}
+          onSetDefault={onSetDefault}
+          onInvite={onInvite}
+          onDelete={handleDelete}
+        />
 
-      <MembersList members={home.members || []} invites={home.invites || []} />
-      </Animated.View>
+        <MembersList
+          members={home.members || []}
+          invites={home.invites || []}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  homeCard: {
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
+  homeCardWrapper: {
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,
-    position: 'relative',
-    overflow: 'hidden',
-    // Shadow styles (previously from commonStyles.shadow)
+    // borderRadius needed for shadow to follow card shape
+    borderRadius: theme.radii.md,
+    // Shadow styles
     boxShadow: [
       {
         offsetX: 0,
@@ -212,8 +187,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.primary + '10',
-    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary + '15',
     pointerEvents: 'none',
   },
   homeHeader: {

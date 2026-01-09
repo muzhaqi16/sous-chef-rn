@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {TextInput, Text} from 'react-native';
+import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 
@@ -12,6 +13,10 @@ interface FractionInputProps {
   disabled?: boolean;
   testID?: string;
   keyboardType?: 'default' | 'numeric' | 'decimal-pad' | 'numbers-and-punctuation';
+  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
+  useBottomSheetInput?: boolean;
+  /** Show red asterisk to indicate required field */
+  required?: boolean;
 }
 
 /**
@@ -33,7 +38,10 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   disabled = false,
   testID,
   keyboardType = 'numbers-and-punctuation',
+  useBottomSheetInput = false,
+  required = false,
 }) => {
+  const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
 
@@ -57,8 +65,9 @@ export const FractionInput: React.FC<FractionInputProps> = ({
     <FormFieldWrapper
       label={label || ''}
       error={hasError ? (error || 'Use format: 1/4, 1 1/4, or 1.5') : undefined}
+      required={required}
     >
-      <TextInput
+      <InputComponent
         style={[
           styles.input,
           isFocused && styles.inputFocused,

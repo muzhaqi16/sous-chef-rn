@@ -1,42 +1,23 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import {
-  useAppStore,
-  selectShoppingListState,
-  selectSelectedHomeId,
-} from '#store/useAppStore';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
 import type { ShoppingListFromQuery } from './useShoppingListsQuery';
 
 /**
- * useShoppingListSelection - Simple list selection with home context
+ * useShoppingListSelection - Shopping list selection
  *
- * Filters lists to show:
- * - Lists belonging to current selected home
- * - Personal lists (no home)
- * - Shared lists without a home
+ * Shows all shopping lists (no home-based filtering).
+ * Grouping by home is handled in the UI layer (selector modal).
  *
- * Uses one-time auto-select to prevent infinite re-render loops.
+ * Auto-selects first list when no valid selection exists.
  */
 export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
   const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
     useShallow(selectShoppingListState),
   );
-  const selectedHomeId = useAppStore(selectSelectedHomeId);
 
-  // One-time initialization flag
-  const didInitRef = useRef(false);
-
-  // Filter lists relevant to current home context:
-  // - Lists belonging to current home
-  // - Personal lists (no home)
-  // - Shared lists without a home
-  const relevantLists = useMemo(() => {
-    return lists.filter(
-      list =>
-        list.homeId === selectedHomeId || // Belongs to current home
-        !list.homeId, // Personal or shared without home
-    );
-  }, [lists, selectedHomeId]);
+  // Show all lists - grouping by home is handled in the UI layer
+  const relevantLists = useMemo(() => lists, [lists]);
 
   // Default: first with isDefault flag from relevant lists, or first relevant list
   const defaultList = useMemo(
@@ -61,27 +42,26 @@ export function useShoppingListSelection(lists: ShoppingListFromQuery[]) {
     [relevantLists, currentListId, defaultList],
   );
 
-  // ONE-TIME auto-select
+  // Auto-select when lists load and current selection is invalid
   useEffect(() => {
-    if (didInitRef.current) return;
+    // Skip if no lists available yet (query still loading)
     if (relevantLists.length === 0) return;
 
-    // Already have valid selection in relevant lists
-    if (
+    // Check if current selection is valid
+    const hasValidSelection =
       selectedShoppingListId &&
-      relevantLists.some(l => l.id === selectedShoppingListId)
-    ) {
-      didInitRef.current = true;
-      return;
-    }
+      relevantLists.some(l => l.id === selectedShoppingListId);
 
-    // Select first relevant list
-    const firstList = relevantLists.find(l => l.isDefault) || relevantLists[0];
-    if (firstList?.id) {
-      setSelectedShoppingListId(firstList.id);
+    // Skip if already have valid selection
+    if (hasValidSelection) return;
+
+    // Auto-select: first with isDefault flag, or first list
+    const listToSelect =
+      relevantLists.find(l => l.isDefault) || relevantLists[0];
+    if (listToSelect?.id) {
+      setSelectedShoppingListId(listToSelect.id);
     }
-    didInitRef.current = true;
-  }); // NO DEPENDENCIES - runs on every render until didInitRef is true
+  }, [relevantLists, selectedShoppingListId, setSelectedShoppingListId]);
 
   return {
     currentListId,

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -14,7 +13,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { TagInput } from '#components';
 import { Icon } from '#utils';
 
@@ -41,6 +40,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>('Favorites');
@@ -103,7 +103,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['75%']}
+      snapPoints={['75%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -111,8 +111,9 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -161,11 +162,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 
         {/* Folder Selection */}
         <Text style={styles.sectionLabel}>Folder</Text>
-        <ScrollView
-          style={styles.folderList}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled={true}
-        >
+        <View style={styles.folderList}>
           {[null, ...displayFolders].map(folder => {
             const isSelected =
               folder === null ? !selectedFolder : selectedFolder === folder;
@@ -208,9 +205,9 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
-        {/* Create New Folder - Outside ScrollView so always visible */}
+        {/* Create New Folder */}
         {showNewFolder ? (
           <View style={styles.newFolderContainer}>
             <BottomSheetTextInput
@@ -318,9 +315,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
     marginTop: theme.spacing.md,
   },
-  folderList: {
-    maxHeight: 180,
-  },
+  folderList: {},
   folderOption: {
     flexDirection: 'row',
     alignItems: 'center',

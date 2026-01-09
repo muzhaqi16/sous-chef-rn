@@ -107,7 +107,7 @@ export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
 }> = ({ route }) => {
   const itemId = route.params.itemId;
-  const { goBack, navigate, navigateTo } = useAppNavigation();
+  const { goBack, navigateToNested, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
@@ -117,7 +117,7 @@ export const PantryItemDetail: React.FC<{
   >('idle');
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
 
-  // Recipes to try state (dev only)
+  // Recipes to try state
   const [suggestedRecipes, setSuggestedRecipes] = useState<RecipeInformation[]>(
     [],
   );
@@ -153,9 +153,9 @@ export const PantryItemDetail: React.FC<{
 
   const item = data?.pantryItem;
 
-  // Fetch suggested recipes (dev only)
+  // Fetch suggested recipes based on pantry item
   useEffect(() => {
-    if (!__DEV__ || !item?.item?.name) return;
+    if (!item?.item?.name) return;
 
     const fetchRecipes = async () => {
       setLoadingRecipes(true);
@@ -250,9 +250,11 @@ export const PantryItemDetail: React.FC<{
   };
 
   const handleRecipePress = (recipeId: number) => {
-    navigate('RecipeDetail', {
+    navigateToNested('Recipe', 'RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
+      sourceTab: 'Pantry',
+      sourcePantryItemId: itemId,
     });
   };
 
@@ -754,47 +756,45 @@ export const PantryItemDetail: React.FC<{
           </>
         )}
 
-        {/* Recipes to try (dev only) */}
-        {__DEV__ && (
-          <View style={styles.recipesSection}>
-            <Text style={styles.sectionTitle}>Recipes to try</Text>
-            {loadingRecipes ? (
-              <ActivityIndicator
-                size="small"
-                color={theme.colors.primary}
-                style={styles.recipesLoading}
-              />
-            ) : suggestedRecipes.length > 0 ? (
-              <FlatList
-                horizontal
-                data={suggestedRecipes}
-                keyExtractor={recipe => String(recipe.id)}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recipesList}
-                renderItem={({ item: recipe }) => (
-                  <TouchableOpacity
-                    style={styles.recipeCard}
-                    onPress={() => handleRecipePress(recipe.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Image
-                      source={{ uri: recipe.image }}
-                      style={styles.recipeImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.recipeTitle} numberOfLines={2}>
-                      {recipe.title}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            ) : (
-              <Text style={styles.noRecipes}>
-                No recipe suggestions available
-              </Text>
-            )}
-          </View>
-        )}
+        {/* Recipes to try */}
+        <View style={styles.recipesSection}>
+          <Text style={styles.sectionTitle}>Recipes to try</Text>
+          {loadingRecipes ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.colors.primary}
+              style={styles.recipesLoading}
+            />
+          ) : suggestedRecipes.length > 0 ? (
+            <FlatList
+              horizontal
+              data={suggestedRecipes}
+              keyExtractor={recipe => String(recipe.id)}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recipesList}
+              renderItem={({ item: recipe }) => (
+                <TouchableOpacity
+                  style={styles.recipeCard}
+                  onPress={() => handleRecipePress(recipe.id)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: recipe.image }}
+                    style={styles.recipeImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                    {recipe.title}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <Text style={styles.noRecipes}>
+              No recipe suggestions available
+            </Text>
+          )}
+        </View>
 
         {/* Bottom padding for safe area */}
         <View style={{ height: insets.bottom + 20 }} />
