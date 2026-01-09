@@ -4,11 +4,8 @@ import { useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
   Easing,
-  FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { HapticService } from '#services/haptic';
@@ -68,11 +65,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
           easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         },
       ),
+      // PERFORMANCE: Use timing instead of spring for cheaper animation
       transform: [
         {
-          scale: withSpring(finalScale, {
-            damping: 15,
-            stiffness: 200,
+          scale: withTiming(finalScale, {
+            duration: 100,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
           }),
         },
       ],
@@ -127,17 +125,10 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
           animatedContainerStyle,
         ]}
       >
+        {/* PERFORMANCE: Simple conditional render without layout animations */}
+        {/* The container scale/color animation provides sufficient visual feedback */}
         {visuallyChecked && (
-          <Animated.View
-            entering={FadeIn.duration(200).easing(
-              Easing.bezier(0.34, 1.56, 0.64, 1).factory(),
-            )}
-            exiting={FadeOut.duration(100).easing(
-              Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
-            )}
-          >
-            <Icon name="check" size={size * 0.66} color="white" />
-          </Animated.View>
+          <Icon name="check" size={size * 0.66} color="white" />
         )}
       </Animated.View>
     </Pressable>

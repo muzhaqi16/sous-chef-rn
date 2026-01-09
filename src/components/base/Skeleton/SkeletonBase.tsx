@@ -94,7 +94,12 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         style,
       ]}
     >
-      {animated && <Animated.View style={[styles.shimmer, animatedStyle]} />}
+      {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
+      {animated && (
+        <View style={styles.shimmer}>
+          <Animated.View style={[{ width: '100%', height: '100%' }, animatedStyle]} />
+        </View>
+      )}
     </View>
   );
 };

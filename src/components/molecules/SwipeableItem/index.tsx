@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Animated } from 'react-native';
+import { Animated, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
@@ -113,8 +113,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     ],
   );
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
+  // animated styles on inner Reanimated.View to avoid "2 unistyles styles" warning
   return (
-    <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>
+    <View style={styles.gestureContainer}>
+      <Reanimated.View style={animatedStyle}>
       <Swipeable
         ref={swipeableRef}
         friction={friction}
@@ -134,7 +137,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           {children}
         </SwipeableContent>
       </Swipeable>
-    </Reanimated.View>
+      </Reanimated.View>
+    </View>
   );
 };
 

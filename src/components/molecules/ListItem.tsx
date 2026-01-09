@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, TextStyle } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
@@ -34,6 +34,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
+  // Select variants based on purchased state
+  styles.useVariants({ purchased: isPurchased });
+
   const content = (
     <>
       {/* Optional checkbox element (for shopping list items) */}
@@ -49,7 +52,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       )}
       <View style={styles.content}>
         <Text
-          style={[styles.title, isPurchased && styles.purchasedText]}
+          style={styles.title}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
@@ -58,14 +61,14 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         {subtitle && (
           typeof subtitle === 'string' ? (
             <Text
-              style={[styles.subtitle, isPurchased && styles.purchasedText]}
+              style={styles.subtitle}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
               {subtitle}
             </Text>
           ) : (
-            <View style={[styles.subtitleContainer, isPurchased && { opacity: 0.6 }]}>
+            <View style={styles.subtitleContainer}>
               {subtitle}
             </View>
           )
@@ -137,18 +140,37 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     color: theme.colors.textPrimary,
+    variants: {
+      purchased: {
+        true: {
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+          opacity: 0.6,
+          color: theme.colors.textSecondary,
+        },
+      },
+    },
   },
   subtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+    variants: {
+      purchased: {
+        true: {
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+          opacity: 0.6,
+        },
+      },
+    },
   },
   subtitleContainer: {
     marginTop: theme.spacing.xs,
-  },
-  purchasedText: {
-    textDecorationLine: 'line-through',
-    opacity: 0.6,
-    color: theme.colors.textSecondary,
+    variants: {
+      purchased: {
+        true: {
+          opacity: 0.6,
+        },
+      },
+    },
   },
 }));

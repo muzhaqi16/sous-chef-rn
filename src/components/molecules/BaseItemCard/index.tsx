@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import type { BaseItemCardProps } from './types';
 
@@ -69,40 +69,8 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   rightThreshold = 80,
   testID,
 }) => {
-  const { theme } = useUnistyles();
-
-  const getBackgroundStyle = () => {
-    switch (variant) {
-      case 'warning':
-        return {
-          backgroundColor: theme.colors.expiration.warningBg,
-          borderColor: theme.colors.expiration.warningBorder,
-        };
-      case 'expired':
-        return {
-          backgroundColor: theme.colors.expiration.expiredBg,
-          borderColor: theme.colors.expiration.expiredBorder,
-        };
-      case 'success':
-        return {
-          backgroundColor: theme.colors.alertBanner.success.bg,
-          borderColor: theme.colors.alertBanner.success.border,
-        };
-      case 'dimmed':
-        return {
-          backgroundColor: theme.colors.surfaceVariant,
-          borderColor: theme.colors.borderLight,
-          opacity: 0.8,
-        };
-      default:
-        return {
-          backgroundColor: theme.colors.white,
-          borderColor: theme.colors.borderLight,
-        };
-    }
-  };
-
-  const backgroundStyle = getBackgroundStyle();
+  // Select variant for styling
+  styles.useVariants({ variant });
 
   // Build children array from slot props with keys to prevent React warnings
   const slotChildren: React.ReactNode[] = [];
@@ -121,7 +89,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
 
   const cardContent = (
     <View
-      style={[styles.container, backgroundStyle, containerStyle]}
+      style={[styles.container, containerStyle]}
       testID={testID}
     >
       {slotChildren}
@@ -179,5 +147,33 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 2,
+    // Default styles (applied when no variant matches)
+    backgroundColor: theme.colors.white,
+    borderColor: theme.colors.borderLight,
+    variants: {
+      variant: {
+        normal: {
+          backgroundColor: theme.colors.white,
+          borderColor: theme.colors.borderLight,
+        },
+        warning: {
+          backgroundColor: theme.colors.expiration.warningBg,
+          borderColor: theme.colors.expiration.warningBorder,
+        },
+        expired: {
+          backgroundColor: theme.colors.expiration.expiredBg,
+          borderColor: theme.colors.expiration.expiredBorder,
+        },
+        success: {
+          backgroundColor: theme.colors.alertBanner.success.bg,
+          borderColor: theme.colors.alertBanner.success.border,
+        },
+        dimmed: {
+          backgroundColor: theme.colors.surfaceVariant,
+          borderColor: theme.colors.borderLight,
+          opacity: 0.8,
+        },
+      },
+    },
   },
 }));

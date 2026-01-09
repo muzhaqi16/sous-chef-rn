@@ -1,11 +1,9 @@
 import { useCallback, useRef, useEffect } from 'react';
 import {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
-  withDelay,
   runOnJS,
-  runOnUI,
 } from 'react-native-reanimated';
 import {
   listItemExitAnimation,
@@ -18,9 +16,9 @@ import {
  * Provides coordinated slide, fade, and scale animations
  * for when items are toggled between purchased/unpurchased states.
  *
- * PERFORMANCE: Uses useRef for isAnimating state to avoid blocking the JS thread.
- * Reading/writing SharedValue.value on JS thread triggers executeOnUIRuntimeSync
- * which blocks execution. Using useRef + runOnUI avoids this blocking.
+ * PERFORMANCE: Uses eager shared value creation but defers animation calculations.
+ * The animated style returns static values when exitDirection === 0 (no animation),
+ * avoiding expensive animation calculations until the user actually triggers one.
  *
  * Uses runOnJS for accurate animation completion callbacks instead of setTimeout.
  *
@@ -42,7 +40,8 @@ import {
  * ```
  */
 export const useItemExitAnimation = () => {
-  // 0 = no animation, 1 = exiting right (marking purchased), -1 = exiting left (unmarking)
+  // Shared value for exit direction - created eagerly but idle until animation triggers
+  // Value: 0 = no animation, 1 = animating right, -1 = animating left
   const exitDirection = useSharedValue(0);
 
   // PERFORMANCE: Use useRef instead of useSharedValue for isAnimating flag
@@ -62,29 +61,25 @@ export const useItemExitAnimation = () => {
   }, []);
 
   // Exit animated style (slide, fade, scale)
+  // PERFORMANCE: Returns static values when exitDirection === 0 (no animation triggered)
+  // All visual properties derive from the single animated exitDirection.value (0 to 1 or -1)
   const exitAnimatedStyle = useAnimatedStyle(() => {
-    const isActive = exitDirection.value !== 0;
-    const { slide, fade, scale } = listItemExitAnimation;
+    // Fast path: no animation active, return static values
+    if (exitDirection.value === 0) {
+      return {
+        opacity: 1,
+        transform: [{ translateX: 0 }, { scale: 1 }],
+      };
+    }
+
+    const progress = Math.abs(exitDirection.value); // 0 to 1
+    const { slide, scale } = listItemExitAnimation;
 
     return {
-      opacity: isActive
-        ? withDelay(fade.delay, withTiming(0, { duration: fade.duration }))
-        : withTiming(1, { duration: fade.duration }),
+      opacity: 1 - progress, // Fade out as progress increases
       transform: [
-        {
-          translateX: withTiming(exitDirection.value * slide.distance, {
-            duration: slide.duration,
-            easing: standardEasing,
-          }),
-        },
-        {
-          scale: isActive
-            ? withDelay(
-                scale.delay,
-                withTiming(scale.toValue, { duration: scale.duration }),
-              )
-            : withTiming(1, { duration: scale.duration }),
-        },
+        { translateX: exitDirection.value * slide.distance }, // Slide in direction
+        { scale: 1 - progress * (1 - scale.toValue) }, // Scale from 1 to 0.95
       ],
     };
   });
@@ -102,7 +97,6 @@ export const useItemExitAnimation = () => {
 
   /**
    * Trigger exit animation with direction and completion callback
-   * PERFORMANCE: Uses runOnUI to schedule animation without blocking JS thread
    * @param direction - 1 for right (marking purchased), -1 for left (unmarking)
    * @param onComplete - Callback fired when animation completes
    */
@@ -117,21 +111,18 @@ export const useItemExitAnimation = () => {
 
       const { slide } = listItemExitAnimation;
 
-      // PERFORMANCE: Schedule animation on UI thread without blocking JS thread
-      // This avoids executeOnUIRuntimeSync which would block the JS thread
-      runOnUI(() => {
-        'worklet';
-        exitDirection.value = withTiming(
-          direction * slide.distance,
-          { duration: slide.duration, easing: standardEasing },
-          finished => {
-            'worklet';
-            if (finished) {
-              runOnJS(safeCallComplete)();
-            }
-          },
-        );
-      })();
+      // Animate exitDirection.value from 0 to 1 (or -1)
+      // The useAnimatedStyle derives all visual properties from this single animated value
+      exitDirection.value = withTiming(
+        direction,
+        { duration: slide.duration, easing: standardEasing },
+        finished => {
+          'worklet';
+          if (finished) {
+            runOnJS(safeCallComplete)();
+          }
+        },
+      );
     },
     [exitDirection, safeCallComplete],
   );
@@ -142,12 +133,8 @@ export const useItemExitAnimation = () => {
   const resetAnimation = useCallback(() => {
     // Reset ref state (non-blocking)
     isAnimatingRef.current = false;
-
-    // Schedule shared value reset on UI thread (non-blocking)
-    runOnUI(() => {
-      'worklet';
-      exitDirection.value = 0;
-    })();
+    // Reset shared value to neutral
+    exitDirection.value = 0;
   }, [exitDirection]);
 
   return {

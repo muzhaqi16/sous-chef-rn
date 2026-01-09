@@ -46,15 +46,10 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = memo(({
       ]}
     >
       {/* Animated progress bar background */}
-      <Animated.View
-        style={[
-          styles.progressBar,
-          {
-            height,
-          },
-          progressBarStyle,
-        ]}
-      />
+      {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
+      <View style={[styles.progressBar, { height }]}>
+        <Animated.View style={[{ width: '100%', height: '100%' }, progressBarStyle]} />
+      </View>
 
       {/* Step dots */}
       {steps.map((step, index) => (

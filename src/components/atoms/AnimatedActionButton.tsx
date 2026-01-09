@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -53,10 +53,15 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     }
   }, [isHighlighted, scale, rotation]);
 
+  // UNISTYLES FIX: Include layout properties in animatedStyle to avoid
+  // combining Unistyles and Reanimated styles in the same array
   const animatedStyle = useAnimatedStyle(() => {
     const rotate = interpolate(rotation.value, [0, 1], [0, 90]);
 
     return {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: withTiming(backgroundColor || theme.colors.surface, {
         duration: 150,
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
@@ -65,17 +70,20 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     };
   });
 
+  // Wrapper pattern: static Unistyles on outer View, animated styles on inner Animated.View
   return (
-    <Animated.View style={[styles.button, animatedStyle, style]} testID={testID}>
-      <IconButton
-        name={name || 'add'}
-        size={size}
-        color={color || theme.colors.primary}
-        onPress={onPress}
-        library="Ionicons"
-        accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
-      />
-    </Animated.View>
+    <View style={[styles.button, style]} testID={testID}>
+      <Animated.View style={animatedStyle}>
+        <IconButton
+          name={name || 'add'}
+          size={size}
+          color={color || theme.colors.primary}
+          onPress={onPress}
+          library="Ionicons"
+          accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
+        />
+      </Animated.View>
+    </View>
   );
 };
 
@@ -90,5 +98,6 @@ const styles = StyleSheet.create(theme => ({
     height: 44,
     borderColor: theme.colors.primary,
     borderWidth: 2,
+    overflow: 'hidden', // Clip animated background to border radius
   },
 }));

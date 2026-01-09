@@ -1,7 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { Text, Animated, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { scheduleOnRN } from 'react-native-worklets';
+import { Text, Animated, Pressable } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
 import { useUnistyles } from 'react-native-unistyles';
@@ -62,34 +60,20 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     };
   }, [progress, startThreshold, endThreshold]);
 
-  // PERFORMANCE: Memoize the press handler to prevent gesture recreation
+  // PERFORMANCE: Memoize the press handler
   const handlePress = useCallback(() => {
     onPress();
   }, [onPress]);
 
-  // PERFORMANCE: Memoize Gesture.Tap() to avoid recreating gesture on every render
-  const tapGesture = useMemo(
-    () =>
-      Gesture.Tap()
-        .onEnd(() => {
-          'worklet';
-          scheduleOnRN(handlePress);
-        })
-        .shouldCancelWhenOutside(false),
-    [handlePress],
-  );
-
-  // UNISTYLES FIX: Separate static Unistyles styles from RN Animated styles
-  // Using wrapper pattern to avoid "2 unistyles styles" warning
-  // See: https://github.com/jpudysz/react-native-unistyles/issues/512
+  // PERFORMANCE: Use Pressable instead of GestureDetector + Gesture.Tap()
+  // Pressable is lighter weight and sufficient for simple tap actions
+  // The parent Swipeable already handles gesture coordination
   return (
-    <GestureDetector gesture={tapGesture}>
-      <View style={buttonStyle} testID={testID}>
-        <Animated.View style={animatedStyle}>
-          <Icon name={icon} size={iconSize} color={iconColor} library={library} />
-          {label && <Text style={styles.deleteText}>{label}</Text>}
-        </Animated.View>
-      </View>
-    </GestureDetector>
+    <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
+      <Animated.View style={animatedStyle}>
+        <Icon name={icon} size={iconSize} color={iconColor} library={library} />
+        {label && <Text style={styles.deleteText}>{label}</Text>}
+      </Animated.View>
+    </Pressable>
   );
 };

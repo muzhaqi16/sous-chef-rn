@@ -1,6 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -19,6 +18,8 @@ export const StepDot: React.FC<StepDotProps> = ({
   onPress,
   allowNavigation = false,
 }) => {
+  // Animated style for color transitions, scale, and opacity
+  // Static layout properties are in StyleSheet to avoid 'as const' casts
   const animatedStyle = useAnimatedStyle(() => {
     const isActive = activeIndex.value === index;
     const isCompleted = activeIndex.value > index;
@@ -44,6 +45,11 @@ export const StepDot: React.FC<StepDotProps> = ({
     const opacity = withTiming(isCompleted ? 1 : isPending ? 0.6 : 1, { duration: 200 });
 
     return {
+      // Size-dependent properties (from prop)
+      width: stepSize,
+      height: stepSize,
+      borderRadius: stepSize / 2,
+      // Animated properties
       backgroundColor: withTiming(
         isCompleted ? '#10B981' : backgroundColor, // green for completed
         { duration: 300 }
@@ -55,7 +61,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       transform: [{ scale }],
       opacity,
     };
-  }, [index]);
+  }, [index, stepSize]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => {
     const isCompleted = activeIndex.value > index;
@@ -74,17 +80,10 @@ export const StepDot: React.FC<StepDotProps> = ({
     }
   };
 
+  // Use single static style + animatedStyle to avoid "2 unistyles styles" warning
   return (
     <AnimatedTouchableOpacity
-      style={[
-        styles.stepDot,
-        {
-          width: stepSize,
-          height: stepSize,
-          borderRadius: stepSize / 2,
-        },
-        animatedStyle,
-      ]}
+      style={[styles.stepDot, animatedStyle]}
       onPress={handlePress}
       disabled={!allowNavigation}
       activeOpacity={allowNavigation ? 0.7 : 1}
@@ -96,13 +95,13 @@ export const StepDot: React.FC<StepDotProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+// Static styles using React Native StyleSheet (not Unistyles)
+// This avoids mixing Unistyles with Reanimated while keeping proper TypeScript types
+const styles = StyleSheet.create({
   stepDot: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
   },
   iconContainer: {
     position: 'absolute',
@@ -111,4 +110,4 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     height: '100%',
   },
-}));
+});

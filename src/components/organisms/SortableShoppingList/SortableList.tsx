@@ -61,11 +61,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   // Each item creates ~8-10 Reanimated shared values + gesture handlers
   // Rendering all at once blocks JS thread for 4-5 seconds
   // Progressive loading renders items in batches, yields, then continues
-  // TUNED: Increased batch sizes to reduce visible empty scroll areas
+  // TUNED v3: Reduced batch sizes to spread CPU load and allow UI thread to breathe
   const progressiveItems = useProgressiveList(localItems, {
-    initialBatch: 16, // Show 16 items immediately for better initial UX (was 8)
-    batchSize: 8, // Add 8 items per batch for faster loading (was 4)
-    batchDelay: 8, // ~0.5 frame for quicker batching (was 16)
+    initialBatch: 8, // Fill viewport only (~8-9 items visible) to reduce initial blocking
+    batchSize: 4, // Smaller batches yield more often to UI thread
+    batchDelay: 16, // ~1 frame between batches for smoother rendering
     enabled: true, // Enable progressive rendering to reduce JS thread blocking
   });
   // Track if we're currently updating the sort order
@@ -114,17 +114,25 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       return;
     }
 
-    // Animate layout when items are added or removed
-    if (items.length !== prevItemsLengthRef.current) {
-      LayoutAnimation.configureNext({
-        duration: 200,
-        update: {
-          type: LayoutAnimation.Types.easeInEaseOut,
-        },
+    const itemsChanged = items.length !== prevItemsLengthRef.current;
+    prevItemsLengthRef.current = items.length;
+
+    // Update state FIRST to ensure React flushes the new items
+    setLocalItems(items);
+
+    // Then schedule LayoutAnimation for next frame (after React flushes state)
+    // This fixes a race condition where LayoutAnimation would measure the old layout
+    // before React had a chance to update the rendered items
+    if (itemsChanged) {
+      requestAnimationFrame(() => {
+        LayoutAnimation.configureNext({
+          duration: 200,
+          update: {
+            type: LayoutAnimation.Types.easeInEaseOut,
+          },
+        });
       });
     }
-    prevItemsLengthRef.current = items.length;
-    setLocalItems(items);
   }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
@@ -435,11 +443,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           // Alternative: Add manual refresh button to tab bar or header
           // PERFORMANCE: Optimized for smooth scrolling
           // Trade-off: Higher memory usage for smoother scroll experience
-          // TUNED: Increased values to reduce blank cells during fast scrolling
-          initialNumToRender={20} // Fill viewport + buffer (was 12)
-          maxToRenderPerBatch={12} // Render more cells per batch (was 8)
-          windowSize={9} // 9 viewports for more buffer (was 7)
-          updateCellsBatchingPeriod={30} // Faster cell updates during scroll (was 100)
+          // TUNED v3: Reduced values to match smaller initial batch and spread CPU load
+          initialNumToRender={10} // Match progressive batch - fill viewport only
+          maxToRenderPerBatch={6} // Smaller batches yield to UI thread more often
+          windowSize={5} // Reduced buffer - loads remaining items progressively
+          updateCellsBatchingPeriod={50} // More batching = less frequent updates
           removeClippedSubviews={true} // Reduce memory on large lists
           // PERF DIAGNOSTICS: Track visible items to detect blank cells
           onViewableItemsChanged={onViewableItemsChanged}

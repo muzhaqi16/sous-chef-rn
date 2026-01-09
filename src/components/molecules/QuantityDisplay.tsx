@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text, TextStyle} from 'react-native';
+import {Text, TextStyle, StyleProp} from 'react-native';
 import {DisplayFormat} from '#/graphql/generated';
 
 interface QuantityDisplayProps {
@@ -8,7 +8,7 @@ interface QuantityDisplayProps {
   displayFormat?: DisplayFormat | null;
   unitSymbol?: string | null;
   displayAsFraction?: boolean | null;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   showUnit?: boolean;
 }
 

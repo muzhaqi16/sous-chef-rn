@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, TextStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem';
 import { Counter } from './Counter';
@@ -42,6 +42,9 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(quantity);
 
+  // Select variants based on purchased state
+  styles.useVariants({ purchased: isPurchased });
+
   const handleQuantityUpdate = () => {
     onUpdateQuantity(id, localQuantity);
     setIsEditingQuantity(false);
@@ -49,9 +52,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
 
   return (
     <SwipeableItem onDelete={() => onDelete(id)} onEdit={() => onEdit(id)}>
-      <View
-        style={[styles.container, isPurchased && styles.purchasedContainer]}
-      >
+      <View style={styles.container}>
         <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => onToggle(id)}
@@ -60,9 +61,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
           accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
           accessibilityState={{ checked: isPurchased }}
         >
-          <View
-            style={[styles.checkbox, isPurchased && styles.checkboxChecked]}
-          >
+          <View style={styles.checkbox}>
             {isPurchased && <Icon name="check" size={16} color="white" />}
           </View>
         </TouchableOpacity>
@@ -72,7 +71,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
         )}
 
         <View style={styles.contentContainer}>
-          <Text style={[styles.itemName, isPurchased && styles.purchasedText]}>
+          <Text style={styles.itemName}>
             {name}
           </Text>
 
@@ -102,10 +101,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 displayFormat={displayFormat}
                 unitSymbol={unit}
                 displayAsFraction={displayAsFraction}
-                style={{
-                  ...styles.quantityText,
-                  ...styles.purchasedText,
-                }}
+                style={styles.quantityText}
               />
             </View>
           ) : (
@@ -140,10 +136,14 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
-  },
-  purchasedContainer: {
-    opacity: 0.6,
-    backgroundColor: theme.colors.surfaceVariant,
+    variants: {
+      purchased: {
+        true: {
+          opacity: 0.6,
+          backgroundColor: theme.colors.surfaceVariant,
+        },
+      },
+    },
   },
   checkboxContainer: {
     marginRight: theme.spacing['3'],
@@ -156,10 +156,14 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    variants: {
+      purchased: {
+        true: {
+          backgroundColor: theme.colors.primary,
+          borderColor: theme.colors.primary,
+        },
+      },
+    },
   },
   itemImage: {
     width: theme.sizes.avatar.lg,
@@ -175,10 +179,14 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '500',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-  },
-  purchasedText: {
-    textDecorationLine: 'line-through',
-    color: theme.colors.textSecondary,
+    variants: {
+      purchased: {
+        true: {
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+          color: theme.colors.textSecondary,
+        },
+      },
+    },
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -188,6 +196,13 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginRight: theme.spacing.xs,
+    variants: {
+      purchased: {
+        true: {
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
+        },
+      },
+    },
   },
   editQuantityContainer: {
     flexDirection: 'row',
