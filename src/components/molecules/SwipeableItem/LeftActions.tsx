@@ -1,6 +1,5 @@
 import React from 'react';
-import { Vibration, Platform } from 'react-native';
-import Reanimated from 'react-native-reanimated';
+import { Vibration, Platform, Animated } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
@@ -37,7 +36,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
       };
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
           pointerEvents="box-none"
         >
@@ -50,7 +49,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={0}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
     // Show consume, waste, and restock buttons for pantry items
@@ -71,7 +70,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
       };
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.leftActionsContainer, { width: getContainerWidth(3) }]}
           pointerEvents="box-none"
         >
@@ -102,7 +101,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={2}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
 
@@ -119,7 +118,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
       };
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.leftActionsContainer, { width: getContainerWidth(2) }]}
           pointerEvents="box-none"
         >
@@ -141,7 +140,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={1}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
 
@@ -155,7 +154,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
       };
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
           pointerEvents="box-none"
         >
@@ -168,7 +167,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={0}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
 
@@ -180,7 +179,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
       };
 
       return (
-        <Reanimated.View
+        <Animated.View
           style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
           pointerEvents="box-none"
         >
@@ -193,7 +192,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             progress={progress}
             index={0}
           />
-        </Reanimated.View>
+        </Animated.View>
       );
     }
 
@@ -221,7 +220,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
     };
 
     return (
-      <Reanimated.View
+      <Animated.View
         style={[styles.leftActionsContainer, { width: getContainerWidth(1) }]}
         pointerEvents="box-none"
       >
@@ -234,7 +233,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           progress={progress}
           index={0}
         />
-      </Reanimated.View>
+      </Animated.View>
     );
   },
 );

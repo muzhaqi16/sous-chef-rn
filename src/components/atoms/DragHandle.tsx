@@ -6,6 +6,8 @@ import { Icon } from '#/utils';
 interface DragHandleProps {
   onLongPress: () => void;
   disabled?: boolean;
+  /** PERFORMANCE: Pass icon color from parent to avoid useUnistyles call */
+  iconColor?: string;
 }
 
 /**
@@ -16,8 +18,13 @@ interface DragHandleProps {
 export const DragHandle = React.memo(function DragHandle({
   onLongPress,
   disabled = false,
+  iconColor,
 }: DragHandleProps) {
+  // Always call useUnistyles to satisfy Rules of Hooks
+  // But when iconColor is provided, the theme lookup is not used (minor overhead only)
   const { theme } = useUnistyles();
+  // PERFORMANCE: Use passed iconColor to avoid re-render when theme unchanged
+  const color = iconColor ?? theme.colors.textSecondary;
 
   if (disabled) {
     return null;
@@ -35,7 +42,7 @@ export const DragHandle = React.memo(function DragHandle({
         library="MaterialIcons"
         name="drag-indicator"
         size={24}
-        color={theme.colors.textSecondary}
+        color={color}
       />
     </TouchableOpacity>
   );

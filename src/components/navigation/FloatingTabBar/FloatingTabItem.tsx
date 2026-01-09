@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -45,24 +45,27 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
     };
   }, [index]);
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
-    <AnimatedTouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={isActive ? { selected: true } : {}}
-      accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      style={[styles.tabItem, animatedStyle]}
-      activeOpacity={0.7}
-    >
-      {IconComponent && (
-        <IconComponent
-          focused={isActive}
-          color={isActive ? theme.colors.iconOnPrimary : theme.colors.iconDisabled}
-          size={24}
-        />
-      )}
-    </AnimatedTouchableOpacity>
+    <View style={styles.tabItem}>
+      <AnimatedTouchableOpacity
+        accessibilityRole="button"
+        accessibilityState={isActive ? { selected: true } : {}}
+        accessibilityLabel={accessibilityLabel}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={[{ flex: 1, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}
+        activeOpacity={0.7}
+      >
+        {IconComponent && (
+          <IconComponent
+            focused={isActive}
+            color={isActive ? theme.colors.iconOnPrimary : theme.colors.iconDisabled}
+            size={24}
+          />
+        )}
+      </AnimatedTouchableOpacity>
+    </View>
   );
 };
 

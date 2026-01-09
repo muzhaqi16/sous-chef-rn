@@ -42,6 +42,9 @@ const ExpirationText: React.FC<{
 }> = ({ text, variant }) => {
   const { theme } = useUnistyles();
 
+  // Select variant for bold styling
+  styles.useVariants({ bold: variant !== 'normal' });
+
   const getColor = () => {
     switch (variant) {
       case 'expired':
@@ -59,7 +62,6 @@ const ExpirationText: React.FC<{
       style={[
         styles.expiration,
         { color: getColor() },
-        variant !== 'normal' && styles.expirationBold,
       ]}
       numberOfLines={1}
     >
@@ -141,9 +143,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 const styles = StyleSheet.create(theme => ({
   expiration: {
     fontSize: theme.typography.fontSize.sm - 1,
-  },
-  expirationBold: {
-    fontWeight: theme.fonts.weight.medium,
+    variants: {
+      bold: {
+        true: {
+          fontWeight: theme.fonts.weight.medium,
+        },
+      },
+    },
   },
 }));
 

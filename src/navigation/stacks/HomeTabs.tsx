@@ -68,7 +68,7 @@ export const HomeTabs = () => {
       options={({route}) => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'ShoppingListMain';
         return {
-          title: 'Shopping List',
+          title: 'List',
           tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
           freezeOnBlur: true, // Prevent re-renders when tab is not active
         };

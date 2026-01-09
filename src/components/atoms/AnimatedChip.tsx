@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image } from 'react-native';
+import { Image, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   Easing,
@@ -28,8 +28,16 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   const { theme } = useUnistyles();
 
   // Animated container style with dynamic padding and colors
+  // Includes layout properties to avoid mixing Unistyles with Reanimated styles
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
+      // Layout properties (moved from static stylesheet)
+      alignItems: 'center',
+      borderRadius: theme.radii['2xl'],
+      flexDirection: 'row',
+      justifyContent: 'center',
+      paddingVertical: theme.spacing.sm,
+      // Dynamic properties
       paddingLeft: imageUrl ? theme.spacing.sm : theme.spacing.md,
       paddingRight: selected ? theme.spacing['3'] : theme.spacing.md,
       borderWidth: 1.5,
@@ -52,52 +60,50 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     };
   }, [selected, theme]);
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
-    <Animated.View
-      layout={LinearTransition.springify().mass(0.8).damping(20).stiffness(200)}
-      onTouchEnd={disabled ? undefined : onPress}
-      style={[styles.container, animatedContainerStyle]}
-    >
-      {imageUrl && (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-      )}
-      <Animated.Text style={[styles.label, animatedTextStyle]}>
-        {label}
-      </Animated.Text>
-      {selected && (
-        <Animated.View
-          style={styles.iconContainer}
-          layout={LinearTransition}
-          entering={FadeIn.duration(200).easing(
-            Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
-          )}
-          exiting={FadeOut.duration(150).easing(
-            Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
-          )}
-        >
-          <Icon
-            name="check-circle"
-            size={18}
-            color={theme.colors.chipSelectedText}
+    <View style={styles.container}>
+      <Animated.View
+        layout={LinearTransition.springify().mass(0.8).damping(20).stiffness(200)}
+        onTouchEnd={disabled ? undefined : onPress}
+        style={animatedContainerStyle}
+      >
+        {imageUrl && (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
           />
-        </Animated.View>
-      )}
-    </Animated.View>
+        )}
+        <Animated.Text style={[styles.label, animatedTextStyle]}>
+          {label}
+        </Animated.Text>
+        {selected && (
+          <Animated.View
+            style={styles.iconContainer}
+            layout={LinearTransition}
+            entering={FadeIn.duration(200).easing(
+              Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
+            )}
+            exiting={FadeOut.duration(150).easing(
+              Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
+            )}
+          >
+            <Icon
+              name="check-circle"
+              size={18}
+              color={theme.colors.chipSelectedText}
+            />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    alignItems: 'center',
-    borderRadius: theme.radii['2xl'],
-    flexDirection: 'row',
-    justifyContent: 'center',
-    paddingLeft: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    // Only margin for spacing - other properties moved to animatedContainerStyle
     margin: theme.spacing.xs,
   },
   image: {

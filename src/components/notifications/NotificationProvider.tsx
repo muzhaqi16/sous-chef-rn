@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNotifications, useNotificationSettings, useAuth } from '#hooks';
+import {useNotifications, useNotificationSettings, useAuth} from '#hooks';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
@@ -14,8 +14,8 @@ interface NotificationProviderProps {
  * since it returns null (no React elements to reconcile).
  */
 const NotificationListener: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
-  const { settings } = useNotificationSettings();
+  const {user, isAuthenticated} = useAuth();
+  const {settings} = useNotificationSettings();
 
   // Initialize real-time notifications with user settings
   // skip when not authenticated to prevent unnecessary subscription attempts

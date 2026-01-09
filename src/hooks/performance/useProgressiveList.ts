@@ -43,6 +43,10 @@ export function useProgressiveList<T>(
   // Track if we've finished loading all items for the current batch
   const isLoadingRef = useRef(false);
 
+  // PERF DIAGNOSTICS: Track progressive render timing
+  const mountTimeRef = useRef(Date.now());
+  const hasLoggedCompletionRef = useRef(false);
+
   // When items array changes significantly, reset progressive loading
   useEffect(() => {
     const prevLength = prevLengthRef.current;
@@ -98,6 +102,36 @@ export function useProgressiveList<T>(
       if (timerId) clearTimeout(timerId);
     };
   }, [visibleCount, items.length, batchSize, batchDelay, enabled]);
+
+  // PERF DIAGNOSTICS: Log when progressive rendering completes
+  useEffect(() => {
+    if (!__DEV__) return;
+
+    // Only log once per mount, and only for lists with significant items
+    if (
+      enabled &&
+      visibleCount >= items.length &&
+      items.length > initialBatch &&
+      !hasLoggedCompletionRef.current
+    ) {
+      hasLoggedCompletionRef.current = true;
+      const elapsed = Date.now() - mountTimeRef.current;
+      console.log(`[PERF] Progressive: ${elapsed}ms for ${items.length} items`);
+
+      // Log if taking too long
+      if (elapsed > 500) {
+        console.log(`[PERF] Progressive slow: ${elapsed}ms > 500ms`);
+      }
+    }
+  }, [visibleCount, items.length, initialBatch, batchSize, enabled]);
+
+  // Reset completion flag when items change significantly
+  useEffect(() => {
+    if (items.length === 0) {
+      hasLoggedCompletionRef.current = false;
+      mountTimeRef.current = Date.now();
+    }
+  }, [items.length]);
 
   // Return the slice of items to render
   return useMemo(

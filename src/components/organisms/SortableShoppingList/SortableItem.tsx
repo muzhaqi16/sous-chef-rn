@@ -1,12 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated from 'react-native-reanimated';
 import { useItemExitAnimation } from '#/hooks/animations';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem';
+import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
-import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
+import { LazyAnimatedCheckbox } from '#/components/atoms/LazyAnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
 import { commonStyles } from '#/styles';
 import { HapticService } from '#services/haptic';
@@ -38,6 +38,31 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   drag,
   isActive,
 }) => {
+  // PERF DIAGNOSTICS: Track render time for this item
+  const renderStartRef = useRef(Date.now());
+  const renderCountRef = useRef(0);
+
+  // Log slow renders in development (sampled to reduce overhead)
+  useEffect(() => {
+    if (__DEV__) {
+      renderCountRef.current++;
+
+      // PERFORMANCE: Only log every 10th render to reduce console overhead
+      // This dramatically reduces JS thread blocking from console.log calls
+      if (renderCountRef.current % 10 === 1) {
+        const renderTime = Date.now() - renderStartRef.current;
+
+        // Only log slow renders (>16ms = dropped frame potential)
+        if (renderTime > 16) {
+          console.log(`[PERF] Slow render: "${item.title.slice(0, 15)}" ${renderTime}ms (render #${renderCountRef.current})`);
+        }
+      }
+    }
+  });
+
+  // Reset render start time for next render measurement
+  renderStartRef.current = Date.now();
+
   const { theme } = useUnistyles();
 
   // Get actions and permissions from context (stable references)
@@ -108,10 +133,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           )}
 
           {/* For unpurchased items, show drag handle */}
+          {/* PERFORMANCE: Pass iconColor to avoid useUnistyles call in DragHandle */}
           {!item.isPurchased && drag && (
             <DragHandle
               onLongPress={handleLongPress}
               disabled={item.isPurchased}
+              iconColor={theme.colors.textSecondary}
             />
           )}
         </View>
@@ -130,7 +157,17 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     onQuantityPress,
     onMoveToPantry,
     theme.colors.primary,
+    theme.colors.textSecondary,
   ]);
+
+  // PERFORMANCE: Memoize image source object to prevent recreation on every render
+  // This prevents Image component from thinking source changed
+  const imageSource = React.useMemo(() => {
+    if (item.leftElementConfig?.type === 'image') {
+      return { uri: item.leftElementConfig.url };
+    }
+    return undefined;
+  }, [item.leftElementConfig?.url, item.leftElementConfig?.type]);
 
   // Create leftElement from config or use provided element
   const leftElement = React.useMemo(() => {
@@ -145,7 +182,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           ]}
         >
           <Image
-            source={{ uri: config.url }}
+            source={imageSource}
             style={commonStyles.listItemImage}
             resizeMode="cover"
             fadeDuration={0}
@@ -156,21 +193,20 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
     // Priority 2: Use provided element
     return item.leftElement;
-  }, [item.leftElement, item.leftElementConfig]);
+  }, [item.leftElement, item.leftElementConfig, imageSource]);
 
   // Create checkbox element for marking items as purchased
   // Triggers exit animation immediately, mutation fires after animation completes
   // This creates a clean visual sequence: slide out → then list reflows
   // Only shown if user has permission to mark items as purchased
+  // PERFORMANCE: Uses LazyAnimatedCheckbox which avoids useSharedValue/useAnimatedStyle
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
 
     return (
-      <AnimatedCheckbox
+      <LazyAnimatedCheckbox
         checked={!!item.isPurchased}
         onPress={() => {
-          // Immediate tactile feedback
-          HapticService.light();
           // Trigger exit animation, mutation fires in callback after animation completes
           // Direction: 1 = right (marking purchased), -1 = left (unmarking)
           const direction = item.isPurchased ? -1 : 1;
@@ -183,11 +219,24 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     );
   }, [item.isPurchased, item.id, onTogglePurchase, triggerExit, canMarkPurchased]);
 
+  // Use single Unistyles style + inline conditional to avoid "2 unistyles styles" warning
   return (
-    <Animated.View
-      style={[styles.container, isActive && styles.activeContainer, exitAnimatedStyle]}
+    <View
+      style={[
+        styles.container,
+        isActive && {
+          opacity: 0.98,
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        },
+      ]}
     >
-      <SwipeableItem
+      <Animated.View style={exitAnimatedStyle}>
+      {/* PERFORMANCE: LazySwipeableItem defers expensive Swipeable setup until first touch */}
+      <LazySwipeableItem
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
@@ -216,8 +265,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </SwipeableItem>
-    </Animated.View>
+      </LazySwipeableItem>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -228,18 +278,6 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.sm,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
-  },
-  activeContainer: {
-    opacity: 0.98,
-    // Enhanced shadow when dragging for visual feedback
-    shadowColor: theme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   moveToPantryButton: {
     padding: theme.spacing.xs,

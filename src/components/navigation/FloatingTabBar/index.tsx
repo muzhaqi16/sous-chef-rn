@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { View, Text, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -117,6 +117,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
       transform: [{ scale: iconScale.value }],
     }));
 
+    const label = options.title || route.name;
+
     return (
       <TouchableOpacity
         key={route.key}
@@ -137,33 +139,35 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
             />
           )}
         </Animated.View>
+        <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+          {label}
+        </Text>
       </TouchableOpacity>
     );
   };
 
   return (
-    <Animated.View
-      style={[containerStyle, styles.container, animatedStyle]}
-      testID="tab-bar"
-    >
-      {/* First half of tabs (Pantry, ShoppingList) */}
-      {state.routes.slice(0, middleIndex).map((route, index) => renderTabItem(route, index))}
+    <Animated.View style={[containerStyle, styles.container, animatedStyle]} testID="tab-bar">
+      <View style={styles.tabsRow}>
+        {/* First half of tabs (Pantry, ShoppingList) */}
+        {state.routes.slice(0, middleIndex).map((route, index) => renderTabItem(route, index))}
 
-      {/* Center Add Button */}
-      {showAddButton && onAddPress ? (
-        <View style={styles.addButtonContainer}>
-          <AddButton
-            onPress={onAddPress}
-            icon={addButtonConfig.icon}
-            iconLibrary={addButtonConfig.iconLibrary}
-          />
-        </View>
-      ) : (
-        <View style={styles.addButtonPlaceholder} />
-      )}
+        {/* Center Add Button */}
+        {showAddButton && onAddPress ? (
+          <View style={styles.addButtonContainer}>
+            <AddButton
+              onPress={onAddPress}
+              icon={addButtonConfig.icon}
+              iconLibrary={addButtonConfig.iconLibrary}
+            />
+          </View>
+        ) : (
+          <View style={styles.addButtonPlaceholder} />
+        )}
 
-      {/* Second half of tabs (Recipe, Profile) */}
-      {state.routes.slice(middleIndex).map((route, index) => renderTabItem(route, middleIndex + index))}
+        {/* Second half of tabs (Recipe, Profile) */}
+        {state.routes.slice(middleIndex).map((route, index) => renderTabItem(route, middleIndex + index))}
+      </View>
     </Animated.View>
   );
 });
@@ -176,7 +180,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii['2xl'],
     position: 'absolute',
     paddingHorizontal: '5%',
-    flexDirection: 'row',
     shadowColor: theme.colors.black,
     shadowOffset: {
       width: 0,
@@ -187,12 +190,24 @@ const styles = StyleSheet.create(theme => ({
     elevation: 12,
     zIndex: theme.zIndex.overlay,
   },
+  tabsRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
   tabItem: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
     minWidth: theme.sizes.touchTarget.sm,
+  },
+  tabLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.xs,
+  },
+  tabLabelFocused: {
+    color: theme.colors.primary,
   },
   addButtonContainer: {
     justifyContent: 'center',

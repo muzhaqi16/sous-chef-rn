@@ -4,6 +4,7 @@ import {
   Text,
   ActivityIndicator,
   TouchableOpacityProps,
+  View,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -39,6 +40,9 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   const { theme } = useUnistyles();
   const loadingProgress = useSharedValue(0);
   const textOpacity = useSharedValue(1);
+
+  // Select variants based on disabled/loading state
+  styles.useVariants({ disabled: disabled || loading });
 
   useEffect(() => {
     if (loading) {
@@ -116,36 +120,41 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   // Generate default accessibility label from children if not provided
   const defaultLabel = typeof children === 'string' ? children : accessibilityLabel;
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
+  // only Reanimated/inline styles on AnimatedTouchable
+  // Uses variants for disabled state to avoid "2 unistyles styles" warning
   return (
-    <AnimatedTouchable
-      {...props}
-      disabled={disabled || loading}
+    <View
       style={[
         styles.button,
         getButtonStyle(),
-        animatedButtonStyle,
-        (disabled || loading) && styles.disabled,
         style,
       ]}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={loading ? `Loading ${defaultLabel}` : defaultLabel}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={{
-        disabled: disabled || loading,
-        busy: loading,
-      }}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={getTextColor()} />
-      ) : (
-        <Animated.View style={animatedTextStyle}>
-          <Text style={[styles.text, { color: getTextColor() }]}>
-            {children}
-          </Text>
-        </Animated.View>
-      )}
-    </AnimatedTouchable>
+      <AnimatedTouchable
+        {...props}
+        disabled={disabled || loading}
+        style={[{ flex: 1, alignItems: 'center', justifyContent: 'center' }, animatedButtonStyle]}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? `Loading ${defaultLabel}` : defaultLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{
+          disabled: disabled || loading,
+          busy: loading,
+        }}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={getTextColor()} />
+        ) : (
+          <Animated.View style={animatedTextStyle}>
+            <Text style={[styles.text, { color: getTextColor() }]}>
+              {children}
+            </Text>
+          </Animated.View>
+        )}
+      </AnimatedTouchable>
+    </View>
   );
 };
 
@@ -158,9 +167,14 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     minHeight: theme.sizes.fab.sm,
-  },
-  disabled: {
-    opacity: 0.5,
+    overflow: 'hidden',
+    variants: {
+      disabled: {
+        true: {
+          opacity: 0.5,
+        },
+      },
+    },
   },
   text: {
     fontSize: theme.typography.fontSize.base,

@@ -1,9 +1,7 @@
 import React, { useCallback } from 'react';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  useAnimatedStyle,
-  SharedValue,
-} from 'react-native-reanimated';
+import { Animated, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
@@ -67,8 +65,10 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     };
   });
 
+  // PERFORMANCE: Legacy Swipeable has better list performance than Swipeable
+  // See: https://github.com/software-mansion/react-native-gesture-handler/issues/3307
   const renderRightActions = useCallback(
-    (progress: SharedValue<number>) => {
+    (progress: Animated.AnimatedInterpolation<number>) => {
       return (
         <RightActions
           onEdit={onEdit}
@@ -84,7 +84,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   );
 
   const renderLeftActions = useCallback(
-    (progress: SharedValue<number>) => {
+    (progress: Animated.AnimatedInterpolation<number>) => {
       return (
         <LeftActions
           onTogglePurchase={onTogglePurchase}
@@ -113,9 +113,12 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     ],
   );
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
+  // animated styles on inner Reanimated.View to avoid "2 unistyles styles" warning
   return (
-    <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>
-      <ReanimatedSwipeable
+    <View style={styles.gestureContainer}>
+      <Reanimated.View style={animatedStyle}>
+      <Swipeable
         ref={swipeableRef}
         friction={friction}
         leftThreshold={computedLeftThreshold}
@@ -133,8 +136,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         <SwipeableContent onPress={onPress} onLongPress={onLongPress}>
           {children}
         </SwipeableContent>
-      </ReanimatedSwipeable>
-    </Reanimated.View>
+      </Swipeable>
+      </Reanimated.View>
+    </View>
   );
 };
 

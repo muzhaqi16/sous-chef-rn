@@ -78,6 +78,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Track drag state to disable tab swipe during drag
   const [isDragging, setIsDragging] = useState(false);
 
+  // Track if any swipeable is open to disable tab swipe (prevents gesture conflict)
+  const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
+
   // PERFORMANCE: Use refs for callbacks to prevent renderScene recreation
   // This avoids expensive scene re-creation when parent callbacks change
   const callbacksRef = useRef({
@@ -168,6 +171,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       openSwipeableRef.current.current?.close();
       openSwipeableRef.current = null;
     }
+    setIsSwipeableOpen(false);
   }, []);
 
   // Wrap swipeable handlers to use shared ref across tabs
@@ -177,10 +181,18 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         openSwipeableRef.current.current?.close();
       }
       openSwipeableRef.current = ref;
+      setIsSwipeableOpen(true);
       onSwipeableWillOpen?.(ref);
     },
     [onSwipeableWillOpen],
   );
+
+  // Handle swipeable close - reset state to re-enable tab swipe
+  const handleSwipeableClose = useCallback(() => {
+    openSwipeableRef.current = null;
+    setIsSwipeableOpen(false);
+    callbacksRef.current.onSwipeableClose?.();
+  }, []);
 
   // Handle drag events - disable tab swipe during drag
   const handleDragBegin = useCallback(() => {
@@ -220,7 +232,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               loading={state.loading}
               disabled={state.disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={callbacks.onSwipeableClose}
+              onSwipeableClose={handleSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
               canRemoveItems={state.canRemoveItems}
@@ -245,7 +257,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               loading={state.loading}
               isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={callbacks.onSwipeableClose}
+              onSwipeableClose={handleSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
               canRemoveItems={state.canRemoveItems}
@@ -265,6 +277,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       purchasedItems,
       isDragging,
       handleSwipeableWillOpen,
+      handleSwipeableClose,
       handleDragBegin,
       handleDragRelease,
     ],
@@ -298,7 +311,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazy={true}
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
-      swipeEnabled={true}
+      swipeEnabled={!isSwipeableOpen && !isDragging}
       onRefresh={onRefresh}
       refreshing={refreshing}
     />

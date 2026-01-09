@@ -98,6 +98,8 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       close();
     };
 
+    // FIX: translateY animation MUST be on the container with position: absolute
+    // Otherwise the container stays visible even when "closed"
     return (
       <>
         {enableBackdrop && (

@@ -9,7 +9,6 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
-import { commonStyles } from '#/styles';
 import { HomeInviteFragment } from '#generated';
 
 export type PartialHome = {
@@ -130,9 +129,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
     onDelete(home.id, home.name);
   };
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
+  // Uses single style with shadow included to avoid "2 unistyles styles" warning
   return (
-    <Animated.View style={[commonStyles.shadow, styles.homeCard, animatedCardStyle]}>
-      <Animated.View style={[styles.highlightOverlay, animatedHighlightStyle]} />
+    <View style={styles.homeCard}>
+      <Animated.View style={animatedCardStyle}>
+        <View style={styles.highlightOverlay}>
+          <Animated.View style={[{ width: '100%', height: '100%' }, animatedHighlightStyle]} />
+        </View>
       <TouchableOpacity
         style={styles.homeHeader}
         onPress={() => onPress?.(home.id)}
@@ -178,7 +182,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
       />
 
       <MembersList members={home.members || []} invites={home.invites || []} />
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -190,6 +195,16 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
     position: 'relative',
     overflow: 'hidden',
+    // Shadow styles (previously from commonStyles.shadow)
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 15,
+        spreadDistance: 1,
+        color: '#0000001A',
+      },
+    ],
   },
   highlightOverlay: {
     position: 'absolute',

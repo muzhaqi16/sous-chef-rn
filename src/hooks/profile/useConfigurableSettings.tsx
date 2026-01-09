@@ -401,6 +401,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'appSettings':
         case 'debugInfo':
         case 'performanceDashboard':
+        case 'changePassword':
           if (config.type === 'navigation') {
             baseItem.onPress = () => {
               // Navigation will be handled in ProfileScreen

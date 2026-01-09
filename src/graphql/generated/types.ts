@@ -151,6 +151,11 @@ export type AdditionCostAnalytics = {
   totalSpent: Scalars['Float']['output'];
 };
 
+export type AdminDeleteUserInput = {
+  /** If true, permanently deletes the user (SuperAdmin only) */
+  hard?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 /** Result of quantity aggregation (add/subtract) */
 export type AggregationResult = {
   __typename?: 'AggregationResult';
@@ -351,6 +356,8 @@ export type Brand = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  /** Denormalized count of items associated with this brand */
+  itemCount: Scalars['Int']['output'];
   name: Scalars['String']['output'];
   parent?: Maybe<Brand>;
   updatedAt: Scalars['DateTime']['output'];
@@ -2461,6 +2468,8 @@ export type ItemFilters = {
   /** Provider type for external ID lookup */
   externalProvider?: InputMaybe<ProviderType>;
   hasAllergens?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Filter items that have a default unit assigned */
+  hasDefaultUnit?: InputMaybe<Scalars['Boolean']['input']>;
   hasNutrition?: InputMaybe<Scalars['Boolean']['input']>;
   hasOffers?: InputMaybe<Scalars['Boolean']['input']>;
   /** Items that have ALL of these tags */
@@ -2827,6 +2836,10 @@ export type LoginHistory = {
   flaggedById?: Maybe<Scalars['String']['output']>;
   flaggedReason?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  ipCity?: Maybe<Scalars['String']['output']>;
+  ipCountry?: Maybe<Scalars['String']['output']>;
+  ipRegion?: Maybe<Scalars['String']['output']>;
   isApiLogin: Scalars['Boolean']['output'];
   isAutomated: Scalars['Boolean']['output'];
   isMobileApp: Scalars['Boolean']['output'];
@@ -3844,6 +3857,7 @@ export type MutationAddWarningArgs = {
 
 export type MutationAdminDeleteUserArgs = {
   id: Scalars['ID']['input'];
+  input?: InputMaybe<AdminDeleteUserInput>;
 };
 
 export type MutationApproveItemArgs = {
@@ -6080,7 +6094,7 @@ export type Query = {
   userModeration?: Maybe<UserModeration>;
   userProfile?: Maybe<UserProfile>;
   userSettings?: Maybe<UserSettings>;
-  users: Array<User>;
+  users: UserConnection;
   validateUpc: UpcValidation;
 };
 
@@ -6136,6 +6150,7 @@ export type QueryCategoriesArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<CategoryType>;
 };
 
@@ -6831,6 +6846,8 @@ export type RecipeIngredient = {
   item?: Maybe<Item>;
   name: Scalars['String']['output'];
   notes?: Maybe<Scalars['String']['output']>;
+  /** @deprecated Use sortOrder instead */
+  order?: Maybe<Scalars['Int']['output']>;
   preparation?: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
   recipe: Recipe;
@@ -8493,6 +8510,7 @@ export type UpdateHomeInput = {
  * Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
  */
 export type UpdateItemInput = {
+  addBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
   addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -8530,6 +8548,7 @@ export type UpdateItemInput = {
   priceStoreId?: InputMaybe<Scalars['String']['input']>;
   primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
   primaryUpc?: InputMaybe<Scalars['String']['input']>;
+  removeBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   /** Remove the item image (replaces removeItemImage) */
   removeImage?: InputMaybe<Scalars['Boolean']['input']>;
@@ -9154,6 +9173,20 @@ export type UserAuthPayload = {
   deviceInfo?: Maybe<Scalars['JSON']['output']>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['String']['output'];
+};
+
+export type UserConnection = {
+  __typename?: 'UserConnection';
+  edges: Array<UserEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** User connection for pagination (admin only) */
+export type UserEdge = {
+  __typename?: 'UserEdge';
+  cursor: Scalars['String']['output'];
+  node: User;
 };
 
 export type UserModeration = {

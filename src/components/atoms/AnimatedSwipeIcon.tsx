@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -74,10 +75,13 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
     transform: [{ translateX: translateX.value }],
   }));
 
+  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
-    <Animated.View style={[styles.iconContainer, animatedStyle]}>
-      <Icon name={iconName} size={size} color={iconColor} library={library} />
-    </Animated.View>
+    <View style={styles.iconContainer}>
+      <Animated.View style={animatedStyle}>
+        <Icon name={iconName} size={size} color={iconColor} library={library} />
+      </Animated.View>
+    </View>
   );
 };
 

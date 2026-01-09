@@ -1,4 +1,4 @@
-import { SharedValue } from 'react-native-reanimated';
+import { Animated } from 'react-native';
 import {Icon} from '#/utils/iconUtils';
 
 /**
@@ -53,7 +53,7 @@ export interface SwipeActionsProps {
   onActionPress?: (action: 'edit' | 'delete') => void;
   swipeableRef?: React.RefObject<any>;
   testIDPrefix?: string;
-  progress?: SharedValue<number>;
+  progress?: Animated.AnimatedInterpolation<number>;
   /** Controls swipe action layout */
   swipeMode?: SwipeMode;
 }

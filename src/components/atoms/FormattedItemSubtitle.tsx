@@ -81,7 +81,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
-          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+          style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
         <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
           {' × '}
@@ -113,7 +113,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           unitSymbol={unitSymbol}
           displayAsFraction={displayAsFraction}
-          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+          style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
         {isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
@@ -165,7 +165,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
-          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+          style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
         {isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>

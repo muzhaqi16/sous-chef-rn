@@ -1,9 +1,10 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { StyleSheet } from 'react-native-unistyles';
+import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
 import type { TabIndicatorProps } from './types';
 
 export const TabIndicator: React.FC<TabIndicatorProps> = ({
@@ -12,6 +13,9 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   tabCount: _tabCount,
   tabBarWidth,
 }) => {
+  // Use useAnimatedTheme for proper theme access in worklets
+  const theme = useAnimatedTheme();
+
   const animatedStyle = useAnimatedStyle(() => {
     // Use percentage-based padding offset like reference (5% of tab bar width)
     const paddingOffset = tabBarWidth * 0.05;
@@ -24,6 +28,9 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
     );
 
     return {
+      width: tabWidth,
+      backgroundColor: theme.value.colors.primary,
+      borderRadius: theme.value.radii['2xl'],
       transform: [{ translateX }],
     };
   }, [tabWidth, tabBarWidth]);
@@ -31,24 +38,16 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   return (
     <Animated.View
       pointerEvents="none"
-      style={[
-        styles.indicator,
-        {
-          width: tabWidth,
-        },
-        animatedStyle,
-      ]}
+      style={[styles.indicator, animatedStyle]}
     />
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+// Static styles using React Native StyleSheet
+const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     height: '100%',
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.radii['2xl'],
-    opacity: 0.35, // More visible indicator
-    // NO z-index or elevation needed - parent layer controls stacking
+    opacity: 0.35,
   },
-}));
+});

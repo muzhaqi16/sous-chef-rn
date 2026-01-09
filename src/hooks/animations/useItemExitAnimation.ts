@@ -1,9 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
 import {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withTiming,
-  withDelay,
   runOnJS,
 } from 'react-native-reanimated';
 import {
@@ -16,6 +15,10 @@ import {
  *
  * Provides coordinated slide, fade, and scale animations
  * for when items are toggled between purchased/unpurchased states.
+ *
+ * PERFORMANCE: Uses eager shared value creation but defers animation calculations.
+ * The animated style returns static values when exitDirection === 0 (no animation),
+ * avoiding expensive animation calculations until the user actually triggers one.
  *
  * Uses runOnJS for accurate animation completion callbacks instead of setTimeout.
  *
@@ -37,9 +40,13 @@ import {
  * ```
  */
 export const useItemExitAnimation = () => {
-  // 0 = no animation, 1 = exiting right (marking purchased), -1 = exiting left (unmarking)
+  // Shared value for exit direction - created eagerly but idle until animation triggers
+  // Value: 0 = no animation, 1 = animating right, -1 = animating left
   const exitDirection = useSharedValue(0);
-  const isAnimating = useSharedValue(false);
+
+  // PERFORMANCE: Use useRef instead of useSharedValue for isAnimating flag
+  // This avoids blocking the JS thread when checking/setting animation state
+  const isAnimatingRef = useRef(false);
 
   // Refs for callback management and unmount safety
   const onCompleteRef = useRef<(() => void) | null>(null);
@@ -54,62 +61,60 @@ export const useItemExitAnimation = () => {
   }, []);
 
   // Exit animated style (slide, fade, scale)
+  // PERFORMANCE: Returns static values when exitDirection === 0 (no animation triggered)
+  // All visual properties derive from the single animated exitDirection.value (0 to 1 or -1)
   const exitAnimatedStyle = useAnimatedStyle(() => {
-    const isActive = exitDirection.value !== 0;
-    const { slide, fade, scale } = listItemExitAnimation;
+    // Fast path: no animation active, return static values
+    if (exitDirection.value === 0) {
+      return {
+        opacity: 1,
+        transform: [{ translateX: 0 }, { scale: 1 }],
+      };
+    }
+
+    const progress = Math.abs(exitDirection.value); // 0 to 1
+    const { slide, scale } = listItemExitAnimation;
 
     return {
-      opacity: isActive
-        ? withDelay(fade.delay, withTiming(0, { duration: fade.duration }))
-        : withTiming(1, { duration: fade.duration }),
+      opacity: 1 - progress, // Fade out as progress increases
       transform: [
-        {
-          translateX: withTiming(exitDirection.value * slide.distance, {
-            duration: slide.duration,
-            easing: standardEasing,
-          }),
-        },
-        {
-          scale: isActive
-            ? withDelay(
-                scale.delay,
-                withTiming(scale.toValue, { duration: scale.duration }),
-              )
-            : withTiming(1, { duration: scale.duration }),
-        },
+        { translateX: exitDirection.value * slide.distance }, // Slide in direction
+        { scale: 1 - progress * (1 - scale.toValue) }, // Scale from 1 to 0.95
       ],
     };
   });
 
-  // Helper function to safely call the completion callback
+  // Helper function to safely call the completion callback and reset state
   // Must be defined outside worklet to be called via runOnJS
   const safeCallComplete = useCallback(() => {
     if (isMountedRef.current && onCompleteRef.current) {
       onCompleteRef.current();
       onCompleteRef.current = null;
     }
+    // Reset animating state on JS thread (non-blocking)
+    isAnimatingRef.current = false;
   }, []);
 
   /**
    * Trigger exit animation with direction and completion callback
-   * Uses Reanimated's runOnJS for frame-accurate callback timing
    * @param direction - 1 for right (marking purchased), -1 for left (unmarking)
    * @param onComplete - Callback fired when animation completes
    */
   const triggerExit = useCallback(
     (direction: 1 | -1, onComplete: () => void) => {
-      // Guard against rapid toggling
-      if (isAnimating.value) return;
+      // Guard against rapid toggling - non-blocking ref read
+      if (isAnimatingRef.current) return;
 
-      isAnimating.value = true;
+      // Set animating state - non-blocking ref write
+      isAnimatingRef.current = true;
       onCompleteRef.current = onComplete;
 
       const { slide } = listItemExitAnimation;
 
-      // Start the slide animation with completion callback
-      // runOnJS ensures callback fires on JS thread after animation completes
+      // Animate exitDirection.value from 0 to 1 (or -1)
+      // The useAnimatedStyle derives all visual properties from this single animated value
       exitDirection.value = withTiming(
-        direction * slide.distance,
+        direction,
         { duration: slide.duration, easing: standardEasing },
         finished => {
           'worklet';
@@ -119,16 +124,18 @@ export const useItemExitAnimation = () => {
         },
       );
     },
-    [exitDirection, isAnimating, safeCallComplete],
+    [exitDirection, safeCallComplete],
   );
 
   /**
    * Reset animation state (for reuse or error recovery)
    */
   const resetAnimation = useCallback(() => {
+    // Reset ref state (non-blocking)
+    isAnimatingRef.current = false;
+    // Reset shared value to neutral
     exitDirection.value = 0;
-    isAnimating.value = false;
-  }, [exitDirection, isAnimating]);
+  }, [exitDirection]);
 
   return {
     exitAnimatedStyle,
