@@ -22,7 +22,7 @@ import {
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useAppNavigation } from '#/hooks';
+import { useCrossTabNavigation, type CrossTabSource } from '#/hooks';
 import { normalizeRecipes } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
@@ -50,8 +50,8 @@ export interface RecipeDisplayData {
 
 export function useRecipeDetail() {
   const route = useRoute<RecipeDetailRouteProp>();
-  const { goBack } = useAppNavigation();
-  const { recipeId, externalSource, externalId } = route.params;
+  const { goBackToSource } = useCrossTabNavigation('RecipeMain');
+  const { recipeId, externalSource, externalId, sourceTab, sourcePantryItemId } = route.params;
 
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } = useGetShoppingListsLiteQuery({
@@ -907,9 +907,20 @@ export function useRecipeDetail() {
     return null;
   }, [isBackendRecipe, backendRecipe, externalRecipe]);
 
+  // Smart goBack that handles cross-tab navigation
+  const handleGoBack = useCallback(() => {
+    const source: CrossTabSource | undefined = sourceTab ? {
+      sourceTab,
+      sourceScreen: sourcePantryItemId ? 'PantryItemDetail' : undefined,
+      sourceParams: sourcePantryItemId ? { itemId: sourcePantryItemId } : undefined,
+    } : undefined;
+
+    goBackToSource(source);
+  }, [sourceTab, sourcePantryItemId, goBackToSource]);
+
   return {
     // Navigation
-    goBack,
+    goBack: handleGoBack,
     recipeId,
 
     // Loading/error states

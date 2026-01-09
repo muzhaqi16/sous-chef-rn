@@ -1,8 +1,6 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import Animated from 'react-native-reanimated';
-import { useItemExitAnimation } from '#/hooks/animations';
+import { StyleSheet } from 'react-native-unistyles';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
@@ -13,6 +11,7 @@ import { HapticService } from '#services/haptic';
 import { Icon } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
+import { useSortableListTheme } from './SortableListThemeContext';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -63,7 +62,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Reset render start time for next render measurement
   renderStartRef.current = Date.now();
 
-  const { theme } = useUnistyles();
+  // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
+  // This eliminates 7-8 useUnistyles calls per item
+  const themeColors = useSortableListTheme();
 
   // Get actions and permissions from context (stable references)
   const { actions, permissionsRef } = useSortableListActions();
@@ -84,10 +85,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     canMarkPurchased = true,
   } = permissionsRef.current;
 
-  // ANIMATION: Manual exit animation triggered on checkbox press
-  // Animation plays first, then mutation fires in the callback
-  const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
-
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
     if (drag) {
@@ -107,6 +104,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       return (
         <View style={styles.rightElementContainer}>
           {/* Tappable quantity badge */}
+          {/* PERFORMANCE: Pass themeColors to avoid useUnistyles in QuantityBadge */}
           <QuantityBadge
             quantity={config.quantity}
             quantityInput={config.quantityInput}
@@ -114,6 +112,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
             onPress={() => onQuantityPress?.(config.itemId)}
             disabled={config.disabled}
             isPurchased={item.isPurchased}
+            themeColors={themeColors}
           />
 
           {/* For purchased items, show "Move to Pantry" button */}
@@ -126,7 +125,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
               <Icon
                 name="cupboard"
                 size={24}
-                color={theme.colors.primary}
+                color={themeColors?.primary}
                 library="MaterialDesignIcons"
               />
             </TouchableOpacity>
@@ -138,7 +137,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
             <DragHandle
               onLongPress={handleLongPress}
               disabled={item.isPurchased}
-              iconColor={theme.colors.textSecondary}
+              iconColor={themeColors?.textSecondary}
             />
           )}
         </View>
@@ -156,8 +155,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     handleLongPress,
     onQuantityPress,
     onMoveToPantry,
-    theme.colors.primary,
-    theme.colors.textSecondary,
+    themeColors,
   ]);
 
   // PERFORMANCE: Memoize image source object to prevent recreation on every render
@@ -196,28 +194,22 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [item.leftElement, item.leftElementConfig, imageSource]);
 
   // Create checkbox element for marking items as purchased
-  // Triggers exit animation immediately, mutation fires after animation completes
-  // This creates a clean visual sequence: slide out → then list reflows
   // Only shown if user has permission to mark items as purchased
   // PERFORMANCE: Uses LazyAnimatedCheckbox which avoids useSharedValue/useAnimatedStyle
+  // PERFORMANCE: Pass colors to avoid useUnistyles in checkbox
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
 
     return (
       <LazyAnimatedCheckbox
         checked={!!item.isPurchased}
-        onPress={() => {
-          // Trigger exit animation, mutation fires in callback after animation completes
-          // Direction: 1 = right (marking purchased), -1 = left (unmarking)
-          const direction = item.isPurchased ? -1 : 1;
-          triggerExit(direction, () => {
-            onTogglePurchase(item.id);
-          });
-        }}
+        onPress={() => onTogglePurchase(item.id)}
         size={28}
+        primaryColor={themeColors?.primary}
+        borderColor={themeColors?.border}
       />
     );
-  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit, canMarkPurchased]);
+  }, [item.isPurchased, item.id, onTogglePurchase, canMarkPurchased, themeColors]);
 
   // Use single Unistyles style + inline conditional to avoid "2 unistyles styles" warning
   return (
@@ -226,7 +218,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         styles.container,
         isActive && {
           opacity: 0.98,
-          shadowColor: theme.colors.primary,
+          shadowColor: themeColors?.primary,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
@@ -234,7 +226,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         },
       ]}
     >
-      <Animated.View style={exitAnimatedStyle}>
       {/* PERFORMANCE: LazySwipeableItem defers expensive Swipeable setup until first touch */}
       <LazySwipeableItem
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
@@ -255,6 +246,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         onSwipeableClose={onSwipeableClose}
         swipeMode="shopping"
       >
+        {/* PERFORMANCE: Pass themeColors to avoid useUnistyles in ListItem */}
         <ListItem
           title={item.title}
           subtitle={item.subtitle}
@@ -264,9 +256,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           checkboxElement={checkboxElement}
           rightIcon={undefined}
           isPurchased={item.isPurchased}
+          themeColors={themeColors}
         />
       </LazySwipeableItem>
-      </Animated.View>
     </View>
   );
 };

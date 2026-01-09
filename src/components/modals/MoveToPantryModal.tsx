@@ -6,12 +6,13 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { Header } from '#components/molecules/Header';
+import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
 import { Icon } from '#utils';
 import { parseFractionalInput } from '#/utils';
 import {
@@ -31,11 +32,11 @@ interface MoveToPantryModalProps {
   onConfirm: (input: {
     pantryId: string;
     actualQuantity: number;
+    actualUnitId?: string;
     storageState?: StorageState;
     expiresAt?: string;
     removeFromList: boolean;
-    costPerUnit?: number;
-    totalCost?: number;
+    actualPrice?: number;
     notes?: string;
   }) => void;
 }
@@ -52,9 +53,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
+  const [unitValue, setUnitValue] = useState('');
+  const [unitId, setUnitId] = useState<string | null>(null);
   const [pantryId, setPantryId] = useState<string | null>(null);
   const [storageState, setStorageState] = useState<StorageState>(
     StorageState.Ambient,
@@ -64,8 +68,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [removeFromList, setRemoveFromList] = useState(true);
-  const [costPerUnitInput, setCostPerUnitInput] = useState('');
-  const [totalCostInput, setTotalCostInput] = useState('');
+  const [actualPriceInput, setActualPriceInput] = useState('');
   const [notes, setNotes] = useState('');
 
   // Control bottom sheet visibility based on visible prop
@@ -74,13 +77,16 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       bottomSheetRef.current?.present();
       // Reset form when modal opens with new item
       setQuantityInput(shoppingListItem.quantity?.toString() || '1');
+      setUnitValue(
+        shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
+      );
+      setUnitId(shoppingListItem.unit?.id || null);
       setPantryId(selectedPantryId);
       setStorageState(StorageState.Ambient);
       setExpirationDate(undefined);
       setShowDatePicker(false);
       setRemoveFromList(true);
-      setCostPerUnitInput('');
-      setTotalCostInput('');
+      setActualPriceInput('');
       setNotes('');
     } else {
       bottomSheetRef.current?.dismiss();
@@ -102,20 +108,25 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       return;
     }
 
-    // Parse cost values (optional)
-    const costPerUnit = costPerUnitInput
-      ? parseFloat(costPerUnitInput)
+    // Validate unit is selected
+    if (!unitId && !unitValue.trim()) {
+      Alert.alert('Error', 'Please select a unit');
+      return;
+    }
+
+    // Parse price value (optional)
+    const actualPrice = actualPriceInput
+      ? parseFloat(actualPriceInput)
       : undefined;
-    const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
     onConfirm({
       pantryId,
       actualQuantity: quantityValue,
+      actualUnitId: unitId || undefined,
       storageState,
       expiresAt: expirationDate?.toISOString(),
       removeFromList,
-      costPerUnit: isNaN(costPerUnit!) ? undefined : costPerUnit,
-      totalCost: isNaN(totalCost!) ? undefined : totalCost,
+      actualPrice: isNaN(actualPrice!) ? undefined : actualPrice,
       notes: notes || undefined,
     });
     onClose();
@@ -123,11 +134,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     shoppingListItem,
     pantryId,
     quantityInput,
+    unitId,
+    unitValue,
     storageState,
     expirationDate,
     removeFromList,
-    costPerUnitInput,
-    totalCostInput,
+    actualPriceInput,
     notes,
     onConfirm,
     onClose,
@@ -147,7 +159,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['75%']}
+      snapPoints={['75%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -155,6 +167,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -206,7 +221,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {/* Pantry Selector */}
             {pantries.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Select Pantry *</Text>
+                <Text style={styles.sectionLabel}>
+                  Select Pantry<Text style={styles.requiredAsterisk}> *</Text>
+                </Text>
                 <View style={styles.pantryList}>
                   {pantries.map(pantry => (
                     <TouchableOpacity
@@ -261,19 +278,32 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               </View>
             )}
 
-            {/* Quantity Input */}
+            {/* Quantity and Unit Input */}
             <View style={styles.section}>
-              <FractionInput
-                label={`Actual Quantity Purchased (${
-                  shoppingListItem.unit?.symbol ||
-                  shoppingListItem.unitName ||
-                  'item'
-                }) *`}
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType="numeric"
-              />
+              <View style={styles.quantityUnitRow}>
+                <View style={styles.quantityField}>
+                  <FractionInput
+                    label="Quantity"
+                    value={quantityInput}
+                    onChangeText={setQuantityInput}
+                    placeholder="e.g., 1, 1 1/4"
+                    keyboardType="numeric"
+                    required
+                  />
+                </View>
+                <View style={styles.unitField}>
+                  <InlineUnitsAutocomplete
+                    label="Unit"
+                    value={unitValue}
+                    onChangeText={setUnitValue}
+                    placeholder="pcs, kg"
+                    required
+                    onUnitSelected={(id, _name) => {
+                      setUnitId(id);
+                    }}
+                  />
+                </View>
+              </View>
             </View>
 
             {/* Storage State */}
@@ -345,28 +375,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               )}
             </View>
 
-            {/* Cost Tracking (Optional) */}
+            {/* Purchase Price (Optional) */}
             <View style={styles.section}>
-              <View style={styles.costRow}>
-                <View style={styles.costField}>
-                  <FormInput
-                    label="Cost per Unit"
-                    value={costPerUnitInput}
-                    onChangeText={setCostPerUnitInput}
-                    placeholder="0.00"
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <View style={styles.costField}>
-                  <FormInput
-                    label="Total Cost"
-                    value={totalCostInput}
-                    onChangeText={setTotalCostInput}
-                    placeholder="0.00"
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              </View>
+              <FormInput
+                label="Purchase Price (per unit)"
+                value={actualPriceInput}
+                onChangeText={setActualPriceInput}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+              />
             </View>
 
             {/* Notes (Optional) */}
@@ -401,7 +418,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 thumbColor={theme.colors.white}
               />
             </View>
-
           </>
         )}
       </BottomSheetScrollView>
@@ -441,12 +457,19 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
-  costRow: {
+  requiredAsterisk: {
+    color: theme.colors.error,
+  },
+  quantityUnitRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
   },
-  costField: {
-    flex: 1,
+  quantityField: {
+    flex: 0.4,
+  },
+  unitField: {
+    flex: 0.6,
+    zIndex: 10,
   },
   pantryList: {
     gap: theme.spacing.sm,

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ViewStyle } from 'react-native';
+import { View, Text, Pressable, ScrollView, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { NutritionsData, NutritionHighlight } from '#types';
@@ -173,9 +173,17 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <Pressable
+        onPress={onPress}
+        android_ripple={null}
+        needsOffscreenAlphaCompositing
+        style={({ pressed }) => [
+          { borderRadius: theme.radii.lg, overflow: 'hidden' },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
         {content}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 

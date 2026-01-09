@@ -24620,6 +24620,14 @@
         "fields": null,
         "inputFields": [
           {
+            "name": "actualPrice",
+            "description": "Actual per-unit price paid (optional).\nIf not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.\nServer calculates totalCost = actualPrice × actualQuantity for analytics.",
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "actualQuantity",
             "description": "Actual quantity purchased (may differ from planned)",
             "type": {
@@ -24635,14 +24643,6 @@
             "name": "actualUnitId",
             "description": "Unit ID for the quantity (defaults to shopping item's unit)",
             "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "costPerUnit",
-            "description": "Cost per unit (optional)",
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -24707,14 +24707,6 @@
             "name": "storageState",
             "description": "Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)",
             "type": { "kind": "ENUM", "name": "StorageState", "ofType": null },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "totalCost",
-            "description": "Total cost paid (optional)",
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null

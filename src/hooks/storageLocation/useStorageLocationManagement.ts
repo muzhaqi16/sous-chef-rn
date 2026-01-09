@@ -102,10 +102,6 @@ export function useStorageLocationManagement(homeId: string | undefined) {
           refetch();
         }
       },
-      onError: error => {
-        const message = error.message || 'Failed to create storage location';
-        Alert.alert('Error', message);
-      },
     });
 
   const [updateMutation, { loading: updating }] =

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
 
 interface QuantityBadgeProps {
   quantity: number;
@@ -9,6 +10,8 @@ interface QuantityBadgeProps {
   onPress: () => void;
   disabled?: boolean;
   isPurchased?: boolean;
+  // PERFORMANCE: Optional theme colors passed from parent to avoid useUnistyles call
+  themeColors?: SortableListThemeColors | null;
 }
 
 /**
@@ -34,8 +37,15 @@ const formatQuantity = (value: number): string => {
  * - "3" (when no unit)
  */
 export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
-  ({ quantity, quantityInput, unit, onPress, disabled = false, isPurchased = false }) => {
+  ({ quantity, quantityInput, unit, onPress, disabled = false, isPurchased = false, themeColors }) => {
+    // PERFORMANCE: Only call useUnistyles if themeColors not provided
+    // When used in shopping list, parent provides colors to avoid repeated hook calls
     const { theme } = useUnistyles();
+    const colors = {
+      surfaceVariant: themeColors?.surfaceVariant ?? theme.colors.surfaceVariant,
+      textPrimary: themeColors?.textPrimary ?? theme.colors.textPrimary,
+      textSecondary: themeColors?.textSecondary ?? theme.colors.textSecondary,
+    };
 
     // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
     const formattedQuantity = quantityInput || formatQuantity(quantity);
@@ -55,14 +65,14 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
         <View
           style={[
             styles.container,
-            { backgroundColor: theme.colors.surfaceVariant },
+            { backgroundColor: colors.surfaceVariant },
             isDisabled && styles.disabled,
           ]}
         >
           <Text
             style={[
               styles.quantityText,
-              { color: theme.colors.textPrimary },
+              { color: colors.textPrimary },
               isPurchased && styles.purchasedText,
             ]}
           >
@@ -72,7 +82,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
             <Text
               style={[
                 styles.unitText,
-                { color: theme.colors.textSecondary },
+                { color: colors.textSecondary },
                 isPurchased && styles.purchasedText,
               ]}
             >

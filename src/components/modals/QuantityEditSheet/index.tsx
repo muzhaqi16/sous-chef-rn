@@ -8,7 +8,7 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { InlineUnitsAutocomplete } from '#/components/molecules/InlineUnitsAutocomplete';
 import Chip from '#/components/atoms/Chip';
@@ -102,6 +102,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
@@ -264,8 +265,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="interactive"
+      keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
       <BottomSheetView
         style={[styles.content, { paddingBottom: insets.bottom + 16 }]}

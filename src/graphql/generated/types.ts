@@ -3381,12 +3381,16 @@ export type MovePurchasedItemsResult = {
  * Creates a PantryItem from a ShoppingListItem after purchase.
  */
 export type MoveShoppingItemToPantryInput = {
+  /**
+   * Actual per-unit price paid (optional).
+   * If not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.
+   * Server calculates totalCost = actualPrice × actualQuantity for analytics.
+   */
+  actualPrice?: InputMaybe<Scalars['Float']['input']>;
   /** Actual quantity purchased (may differ from planned) */
   actualQuantity: Scalars['Float']['input'];
   /** Unit ID for the quantity (defaults to shopping item's unit) */
   actualUnitId?: InputMaybe<Scalars['ID']['input']>;
-  /** Cost per unit (optional) */
-  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   /** Expiration date (optional) */
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   /** Additional notes */
@@ -3401,8 +3405,6 @@ export type MoveShoppingItemToPantryInput = {
   storageLocationId?: InputMaybe<Scalars['ID']['input']>;
   /** Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE) */
   storageState?: InputMaybe<StorageState>;
-  /** Total cost paid (optional) */
-  totalCost?: InputMaybe<Scalars['Float']['input']>;
 };
 
 export type MoveShoppingListItemInput = {

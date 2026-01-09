@@ -6,7 +6,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
+import { useSharedBottomSheetConfigs, useAppNavigation, useBottomSheetBackHandler } from '#hooks';
 import {
   useShoppingListSuggestions,
   ShoppingListSuggestionItem,
@@ -52,6 +52,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   const { navigate, navigateTo } = useAppNavigation();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Online status for autocomplete
   const isOnline = useAppStore(state => state.isOnline);
@@ -264,7 +265,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['70%']}
+      snapPoints={['70%', '95%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
@@ -272,6 +273,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
