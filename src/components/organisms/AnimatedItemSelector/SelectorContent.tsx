@@ -1,10 +1,7 @@
 import React from 'react';
 import { FlatList, Text, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import Animated, {
-  FadeIn,
-  LinearTransition,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SelectorItem } from './SelectorItem';
 import { ActionButtons } from './ActionButtons';
 import type { SelectorConfig, SelectableItem } from './types';
@@ -14,20 +11,14 @@ interface SelectorContentProps<T extends SelectableItem> {
 }
 
 const LoadingState = () => (
-  <Animated.View
-    entering={FadeIn}
-    style={styles.loadingContainer}
-  >
+  <Animated.View entering={FadeIn} style={styles.loadingContainer}>
     <ActivityIndicator size="large" color="#007AFF" />
     <Text style={styles.loadingText}>Loading...</Text>
   </Animated.View>
 );
 
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
-  <Animated.View
-    entering={FadeIn}
-    style={styles.emptyContainer}
-  >
+  <Animated.View entering={FadeIn} style={styles.emptyContainer}>
     <Text style={styles.emptyText}>{message}</Text>
   </Animated.View>
 );
@@ -83,10 +74,7 @@ export const SelectorContent = <T extends SelectableItem>({
     : undefined;
 
   return (
-    <Animated.View
-      layout={LinearTransition}
-      style={styles.container}
-    >
+    <Animated.View layout={LinearTransition} style={styles.container}>
       <Animated.View
         entering={FadeIn}
         layout={LinearTransition}
@@ -96,8 +84,8 @@ export const SelectorContent = <T extends SelectableItem>({
           data={data}
           renderItem={renderItem}
           keyExtractor={keyExtractor || ((item: T) => item.id)}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
           contentContainerStyle={styles.listContent}
           getItemLayout={getItemLayout}
           // Performance optimizations
@@ -108,7 +96,9 @@ export const SelectorContent = <T extends SelectableItem>({
           updateCellsBatchingPeriod={50}
         />
       </Animated.View>
-      <ActionButtons actions={actions} />
+      <Animated.View style={styles.actionsWrapper}>
+        <ActionButtons actions={actions} />
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -120,7 +110,10 @@ const styles = StyleSheet.create(theme => ({
   },
   listContainer: {
     flex: 1,
-    minHeight: 150, // Ensure minimum height for better UX
+    minHeight: 100,
+  },
+  actionsWrapper: {
+    flexShrink: 0, // Prevent ActionButtons from being compressed/hidden
   },
   listContent: {
     paddingBottom: theme.spacing.sm,

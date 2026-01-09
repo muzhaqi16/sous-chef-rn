@@ -134,7 +134,7 @@ export function useShoppingListSelectorModal({
           ]}
           onPress={onPress}
         >
-          <ShoppingListAvatar list={list} size={40} />
+          <ShoppingListAvatar list={list} size={32} />
           <View style={styles.selectorItemInfo}>
             <Text style={styles.selectorItemName}>{list.name}</Text>
             {!list._isOwner && (
@@ -244,9 +244,9 @@ const styles = StyleSheet.create(theme => ({
   selectorItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.xs,
     backgroundColor: theme.colors.surface,
@@ -274,9 +274,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   sectionHeaderText: {
     fontSize: theme.fonts.size.xs,

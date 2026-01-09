@@ -136,6 +136,7 @@ const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
     marginRight: theme.spacing.xs, // Reduced since gap provides base spacing
     justifyContent: 'center',
+    flexShrink: 0, // Prevent checkbox from being compressed when no image exists
   },
   leftIcon: {
     marginRight: theme.spacing['3'],

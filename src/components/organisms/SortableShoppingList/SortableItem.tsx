@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
@@ -12,6 +13,7 @@ import { Icon } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
+import { useItemExitAnimation } from '#/hooks/animations/useItemExitAnimation';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -84,6 +86,23 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     canEditItems = true,
     canMarkPurchased = true,
   } = permissionsRef.current;
+
+  // Exit animation hook for smooth slide-out when toggling purchase state
+  const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
+
+  // Handle animated toggle with exit animation before mutation
+  const handleAnimatedToggle = useCallback(() => {
+    if (!onTogglePurchase) return;
+
+    // Direction: 1 = slide right (marking purchased), -1 = slide left (unmarking)
+    const direction = item.isPurchased ? -1 : 1;
+
+    triggerExit(direction, () => {
+      onTogglePurchase(item.id);
+      // Don't reset animation - item will be removed from DOM shortly
+      // Animation state is garbage collected on unmount
+    });
+  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit]);
 
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
@@ -197,25 +216,28 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Only shown if user has permission to mark items as purchased
   // PERFORMANCE: Uses LazyAnimatedCheckbox which avoids useSharedValue/useAnimatedStyle
   // PERFORMANCE: Pass colors to avoid useUnistyles in checkbox
+  // Uses handleAnimatedToggle for smooth exit animation before mutation
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
 
     return (
       <LazyAnimatedCheckbox
         checked={!!item.isPurchased}
-        onPress={() => onTogglePurchase(item.id)}
+        onPress={handleAnimatedToggle}
         size={28}
         primaryColor={themeColors?.primary}
         borderColor={themeColors?.border}
       />
     );
-  }, [item.isPurchased, item.id, onTogglePurchase, canMarkPurchased, themeColors]);
+  }, [item.isPurchased, handleAnimatedToggle, onTogglePurchase, canMarkPurchased, themeColors]);
 
   // Use single Unistyles style + inline conditional to avoid "2 unistyles styles" warning
+  // Animated.View enables smooth exit animation when toggling purchase state
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
+        exitAnimatedStyle,
         isActive && {
           opacity: 0.98,
           shadowColor: themeColors?.primary,
@@ -259,7 +281,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           themeColors={themeColors}
         />
       </LazySwipeableItem>
-    </View>
+    </Animated.View>
   );
 };
 

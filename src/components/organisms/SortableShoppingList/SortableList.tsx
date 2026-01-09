@@ -27,6 +27,7 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors,
 } from './SortableListThemeContext';
+import { listItemLayoutAnimation } from '#/constants/animations';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -439,6 +440,8 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           data={progressiveItems}
           renderItem={renderItem}
           keyExtractor={item => item.id}
+          itemLayoutAnimation={listItemLayoutAnimation}
+          enableLayoutAnimationExperimental={true}
           getItemLayout={(_, index) => ({
             length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
             offset: 103 * index,
