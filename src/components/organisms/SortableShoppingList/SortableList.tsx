@@ -426,6 +426,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           renderItem={renderItem}
           keyExtractor={item => item.id}
           itemLayoutAnimation={listItemLayoutAnimation}
+          enableLayoutAnimationExperimental={true}
           getItemLayout={(_, index) => ({
             length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
             offset: 103 * index,

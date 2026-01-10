@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-draggable-flatlist/src/components/CellRendererComponent.tsx b/node_modules/react-native-draggable-flatlist/src/components/CellRendererComponent.tsx
+index e4e861a..902d49a 100644
+--- a/node_modules/react-native-draggable-flatlist/src/components/CellRendererComponent.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/components/CellRendererComponent.tsx
+@@ -139,6 +139,8 @@ function CellRendererComponent<T>(props: Props<T>) {
+     runOnUI((t: number | null, _layoutDisabled) => {
+       "worklet";
+       if (!t) return;
++      // Guard for Reanimated 4.x where LayoutAnimationRepository doesn't exist
++      if (!global.LayoutAnimationRepository) return;
+       const config = global.LayoutAnimationRepository.configs[t];
+       if (config) stashConfig(t, config);
+       const stashedConfig = getStashedConfig(t);

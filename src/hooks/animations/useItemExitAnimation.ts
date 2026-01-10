@@ -22,13 +22,10 @@ import {
  *
  * Uses runOnJS for accurate animation completion callbacks instead of setTimeout.
  *
- * NOTE: Layout animations for remaining items (sliding up to fill the gap) are not
- * supported due to React Native 0.76+ limitations:
- * - LayoutAnimation.configureNext() is broken with New Architecture (RN 0.76+)
- *   See: https://github.com/facebook/react-native/issues/47617
- * - Reanimated explicitly disables React Native's Layout Animations when activated
- * - DraggableFlatList's enableLayoutAnimationExperimental uses internal Reanimated APIs
- *   (LayoutAnimationRepository) that don't exist in Reanimated 4.x
+ * Layout animations for remaining items (sliding up to fill the gap) are handled by
+ * DraggableFlatList's itemLayoutAnimation prop with enableLayoutAnimationExperimental={true}.
+ * A patch to react-native-draggable-flatlist guards against missing LayoutAnimationRepository
+ * API in Reanimated 4.x (see patches/react-native-draggable-flatlist+4.0.3.patch).
  *
  * @returns Animation styles and trigger functions
  *
