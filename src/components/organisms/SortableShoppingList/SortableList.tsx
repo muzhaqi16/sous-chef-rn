@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { View, LayoutAnimation, Dimensions } from 'react-native';
+import { View, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -142,25 +142,10 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
       return;
     }
 
-    const itemsChanged = items.length !== prevItemsLengthRef.current;
     prevItemsLengthRef.current = items.length;
-
-    // Update state FIRST to ensure React flushes the new items
     setLocalItems(items);
-
-    // Then schedule LayoutAnimation for next frame (after React flushes state)
-    // This fixes a race condition where LayoutAnimation would measure the old layout
-    // before React had a chance to update the rendered items
-    if (itemsChanged) {
-      requestAnimationFrame(() => {
-        LayoutAnimation.configureNext({
-          duration: 200,
-          update: {
-            type: LayoutAnimation.Types.easeInEaseOut,
-          },
-        });
-      });
-    }
+    // Note: LayoutAnimation is now configured by useItemExitAnimation
+    // before the mutation fires, ensuring smooth transitions
   }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
