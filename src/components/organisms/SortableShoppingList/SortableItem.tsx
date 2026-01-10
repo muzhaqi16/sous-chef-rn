@@ -14,6 +14,7 @@ import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
 import { useItemExitAnimation } from '#/hooks/animations/useItemExitAnimation';
+import { listItemLayoutAnimation } from '#/constants/animations';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -233,8 +234,10 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   // Use single Unistyles style + inline conditional to avoid "2 unistyles styles" warning
   // Animated.View enables smooth exit animation when toggling purchase state
+  // layout prop handles items animating up when other items are removed
   return (
     <Animated.View
+      layout={listItemLayoutAnimation}
       style={[
         styles.container,
         exitAnimatedStyle,
