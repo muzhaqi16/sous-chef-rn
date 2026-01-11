@@ -20,7 +20,7 @@ import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
 import { useListExitAnimation, useListEntryAnimation } from '#hooks/animations';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
-import { HapticService } from '#/services/haptics';
+import { HapticService } from '#/services/haptic';
 
 // Approximate item height for drag calculations (87px content + 16px margin)
 const ITEM_HEIGHT = 103;
@@ -61,15 +61,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // This eliminates 7-8 useUnistyles calls per item
   const themeColors = useSortableListTheme();
 
-  // Safety guard: skip rendering if item is invalid (prevents empty items)
-  if (!item?.id || !item?.title) {
-    if (__DEV__) {
-      console.warn('⚠️ SortableItem: Invalid item data, skipping render');
-    }
-    return null;
-  }
-
   // Get actions and permissions from context (stable references)
+  // NOTE: All hooks must be called before any early returns (Rules of Hooks)
   const { actions, permissionsRef } = useSortableListActions();
   const {
     onItemPress,
@@ -329,6 +322,15 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       </View>
     );
   }, [item.isPurchased, canReorderItems, onReorderByDelta, themeColors]);
+
+  // Safety guard: skip rendering if item is invalid (prevents empty items)
+  // NOTE: This check must come AFTER all hooks to comply with Rules of Hooks
+  if (!item?.id || !item?.title) {
+    if (__DEV__) {
+      console.warn('⚠️ SortableItem: Invalid item data, skipping render');
+    }
+    return null;
+  }
 
   // Determine if drag is enabled for this item
   const isDragEnabled = !item.isPurchased && canReorderItems && !!onReorderByDelta;

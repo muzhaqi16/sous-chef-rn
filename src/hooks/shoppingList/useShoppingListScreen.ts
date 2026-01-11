@@ -91,6 +91,8 @@ export function useShoppingListScreen() {
     sortableItems,
     unpurchasedItems: transformedUnpurchasedItems,
     purchasedItems: transformedPurchasedItems,
+    // Raw items (for hooks that need GraphQL fragment fields like version)
+    rawUnpurchasedItems,
 
     // Loading states
     loading: listsLoading || itemsLoading,

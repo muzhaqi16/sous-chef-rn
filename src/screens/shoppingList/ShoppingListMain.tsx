@@ -95,6 +95,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     sortableItems,
     unpurchasedItems,
     purchasedItems,
+    rawUnpurchasedItems,
     loading,
     isLoadingInitial,
     searchQuery,
@@ -133,9 +134,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   });
 
   // --- Reordering Hook ---
+  // Use raw items (with version field) for reordering - transformed items don't have version
   const { handleSortOrderUpdate: reorderItem } = useItemReordering({
     listId: currentListId,
-    items: unpurchasedItems, // Only unpurchased items can be reordered
+    items: rawUnpurchasedItems, // Only unpurchased items can be reordered
     refetch: refetchItems,
   });
 
