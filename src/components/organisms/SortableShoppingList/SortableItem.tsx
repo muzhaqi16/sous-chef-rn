@@ -119,7 +119,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           'worklet';
           isDragging.value = true;
           scale.value = withSpring(DRAG_SCALE, { damping: 15, stiffness: 400 });
-          scheduleOnRN(HapticService.light);
+          scheduleOnRN(() => HapticService.light());
         })
         .onUpdate((event) => {
           'worklet';
