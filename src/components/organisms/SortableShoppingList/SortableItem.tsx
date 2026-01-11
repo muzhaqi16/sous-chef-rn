@@ -4,11 +4,10 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  runOnJS,
   interpolate,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
@@ -127,7 +126,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           'worklet';
           isDragging.value = true;
           scale.value = withSpring(DRAG_SCALE, { damping: 15, stiffness: 400 });
-          runOnJS(HapticService.light)();
+          scheduleOnRN(HapticService.light);
         })
         .onUpdate((event) => {
           'worklet';
@@ -139,7 +138,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           const finalY = event.translationY;
           translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
           scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-          runOnJS(handleDragEnd)(finalY);
+          scheduleOnRN(() => handleDragEnd(finalY));
         })
         .onFinalize(() => {
           'worklet';
