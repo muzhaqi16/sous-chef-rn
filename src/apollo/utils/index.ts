@@ -33,4 +33,7 @@ export {
   removeFromUnpurchasedItems,
   addToPurchasedItems,
   removeFromPurchasedItems,
+  // High-level move utilities (handles both itemsConnection and aliased fields)
+  moveShoppingListItemToPurchased,
+  moveShoppingListItemToUnpurchased,
 } from './shoppingListCacheUpdaters';
