@@ -48,8 +48,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   const content = (
     <>
-      {/* Optional drag handle element (for reordering) */}
-      {dragHandleElement}
       {/* Optional checkbox element (for shopping list items) */}
       {checkboxElement && (
         <View style={styles.checkboxContainer}>{checkboxElement}</View>
@@ -90,6 +88,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {rightIcon && !rightElement && (
         <Icon name={rightIcon} size={24} color={iconColor} />
       )}
+      {/* Optional drag handle element (for reordering) - on right side */}
+      {dragHandleElement}
     </>
   );
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -89,31 +89,48 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
 
+  // Store current values in refs for stable gesture callbacks
+  // This prevents gesture recreation when these values change
+  const dragContextRef = useRef({
+    index,
+    totalItems,
+    itemId: item.id,
+    onReorderByDelta,
+  });
+
+  // Keep ref in sync with current values
+  dragContextRef.current = {
+    index,
+    totalItems,
+    itemId: item.id,
+    onReorderByDelta,
+  };
+
   // Calculate new position and call reorder callback
-  const handleDragEnd = useCallback(
-    (finalTranslateY: number) => {
-      if (!onReorderByDelta) return;
+  const handleDragEnd = useCallback((finalTranslateY: number) => {
+    const { index: currentIndex, totalItems: total, itemId, onReorderByDelta: reorder } = dragContextRef.current;
+    if (!reorder) return;
 
-      // Calculate how many positions to move based on drag offset
-      const positionDelta = Math.round(finalTranslateY / ITEM_HEIGHT);
-      if (positionDelta === 0) return; // No movement
+    // Calculate how many positions to move based on drag offset
+    const positionDelta = Math.round(finalTranslateY / ITEM_HEIGHT);
+    if (positionDelta === 0) return; // No movement
 
-      // Calculate new index, clamped to valid range
-      const newIndex = Math.max(0, Math.min(totalItems - 1, index + positionDelta));
-      if (newIndex === index) return; // Same position
+    // Calculate new index, clamped to valid range
+    const newIndex = Math.max(0, Math.min(total - 1, currentIndex + positionDelta));
+    if (newIndex === currentIndex) return; // Same position
 
-      // Call the parent callback with the delta - it will convert to neighbor IDs
-      HapticService.medium();
-      onReorderByDelta(item.id, positionDelta);
-    },
-    [index, totalItems, item.id, onReorderByDelta],
-  );
+    // Call the parent callback with the delta - it will convert to neighbor IDs
+    HapticService.medium();
+    reorder(itemId, positionDelta);
+  }, []); // Empty deps - uses ref for current values
 
   // Pan gesture for drag-to-reorder (attached to drag handle only)
   // Using drag handle avoids gesture conflicts with Swipeable and TouchableOpacity
+  // activateAfterLongPress requires holding the drag handle to start dragging
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
+        .activateAfterLongPress(300) // Require 300ms long press to start drag
         .onStart(() => {
           'worklet';
           isDragging.value = true;
