@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { Icon } from '#utils';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { useDeferredRender } from '#hooks/performance';
+import { listItemLayoutAnimation } from '#/constants/animations';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -15,21 +17,17 @@ interface PurchasedTabProps {
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-    afterSortOrder: string | null,
-    beforeSortOrder: string | null,
-  ) => Promise<void>;
   onClearAll?: () => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
-  onDragBegin?: () => void;
-  onDragRelease?: () => void;
+  // Pagination props
+  onEndReached?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   // Permission flags
   canRemoveItems?: boolean;
   canEditItems?: boolean;
@@ -44,15 +42,14 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onSortOrderUpdate,
   onClearAll,
+  onRefresh,
+  refreshing,
   loading,
   disabled,
-  isDragging,
   onSwipeableWillOpen,
   onSwipeableClose,
-  onDragBegin,
-  onDragRelease,
+  onEndReached,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
@@ -139,20 +136,19 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
       onTogglePurchase={onTogglePurchase}
       onMoveToPantry={onMoveToPantry}
       onQuantityPress={onQuantityPress}
-      onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
-      isDragging={isDragging}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
       onSwipeableClose={onSwipeableClose}
-      onDragBegin={onDragBegin}
-      onDragRelease={onDragRelease}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      onEndReached={onEndReached}
       canRemoveItems={canRemoveItems}
       canEditItems={canEditItems}
       canMarkPurchased={canMarkPurchased}
       ListFooterComponent={
         onClearAll && canRemoveItems ? (
-          <View key="purchased-footer" style={styles.footer}>
+          <Animated.View layout={listItemLayoutAnimation} style={styles.footer}>
             <TouchableOpacity style={clearButtonStyle} onPress={handleClearAll}>
               <Icon
                 name="delete-outline"
@@ -169,7 +165,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
                 Clear All Purchased
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : null
       }
     />

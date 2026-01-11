@@ -1,6 +1,7 @@
 import React from 'react';
-import { Vibration, Platform, Animated } from 'react-native';
+import { Animated } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
+import { HapticService } from '#/services/haptic';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
@@ -207,11 +208,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
 
     const handlePress = () => {
       // Provide haptic feedback for purchase toggle
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate([0, 40]); // Short vibration
-      } else {
-        Vibration.vibrate(40);
-      }
+      HapticService.light();
 
       // Close the swipeable
       swipeableRef?.current?.close();

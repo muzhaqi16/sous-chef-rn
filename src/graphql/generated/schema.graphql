@@ -6557,6 +6557,7 @@ type ShoppingList {
   itemsConnection(
     after: String
     before: String
+    filters: ShoppingListItemFilters
     first: Int
     last: Int
     orderBy: ShoppingListItemOrderBy
@@ -6773,6 +6774,16 @@ Shopping list item connection for pagination
 type ShoppingListItemEdge {
   cursor: String!
   node: ShoppingListItem!
+}
+
+"""
+Filters for shopping list items pagination
+"""
+input ShoppingListItemFilters {
+  """
+  Filter by purchase status
+  """
+  isPurchased: Boolean
 }
 
 """

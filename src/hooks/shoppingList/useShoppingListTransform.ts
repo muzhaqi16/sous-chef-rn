@@ -7,6 +7,15 @@ import type {
   ImageElementConfig,
 } from '#components/organisms/SortableShoppingList/types';
 
+interface TransformOptions {
+  /**
+   * Force the isPurchased state for all items.
+   * Use this when items are already filtered by purchase status
+   * to ensure checkbox state matches the tab they're in.
+   */
+  forcePurchasedState?: boolean;
+}
+
 /**
  * useShoppingListTransform - Transform raw items to SortableShoppingListItem
  *
@@ -22,11 +31,18 @@ import type {
  */
 export function useShoppingListTransform(
   items: ShoppingListItemDisplayFragment[],
+  options?: TransformOptions,
 ) {
+  const { forcePurchasedState } = options ?? {};
   // Transform items to sortable format with configs
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
     return items.map((item): SortableShoppingListItem => {
       const imageUrl = getItemImageUrl(item.item);
+
+      // Use forced state if provided, otherwise read from server data
+      // This ensures checkbox state matches the tab items are displayed in
+      const isPurchasedValue =
+        forcePurchasedState ?? item.purchaseInfo?.isPurchased;
 
       // Create quantity config
       // unitName from server now includes item-specific display name
@@ -37,7 +53,7 @@ export function useShoppingListTransform(
         quantityInput: item.quantityInput,
         unit: item.unitName || item.unit?.symbol || undefined,
         itemId: item.id,
-        disabled: item.purchaseInfo?.isPurchased ?? false,
+        disabled: isPurchasedValue ?? false,
       };
 
       // Create image config (only if image exists)
@@ -45,7 +61,7 @@ export function useShoppingListTransform(
         ? {
             type: 'image',
             url: imageUrl,
-            isPurchased: item.purchaseInfo?.isPurchased,
+            isPurchased: isPurchasedValue,
           }
         : undefined;
 
@@ -54,12 +70,12 @@ export function useShoppingListTransform(
         title: item.itemName || '',
         subtitle: item.category || undefined,
         sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
-        isPurchased: item.purchaseInfo?.isPurchased,
+        isPurchased: isPurchasedValue,
         rightElementConfig,
         leftElementConfig,
       };
     });
-  }, [items]);
+  }, [items, forcePurchasedState]);
 
   // Partition by purchase status
   const { unpurchasedItems, purchasedItems } = useMemo(

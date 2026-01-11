@@ -56,14 +56,6 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
-  onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-    afterSortOrder: string | null,
-    beforeSortOrder: string | null,
-  ) => Promise<void>;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
@@ -72,9 +64,9 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onSwipeableClose?: () => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
-  onDragBegin?: () => void;
-  onDragRelease?: () => void;
-  isDragging?: boolean;
+  // Pagination props
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
   // Permission flags for conditional rendering of item actions
   canRemoveItems?: boolean;
   canEditItems?: boolean;

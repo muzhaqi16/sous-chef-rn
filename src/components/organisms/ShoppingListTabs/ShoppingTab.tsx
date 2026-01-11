@@ -14,22 +14,16 @@ interface ShoppingTabProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-    afterSortOrder: string | null,
-    beforeSortOrder: string | null,
-  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
-  onDragBegin?: () => void;
-  onDragRelease?: () => void;
+  // Pagination props
+  onEndReached?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   // Permission flags
   canRemoveItems?: boolean;
   canEditItems?: boolean;
@@ -43,16 +37,15 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onItemDelete,
   onTogglePurchase,
   onQuantityPress,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   loading,
   disabled,
-  isDragging,
   onSwipeableWillOpen,
   onSwipeableClose,
-  onDragBegin,
-  onDragRelease,
+  onEndReached,
+  hasMore: _hasMore,
+  isLoadingMore: _isLoadingMore,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
@@ -110,16 +103,13 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       onItemDelete={onItemDelete}
       onTogglePurchase={onTogglePurchase}
       onQuantityPress={onQuantityPress}
-      onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
-      isDragging={isDragging}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
       onSwipeableClose={onSwipeableClose}
       onRefresh={onRefresh}
       refreshing={refreshing}
-      onDragBegin={onDragBegin}
-      onDragRelease={onDragRelease}
+      onEndReached={onEndReached}
       canRemoveItems={canRemoveItems}
       canEditItems={canEditItems}
       canMarkPurchased={canMarkPurchased}

@@ -71,7 +71,7 @@ export const ShareList: React.FC = () => {
   // Get current user to check if they are owner
   const currentUser = useAppStore(selectUser);
 
-  const { loading, collaborators, name: listName, refetch } = useShoppingListDetails(listId);
+  const { loading, isRefetching, collaborators, name: listName, refetch } = useShoppingListDetails(listId);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -290,6 +290,8 @@ export const ShareList: React.FC = () => {
             data={collaborators}
             keyExtractor={member => member.id}
             renderItem={renderMemberItem}
+            refreshing={isRefetching}
+            onRefresh={refetch}
           />
         </View>
       )}

@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useCallback,
-  useRef,
-  useState,
-  useEffect,
-} from 'react';
+import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
@@ -19,19 +13,15 @@ interface ShoppingListTabsProps {
   // When provided, skip internal filtering to prevent new array references
   unpurchasedItems?: SortableShoppingListItem[];
   purchasedItems?: SortableShoppingListItem[];
+  // Total counts from GraphQL (not array length) for accurate tab badge counts
+  totalCountUnpurchased?: number;
+  totalCountPurchased?: number;
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-    afterSortOrder: string | null,
-    beforeSortOrder: string | null,
-  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -40,6 +30,14 @@ interface ShoppingListTabsProps {
   onClearAllPurchased?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  // Pagination props for shopping tab
+  onEndReachedUnpurchased?: () => void;
+  hasMoreUnpurchased?: boolean;
+  isLoadingMoreUnpurchased?: boolean;
+  // Pagination props for purchased tab
+  onEndReachedPurchased?: () => void;
+  hasMorePurchased?: boolean;
+  isLoadingMorePurchased?: boolean;
   // Permission flags for conditional rendering of item actions
   canAddItems?: boolean;
   canRemoveItems?: boolean;
@@ -51,13 +49,14 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
   unpurchasedItems: preFilteredUnpurchased,
   purchasedItems: preFilteredPurchased,
+  totalCountUnpurchased,
+  totalCountPurchased,
   onItemPress,
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   loading,
@@ -66,6 +65,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onClearAllPurchased,
   onSwipeableWillOpen,
   onSwipeableClose,
+  // Pagination props
+  onEndReachedUnpurchased,
+  hasMoreUnpurchased,
+  isLoadingMoreUnpurchased,
+  onEndReachedPurchased,
+  hasMorePurchased,
+  isLoadingMorePurchased,
   // Permission props - default to true for backward compatibility
   canAddItems = true,
   canRemoveItems = true,
@@ -74,9 +80,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 }) => {
   // Track open swipeable across both tabs
   const openSwipeableRef = useRef<any>(null);
-
-  // Track drag state to disable tab swipe during drag
-  const [isDragging, setIsDragging] = useState(false);
 
   // Track if any swipeable is open to disable tab swipe (prevents gesture conflict)
   const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
@@ -90,10 +93,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
-    onSortOrderUpdate,
     onRefresh,
     onClearAllPurchased,
     onSwipeableClose,
+    onEndReachedUnpurchased,
+    onEndReachedPurchased,
   });
 
   // PERFORMANCE: Store state props in ref to prevent renderScene recreation
@@ -116,10 +120,11 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onTogglePurchase,
       onMoveToPantry,
       onQuantityPress,
-      onSortOrderUpdate,
       onRefresh,
       onClearAllPurchased,
       onSwipeableClose,
+      onEndReachedUnpurchased,
+      onEndReachedPurchased,
     };
     stateRef.current = {
       loading,
@@ -144,8 +149,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     return items.filter(item => item.isPurchased);
   }, [preFilteredPurchased, items]);
 
-  const unpurchasedCount = unpurchasedItems.length;
-  const purchasedCount = purchasedItems.length;
+  // Use GraphQL totalCount for accurate counts (handles pagination)
+  // Fall back to array length for backwards compatibility
+  const unpurchasedCount = totalCountUnpurchased ?? unpurchasedItems.length;
+  const purchasedCount = totalCountPurchased ?? purchasedItems.length;
 
   // Tab routes with badge counts
   // PERFORMANCE: Only recreate when badge counts actually change
@@ -194,17 +201,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     callbacksRef.current.onSwipeableClose?.();
   }, []);
 
-  // Handle drag events - disable tab swipe during drag
-  const handleDragBegin = useCallback(() => {
-    if (__DEV__) console.log('🎯 Drag BEGIN - disabling tab swipe');
-    setIsDragging(true);
-  }, []);
-
-  const handleDragRelease = useCallback(() => {
-    if (__DEV__) console.log('🎯 Drag RELEASE - enabling tab swipe');
-    setIsDragging(false);
-  }, []);
-
   // Render scene for each tab
   // PERFORMANCE: Use refs for callbacks, items, AND state to prevent scene recreation
   // renderScene only recreates when stable handlers change (never for state/data changes)
@@ -222,19 +218,18 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               items={unpurchasedItems}
               onItemPress={callbacks.onItemPress}
               onItemEdit={callbacks.onItemEdit}
-              isDragging={isDragging}
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
               onQuantityPress={callbacks.onQuantityPress}
-              onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onRefresh={callbacks.onRefresh}
-              refreshing={state.refreshing}
+              refreshing={refreshing}
               loading={state.loading}
               disabled={state.disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={handleSwipeableClose}
-              onDragBegin={handleDragBegin}
-              onDragRelease={handleDragRelease}
+              onEndReached={callbacks.onEndReachedUnpurchased}
+              hasMore={hasMoreUnpurchased}
+              isLoadingMore={isLoadingMoreUnpurchased}
               canRemoveItems={state.canRemoveItems}
               canEditItems={state.canEditItems}
               canMarkPurchased={state.canMarkPurchased}
@@ -251,15 +246,16 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onTogglePurchase={callbacks.onTogglePurchase}
               onMoveToPantry={callbacks.onMoveToPantry}
               onQuantityPress={callbacks.onQuantityPress}
-              onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onClearAll={callbacks.onClearAllPurchased}
+              onRefresh={callbacks.onRefresh}
+              refreshing={refreshing}
               disabled={state.disabled}
               loading={state.loading}
-              isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={handleSwipeableClose}
-              onDragBegin={handleDragBegin}
-              onDragRelease={handleDragRelease}
+              onEndReached={callbacks.onEndReachedPurchased}
+              hasMore={hasMorePurchased}
+              isLoadingMore={isLoadingMorePurchased}
               canRemoveItems={state.canRemoveItems}
               canEditItems={state.canEditItems}
               canMarkPurchased={state.canMarkPurchased}
@@ -272,14 +268,17 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     },
     // PERFORMANCE: Include filtered arrays to ensure tabs update when items change
     // The memoized filter functions ensure these only change when items actually change
+    // NOTE: refreshing must be in deps so RefreshControl updates when refresh completes
     [
       unpurchasedItems,
       purchasedItems,
-      isDragging,
+      refreshing,
+      hasMoreUnpurchased,
+      hasMorePurchased,
+      isLoadingMoreUnpurchased,
+      isLoadingMorePurchased,
       handleSwipeableWillOpen,
       handleSwipeableClose,
-      handleDragBegin,
-      handleDragRelease,
     ],
   );
 
@@ -311,9 +310,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazy={true}
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
-      swipeEnabled={!isSwipeableOpen && !isDragging}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
+      swipeEnabled={!isSwipeableOpen}
     />
   );
 };

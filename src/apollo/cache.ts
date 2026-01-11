@@ -158,38 +158,44 @@ export function makeCache(): InMemoryCache {
             },
           },
           itemsConnection: {
-            keyArgs: false,
-            merge(existing, incoming, { readField }) {
+            // Include filters in keyArgs so purchased/unpurchased have separate cache entries
+            keyArgs: ['filters'],
+            merge(existing, incoming, { args, readField }) {
               // Always preserve existing data if incoming is missing
               if (!incoming) return existing;
 
-              // If no existing data, return incoming (first load)
-              if (!existing) return incoming;
+              // If no existing data or this is an initial load (no cursor), return incoming
+              // This prevents stale items from persisting when items move between connections
+              if (!existing || !args?.after) {
+                return incoming;
+              }
 
+              // This is pagination (cursor provided) - merge edges with deduplication
               const existingEdges = existing.edges || [];
               const incomingEdges = incoming.edges || [];
 
-              // Create set of incoming IDs for quick lookup
-              const incomingIds = new Set<string>();
-              incomingEdges.forEach((edge: any) => {
+              // Deduplicate by node ID to prevent duplicates during pagination
+              const edgeMap = new Map();
+
+              // Add existing edges first
+              existingEdges.forEach((edge: any) => {
                 const id = readField('id', edge?.node);
-                if (id) incomingIds.add(id as string);
+                if (id && !edgeMap.has(id)) {
+                  edgeMap.set(id, edge);
+                }
               });
 
-              // CRITICAL: Start with incoming edges to preserve their order
-              // This is essential for sortOrder sync across clients
-              // Then append any existing edges not in incoming (preserves pagination data)
-              const mergedEdges = [
-                ...incomingEdges,
-                ...existingEdges.filter((edge: any) => {
-                  const id = readField('id', edge?.node);
-                  return id && !incomingIds.has(id as string);
-                }),
-              ];
+              // Add incoming edges (will overwrite existing with same ID)
+              incomingEdges.forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) {
+                  edgeMap.set(id, edge);
+                }
+              });
 
               return {
                 ...incoming,
-                edges: mergedEdges,
+                edges: Array.from(edgeMap.values()),
               };
             },
           },
@@ -260,8 +266,8 @@ export function makeCache(): InMemoryCache {
             },
           },
           itemsConnection: {
-            // No keyArgs - cursor-based pagination uses the cursor, not cache key
-            keyArgs: false,
+            // Include filters in keyArgs so purchased/unpurchased have separate cache entries
+            keyArgs: ['filters'],
             merge(existing, incoming, { args, readField }) {
               // If no incoming data, preserve existing
               if (!incoming) return existing;

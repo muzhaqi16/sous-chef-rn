@@ -47,7 +47,6 @@ import {
   useMoveToPantry,
   type MoveToPantryInput,
 } from '#/hooks/shoppingList/useMoveToPantry';
-import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
 
 /**
  * Shopping List Main Screen
@@ -103,18 +102,19 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     toggleItem,
     removeItem,
     refetch: refetchItems,
-    loadMore,
-    hasMore,
-    isLoadingMore,
+    // Total counts for tab headers (from GraphQL, not array length)
+    totalCountUnpurchased,
+    totalCountPurchased,
+    // Pagination - Shopping tab (unpurchased)
+    loadMoreUnpurchased,
+    hasMoreUnpurchased,
+    isLoadingMoreUnpurchased,
+    // Pagination - Purchased tab
+    loadMorePurchased,
+    hasMorePurchased,
+    isLoadingMorePurchased,
     setSelectedShoppingListId,
   } = useShoppingListScreen();
-
-  // --- Reordering Hook (optimistic UI with fractional indexing) ---
-  const { handleSortOrderUpdate } = useItemReordering({
-    listId: currentListId,
-    items,
-    refetch: refetchItems,
-  });
 
   // --- Actions Hook ---
   const {
@@ -420,7 +420,6 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   const customListProps = useMemo(
     () => ({
       loading: isLoadingInitial,
-      onSortOrderUpdate: searchQuery.trim() ? undefined : handleSortOrderUpdate,
       onTogglePurchase: handleTogglePurchase,
       onMoveToPantry: handleMoveToPantry,
       onQuantityPress: handleQuantityPress,
@@ -433,6 +432,17 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       // Pre-filtered items with stable references (no filtering needed in ShoppingListTabs)
       unpurchasedItems,
       purchasedItems,
+      // Total counts for tab headers (from GraphQL totalCount, not array length)
+      totalCountUnpurchased,
+      totalCountPurchased,
+      // Pagination props for shopping tab (unpurchased)
+      onEndReachedUnpurchased: loadMoreUnpurchased,
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      // Pagination props for purchased tab
+      onEndReachedPurchased: loadMorePurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased,
       // Permission flags for conditional rendering of item actions
       canAddItems: permissions.canAddItems,
       canRemoveItems: permissions.canRemoveItems,
@@ -442,7 +452,6 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     [
       isLoadingInitial,
       searchQuery,
-      handleSortOrderUpdate,
       handleTogglePurchase,
       handleMoveToPantry,
       handleQuantityPress,
@@ -453,6 +462,14 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       handleSwipeableClose,
       unpurchasedItems,
       purchasedItems,
+      totalCountUnpurchased,
+      totalCountPurchased,
+      loadMoreUnpurchased,
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      loadMorePurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased,
       permissions,
     ],
   );
@@ -509,6 +526,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       setAddProps(undefined, false);
     };
   }, [isFocused, setAddProps, currentListId]);
+
+  // Combined pagination state for footer display
+  const hasMore = hasMoreUnpurchased || hasMorePurchased;
+  const isLoadingMore = isLoadingMoreUnpurchased || isLoadingMorePurchased;
 
   // Memoized footer
   const footerComponent = useMemo(
@@ -595,8 +616,6 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         emptyState={emptyStateConfig}
         customListComponent={ShoppingListTabs}
         customListProps={customListProps}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
         ListFooterComponent={footerComponent}
       />
 

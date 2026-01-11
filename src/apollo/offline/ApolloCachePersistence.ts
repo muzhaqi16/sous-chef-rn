@@ -3,7 +3,7 @@ import { storage } from '#storage/mmkv';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
-const CURRENT_CACHE_VERSION = '1.1.2'; // Increment this to invalidate old caches (bumped to clear cache corrupted by __ref spread)
+const CURRENT_CACHE_VERSION = '1.1.3'; // Bumped to clear stale itemsConnection cache after keyArgs fix
 
 /**
  * Custom Apollo cache persistence using MMKV

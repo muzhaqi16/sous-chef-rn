@@ -18,6 +18,10 @@ import { generateId } from '#/utils/generateId';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
+  addToUnpurchasedItems,
+  removeFromUnpurchasedItems,
+  addToPurchasedItems,
+  removeFromPurchasedItems,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -301,12 +305,12 @@ export function useShoppingListItemMutations(
       };
     },
     update(cache, _result, { variables }) {
-      if (!variables) return;
+      if (!variables || !listId) return;
 
       const itemId = variables.id;
-      const newStatus = variables.purchased;
+      const newStatus = variables.purchased; // true = marking purchased, false = marking unpurchased
 
-      // Also use cache.modify for belt-and-suspenders instant update
+      // 1. Update the item's purchaseInfo field directly
       cache.modify({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fields: {
@@ -322,7 +326,100 @@ export function useShoppingListItemMutations(
         },
       });
 
-      // Persist optimistic isPurchased to survive app restarts while offline
+      // 2. Move item between connections using cache.modify on ShoppingList entity
+      // This is the PREFERRED pattern per docs/apollo-client-patterns.md
+      // With keyArgs: ['filters'], Apollo stores separate connection variants
+      // The itemsConnection modifier is called for EACH variant (unpurchased/purchased)
+      cache.modify({
+        id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+        fields: {
+          itemsConnection(existing: any, { readField, storeFieldName, toReference }) {
+            // Determine which connection variant we're modifying based on storeFieldName
+            // storeFieldName contains the serialized keyArgs, e.g., 'itemsConnection({"filters":{"isPurchased":false}})'
+            const isUnpurchasedConnection = storeFieldName.includes('isPurchased":false');
+            const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
+
+            if (!existing?.edges) return existing;
+
+            if (newStatus) {
+              // Marking as purchased: remove from unpurchased, add to purchased
+              if (isUnpurchasedConnection) {
+                return {
+                  ...existing,
+                  edges: existing.edges.filter(
+                    (edge: any) => readField('id', edge.node) !== itemId,
+                  ),
+                  totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+                };
+              }
+              if (isPurchasedConnection) {
+                const alreadyExists = existing.edges.some(
+                  (edge: any) => readField('id', edge.node) === itemId,
+                );
+                if (alreadyExists) return existing;
+                return {
+                  ...existing,
+                  edges: [
+                    {
+                      __typename: 'ShoppingListItemEdge',
+                      cursor: itemId,
+                      node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
+                    },
+                    ...existing.edges,
+                  ],
+                  totalCount: (existing.totalCount || 0) + 1,
+                };
+              }
+            } else {
+              // Marking as unpurchased: remove from purchased, add to unpurchased
+              if (isPurchasedConnection) {
+                return {
+                  ...existing,
+                  edges: existing.edges.filter(
+                    (edge: any) => readField('id', edge.node) !== itemId,
+                  ),
+                  totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+                };
+              }
+              if (isUnpurchasedConnection) {
+                const alreadyExists = existing.edges.some(
+                  (edge: any) => readField('id', edge.node) === itemId,
+                );
+                if (alreadyExists) return existing;
+                return {
+                  ...existing,
+                  edges: [
+                    {
+                      __typename: 'ShoppingListItemEdge',
+                      cursor: itemId,
+                      node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
+                    },
+                    ...existing.edges,
+                  ],
+                  totalCount: (existing.totalCount || 0) + 1,
+                };
+              }
+            }
+
+            return existing;
+          },
+        },
+      });
+
+      // 2b. Also update aliased fields used by GetShoppingListItemsPaginatedQuery
+      // This query uses aliases: unpurchasedItems/purchasedItems instead of itemsConnection
+      // Apollo caches aliased fields separately, so we must update them explicitly
+      if (newStatus) {
+        // Moving to purchased: remove from unpurchased, add to purchased
+        removeFromUnpurchasedItems(cache, listId, itemId);
+        addToPurchasedItems(cache, listId, { id: itemId } as any);
+      } else {
+        // Moving to unpurchased: remove from purchased, add to unpurchased
+        removeFromPurchasedItems(cache, listId, itemId);
+        addToUnpurchasedItems(cache, listId, { id: itemId } as any);
+      }
+
+      // 3. Persist optimistic isPurchased to survive app restarts while offline
       optimisticDataPersistence.save(
         'ShoppingListItem',
         itemId,

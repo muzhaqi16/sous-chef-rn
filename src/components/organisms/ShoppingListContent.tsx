@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { SortableShoppingList } from '#components/organisms/SortableShoppingList';
 import { CollapsiblePurchasedSection } from '#components/molecules/CollapsiblePurchasedSection';
@@ -13,11 +13,6 @@ interface ShoppingListContentProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
@@ -41,7 +36,6 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   disabled,
@@ -49,6 +43,17 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
   onClearAllPurchased,
   onSwipeableWillOpen,
 }) => {
+  // Separate items by purchased status (memoized to prevent unnecessary re-renders)
+  // Must be called before any early returns to comply with React hooks rules
+  const unpurchasedItems = useMemo(
+    () => items.filter(item => !item.isPurchased),
+    [items],
+  );
+  const purchasedItems = useMemo(
+    () => items.filter(item => item.isPurchased),
+    [items],
+  );
+
   // Show skeleton screens during initial load
   if (loading && items.length === 0) {
     return (
@@ -59,10 +64,6 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
       </ScrollView>
     );
   }
-
-  // Separate items by purchased status
-  const unpurchasedItems = items.filter(item => !item.isPurchased);
-  const purchasedItems = items.filter(item => item.isPurchased);
 
   if (items.length === 0 && emptyState) {
     return (
@@ -91,7 +92,6 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}
         onTogglePurchase={onTogglePurchase}
-        onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
         onSwipeableWillOpen={onSwipeableWillOpen}
@@ -103,7 +103,6 @@ export const ShoppingListContent: React.FC<ShoppingListContentProps> = ({
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
             onTogglePurchase={onTogglePurchase}
-            onSortOrderUpdate={onSortOrderUpdate}
             onClearAll={onClearAllPurchased}
             disabled={disabled}
             onSwipeableWillOpen={onSwipeableWillOpen}

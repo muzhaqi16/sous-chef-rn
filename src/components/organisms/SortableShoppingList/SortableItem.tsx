@@ -4,16 +4,14 @@ import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
-import { DragHandle } from '#/components/atoms/DragHandle';
 import { LazyAnimatedCheckbox } from '#/components/atoms/LazyAnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
 import { commonStyles } from '#/styles';
-import { HapticService } from '#services/haptic';
 import { Icon } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
-import { useItemExitAnimation } from '#/hooks/animations/useItemExitAnimation';
+import { useItemExitAnimation } from '#hooks/animations/useItemExitAnimation';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -30,13 +28,11 @@ interface SimpleDraggableItemProps {
     leftElement?: React.ReactNode;
     leftElementConfig?: ImageElementConfig; // Config-based element creation
   };
-  drag?: () => void;
   isActive?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
-  drag,
   isActive,
 }) => {
   // PERF DIAGNOSTICS: Track render time for this item
@@ -87,34 +83,21 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     canMarkPurchased = true,
   } = permissionsRef.current;
 
-  // Exit animation hook for smooth slide-out when toggling purchase state
+  // Exit animation for smooth slide-out when toggling purchase state
   const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
 
-  // Handle animated toggle with exit animation before mutation
+  // Animated toggle handler - triggers slide animation then calls toggle
   const handleAnimatedToggle = useCallback(() => {
-    if (!onTogglePurchase) return;
-
-    // Direction: 1 = slide right (marking purchased), -1 = slide left (unmarking)
+    // Slide right when marking as purchased (not currently purchased)
+    // Slide left when unmarking (currently purchased)
     const direction = item.isPurchased ? -1 : 1;
-
     triggerExit(direction, () => {
-      onTogglePurchase(item.id);
-      // Don't reset animation - item will be removed from DOM shortly
-      // Animation state is garbage collected on unmount
+      onTogglePurchase?.(item.id);
     });
-  }, [item.isPurchased, item.id, onTogglePurchase, triggerExit]);
-
-  // Handle long press for drag activation with haptic feedback
-  const handleLongPress = useCallback(() => {
-    if (drag) {
-      // Provide haptic feedback when drag activates
-      HapticService.longPress();
-      drag();
-    }
-  }, [drag]);
+  }, [item.id, item.isPurchased, onTogglePurchase, triggerExit]);
 
   // Create rightElement from config or use provided element
-  // Uses QuantityBadge (tappable) + DragHandle or MoveToPantry button
+  // Uses QuantityBadge (tappable) + MoveToPantry button for purchased items
   const rightElement = React.useMemo(() => {
     // Priority 1: Use config-based element (performance optimized)
     if (item.rightElementConfig?.type === 'quantity') {
@@ -149,16 +132,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
               />
             </TouchableOpacity>
           )}
-
-          {/* For unpurchased items, show drag handle */}
-          {/* PERFORMANCE: Pass iconColor to avoid useUnistyles call in DragHandle */}
-          {!item.isPurchased && drag && (
-            <DragHandle
-              onLongPress={handleLongPress}
-              disabled={item.isPurchased}
-              iconColor={themeColors?.textSecondary}
-            />
-          )}
         </View>
       );
     }
@@ -166,12 +139,10 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     // Priority 2: Use provided element
     return item.rightElement;
   }, [
-    drag,
     item.isPurchased,
     item.id,
     item.rightElement,
     item.rightElementConfig,
-    handleLongPress,
     onQuantityPress,
     onMoveToPantry,
     themeColors,
@@ -216,7 +187,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Only shown if user has permission to mark items as purchased
   // PERFORMANCE: Uses LazyAnimatedCheckbox which avoids useSharedValue/useAnimatedStyle
   // PERFORMANCE: Pass colors to avoid useUnistyles in checkbox
-  // Uses handleAnimatedToggle for smooth exit animation before mutation
   const checkboxElement = React.useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
 
@@ -231,8 +201,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     );
   }, [item.isPurchased, handleAnimatedToggle, onTogglePurchase, canMarkPurchased, themeColors]);
 
-  // Use single Unistyles style + inline conditional to avoid "2 unistyles styles" warning
-  // Animated.View enables smooth exit animation when toggling purchase state
+  // Use Animated.View for exit animation + inline conditional for active state
   return (
     <Animated.View
       style={[
@@ -251,9 +220,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       {/* PERFORMANCE: LazySwipeableItem defers expensive Swipeable setup until first touch */}
       <LazySwipeableItem
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
-        onLongPress={
-          !drag && onItemPress ? () => onItemPress(item.id) : undefined
-        }
+        onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
           canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
         }

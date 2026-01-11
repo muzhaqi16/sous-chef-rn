@@ -23,9 +23,7 @@ import {
  * Uses runOnJS for accurate animation completion callbacks instead of setTimeout.
  *
  * Layout animations for remaining items (sliding up to fill the gap) are handled by
- * DraggableFlatList's itemLayoutAnimation prop with enableLayoutAnimationExperimental={true}.
- * A patch to react-native-draggable-flatlist guards against missing LayoutAnimationRepository
- * API in Reanimated 4.x (see patches/react-native-draggable-flatlist+4.0.3.patch).
+ * FlashList with custom drag-to-reorder implementation using gesture handler and Reanimated.
  *
  * @returns Animation styles and trigger functions
  *

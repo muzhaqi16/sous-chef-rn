@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useSearchableList } from '../useSearchableList';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
+import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
 import { useShoppingListItemMutations } from './useShoppingListItemMutations';
 import type { ShoppingListItemInput, ShoppingListItemUpdate } from './useShoppingListItemMutations';
 
@@ -12,31 +13,62 @@ export type { ShoppingListItemInput, ShoppingListItemUpdate };
  * useShoppingListManagement - Composition hook for shopping list data management
  *
  * Orchestrates specialized hooks:
- * 1. useShoppingListItemsQuery - Fetch items AND shopping list details
- * 2. useShoppingListItemMutations - CRUD operations with optimistic responses
- * 3. useSearchableList - Client-side search filtering
+ * 1. useShoppingListItemsQuery - Fetch shopping list details (for permissions)
+ * 2. usePaginatedShoppingItems - Single query fetches BOTH unpurchased/purchased items
+ * 3. useShoppingListItemMutations - CRUD operations with optimistic responses
+ * 4. useSearchableList - Client-side search filtering
  *
  * Returns:
- * - items: Sorted shopping list items
+ * - items: Sorted shopping list items (combined)
+ * - unpurchasedItems: Paginated unpurchased items for Shopping tab
+ * - purchasedItems: Paginated purchased items for Purchased tab
  * - shoppingList: Full shopping list details (for permissions, collaborators)
  * - mutations: addItem, updateItem, removeItem, toggleItem
  * - search: query, setQuery, filtered items
+ * - pagination: loadMore, hasMore, isLoadingMore (per tab)
  *
  * @param currentListId - Validated list ID from useShoppingListSelection
  *   (ensures the ID exists in available lists, preventing queries for deleted lists)
  */
 export function useShoppingListManagement(currentListId: string | undefined) {
-  // 1. Query: Fetch items AND shopping list details (for permissions)
-  const { items, shoppingList, loading, error, refetch } = useShoppingListItemsQuery(currentListId);
+  // 1. Query shopping list details (for permissions, collaborators)
+  const { shoppingList, error: listError } = useShoppingListItemsQuery(currentListId);
 
-  // 2. Mutations: CRUD operations
+  // 2. Single query fetches BOTH unpurchased and purchased items (no cache collision)
+  const {
+    unpurchased,
+    purchased,
+    loading: itemsLoading,
+    error: itemsError,
+    refetch,
+  } = usePaginatedShoppingItems({
+    listId: currentListId,
+  });
+
+  // Extract data from combined query result
+  const unpurchasedItems = unpurchased.items;
+  const purchasedItems = purchased.items;
+  const totalCountUnpurchased = unpurchased.totalCount;
+  const totalCountPurchased = purchased.totalCount;
+
+  // Combined items for backwards compatibility
+  const items = useMemo(
+    () => [...unpurchasedItems, ...purchasedItems],
+    [unpurchasedItems, purchasedItems],
+  );
+
+  // Combined loading/error state
+  const loading = itemsLoading;
+  const error = listError || itemsError;
+
+  // 3. Mutations: CRUD operations
   const { addItem, updateItem, removeItem, toggleItem } = useShoppingListItemMutations(
     currentListId,
     items,
     refetch,
   );
 
-  // 3. Search: Client-side filtering
+  // 4. Search: Client-side filtering
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
@@ -46,8 +78,8 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   // Stats calculation
   const stats = useMemo(() => {
     const total = items.length;
-    const completed = items.filter(item => item?.purchaseInfo?.isPurchased).length;
-    const pending = total - completed;
+    const completed = purchasedItems.length;
+    const pending = unpurchasedItems.length;
 
     return {
       total,
@@ -55,13 +87,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
       pending,
       completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
     };
-  }, [items]);
-
-  // Pagination helpers (shoppingListItems returns full list; no pagination)
-  const loadMore = useCallback(async () => {
-    return;
-  }, []);
-  const hasMore = false;
+  }, [items.length, purchasedItems.length, unpurchasedItems.length]);
 
   // Helper functions
   const getItemById = useCallback(
@@ -69,15 +95,9 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     [items],
   );
 
-  const getCompletedItems = useCallback(
-    () => items.filter(item => item.purchaseInfo?.isPurchased),
-    [items],
-  );
+  const getCompletedItems = useCallback(() => purchasedItems, [purchasedItems]);
 
-  const getPendingItems = useCallback(
-    () => items.filter(item => !item.purchaseInfo?.isPurchased),
-    [items],
-  );
+  const getPendingItems = useCallback(() => unpurchasedItems, [unpurchasedItems]);
 
   const getItemsByCategory = useCallback(
     (category: string) => items.filter(item => item.category === category),
@@ -88,15 +108,26 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: items,
+    unpurchasedItems,
+    purchasedItems,
     shoppingList, // Full shopping list details for permissions, collaborators
     loading,
     error,
     stats,
 
-    // Pagination
-    loadMore,
-    hasMore,
-    isLoadingMore: loading && items.length > 0,
+    // Total counts for tab headers (from GraphQL totalCount, not array length)
+    totalCountUnpurchased,
+    totalCountPurchased,
+
+    // Pagination - Shopping tab (unpurchased)
+    loadMoreUnpurchased: unpurchased.loadMore,
+    hasMoreUnpurchased: unpurchased.hasMore,
+    isLoadingMoreUnpurchased: unpurchased.isLoadingMore,
+
+    // Pagination - Purchased tab
+    loadMorePurchased: purchased.loadMore,
+    hasMorePurchased: purchased.hasMore,
+    isLoadingMorePurchased: purchased.isLoadingMore,
 
     // Search
     searchQuery,
