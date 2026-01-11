@@ -22,6 +22,11 @@ interface ShoppingListTabsProps {
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -43,6 +48,7 @@ interface ShoppingListTabsProps {
   canRemoveItems?: boolean;
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
+  canReorderItems?: boolean;
 }
 
 const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
@@ -57,6 +63,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
+  onSortOrderUpdate,
   onRefresh,
   refreshing,
   loading,
@@ -77,6 +84,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
+  canReorderItems = false,
 }) => {
   // Track open swipeable across both tabs
   const openSwipeableRef = useRef<any>(null);
@@ -93,6 +101,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
+    onSortOrderUpdate,
     onRefresh,
     onClearAllPurchased,
     onSwipeableClose,
@@ -109,6 +118,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canRemoveItems,
     canEditItems,
     canMarkPurchased,
+    canReorderItems,
   });
 
   // Keep refs updated with latest callbacks and state
@@ -120,6 +130,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onTogglePurchase,
       onMoveToPantry,
       onQuantityPress,
+      onSortOrderUpdate,
       onRefresh,
       onClearAllPurchased,
       onSwipeableClose,
@@ -134,6 +145,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       canRemoveItems,
       canEditItems,
       canMarkPurchased,
+      canReorderItems,
     };
   });
 
@@ -221,6 +233,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
               onQuantityPress={callbacks.onQuantityPress}
+              onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onRefresh={callbacks.onRefresh}
               refreshing={refreshing}
               loading={state.loading}
@@ -233,6 +246,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canRemoveItems={state.canRemoveItems}
               canEditItems={state.canEditItems}
               canMarkPurchased={state.canMarkPurchased}
+              canReorderItems={state.canReorderItems}
             />
           );
 

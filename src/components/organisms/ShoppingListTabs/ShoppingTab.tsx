@@ -14,6 +14,11 @@ interface ShoppingTabProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -28,6 +33,7 @@ interface ShoppingTabProps {
   canRemoveItems?: boolean;
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
+  canReorderItems?: boolean;
 }
 
 const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
@@ -37,6 +43,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onItemDelete,
   onTogglePurchase,
   onQuantityPress,
+  onSortOrderUpdate,
   onRefresh,
   refreshing,
   loading,
@@ -49,6 +56,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
+  canReorderItems = false,
 }) => {
   const { theme } = useUnistyles();
 
@@ -103,6 +111,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       onItemDelete={onItemDelete}
       onTogglePurchase={onTogglePurchase}
       onQuantityPress={onQuantityPress}
+      onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
@@ -113,6 +122,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       canRemoveItems={canRemoveItems}
       canEditItems={canEditItems}
       canMarkPurchased={canMarkPurchased}
+      canReorderItems={canReorderItems}
     />
   );
 };

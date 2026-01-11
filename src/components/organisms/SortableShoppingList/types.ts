@@ -56,6 +56,17 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
+  /**
+   * Callback for reordering items via drag-to-reorder
+   * @param itemId - ID of the item being moved
+   * @param afterItemId - ID of the item that should come before the moved item (null if moving to start)
+   * @param beforeItemId - ID of the item that should come after the moved item (null if moving to end)
+   */
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => void;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
@@ -71,6 +82,8 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   canRemoveItems?: boolean;
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
+  // Drag-to-reorder permission (only for unpurchased items)
+  canReorderItems?: boolean;
 }
 
 // Sort order update for API calls

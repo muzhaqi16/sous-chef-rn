@@ -14,7 +14,6 @@ import type {
   SortableShoppingListItem,
 } from './types';
 import { SimpleDraggableItem } from './SortableItem';
-import { useProgressiveList } from '#hooks/performance';
 import {
   SortableListActionsProvider,
   type SortableListActions,
@@ -45,8 +44,19 @@ const TAB_BAR_HEIGHT = 65;
  * Layout animations removed to prevent conflicts with FlashList virtualization.
  * Exit animations are handled by useItemExitAnimation in SortableItem.
  */
-const ItemWrapper: React.FC<{ item: SortableShoppingListItem }> = React.memo(
-  ({ item }) => <SimpleDraggableItem item={item} isActive={false} />,
+const ItemWrapper: React.FC<{
+  item: SortableShoppingListItem;
+  index: number;
+  totalItems: number;
+}> = React.memo(
+  ({ item, index, totalItems }) => (
+    <SimpleDraggableItem
+      item={item}
+      index={index}
+      totalItems={totalItems}
+      isActive={false}
+    />
+  ),
 );
 
 ItemWrapper.displayName = 'ItemWrapper';
@@ -64,6 +74,7 @@ const SortableShoppingListComponent = forwardRef<
       onTogglePurchase,
       onMoveToPantry,
       onQuantityPress,
+      onSortOrderUpdate,
       disabled = false,
       ListFooterComponent,
       onSwipeableWillOpen: externalOnSwipeableWillOpen,
@@ -72,6 +83,7 @@ const SortableShoppingListComponent = forwardRef<
       canRemoveItems = true,
       canEditItems = true,
       canMarkPurchased = true,
+      canReorderItems = false,
       onEndReached,
       onEndReachedThreshold = 0.5,
       ...flatListProps
@@ -109,15 +121,6 @@ const SortableShoppingListComponent = forwardRef<
     ],
   );
 
-  // PERFORMANCE: Progressive rendering disabled to prevent scroll flickering
-  // FlashList's virtualization handles large lists efficiently with estimatedItemSize
-  const progressiveItems = useProgressiveList(items, {
-    initialBatch: 8,
-    batchSize: 4,
-    batchDelay: 16,
-    enabled: false,
-  });
-
   // Track currently open swipeable item
   const openSwipeableRef = useRef<any>(null);
 
@@ -150,6 +153,48 @@ const SortableShoppingListComponent = forwardRef<
     flashListRef.current?.prepareForLayoutAnimationRender();
   }, []);
 
+  // Keep items in ref for reorder callback to access current values
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  // Handle reorder by index delta - converts to neighbor IDs and calls onSortOrderUpdate
+  const handleReorderByDelta = useCallback(
+    (itemId: string, indexDelta: number) => {
+      if (!onSortOrderUpdate || indexDelta === 0) return;
+
+      const currentItems = itemsRef.current;
+      const currentIndex = currentItems.findIndex(item => item.id === itemId);
+      if (currentIndex === -1) return;
+
+      // Calculate new index, clamped to valid range
+      const newIndex = Math.max(0, Math.min(currentItems.length - 1, currentIndex + indexDelta));
+      if (newIndex === currentIndex) return;
+
+      // Calculate neighbor IDs for the new position
+      // afterItemId = the item that will be before this item (at newIndex - 1)
+      // beforeItemId = the item that will be after this item (at newIndex + 1)
+      // But we need to account for the moved item being removed from its current position
+
+      let afterItemId: string | null = null;
+      let beforeItemId: string | null = null;
+
+      if (indexDelta > 0) {
+        // Moving down - newIndex is where item will end up
+        // Item at newIndex will be "before" (actually after in visual order)
+        afterItemId = currentItems[newIndex]?.id ?? null;
+        beforeItemId = newIndex < currentItems.length - 1 ? currentItems[newIndex + 1]?.id ?? null : null;
+      } else {
+        // Moving up - newIndex is where item will end up
+        afterItemId = newIndex > 0 ? currentItems[newIndex - 1]?.id ?? null : null;
+        beforeItemId = currentItems[newIndex]?.id ?? null;
+      }
+
+      console.log(`📦 Reorder: ${itemId} from ${currentIndex} to ${newIndex}, after=${afterItemId}, before=${beforeItemId}`);
+      onSortOrderUpdate(itemId, afterItemId, beforeItemId);
+    },
+    [onSortOrderUpdate],
+  );
+
   // Memoize actions for context
   const actions = useMemo<SortableListActions>(
     () => ({
@@ -162,6 +207,8 @@ const SortableShoppingListComponent = forwardRef<
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
       prepareForLayoutAnimation: handlePrepareForLayoutAnimation,
+      onSortOrderUpdate,
+      onReorderByDelta: handleReorderByDelta,
     }),
     [
       onItemPress,
@@ -173,6 +220,8 @@ const SortableShoppingListComponent = forwardRef<
       handleSwipeableWillOpen,
       handleSwipeableClose,
       handlePrepareForLayoutAnimation,
+      onSortOrderUpdate,
+      handleReorderByDelta,
     ],
   );
 
@@ -181,17 +230,18 @@ const SortableShoppingListComponent = forwardRef<
       canRemoveItems,
       canEditItems,
       canMarkPurchased,
+      canReorderItems,
       disabled,
     }),
-    [canRemoveItems, canEditItems, canMarkPurchased, disabled],
+    [canRemoveItems, canEditItems, canMarkPurchased, canReorderItems, disabled],
   );
 
   // Render item for FlashList
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<SortableShoppingListItem>) => (
-      <ItemWrapper item={item} />
+    ({ item, index }: ListRenderItemInfo<SortableShoppingListItem>) => (
+      <ItemWrapper item={item} index={index} totalItems={items.length} />
     ),
-    [],
+    [items.length],
   );
 
   // Key extractor
@@ -225,7 +275,7 @@ const SortableShoppingListComponent = forwardRef<
         <View style={styles.container}>
           <FlashList
             ref={flashListRef}
-            data={progressiveItems}
+            data={items}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             showsVerticalScrollIndicator={

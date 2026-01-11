@@ -47,6 +47,7 @@ import {
   useMoveToPantry,
   type MoveToPantryInput,
 } from '#/hooks/shoppingList/useMoveToPantry';
+import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
 
 /**
  * Shopping List Main Screen
@@ -130,6 +131,22 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     refetchItems,
     setSearchQuery,
   });
+
+  // --- Reordering Hook ---
+  const { handleSortOrderUpdate: reorderItem } = useItemReordering({
+    listId: currentListId,
+    items: unpurchasedItems, // Only unpurchased items can be reordered
+    refetch: refetchItems,
+  });
+
+  // Wrapper to match the simpler callback signature used by the list component
+  const handleSortOrderUpdate = useCallback(
+    (itemId: string, afterItemId: string | null, beforeItemId: string | null) => {
+      // The hook expects sortOrder values too, but calculates them internally now
+      reorderItem(itemId, afterItemId, beforeItemId, null, null);
+    },
+    [reorderItem],
+  );
 
   // --- Selector Hook ---
   const {
@@ -423,6 +440,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       onTogglePurchase: handleTogglePurchase,
       onMoveToPantry: handleMoveToPantry,
       onQuantityPress: handleQuantityPress,
+      onSortOrderUpdate: handleSortOrderUpdate,
       onRefresh: handleRefresh,
       refreshing,
       disabled: !!searchQuery.trim(),
@@ -448,6 +466,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       canRemoveItems: permissions.canRemoveItems,
       canEditItems: permissions.canEditItems,
       canMarkPurchased: permissions.canMarkPurchased,
+      // Enable reordering for users with edit permissions
+      canReorderItems: permissions.canEditItems,
     }),
     [
       isLoadingInitial,
@@ -455,6 +475,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       handleTogglePurchase,
       handleMoveToPantry,
       handleQuantityPress,
+      handleSortOrderUpdate,
       handleRefresh,
       refreshing,
       handleClearAllPurchased,
