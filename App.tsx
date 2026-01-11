@@ -27,6 +27,7 @@ import {
   cleanupAppStateTokenRefresh,
 } from '#store/slices/authSlice';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { initializeDeviceId } from '#/utils/deviceId';
 
 // Enable native screens for better performance
 enableScreens();
@@ -60,6 +61,9 @@ const App = () => {
   useEffect(() => {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
+
+      // Initialize device ID early - needed for WebSocket subscription self-echo filtering
+      initializeDeviceId();
 
       // Check for stored credentials
       hasCredentials().then(result => {

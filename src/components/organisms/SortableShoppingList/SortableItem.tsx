@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useLayoutEffect } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,11 +7,12 @@ import { ListItem } from '#/components/molecules/ListItem';
 import { LazyAnimatedCheckbox } from '#/components/atoms/LazyAnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
 import { commonStyles } from '#/styles';
-import { Icon } from '#utils';
+import { Icon, createPropsComparator } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
-import { useItemExitAnimation } from '#hooks/animations/useItemExitAnimation';
+import { useListExitAnimation, useListEntryAnimation } from '#hooks/animations';
+import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -35,31 +36,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
   isActive,
 }) => {
-  // PERF DIAGNOSTICS: Track render time for this item
-  const renderStartRef = useRef(Date.now());
-  const renderCountRef = useRef(0);
-
-  // Log slow renders in development (sampled to reduce overhead)
-  useEffect(() => {
-    if (__DEV__) {
-      renderCountRef.current++;
-
-      // PERFORMANCE: Only log every 10th render to reduce console overhead
-      // This dramatically reduces JS thread blocking from console.log calls
-      if (renderCountRef.current % 10 === 1) {
-        const renderTime = Date.now() - renderStartRef.current;
-
-        // Only log slow renders (>16ms = dropped frame potential)
-        if (renderTime > 16) {
-          console.log(`[PERF] Slow render: "${item.title.slice(0, 15)}" ${renderTime}ms (render #${renderCountRef.current})`);
-        }
-      }
-    }
-  });
-
-  // Reset render start time for next render measurement
-  renderStartRef.current = Date.now();
-
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
   // This eliminates 7-8 useUnistyles calls per item
   const themeColors = useSortableListTheme();
@@ -75,6 +51,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     onQuantityPress,
     onSwipeableWillOpen,
     onSwipeableClose,
+    prepareForLayoutAnimation,
   } = actions;
   // Read permissions from ref to always get latest values
   const {
@@ -84,17 +61,44 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   } = permissionsRef.current;
 
   // Exit animation for smooth slide-out when toggling purchase state
-  const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
+  // IMPORTANT: Pass item.id so animation state resets when FlashList recycles views
+  const { exitAnimatedStyle, triggerExit } = useListExitAnimation(item.id);
+
+  // List animation context for subscription-triggered animations
+  const animationContext = useListAnimationOptional();
+
+  // PERFORMANCE: Register exit animation trigger via useLayoutEffect (O(1) direct calls)
+  // When subscription schedules an animation, it calls the registered trigger directly
+  // instead of updating context state and causing O(n) re-renders
+  useLayoutEffect(() => {
+    if (!animationContext) return;
+
+    // Register this item's animation trigger function
+    animationContext.registerAnimationTrigger(item.id, triggerExit);
+
+    return () => {
+      // Clean up registration on unmount (handles FlashList view recycling)
+      animationContext.unregisterAnimationTrigger(item.id);
+    };
+  }, [item.id, triggerExit, animationContext]);
+
+  // Entry animation for items appearing in destination list after move
+  const { entryAnimatedStyle } = useListEntryAnimation(item.id);
 
   // Animated toggle handler - triggers slide animation then calls toggle
   const handleAnimatedToggle = useCallback(() => {
+    // Prepare FlashList for layout change BEFORE animation starts
+    // This is required for FlashList to properly handle item removal
+    // @see https://shopify.github.io/flash-list/docs/guides/layout-animation
+    prepareForLayoutAnimation?.();
+
     // Slide right when marking as purchased (not currently purchased)
     // Slide left when unmarking (currently purchased)
     const direction = item.isPurchased ? -1 : 1;
     triggerExit(direction, () => {
       onTogglePurchase?.(item.id);
     });
-  }, [item.id, item.isPurchased, onTogglePurchase, triggerExit]);
+  }, [item.id, item.isPurchased, onTogglePurchase, triggerExit, prepareForLayoutAnimation]);
 
   // Create rightElement from config or use provided element
   // Uses QuantityBadge (tappable) + MoveToPantry button for purchased items
@@ -201,12 +205,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     );
   }, [item.isPurchased, handleAnimatedToggle, onTogglePurchase, canMarkPurchased, themeColors]);
 
-  // Use Animated.View for exit animation + inline conditional for active state
+  // Use Animated.View for exit + entry animations + inline conditional for active state
   return (
     <Animated.View
       style={[
         styles.container,
         exitAnimatedStyle,
+        entryAnimatedStyle,
         isActive && {
           opacity: 0.98,
           shadowColor: themeColors?.primary,
@@ -274,36 +279,17 @@ const styles = StyleSheet.create(theme => ({
 // PERFORMANCE: Custom comparator for React.memo
 // Only re-render when item data or drag state changes
 // Actions & permissions come from context (stable) so no need to compare them
-const arePropsEqual = (
-  prev: SimpleDraggableItemProps,
-  next: SimpleDraggableItemProps,
-): boolean => {
-  // Fast path: same item reference + same drag state = definitely equal
-  if (prev.item === next.item && prev.isActive === next.isActive) {
-    return true;
-  }
-
-  // Compare item fields that affect rendering
-  const prevConfig = prev.item.rightElementConfig;
-  const nextConfig = next.item.rightElementConfig;
-
-  return (
-    prev.item.id === next.item.id &&
-    prev.item.title === next.item.title &&
-    prev.item.subtitle === next.item.subtitle &&
-    prev.item.isPurchased === next.item.isPurchased &&
-    prev.item.leftElementConfig === next.item.leftElementConfig &&
-    prev.isActive === next.isActive &&
-    // Deep compare quantity config since it affects display
-    prevConfig?.quantity === nextConfig?.quantity &&
-    prevConfig?.quantityInput === nextConfig?.quantityInput &&
-    prevConfig?.unit === nextConfig?.unit &&
-    prevConfig?.disabled === nextConfig?.disabled
-  );
-};
+const arePropsEqual = createPropsComparator<SimpleDraggableItemProps>({
+  referenceKeys: ['isActive'],
+  nestedComparisons: {
+    item: ['id', 'title', 'subtitle', 'isPurchased', 'leftElementConfig'],
+    'item.rightElementConfig': ['quantity', 'quantityInput', 'unit', 'disabled'],
+  },
+});
 
 // PERFORMANCE: Memoize component with custom comparison
-// Config object stability maintained by Map caching in useShoppingListScreen
+// Custom comparator needed because config objects are recreated each render in useShoppingListTransform.
+// Compares actual field values to prevent unnecessary re-renders when data hasn't changed.
 export const SimpleDraggableItem = React.memo(
   SimpleDraggableItemComponent,
   arePropsEqual,

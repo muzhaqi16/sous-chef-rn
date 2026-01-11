@@ -9,12 +9,13 @@ import {
   listItemExitAnimation,
   standardEasing,
 } from '#/constants/animations';
+import type { AnimationDirection } from '#/types/animations';
 
 /**
  * Hook for managing list item exit animations
  *
- * Provides coordinated slide, fade, and scale animations
- * for when items are toggled between purchased/unpurchased states.
+ * Provides coordinated slide, fade, and scale animations for items
+ * exiting a list (e.g., moving between sections, being deleted).
  *
  * PERFORMANCE: Uses eager shared value creation but defers animation calculations.
  * The animated style returns static values when exitDirection === 0 (no animation),
@@ -25,15 +26,20 @@ import {
  * Layout animations for remaining items (sliding up to fill the gap) are handled by
  * FlashList with custom drag-to-reorder implementation using gesture handler and Reanimated.
  *
+ * IMPORTANT: This hook handles FlashList view recycling by accepting an itemId parameter.
+ * When the itemId changes (view recycled for a different item), all animation state is reset.
+ * @see https://shopify.github.io/flash-list/docs/guides/reanimated
+ *
+ * @param itemId - Unique identifier for the list item (used to detect view recycling)
  * @returns Animation styles and trigger functions
  *
  * @example
  * ```tsx
- * const { exitAnimatedStyle, triggerExit } = useItemExitAnimation();
+ * const { exitAnimatedStyle, triggerExit } = useListExitAnimation(item.id);
  *
  * // Trigger exit animation
  * triggerExit(1, () => {
- *   onTogglePurchase(item.id);
+ *   onItemMoved(item.id);
  * });
  *
  * // Apply styles
@@ -42,7 +48,7 @@ import {
  * </Animated.View>
  * ```
  */
-export const useItemExitAnimation = () => {
+export const useListExitAnimation = (itemId: string) => {
   // Shared value for exit direction - created eagerly but idle until animation triggers
   // Value: 0 = no animation, 1 = animating right, -1 = animating left
   const exitDirection = useSharedValue(0);
@@ -62,6 +68,23 @@ export const useItemExitAnimation = () => {
       onCompleteRef.current = null;
     };
   }, []);
+
+  // Reset ONLY visual animation state when view is recycled (item ID changes)
+  // Per FlashList docs: https://shopify.github.io/flash-list/docs/guides/reanimated/
+  //
+  // We reset:
+  // - exitDirection.value: Prevents ghost animations from previous item
+  // - isAnimatingRef: Allows new animations to start (previous animation is orphaned)
+  //
+  // We DON'T reset onCompleteRef because:
+  // - If animation completed: callback already called and nulled by safeCallComplete
+  // - If animation pending: it will be orphaned (wrong item), but
+  //   new triggerExit call will overwrite with correct callback
+  useEffect(() => {
+    exitDirection.value = 0;
+    isAnimatingRef.current = false;
+    // Note: onCompleteRef is intentionally NOT reset here
+  }, [itemId, exitDirection]);
 
   // Exit animated style (slide, fade, scale)
   // PERFORMANCE: Returns static values when exitDirection === 0 (no animation triggered)
@@ -100,11 +123,11 @@ export const useItemExitAnimation = () => {
 
   /**
    * Trigger exit animation with direction and completion callback
-   * @param direction - 1 for right (marking purchased), -1 for left (unmarking)
+   * @param direction - 1 for forward/right, -1 for backward/left
    * @param onComplete - Callback fired when animation completes
    */
   const triggerExit = useCallback(
-    (direction: 1 | -1, onComplete: () => void) => {
+    (direction: AnimationDirection, onComplete: () => void) => {
       // Guard against rapid toggling - non-blocking ref read
       if (isAnimatingRef.current) return;
 
@@ -146,3 +169,12 @@ export const useItemExitAnimation = () => {
     resetAnimation,
   };
 };
+
+// =============================================================================
+// Backward Compatibility Alias (deprecated - use useListExitAnimation)
+// =============================================================================
+
+/**
+ * @deprecated Use useListExitAnimation instead
+ */
+export const useItemExitAnimation = useListExitAnimation;

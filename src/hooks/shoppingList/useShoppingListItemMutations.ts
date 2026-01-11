@@ -6,6 +6,7 @@ import {
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
   DisplayFormat,
+  ShoppingListItemDisplayFragmentDoc,
 } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
@@ -344,18 +345,23 @@ export function useShoppingListItemMutations(
             if (newStatus) {
               // Marking as purchased: remove from unpurchased, add to purchased
               if (isUnpurchasedConnection) {
+                // Filter out the item AND any broken edges with missing node IDs
+                const filteredEdges = existing.edges.filter((edge: any) => {
+                  const nodeId = readField('id', edge?.node);
+                  return nodeId !== undefined && nodeId !== null && nodeId !== itemId;
+                });
                 return {
                   ...existing,
-                  edges: existing.edges.filter(
-                    (edge: any) => readField('id', edge.node) !== itemId,
-                  ),
+                  edges: filteredEdges,
                   totalCount: Math.max(0, (existing.totalCount || 0) - 1),
                 };
               }
               if (isPurchasedConnection) {
-                const alreadyExists = existing.edges.some(
-                  (edge: any) => readField('id', edge.node) === itemId,
-                );
+                // Check for duplicates, handling undefined node IDs
+                const alreadyExists = existing.edges.some((edge: any) => {
+                  const nodeId = readField('id', edge?.node);
+                  return nodeId === itemId;
+                });
                 if (alreadyExists) return existing;
                 return {
                   ...existing,
@@ -373,18 +379,23 @@ export function useShoppingListItemMutations(
             } else {
               // Marking as unpurchased: remove from purchased, add to unpurchased
               if (isPurchasedConnection) {
+                // Filter out the item AND any broken edges with missing node IDs
+                const filteredEdges = existing.edges.filter((edge: any) => {
+                  const nodeId = readField('id', edge?.node);
+                  return nodeId !== undefined && nodeId !== null && nodeId !== itemId;
+                });
                 return {
                   ...existing,
-                  edges: existing.edges.filter(
-                    (edge: any) => readField('id', edge.node) !== itemId,
-                  ),
+                  edges: filteredEdges,
                   totalCount: Math.max(0, (existing.totalCount || 0) - 1),
                 };
               }
               if (isUnpurchasedConnection) {
-                const alreadyExists = existing.edges.some(
-                  (edge: any) => readField('id', edge.node) === itemId,
-                );
+                // Check for duplicates, handling undefined node IDs
+                const alreadyExists = existing.edges.some((edge: any) => {
+                  const nodeId = readField('id', edge?.node);
+                  return nodeId === itemId;
+                });
                 if (alreadyExists) return existing;
                 return {
                   ...existing,
@@ -409,14 +420,23 @@ export function useShoppingListItemMutations(
       // 2b. Also update aliased fields used by GetShoppingListItemsPaginatedQuery
       // This query uses aliases: unpurchasedItems/purchasedItems instead of itemsConnection
       // Apollo caches aliased fields separately, so we must update them explicitly
+
+      // Read full item data from cache to ensure complete item info when adding to new connection
+      // This prevents empty items from appearing due to incomplete cache references
+      const fullItem = cache.readFragment<ShoppingListItemDisplayFragment>({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        fragment: ShoppingListItemDisplayFragmentDoc,
+        fragmentName: 'ShoppingListItemDisplayFragment',
+      });
+
       if (newStatus) {
         // Moving to purchased: remove from unpurchased, add to purchased
         removeFromUnpurchasedItems(cache, listId, itemId);
-        addToPurchasedItems(cache, listId, { id: itemId } as any);
+        addToPurchasedItems(cache, listId, fullItem || { id: itemId });
       } else {
         // Moving to unpurchased: remove from purchased, add to unpurchased
         removeFromPurchasedItems(cache, listId, itemId);
-        addToUnpurchasedItems(cache, listId, { id: itemId } as any);
+        addToUnpurchasedItems(cache, listId, fullItem || { id: itemId });
       }
 
       // 3. Persist optimistic isPurchased to survive app restarts while offline

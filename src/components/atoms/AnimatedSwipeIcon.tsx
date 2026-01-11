@@ -75,10 +75,20 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
     transform: [{ translateX: translateX.value }],
   }));
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
+  // Background styling applied to Animated.View via inline styles
+  // so the background circle animates together with the icon
   return (
-    <View style={styles.iconContainer}>
-      <Animated.View style={animatedStyle}>
+    <View style={styles.iconWrapper}>
+      <Animated.View
+        style={[
+          animatedStyle,
+          {
+            padding: theme.spacing.md,
+            backgroundColor: theme.colors.primaryLight,
+            borderRadius: theme.radii.full,
+          },
+        ]}
+      >
         <Icon name={iconName} size={size} color={iconColor} library={library} />
       </Animated.View>
     </View>
@@ -86,10 +96,7 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  iconContainer: {
+  iconWrapper: {
     marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.full,
   },
 }));

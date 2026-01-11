@@ -32,6 +32,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
     // Shopping mode: Show Edit button on left swipe
     if (swipeMode === 'shopping' && onEdit) {
       const handleEditPress = () => {
+        HapticService.light();
         swipeableRef?.current?.close();
         onActionPress?.('edit');
       };

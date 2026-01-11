@@ -28,16 +28,19 @@ export enum HapticFeedbackType {
 /**
  * Vibration patterns (in milliseconds)
  * Format: [wait, vibrate, wait, vibrate, ...]
+ *
+ * Android guidelines recommend 10-20ms for crisp click feedback.
+ * @see https://developer.android.com/develop/ui/views/haptics/haptics-principles
  */
 const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
-  [HapticFeedbackType.LIGHT]: 10,
-  [HapticFeedbackType.MEDIUM]: 20,
-  [HapticFeedbackType.HEAVY]: 50,
-  [HapticFeedbackType.SUCCESS]: [0, 10, 50, 10], // Two quick taps
-  [HapticFeedbackType.WARNING]: [0, 20, 100, 20], // Two medium taps with pause
-  [HapticFeedbackType.ERROR]: [0, 50, 100, 50, 100, 50], // Three strong taps
-  [HapticFeedbackType.SELECTION]: 5, // Very light for selections
-  [HapticFeedbackType.LONG_PRESS]: 100, // Long single vibration
+  [HapticFeedbackType.LIGHT]: 15, // Android recommends 10-20ms for crisp feedback
+  [HapticFeedbackType.MEDIUM]: 20, // Upper end of recommended range
+  [HapticFeedbackType.HEAVY]: 40, // Reduced from 50ms
+  [HapticFeedbackType.SUCCESS]: [0, 12, 40, 12], // Two quick taps
+  [HapticFeedbackType.WARNING]: [0, 18, 80, 18], // Two medium taps with pause
+  [HapticFeedbackType.ERROR]: [0, 35, 80, 35, 80, 35], // Three strong taps
+  [HapticFeedbackType.SELECTION]: 10, // Minimum perceptible
+  [HapticFeedbackType.LONG_PRESS]: 80, // Reduced from 100ms
 };
 
 /**

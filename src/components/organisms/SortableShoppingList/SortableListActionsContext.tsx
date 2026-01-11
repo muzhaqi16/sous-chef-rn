@@ -13,6 +13,12 @@ export interface SortableListActions {
   onQuantityPress?: (id: string) => void;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  /**
+   * Prepare FlashList for layout animation before items are removed/added.
+   * Must be called before data changes that affect list layout.
+   * @see https://shopify.github.io/flash-list/docs/guides/layout-animation
+   */
+  prepareForLayoutAnimation?: () => void;
 }
 
 /**
@@ -83,6 +89,7 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
       onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
       onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
       onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
+      prepareForLayoutAnimation: () => actionsRef.current.prepareForLayoutAnimation?.(),
     }),
     [],
   );

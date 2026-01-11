@@ -45,10 +45,6 @@ class MemoryMonitorService {
     this.intervalId = setInterval(() => {
       this.takeSnapshot('periodic_sample');
     }, intervalMs);
-
-    if (__DEV__) {
-      console.log(`[MemoryMonitor] Started with ${intervalMs}ms interval`);
-    }
   }
 
   /**
@@ -61,10 +57,6 @@ class MemoryMonitorService {
     }
 
     this.enabled = false;
-
-    if (__DEV__) {
-      console.log('[MemoryMonitor] Stopped');
-    }
   }
 
   /**

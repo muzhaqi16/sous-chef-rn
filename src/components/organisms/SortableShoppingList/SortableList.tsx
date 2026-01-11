@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useRef,
-  useEffect,
   useMemo,
   forwardRef,
   useImperativeHandle,
@@ -125,18 +124,6 @@ const SortableShoppingListComponent = forwardRef<
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
-  // PERF DIAGNOSTICS
-  const mountTimeRef = useRef(Date.now());
-
-  useEffect(() => {
-    if (__DEV__) {
-      const mountDuration = Date.now() - mountTimeRef.current;
-      console.log(`[PERF] Mount: ${mountDuration}ms, ${items.length} items`);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-
   // Handle swipeable item opening
   const handleSwipeableWillOpen = useCallback(
     (swipeableRef: any) => {
@@ -157,6 +144,12 @@ const SortableShoppingListComponent = forwardRef<
 
   const handleSwipeableClose = useCallback(() => {}, []);
 
+  // Prepare FlashList for layout animation before items are removed
+  // This must be called before data changes per FlashList docs
+  const handlePrepareForLayoutAnimation = useCallback(() => {
+    flashListRef.current?.prepareForLayoutAnimationRender();
+  }, []);
+
   // Memoize actions for context
   const actions = useMemo<SortableListActions>(
     () => ({
@@ -168,6 +161,7 @@ const SortableShoppingListComponent = forwardRef<
       onQuantityPress,
       onSwipeableWillOpen: handleSwipeableWillOpen,
       onSwipeableClose: handleSwipeableClose,
+      prepareForLayoutAnimation: handlePrepareForLayoutAnimation,
     }),
     [
       onItemPress,
@@ -178,6 +172,7 @@ const SortableShoppingListComponent = forwardRef<
       onQuantityPress,
       handleSwipeableWillOpen,
       handleSwipeableClose,
+      handlePrepareForLayoutAnimation,
     ],
   );
 

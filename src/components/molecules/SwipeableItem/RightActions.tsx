@@ -2,6 +2,7 @@ import React from 'react';
 import { Animated } from 'react-native';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { useUnistyles } from 'react-native-unistyles';
+import { HapticService } from '#/services/haptic';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
 
@@ -20,13 +21,18 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
     if (swipeMode === 'shopping') {
       if (!onDelete) return null;
 
+      const handleDeletePress = () => {
+        HapticService.light();
+        onActionPress?.('delete');
+      };
+
       return (
         <Animated.View
           style={[styles.actionsContainer, { width: getContainerWidth(1) }]}
           pointerEvents="box-none"
         >
           <AnimatedActionButton
-            onPress={() => onActionPress?.('delete')}
+            onPress={handleDeletePress}
             icon="delete"
             backgroundColor={theme.colors.danger}
             circular={true}
@@ -45,6 +51,16 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
 
     if (buttonCount === 0) return null;
 
+    const handleEditPress = () => {
+      HapticService.light();
+      onActionPress?.('edit');
+    };
+
+    const handleDeletePress = () => {
+      HapticService.light();
+      onActionPress?.('delete');
+    };
+
     return (
       <Animated.View
         style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
@@ -52,7 +68,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
       >
         {onEdit && (
           <AnimatedActionButton
-            onPress={() => onActionPress?.('edit')}
+            onPress={handleEditPress}
             icon="edit"
             backgroundColor={theme.colors.info}
             circular={true}
@@ -63,7 +79,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
         )}
         {onDelete && (
           <AnimatedActionButton
-            onPress={() => onActionPress?.('delete')}
+            onPress={handleDeletePress}
             icon="delete"
             backgroundColor={theme.colors.danger}
             circular={true}

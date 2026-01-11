@@ -31,6 +31,21 @@ import {
 } from '#/apollo/utils';
 
 /**
+ * Animation scheduler function type for coordinating exit animations
+ * with subscription cache updates
+ */
+type ScheduleAnimationFn = (
+  itemId: string,
+  direction: 1 | -1,
+  onComplete: () => void,
+) => void;
+
+/**
+ * Entry animation scheduler function type for items appearing in destination list
+ */
+type ScheduleEntryAnimationFn = (itemId: string, direction: 1 | -1) => void;
+
+/**
  * Initialize shopping list subscriptions for the current user
  *
  * This hook should be called once at the app level (in SubscriptionProvider)
@@ -38,8 +53,14 @@ import {
  * the user's selected shopping list.
  *
  * @param userId - Current user ID for deduplication
+ * @param scheduleAnimation - Optional callback to schedule exit animations before cache updates
+ * @param scheduleEntryAnimation - Optional callback to schedule entry animations after cache updates
  */
-export function useShoppingListSubscriptions(userId?: string) {
+export function useShoppingListSubscriptions(
+  userId?: string,
+  scheduleAnimation?: ScheduleAnimationFn,
+  scheduleEntryAnimation?: ScheduleEntryAnimationFn,
+) {
   // Get selected shopping list from global store
   // This allows subscriptions to follow the user's current context
   const selectedShoppingListId = useStore(state => state.selectedShoppingListId) || undefined;
@@ -64,17 +85,38 @@ export function useShoppingListSubscriptions(userId?: string) {
 
       const mutation = payload.mutation;
       const item = payload.item;
+      const payloadUserId = payload.userId;
 
       if (!item) return;
+
+      // Skip self-echo: if this subscription is from our own mutation, skip processing
+      // The mutation's cache.modify already handled the update
+      // Note: This also blocks updates from same user on different devices
+      // When multi-device support is needed, switch to originatorClientId filtering
+      if (payloadUserId && userId && payloadUserId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [Subscription] Skipping self-echo (same user)', item.id);
+        }
+        return;
+      }
 
       if (mutation === MutationType.CREATE || mutation === MutationType.ITEM_ADDED) {
         // Add new item to ShoppingList.itemsConnection
         addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
       } else if (mutation === MutationType.DELETE || mutation === MutationType.ITEM_REMOVED) {
         // Remove item from ShoppingList.itemsConnection
-        removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-          evictItem: true,
-        });
+        // If animation scheduler is available, play exit animation first
+        if (scheduleAnimation) {
+          scheduleAnimation(item.id, -1, () => {
+            removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+              evictItem: true,
+            });
+          });
+        } else {
+          removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+            evictItem: true,
+          });
+        }
       } else if (mutation === 'ITEM_UPDATED' || mutation === MutationType.ITEM_COMPLETED || mutation === MutationType.ITEM_UNCOMPLETED) {
         // Read old item to detect sortOrder changes (needed for re-sorting)
         // Use ShoppingListItemDisplayFragment because that's what GetShoppingListItemsPaginated uses
@@ -114,10 +156,29 @@ export function useShoppingListSubscriptions(userId?: string) {
 
         // Move item between purchased/unpurchased connections using reusable utilities
         // These handle both itemsConnection (GetShoppingListQuery) and aliased fields (GetShoppingListItemsPaginatedQuery)
+        // If animation scheduler is available, play exit animation first before moving
         if (isCompletedMutation) {
-          moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+          if (scheduleAnimation) {
+            // Slide right for marking as purchased
+            scheduleAnimation(item.id, 1, () => {
+              moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+              // Schedule entry animation for when item appears in Purchased section
+              scheduleEntryAnimation?.(item.id, 1);
+            });
+          } else {
+            moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+          }
         } else if (isUncompletedMutation) {
-          moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+          if (scheduleAnimation) {
+            // Slide left for unmarking as purchased
+            scheduleAnimation(item.id, -1, () => {
+              moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+              // Schedule entry animation for when item appears in Shopping section
+              scheduleEntryAnimation?.(item.id, -1);
+            });
+          } else {
+            moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+          }
         }
 
         // Re-sort itemsConnection edges if sortOrder changed

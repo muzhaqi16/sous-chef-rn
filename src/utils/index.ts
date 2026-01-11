@@ -2,6 +2,7 @@ export * from './notifications';
 export * from './validation';
 export * from './iconUtils';
 export * from './imageUtils';
+export * from './memoUtils';
 export * from './fractionalIndexing';
 export * from './fractionUtils';
 export * from './pantryItemUtils';

@@ -5,6 +5,7 @@ import {
   useHomeSubscriptions,
   useNotificationSubscriptions,
 } from '#/hooks/subscriptions';
+import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
 interface AuthenticatedSubscriptionsProps {
   userId: string;
@@ -27,10 +28,19 @@ interface AuthenticatedSubscriptionsProps {
 export const AuthenticatedSubscriptions: React.FC<AuthenticatedSubscriptionsProps> = ({
   userId,
 }) => {
+  // Get animation scheduler from context (if available)
+  // This allows subscription updates to trigger exit animations before cache updates
+  // and entry animations when items appear in destination lists
+  const animationContext = useListAnimationOptional();
+
   // Initialize domain-specific subscriptions
   // These hooks register their subscriptions with the SubscriptionService
   // and automatically handle cleanup when unmounted or when dependencies change
-  useShoppingListSubscriptions(userId);
+  useShoppingListSubscriptions(
+    userId,
+    animationContext?.scheduleAnimation,
+    animationContext?.scheduleEntryAnimation,
+  );
   usePantrySubscriptions(userId);
   useHomeSubscriptions(userId);
   useNotificationSubscriptions(userId);

@@ -4,6 +4,7 @@ import { subscriptionService } from '#/services/subscriptions';
 import { enableAutoReconnect, disableAutoReconnect, reconnectWebSocket } from '#/apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
+import { ListAnimationProvider } from '#/context/ListAnimationContext';
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -62,7 +63,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   }, [isAuthenticated]);
 
   return (
-    <>
+    <ListAnimationProvider>
       {/* Only initialize data and subscriptions when user is authenticated
           This prevents WebSocket connection attempts without a valid JWT token,
           eliminating "JWT token is required for WebSocket connections" errors on startup */}
@@ -73,7 +74,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         </>
       )}
       {children}
-    </>
+    </ListAnimationProvider>
   );
 };
 

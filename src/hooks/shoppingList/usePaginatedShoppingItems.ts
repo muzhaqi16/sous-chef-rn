@@ -81,6 +81,8 @@ export function usePaginatedShoppingItems({
     });
 
   // Helper to extract and sort items from edges
+  // Includes defensive filtering to prevent blank items from appearing when
+  // cache has incomplete data (e.g., after subscription sync between devices)
   const extractItems = useCallback(
     (
       edges:
@@ -90,6 +92,12 @@ export function usePaginatedShoppingItems({
     ): ShoppingListItemDisplayFragment[] => {
       if (!edges) return [];
       return edges
+        .filter(edge => {
+          // Filter out edges with missing/incomplete nodes
+          // This prevents blank items from appearing when cache has stale data
+          const node = edge?.node;
+          return node && node.id && node.itemName;
+        })
         .map(edge => edge.node)
         .sort((a, b) => {
           const sortA = a.sortOrder ?? 'zzz';
