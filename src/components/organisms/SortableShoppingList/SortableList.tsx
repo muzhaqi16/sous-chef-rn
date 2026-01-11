@@ -49,14 +49,20 @@ const ItemWrapper: React.FC<{
   index: number;
   totalItems: number;
 }> = React.memo(
-  ({ item, index, totalItems }) => (
-    <SimpleDraggableItem
-      item={item}
-      index={index}
-      totalItems={totalItems}
-      isActive={false}
-    />
-  ),
+  ({ item, index, totalItems }) => {
+    // Skip rendering invalid items to prevent empty cards
+    if (!item?.id || !item?.title) {
+      return null;
+    }
+    return (
+      <SimpleDraggableItem
+        item={item}
+        index={index}
+        totalItems={totalItems}
+        isActive={false}
+      />
+    );
+  },
 );
 
 ItemWrapper.displayName = 'ItemWrapper';
@@ -153,16 +159,16 @@ const SortableShoppingListComponent = forwardRef<
     flashListRef.current?.prepareForLayoutAnimationRender();
   }, []);
 
-  // Keep items in ref for reorder callback to access current values
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  // Keep valid items in ref for reorder callback to access current values
+  // Use a ref to avoid recreating handleReorderByDelta when items change
+  const validItemsRef = useRef<SortableShoppingListItem[]>([]);
 
   // Handle reorder by index delta - converts to neighbor IDs and calls onSortOrderUpdate
   const handleReorderByDelta = useCallback(
     (itemId: string, indexDelta: number) => {
       if (!onSortOrderUpdate || indexDelta === 0) return;
 
-      const currentItems = itemsRef.current;
+      const currentItems = validItemsRef.current;
       const currentIndex = currentItems.findIndex(item => item.id === itemId);
       if (currentIndex === -1) return;
 
@@ -236,17 +242,27 @@ const SortableShoppingListComponent = forwardRef<
     [canRemoveItems, canEditItems, canMarkPurchased, canReorderItems, disabled],
   );
 
+  // Filter out invalid items to prevent empty card renders
+  // This handles edge cases where Apollo cache returns items with missing data
+  const validItems = useMemo(
+    () => items.filter(item => item?.id && item?.title),
+    [items],
+  );
+
+  // Keep ref in sync for reorder callback (avoids callback recreation)
+  validItemsRef.current = validItems;
+
   // Render item for FlashList
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<SortableShoppingListItem>) => (
-      <ItemWrapper item={item} index={index} totalItems={items.length} />
+      <ItemWrapper item={item} index={index} totalItems={validItems.length} />
     ),
-    [items.length],
+    [validItems.length],
   );
 
-  // Key extractor
+  // Key extractor - ensure we have a valid ID
   const keyExtractor = useCallback(
-    (item: SortableShoppingListItem) => item.id,
+    (item: SortableShoppingListItem) => item?.id ?? `invalid-${Math.random()}`,
     [],
   );
 
@@ -256,7 +272,7 @@ const SortableShoppingListComponent = forwardRef<
     return null;
   }
 
-  if (items.length === 0) {
+  if (validItems.length === 0) {
     if (ListFooterComponent) {
       return (
         <View style={styles.container}>
@@ -275,9 +291,10 @@ const SortableShoppingListComponent = forwardRef<
         <View style={styles.container}>
           <FlashList
             ref={flashListRef}
-            data={items}
+            data={validItems}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
+            extraData={validItems.length}
             showsVerticalScrollIndicator={
               flatListProps.showsVerticalScrollIndicator ?? true
             }

@@ -35,8 +35,20 @@ export function useShoppingListTransform(
 ) {
   const { forcePurchasedState } = options ?? {};
   // Transform items to sortable format with configs
+  // Filter out items with missing essential data to prevent empty item renders
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    return items.map((item): SortableShoppingListItem => {
+    return items
+      .filter((item) => {
+        // Skip items without ID or name (invalid/corrupt data)
+        if (!item.id || !item.itemName) {
+          if (__DEV__) {
+            console.warn('⚠️ Skipping invalid shopping list item:', item.id);
+          }
+          return false;
+        }
+        return true;
+      })
+      .map((item): SortableShoppingListItem => {
       const imageUrl = getItemImageUrl(item.item);
 
       // Use forced state if provided, otherwise read from server data

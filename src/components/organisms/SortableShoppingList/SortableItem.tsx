@@ -4,7 +4,9 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   runOnJS,
+  interpolate,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
@@ -23,6 +25,10 @@ import { HapticService } from '#/services/haptics';
 
 // Approximate item height for drag calculations (87px content + 16px margin)
 const ITEM_HEIGHT = 103;
+
+// Drag animation constants
+const DRAG_SCALE = 1.03;
+const DRAG_SHADOW_OPACITY = 0.25;
 
 interface SimpleDraggableItemProps {
   item: {
@@ -56,6 +62,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // This eliminates 7-8 useUnistyles calls per item
   const themeColors = useSortableListTheme();
 
+  // Safety guard: skip rendering if item is invalid (prevents empty items)
+  if (!item?.id || !item?.title) {
+    if (__DEV__) {
+      console.warn('⚠️ SortableItem: Invalid item data, skipping render');
+    }
+    return null;
+  }
+
   // Get actions and permissions from context (stable references)
   const { actions, permissionsRef } = useSortableListActions();
   const {
@@ -81,6 +95,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Drag state for reordering
   const isDragging = useSharedValue(false);
   const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
 
   // Calculate new position and call reorder callback
   const handleDragEnd = useCallback(
@@ -111,6 +126,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         .onStart(() => {
           'worklet';
           isDragging.value = true;
+          scale.value = withSpring(DRAG_SCALE, { damping: 15, stiffness: 400 });
           runOnJS(HapticService.light)();
         })
         .onUpdate((event) => {
@@ -122,22 +138,36 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           isDragging.value = false;
           const finalY = event.translationY;
           translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+          scale.value = withSpring(1, { damping: 15, stiffness: 400 });
           runOnJS(handleDragEnd)(finalY);
         })
         .onFinalize(() => {
           'worklet';
           isDragging.value = false;
           translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+          scale.value = withSpring(1, { damping: 15, stiffness: 400 });
         }),
-    [item.isPurchased, canReorderItems, onReorderByDelta, isDragging, translateY, handleDragEnd],
+    [item.isPurchased, canReorderItems, onReorderByDelta, isDragging, translateY, scale, handleDragEnd],
   );
 
-  // Animated style for drag offset
-  const dragAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    zIndex: isDragging.value ? 999 : 0,
-    opacity: isDragging.value ? 0.95 : 1,
-  }));
+  // Animated style for drag offset with scale and shadow
+  const dragAnimatedStyle = useAnimatedStyle(() => {
+    const shadowOpacity = interpolate(
+      scale.value,
+      [1, DRAG_SCALE],
+      [0.1, DRAG_SHADOW_OPACITY],
+    );
+
+    return {
+      transform: [
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+      zIndex: isDragging.value ? 999 : 0,
+      shadowOpacity,
+      elevation: isDragging.value ? 12 : 4,
+    };
+  });
 
   // Exit animation for smooth slide-out when toggling purchase state
   // IMPORTANT: Pass item.id so animation state resets when FlashList recycles views
