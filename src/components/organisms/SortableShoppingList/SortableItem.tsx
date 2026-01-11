@@ -1,9 +1,11 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
+  Easing,
   interpolate,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -18,12 +20,11 @@ import { Icon, createPropsComparator } from '#utils';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
+import { useDragState } from './DragStateContext';
 import { useListExitAnimation, useListEntryAnimation } from '#hooks/animations';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
 import { HapticService } from '#/services/haptic';
-
-// Approximate item height for drag calculations (87px content + 16px margin)
-const ITEM_HEIGHT = 103;
+import { listItemExitAnimation } from '#/constants/animations';
 
 // Drag animation constants
 const DRAG_SCALE = 1.03;
@@ -84,10 +85,68 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     canReorderItems = false,
   } = permissionsRef.current;
 
-  // Drag state for reordering
+  // Drag state for reordering (local to this item)
   const isDragging = useSharedValue(false);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
+  // Track if this item was recently dragged (to exclude from shiftAnimatedStyle)
+  const wasRecentlyDragged = useSharedValue(false);
+
+  // Track previous index to detect position changes (vs view recycling)
+  const prevIndexRef = useRef(index);
+  const prevItemIdRef = useRef(item.id);
+
+  // Global drag state for coordinating shift animations across all items
+  const {
+    isDragging: globalIsDragging,
+    draggedIndex,
+    currentTranslateY,
+  } = useDragState();
+
+  // Handle animation state when position changes
+  // Two cases:
+  // 1. item.id changes → View recycling: full reset
+  // 2. index changes → Data reorder: compensate for base position shift
+  // @see https://shopify.github.io/flash-list/docs/guides/reanimated/
+  useEffect(() => {
+    const ITEM_HEIGHT = listItemExitAnimation.itemHeight;
+
+    // Case 1: View recycled to different item - full reset
+    if (item.id !== prevItemIdRef.current) {
+      isDragging.value = false;
+      translateY.value = 0;
+      scale.value = 1;
+      wasRecentlyDragged.value = false;
+      prevItemIdRef.current = item.id;
+      prevIndexRef.current = index;
+      return;
+    }
+
+    // Case 2: Same item, index changed (data reordered after drop via Apollo optimisticResponse)
+    if (index !== prevIndexRef.current) {
+      const indexDelta = index - prevIndexRef.current;
+      const heightDelta = indexDelta * ITEM_HEIGHT;
+
+      // Compensate translateY for the base position change
+      // This prevents the snap-back: instead of resetting to 0,
+      // we adjust by the height delta so visual position stays ~same
+      const compensatedY = translateY.value - heightDelta;
+      translateY.value = compensatedY;
+
+      // Then smoothly animate to 0 (final resting position)
+      translateY.value = withTiming(0, { duration: 150, easing: Easing.out(Easing.ease) });
+
+      // Reset other drag state
+      isDragging.value = false;
+      scale.value = 1;
+
+      // Clear the recently dragged flag
+      // This allows shiftAnimatedStyle to start applying again
+      wasRecentlyDragged.value = false;
+
+      prevIndexRef.current = index;
+    }
+  }, [index, item.id, isDragging, translateY, scale, wasRecentlyDragged]);
 
   // Store current values in refs for stable gesture callbacks
   // This prevents gesture recreation when these values change
@@ -112,7 +171,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     if (!reorder) return;
 
     // Calculate how many positions to move based on drag offset
-    const positionDelta = Math.round(finalTranslateY / ITEM_HEIGHT);
+    // Use centralized item height constant for consistency with exit animations
+    const positionDelta = Math.round(finalTranslateY / listItemExitAnimation.itemHeight);
     if (positionDelta === 0) return; // No movement
 
     // Calculate new index, clamped to valid range
@@ -124,41 +184,88 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     reorder(itemId, positionDelta);
   }, []); // Empty deps - uses ref for current values
 
+  // Stable haptic callback for drag start - must be defined in RN Runtime scope
+  // for scheduleOnRN to work correctly (cannot use arrow functions inside worklets)
+  // @see https://docs.swmansion.com/react-native-worklets/docs/threading/scheduleOnRN/
+  const triggerLightHaptic = useCallback(() => {
+    HapticService.light();
+  }, []);
+
+  // Reset wasRecentlyDragged after animation settles
+  // This ensures the flag resets even if cache update doesn't change the item's index
+  // (which would otherwise leave the item "stuck" with wasRecentlyDragged = true)
+  const resetWasRecentlyDraggedDelayed = useCallback(() => {
+    setTimeout(() => {
+      wasRecentlyDragged.value = false;
+    }, 250); // Slightly longer than animation duration (200ms) to ensure it settles
+  }, [wasRecentlyDragged]);
+
   // Pan gesture for drag-to-reorder (attached to drag handle only)
   // Using drag handle avoids gesture conflicts with Swipeable and TouchableOpacity
   // activateAfterLongPress requires holding the drag handle to start dragging
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        .activateAfterLongPress(300) // Require 300ms long press to start drag
+        .activateAfterLongPress(200) // Require 200ms long press to start drag
         .onStart(() => {
           'worklet';
+          // Local drag state
           isDragging.value = true;
+          wasRecentlyDragged.value = true; // Mark as recently dragged to exclude from shiftAnimatedStyle
           scale.value = withSpring(DRAG_SCALE, { damping: 15, stiffness: 400 });
-          scheduleOnRN(() => HapticService.light());
+          // Global drag state for shift animations
+          globalIsDragging.value = true;
+          draggedIndex.value = index;
+          currentTranslateY.value = 0;
+          // Pass function reference (not arrow function) - must be defined in RN Runtime scope
+          scheduleOnRN(triggerLightHaptic);
         })
         .onUpdate((event) => {
           'worklet';
+          // Local drag state
           translateY.value = event.translationY;
+          // Global drag state for shift animations
+          currentTranslateY.value = event.translationY;
         })
         .onEnd((event) => {
           'worklet';
+          // Local drag state
           isDragging.value = false;
           const finalY = event.translationY;
-          translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+          // Don't reset translateY here - useEffect resets it on index change
+          // This prevents the snap-back flicker on drop
           scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-          scheduleOnRN(() => handleDragEnd(finalY));
+
+          // Global drag state - full reset
+          // Pre-mutation cache.modify handles immediate UI update, no need for hold-shift
+          globalIsDragging.value = false;
+          draggedIndex.value = -1;
+          currentTranslateY.value = 0;
+
+          // Pass function reference with argument - scheduleOnRN(fn, ...args) syntax
+          scheduleOnRN(handleDragEnd, finalY);
+
+          // Reset wasRecentlyDragged after a delay to ensure animation settles
+          // This prevents items from getting stuck if cache update doesn't change their index
+          scheduleOnRN(resetWasRecentlyDraggedDelayed);
         })
         .onFinalize(() => {
           'worklet';
+          // Local drag state
           isDragging.value = false;
-          translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
+          wasRecentlyDragged.value = false; // Reset flag on cancelled gesture
+          // Don't reset translateY here - useEffect resets it on index change
+          // This prevents the snap-back flicker on drop
           scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+          // Global drag state - full reset (onFinalize is for cancelled gestures, no reorder)
+          globalIsDragging.value = false;
+          draggedIndex.value = -1;
+          currentTranslateY.value = 0;
         }),
-    [isDragging, translateY, scale, handleDragEnd],
+    [isDragging, translateY, scale, handleDragEnd, triggerLightHaptic, globalIsDragging, draggedIndex, currentTranslateY, index, wasRecentlyDragged, resetWasRecentlyDraggedDelayed],
   );
 
-  // Animated style for drag offset with scale and shadow
+  // Animated style for drag offset with scale and shadow (for the dragged item)
   const dragAnimatedStyle = useAnimatedStyle(() => {
     const shadowOpacity = interpolate(
       scale.value,
@@ -171,9 +278,57 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         { translateY: translateY.value },
         { scale: scale.value },
       ],
-      zIndex: isDragging.value ? 999 : 0,
+      // Keep elevated while dragging OR while translateY offset exists
+      // Prevents rendering under other items during drop transition
+      zIndex: isDragging.value || Math.abs(translateY.value) > 1 ? 999 : 0,
       shadowOpacity,
       elevation: isDragging.value ? 12 : 4,
+    };
+  });
+
+  // Animated style for shift animation (for non-dragged items)
+  // When another item is being dragged, this item shifts up/down to make space
+  // Uses withTiming for smooth slide (no bounce) - bouncing is only for dragged item
+  //
+  // Note: We no longer need "hold-shift" logic because Apollo optimisticResponse
+  // immediately updates the item order on drop. The useEffect compensation handles
+  // the animation from current position to 0.
+  const shiftAnimatedStyle = useAnimatedStyle(() => {
+    // If I'm the dragged item OR was recently dragged, don't apply any shift transform
+    // dragAnimatedStyle handles the dragged item's movement
+    // wasRecentlyDragged prevents interference during drop animation settling
+    if (draggedIndex.value === index || wasRecentlyDragged.value) {
+      return {};
+    }
+
+    // Not dragging - no shift needed
+    // Apollo optimisticResponse handles the reorder, items animate via useEffect compensation
+    if (!globalIsDragging.value) {
+      return {};
+    }
+
+    // During active drag - calculate shift based on current position
+    const ITEM_HEIGHT = listItemExitAnimation.itemHeight;
+    const hoveredIndex = draggedIndex.value + Math.round(currentTranslateY.value / ITEM_HEIGHT);
+
+    let shiftY = 0;
+
+    // Moving DOWN: items between original and hovered positions shift UP
+    if (hoveredIndex > draggedIndex.value) {
+      if (index > draggedIndex.value && index <= hoveredIndex) {
+        shiftY = -ITEM_HEIGHT;
+      }
+    }
+    // Moving UP: items between hovered and original positions shift DOWN
+    else if (hoveredIndex < draggedIndex.value) {
+      if (index < draggedIndex.value && index >= hoveredIndex) {
+        shiftY = ITEM_HEIGHT;
+      }
+    }
+
+    // Smooth slide without bounce - easeOut for natural deceleration
+    return {
+      transform: [{ translateY: withTiming(shiftY, { duration: 200, easing: Easing.out(Easing.ease) }) }],
     };
   });
 
@@ -361,6 +516,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         styles.container,
         exitAnimatedStyle,
         entryAnimatedStyle,
+        shiftAnimatedStyle, // Shift animation for non-dragged items
         isDragEnabled && dragAnimatedStyle,
         isActive && {
           opacity: 0.98,
@@ -373,9 +529,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       ]}
     >
       {/* PERFORMANCE: LazySwipeableItem defers expensive Swipeable setup until first touch */}
+      {/* Pre-activate items with drag handles so RNGH gestures work on first touch */}
       <LazySwipeableItem
+        isPreActivated={isDragEnabled}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
-        onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
+        // Don't pass onLongPress when drag is enabled - allows pan gesture to activate
+        // For purchased items (no drag), long-press still opens item details
+        onLongPress={!isDragEnabled && onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
           canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
         }

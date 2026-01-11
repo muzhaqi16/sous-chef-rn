@@ -64,7 +64,7 @@ export const listItemExitAnimation = {
   layoutAnimation: {
     duration: 200,
   },
-  itemHeight: 103, // 87px content + 16px margins
+  itemHeight: 95, // 87px content + 8px margins (spacing.xs = 4px each side)
 } as const;
 
 /**

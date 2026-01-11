@@ -23,6 +23,7 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors,
 } from './SortableListThemeContext';
+import { DragStateProvider } from './DragStateContext';
 
 /**
  * Ref handle for SortableShoppingList
@@ -288,8 +289,9 @@ const SortableShoppingListComponent = forwardRef<
   return (
     <SortableListThemeContext.Provider value={themeColors}>
       <SortableListActionsProvider actions={actions} permissions={permissions}>
-        <View style={styles.container}>
-          <FlashList
+        <DragStateProvider>
+          <View style={styles.container}>
+            <FlashList
             ref={flashListRef}
             data={validItems}
             renderItem={renderItem}
@@ -315,8 +317,9 @@ const SortableShoppingListComponent = forwardRef<
                 />
               ) : undefined
             }
-          />
-        </View>
+            />
+          </View>
+        </DragStateProvider>
       </SortableListActionsProvider>
     </SortableListThemeContext.Provider>
   );
