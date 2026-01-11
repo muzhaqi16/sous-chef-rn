@@ -421,22 +421,31 @@ export function useShoppingListItemMutations(
       // This query uses aliases: unpurchasedItems/purchasedItems instead of itemsConnection
       // Apollo caches aliased fields separately, so we must update them explicitly
 
-      // Read full item data from cache to ensure complete item info when adding to new connection
-      // This prevents empty items from appearing due to incomplete cache references
-      const fullItem = cache.readFragment<ShoppingListItemDisplayFragment>({
+      // Get the full item data from the items array (closure) - this is more reliable than
+      // cache.readFragment which can return null during optimistic updates
+      const itemFromArray = items.find(i => i.id === itemId);
+
+      // Fallback to cache read if not found in array (edge case)
+      const fullItem = itemFromArray || cache.readFragment<ShoppingListItemDisplayFragment>({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fragment: ShoppingListItemDisplayFragmentDoc,
         fragmentName: 'ShoppingListItemDisplayFragment',
       });
 
+      // Only proceed if we have valid item data to prevent ghost/empty items
+      if (!fullItem || !fullItem.itemName) {
+        console.warn('⚠️ Toggle purchase: Item data missing, skipping aliased field update for', itemId);
+        return;
+      }
+
       if (newStatus) {
         // Moving to purchased: remove from unpurchased, add to purchased
         removeFromUnpurchasedItems(cache, listId, itemId);
-        addToPurchasedItems(cache, listId, fullItem || { id: itemId });
+        addToPurchasedItems(cache, listId, fullItem);
       } else {
         // Moving to unpurchased: remove from purchased, add to unpurchased
         removeFromPurchasedItems(cache, listId, itemId);
-        addToUnpurchasedItems(cache, listId, fullItem || { id: itemId });
+        addToUnpurchasedItems(cache, listId, fullItem);
       }
 
       // 3. Persist optimistic isPurchased to survive app restarts while offline
