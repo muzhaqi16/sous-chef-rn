@@ -109,12 +109,11 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     [index, totalItems, item.id, onReorderByDelta],
   );
 
-  // Pan gesture for drag-to-reorder
+  // Pan gesture for drag-to-reorder (attached to drag handle only)
+  // Using drag handle avoids gesture conflicts with Swipeable and TouchableOpacity
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(!item.isPurchased && canReorderItems && !!onReorderByDelta)
-        .activateAfterLongPress(200) // Long press to activate
         .onStart(() => {
           'worklet';
           isDragging.value = true;
@@ -139,7 +138,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           translateY.value = withSpring(0, { damping: 20, stiffness: 300 });
           scale.value = withSpring(1, { damping: 15, stiffness: 400 });
         }),
-    [item.isPurchased, canReorderItems, onReorderByDelta, isDragging, translateY, scale, handleDragEnd],
+    [isDragging, translateY, scale, handleDragEnd],
   );
 
   // Animated style for drag offset with scale and shadow
@@ -307,21 +306,24 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [item.isPurchased, handleAnimatedToggle, onTogglePurchase, canMarkPurchased, themeColors]);
 
   // Create drag handle element for reordering
-  // Only shown for unpurchased items when reordering is enabled
+  // Wrapped with GestureDetector to handle pan gesture on the handle only
+  // This avoids conflicts with Swipeable and other touch handlers
   const dragHandleElement = React.useMemo(() => {
     if (item.isPurchased || !canReorderItems || !onReorderByDelta) return null;
 
     return (
-      <View style={styles.dragHandle}>
-        <Icon
-          name="drag-indicator"
-          size={20}
-          color={themeColors?.textSecondary}
-          library="MaterialIcons"
-        />
-      </View>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={styles.dragHandle}>
+          <Icon
+            name="drag-indicator"
+            size={20}
+            color={themeColors?.textSecondary}
+            library="MaterialIcons"
+          />
+        </Animated.View>
+      </GestureDetector>
     );
-  }, [item.isPurchased, canReorderItems, onReorderByDelta, themeColors]);
+  }, [item.isPurchased, canReorderItems, onReorderByDelta, themeColors, panGesture]);
 
   // Safety guard: skip rendering if item is invalid (prevents empty items)
   // NOTE: This check must come AFTER all hooks to comply with Rules of Hooks
@@ -335,8 +337,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Determine if drag is enabled for this item
   const isDragEnabled = !item.isPurchased && canReorderItems && !!onReorderByDelta;
 
-  // The item content wrapped in swipeable
-  const itemContent = (
+  // Render the item with drag animation applied when dragging
+  return (
     <Animated.View
       style={[
         styles.container,
@@ -387,17 +389,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       </LazySwipeableItem>
     </Animated.View>
   );
-
-  // Wrap with gesture detector if drag is enabled
-  if (isDragEnabled) {
-    return (
-      <GestureDetector gesture={panGesture}>
-        {itemContent}
-      </GestureDetector>
-    );
-  }
-
-  return itemContent;
 };
 
 const styles = StyleSheet.create(theme => ({
@@ -418,10 +409,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   dragHandle: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
+    // Ensure the drag handle is above other elements for touch
+    zIndex: 10,
   },
 }));
 
