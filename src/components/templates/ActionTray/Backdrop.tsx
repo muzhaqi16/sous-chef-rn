@@ -1,10 +1,10 @@
 import React, { memo } from 'react';
-import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { StyleSheet } from 'react-native-unistyles';
 import type { BackdropProps } from './types';
 
 export const Backdrop = memo<BackdropProps>(({
@@ -37,7 +37,11 @@ Backdrop.displayName = 'Backdrop';
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 1)', // Will be controlled by animated opacity
   },
 });

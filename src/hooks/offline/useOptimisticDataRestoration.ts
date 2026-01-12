@@ -1,4 +1,4 @@
-import { useEffect, startTransition } from 'react';
+import { useEffect, startTransition, useMemo } from 'react';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -80,13 +80,14 @@ export function useOptimisticDataRestoration(
  * Hook to restore optimistic data for multiple entity types
  *
  * Convenience wrapper for restoring multiple types at once.
+ * Handles array stability internally - consumers can pass inline arrays.
  *
  * @param entityTypes - Array of GraphQL typenames
  * @param enabled - Whether restoration is enabled (default: true)
  *
  * @example
  * ```typescript
- * // Restore both lists and items in one call
+ * // Restore both lists and items in one call - inline array is fine
  * useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
  * ```
  */
@@ -96,8 +97,13 @@ export function useOptimisticDataRestorationMultiple(
 ) {
   const { user } = useAuth();
 
+  // Serialize array for stable dependency comparison
+  // This allows consumers to pass inline arrays without causing infinite loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableEntityTypes = useMemo(() => entityTypes, [entityTypes.join(',')]);
+
   useEffect(() => {
-    if (!user?.id || !enabled || entityTypes.length === 0) return;
+    if (!user?.id || !enabled || stableEntityTypes.length === 0) return;
 
     // Defer restoration to avoid blocking navigation/initial render
     // Using startTransition marks this as non-urgent work that won't block the UI
@@ -106,7 +112,7 @@ export function useOptimisticDataRestorationMultiple(
       client.cache.batch({
         update: (cache) => {
           // Process all entity types
-          entityTypes.forEach(entityType => {
+          stableEntityTypes.forEach(entityType => {
             const allUpdates = optimisticDataPersistence.getAllForType(entityType);
 
             if (allUpdates.size === 0) return;
@@ -159,5 +165,5 @@ export function useOptimisticDataRestorationMultiple(
         }
       });
     });
-  }, [user?.id, entityTypes, enabled]);
+  }, [user?.id, stableEntityTypes, enabled]);
 }

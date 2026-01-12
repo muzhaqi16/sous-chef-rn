@@ -11,3 +11,4 @@ export {
   type UpdateOperationConfig,
   type RemoveOperationConfig,
 } from './useCrudOperations';
+export { useStableRef } from './useStableRef';

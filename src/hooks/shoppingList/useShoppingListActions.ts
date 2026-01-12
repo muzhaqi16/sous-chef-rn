@@ -280,14 +280,16 @@ export function useShoppingListActions({
 
   // Clear all purchased handler
   const handleClearAllPurchased = useCallback(async () => {
-    const purchasedItems = items.filter((item: any) => item.purchaseInfo?.isPurchased);
+    const purchasedItems = items.filter(
+      (item: any) => item.purchaseInfo?.isPurchased,
+    );
 
     if (purchasedItems.length === 0) return;
 
     try {
       haptic.warning();
       await Promise.all(purchasedItems.map(item => removeItem(item.id)));
-    } catch (error) {
+    } catch {
       haptic.error();
       toastService.error('Failed to clear purchased items');
     }

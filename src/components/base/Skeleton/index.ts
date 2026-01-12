@@ -13,6 +13,7 @@ export { SkeletonRectangle } from './SkeletonRectangle';
 
 // Composed components
 export { SkeletonListItem } from './SkeletonListItem';
+export { SkeletonList } from './SkeletonList';
 
 // App-specific skeletons
 export { ShoppingListItemSkeleton } from './ShoppingListItemSkeleton';

@@ -3,7 +3,7 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { useShoppingListsQuery } from './useShoppingListsQuery';
 import { useShoppingListSelection } from './useShoppingListSelection';
-import { useShoppingListTransform } from './useShoppingListTransform';
+import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListManagement } from './useShoppingListManagement';
 
 /**
@@ -12,7 +12,7 @@ import { useShoppingListManagement } from './useShoppingListManagement';
  * This is a facade that orchestrates specialized hooks:
  * 1. useShoppingListsQuery - Fetch all user's shopping lists (independent of home)
  * 2. useShoppingListSelection - Handle list selection and auto-select
- * 3. useShoppingListManagement - Manage items for current list
+ * 3. useShoppingListManagement - Manage items for current list (with pagination)
  * 4. useShoppingListTransform - Transform items for UI consumption
  *
  * Each composed hook has a single responsibility, making the code
@@ -33,15 +33,25 @@ export function useShoppingListScreen() {
     setSelectedShoppingListId,
   } = useShoppingListSelection(lists);
 
-  // 3. Items: Fetch and manage items for current list
-  // Pass validated currentListId (ensures ID exists in lists, prevents deleted list queries)
-  // Also returns shoppingList details (for permissions, collaborators, home membership)
+  // 3. Items: Fetch and manage items for current list (with pagination)
+  // Returns paginated unpurchasedItems and purchasedItems
   const shoppingListManagement = useShoppingListManagement(currentListId);
-  const { items, shoppingList: currentListDetails, loading: itemsLoading } = shoppingListManagement;
+  const {
+    items,
+    unpurchasedItems: rawUnpurchasedItems,
+    purchasedItems: rawPurchasedItems,
+    shoppingList: currentListDetails,
+    loading: itemsLoading,
+  } = shoppingListManagement;
 
-  // 4. Transform: Convert raw items to UI format
-  const { sortableItems, unpurchasedItems, purchasedItems } =
-    useShoppingListTransform(items);
+  // 4. Transform: Convert raw items to UI format (single consolidated call)
+  // Transforms all arrays in one useMemo call for better performance
+  const { sortableItems, unpurchasedItems: transformedUnpurchasedItems, purchasedItems: transformedPurchasedItems } =
+    useShoppingListTransformMulti({
+      items,
+      rawUnpurchasedItems,
+      rawPurchasedItems,
+    });
 
   // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = useMemo(
@@ -77,8 +87,10 @@ export function useShoppingListScreen() {
     // Items (transformed for UI)
     items,
     sortableItems,
-    unpurchasedItems,
-    purchasedItems,
+    unpurchasedItems: transformedUnpurchasedItems,
+    purchasedItems: transformedPurchasedItems,
+    // Raw items (for hooks that need GraphQL fragment fields like version)
+    rawUnpurchasedItems,
 
     // Loading states
     loading: listsLoading || itemsLoading,

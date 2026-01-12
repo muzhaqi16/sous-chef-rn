@@ -27,6 +27,7 @@ import {
   cleanupAppStateTokenRefresh,
 } from '#store/slices/authSlice';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { initializeDeviceId } from '#/utils/deviceId';
 
 // Enable native screens for better performance
 enableScreens();
@@ -61,6 +62,9 @@ const App = () => {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
+      // Initialize device ID early - needed for WebSocket subscription self-echo filtering
+      initializeDeviceId();
+
       // Check for stored credentials
       hasCredentials().then(result => {
         setHasStoredCredentials(result);
@@ -72,6 +76,12 @@ const App = () => {
 
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');
+
+      // Track app launch event (captures theme at launch time)
+      Telemetry.trackEvent('app_launched', {
+        theme,
+        timestamp: new Date().toISOString(),
+      });
 
       // Start memory monitoring (only in dev or if enabled in settings)
       if (__DEV__) {
@@ -93,17 +103,6 @@ const App = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
-
-  // PERFORMANCE: Track app launch once on hydration
-  useEffect(() => {
-    if (isHydrated && hydrationInitializedRef.current) {
-      Telemetry.trackEvent('app_launched', {
-        theme,
-        timestamp: new Date().toISOString(),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHydrated]); // Only track on hydration, not theme changes
 
   // Track theme changes separately
   const prevThemeRef = useRef(theme);

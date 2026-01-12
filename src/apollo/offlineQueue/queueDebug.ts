@@ -200,20 +200,8 @@ const queueDebug: QueueDebugTools = {
 
 // Expose debug tools in development only
 if (__DEV__) {
-  // @ts-ignore
+  // @ts-ignore - Debug tools available via __QUEUE_DEBUG__ in dev console
   global.__QUEUE_DEBUG__ = queueDebug;
-
-  console.log('🛠️ Queue Debug Tools Available:');
-  console.log('   Access via: __QUEUE_DEBUG__');
-  console.log('   Commands:');
-  console.log('     __QUEUE_DEBUG__.viewQueue()');
-  console.log('     __QUEUE_DEBUG__.getQueueStats()');
-  console.log('     __QUEUE_DEBUG__.processQueue()');
-  console.log('     __QUEUE_DEBUG__.clearQueue()');
-  console.log('     __QUEUE_DEBUG__.retryFailedMutations(userId)');
-  console.log('     __QUEUE_DEBUG__.exportQueue()');
-  console.log('     __QUEUE_DEBUG__.simulateOffline()');
-  console.log('     __QUEUE_DEBUG__.simulateOnline()');
 }
 
 export { queueDebug };

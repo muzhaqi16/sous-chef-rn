@@ -19,11 +19,6 @@ interface CollapsiblePurchasedSectionProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => Promise<void>;
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
@@ -41,7 +36,6 @@ export const CollapsiblePurchasedSection: React.FC<
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
-  onSortOrderUpdate,
   onClearAll,
   disabled,
   onSwipeableWillOpen,
@@ -195,7 +189,6 @@ export const CollapsiblePurchasedSection: React.FC<
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
             onTogglePurchase={onTogglePurchase}
-            onSortOrderUpdate={onSortOrderUpdate}
             disabled={disabled}
             showsVerticalScrollIndicator={false}
             onSwipeableWillOpen={onSwipeableWillOpen}

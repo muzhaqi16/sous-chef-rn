@@ -23,3 +23,17 @@ export {
   // Direct eviction
   createItemEvictor,
 } from './cacheUpdaters';
+
+export {
+  // Shopping list connection updaters
+  addToShoppingListItemsConnection,
+  removeFromShoppingListItemsConnection,
+  // Shopping list aliased field updaters
+  addToUnpurchasedItems,
+  removeFromUnpurchasedItems,
+  addToPurchasedItems,
+  removeFromPurchasedItems,
+  // High-level move utilities (handles both itemsConnection and aliased fields)
+  moveShoppingListItemToPurchased,
+  moveShoppingListItemToUnpurchased,
+} from './shoppingListCacheUpdaters';

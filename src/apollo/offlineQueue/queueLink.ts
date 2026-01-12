@@ -1,4 +1,4 @@
-import { ApolloLink, Observable, Operation, FetchResult } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { generateId } from '#/utils/generateId';
 import { useStore } from '#store';
@@ -58,7 +58,7 @@ export const createQueueLink = () => {
     // Offline - queue the mutation
     console.log(`📴 Queue Link: Offline, queuing mutation ${operation.operationName}`);
 
-    return new Observable<FetchResult>((observer) => {
+    return new Observable((observer) => {
       try {
         // Get current user
         const user = state.user;
@@ -115,7 +115,7 @@ export const createQueueLink = () => {
 /**
  * Check if operation is a mutation
  */
-function isMutation(operation: Operation): boolean {
+function isMutation(operation: { query: import('graphql').DocumentNode }): boolean {
   const definition = getMainDefinition(operation.query);
   return (
     definition.kind === 'OperationDefinition' &&

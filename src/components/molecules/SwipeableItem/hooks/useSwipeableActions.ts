@@ -1,5 +1,5 @@
 import { useRef, ComponentRef } from 'react';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 interface UseSwipeableActionsProps {
   onEdit?: () => void;

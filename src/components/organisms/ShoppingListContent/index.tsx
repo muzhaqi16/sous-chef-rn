@@ -10,11 +10,6 @@ interface ShoppingListContentProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
@@ -32,7 +27,6 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   disabled,
@@ -81,7 +75,6 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}
         onTogglePurchase={onTogglePurchase}
-        onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
         onSwipeableWillOpen={onSwipeableWillOpen}
@@ -98,7 +91,6 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
             onTogglePurchase={onTogglePurchase}
-            onSortOrderUpdate={onSortOrderUpdate}
             onClearAll={onClearAllPurchased}
             disabled={disabled}
             onSwipeableWillOpen={onSwipeableWillOpen}

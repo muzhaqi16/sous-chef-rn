@@ -71,7 +71,13 @@ export const ShareList: React.FC = () => {
   // Get current user to check if they are owner
   const currentUser = useAppStore(selectUser);
 
-  const { loading, collaborators, name: listName, refetch } = useShoppingListDetails(listId);
+  const {
+    loading,
+    isRefetching,
+    collaborators,
+    name: listName,
+    refetch,
+  } = useShoppingListDetails(listId);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -101,7 +107,7 @@ export const ShareList: React.FC = () => {
       });
       setEmail('');
       refetch();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to send invitation');
     } finally {
       setSharing(false);
@@ -126,7 +132,7 @@ export const ShareList: React.FC = () => {
                   },
                 });
                 refetch();
-              } catch (error) {
+              } catch {
                 Alert.alert('Error', 'Failed to remove member');
               }
             },
@@ -150,7 +156,9 @@ export const ShareList: React.FC = () => {
 
     Alert.alert(
       'Leave Shopping List',
-      `Are you sure you want to leave "${listName || 'this list'}"? You will lose access to this shared list.`,
+      `Are you sure you want to leave "${
+        listName || 'this list'
+      }"? You will lose access to this shared list.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -170,7 +178,7 @@ export const ShareList: React.FC = () => {
                 },
               });
               navigation.goBack();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to leave list');
             } finally {
               setLeaving(false);
@@ -290,6 +298,8 @@ export const ShareList: React.FC = () => {
             data={collaborators}
             keyExtractor={member => member.id}
             renderItem={renderMemberItem}
+            refreshing={isRefetching}
+            onRefresh={refetch}
           />
         </View>
       )}

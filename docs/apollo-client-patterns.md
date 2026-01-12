@@ -1148,12 +1148,12 @@ optimisticResponse: {
 
 ### When Subscriptions Need Manual writeFragment
 
-When using custom `onData` callbacks in subscriptions, Apollo doesn't auto-normalize the data. You must explicitly write to cache:
+When using custom `onData` callbacks with `CacheStrategy.NONE`, you should explicitly write entity updates to cache:
 
 ```typescript
 customOnData: (payload, client) => {
   if (mutation === 'UPDATE') {
-    // Required: Apollo doesn't auto-normalize in onData callbacks
+    // Write the updated entity to cache
     client.cache.writeFragment({
       id: client.cache.identify({ __typename: 'Item', id: item.id }),
       fragment: ItemFragmentDoc,
@@ -1164,6 +1164,43 @@ customOnData: (payload, client) => {
 ```
 
 If you don't use custom `onData` (let Apollo handle it with `CacheStrategy.AUTOMATIC`), this isn't needed.
+
+### Pattern: Subscription Updates for Filtered Connections ⭐ IMPORTANT
+
+When items need to move between filtered connections (e.g., `unpurchasedItems` → `purchasedItems`), use the **mutation type** to determine cache operations instead of comparing old vs new values.
+
+**Why?** Apollo auto-normalizes subscription data, which updates entity fields (like `isPurchased`). However, this normalization happens **before** the `onData` callback runs, so comparing old vs new values will show them as equal (both already updated). Use the mutation type instead.
+
+**Pattern (from `usePantrySubscriptions.ts` and `useShoppingListSubscriptions.ts`):**
+```typescript
+customOnData: (payload, client) => {
+  const mutation = payload.mutation;
+  const item = payload.item;
+
+  // Use mutation type directly - don't compare old vs new values (race condition)
+  if (mutation === MutationType.ITEM_COMPLETED) {
+    // Move from unpurchased to purchased connection
+    removeFromUnpurchasedItems(client.cache, parentId, item.id);
+    addToPurchasedItems(client.cache, parentId, item);
+  } else if (mutation === MutationType.ITEM_UNCOMPLETED) {
+    // Move from purchased to unpurchased connection
+    removeFromPurchasedItems(client.cache, parentId, item.id);
+    addToUnpurchasedItems(client.cache, parentId, item);
+  } else if (mutation === MutationType.UPDATE || mutation === 'ITEM_UPDATED') {
+    // Simple field update - just writeFragment
+    client.cache.writeFragment({ ... });
+  }
+}
+```
+
+**Key points:**
+- Apollo auto-normalizes **entity field updates** but does NOT move items between filtered connections
+- Use the mutation type (`ITEM_COMPLETED`, `ITEM_UNCOMPLETED`, etc.) to know what action occurred
+- This pattern aligns with how Relay handles connection updates with declarative mutation directives
+
+**Reference implementations:**
+- `src/hooks/subscriptions/usePantrySubscriptions.ts` (lines 80-126)
+- `src/hooks/subscriptions/useShoppingListSubscriptions.ts` (lines 80-239)
 
 ---
 
@@ -1226,5 +1263,5 @@ Provides standardized CRUD operation wrappers with built-in validation and error
 
 ---
 
-**Last Updated**: 2026-01-06
+**Last Updated**: 2026-01-10
 **Maintainers**: Development Team

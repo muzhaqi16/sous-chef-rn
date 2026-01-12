@@ -168,6 +168,56 @@ query GetDefaultShoppingList {
   }
 }
 
+# Combined paginated items query for Shopping/Purchased tabs
+# Uses GraphQL aliases to fetch BOTH lists in ONE request
+# Each tab has independent pagination cursors
+query GetShoppingListItemsPaginated(
+  $id: ID!
+  $first: Int!
+  $unpurchasedAfter: String
+  $purchasedAfter: String
+) {
+  shoppingList(id: $id) {
+    id
+    unpurchasedItems: itemsConnection(
+      first: $first
+      after: $unpurchasedAfter
+      filters: { isPurchased: false }
+      orderBy: { sortOrder: ASC }
+    ) {
+      totalCount
+      edges {
+        cursor
+        node {
+          ...ShoppingListItemDisplayFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+    purchasedItems: itemsConnection(
+      first: $first
+      after: $purchasedAfter
+      filters: { isPurchased: true }
+      orderBy: { sortOrder: ASC }
+    ) {
+      totalCount
+      edges {
+        cursor
+        node {
+          ...ShoppingListItemDisplayFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
 query GetShoppingListItem($id: ID!) {
   shoppingListItem(id: $id) {
     ...ShoppingListItemFragment

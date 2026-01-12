@@ -17,28 +17,33 @@ import {
   useShoppingListUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   ShoppingListItemFragmentDoc,
+  ShoppingListItemDisplayFragmentDoc,
   GetShoppingListDocument,
   GetShoppingListQuery,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
 import {
-  createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
+  addToShoppingListItemsConnection,
+  removeFromShoppingListItemsConnection,
+  moveShoppingListItemToPurchased,
+  moveShoppingListItemToUnpurchased,
 } from '#/apollo/utils';
 
-// Cache updaters for ShoppingList.itemsConnection (connection pattern)
-const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
+/**
+ * Animation scheduler function type for coordinating exit animations
+ * with subscription cache updates
+ */
+type ScheduleAnimationFn = (
+  itemId: string,
+  direction: 1 | -1,
+  onComplete: () => void,
+) => void;
 
-const removeFromShoppingListItemsConnection = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
+/**
+ * Entry animation scheduler function type for items appearing in destination list
+ */
+type ScheduleEntryAnimationFn = (itemId: string, direction: 1 | -1) => void;
 
 /**
  * Initialize shopping list subscriptions for the current user
@@ -48,8 +53,14 @@ const removeFromShoppingListItemsConnection = createRemoveFromParentConnectionUp
  * the user's selected shopping list.
  *
  * @param userId - Current user ID for deduplication
+ * @param scheduleAnimation - Optional callback to schedule exit animations before cache updates
+ * @param scheduleEntryAnimation - Optional callback to schedule entry animations after cache updates
  */
-export function useShoppingListSubscriptions(userId?: string) {
+export function useShoppingListSubscriptions(
+  userId?: string,
+  scheduleAnimation?: ScheduleAnimationFn,
+  scheduleEntryAnimation?: ScheduleEntryAnimationFn,
+) {
   // Get selected shopping list from global store
   // This allows subscriptions to follow the user's current context
   const selectedShoppingListId = useStore(state => state.selectedShoppingListId) || undefined;
@@ -74,29 +85,50 @@ export function useShoppingListSubscriptions(userId?: string) {
 
       const mutation = payload.mutation;
       const item = payload.item;
+      const payloadUserId = payload.userId;
 
       if (!item) return;
+
+      // Skip self-echo: if this subscription is from our own mutation, skip processing
+      // The mutation's cache.modify already handled the update
+      // Note: This also blocks updates from same user on different devices
+      // When multi-device support is needed, switch to originatorClientId filtering
+      if (payloadUserId && userId && payloadUserId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [Subscription] Skipping self-echo (same user)', item.id);
+        }
+        return;
+      }
 
       if (mutation === MutationType.CREATE || mutation === MutationType.ITEM_ADDED) {
         // Add new item to ShoppingList.itemsConnection
         addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
       } else if (mutation === MutationType.DELETE || mutation === MutationType.ITEM_REMOVED) {
         // Remove item from ShoppingList.itemsConnection
-        removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-          evictItem: true,
-        });
-      } else if (mutation === 'ITEM_UPDATED') {
-        // Read old item from cache BEFORE writing to detect sortOrder change
+        // If animation scheduler is available, play exit animation first
+        if (scheduleAnimation) {
+          scheduleAnimation(item.id, -1, () => {
+            removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+              evictItem: true,
+            });
+          });
+        } else {
+          removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+            evictItem: true,
+          });
+        }
+      } else if (mutation === 'ITEM_UPDATED' || mutation === MutationType.ITEM_COMPLETED || mutation === MutationType.ITEM_UNCOMPLETED) {
+        // Read old item to detect sortOrder changes (needed for re-sorting)
+        // Use ShoppingListItemDisplayFragment because that's what GetShoppingListItemsPaginated uses
         const oldItem = client.cache.readFragment({
           id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
-          fragment: ShoppingListItemFragmentDoc,
-          fragmentName: 'ShoppingListItemFragment',
+          fragment: ShoppingListItemDisplayFragmentDoc,
+          fragmentName: 'ShoppingListItemDisplayFragment',
         }) as { sortOrder?: string | null } | null;
 
         const sortOrderChanged = oldItem?.sortOrder !== item.sortOrder;
 
         // Write updated item data to cache using fragment
-        // Apollo does NOT auto-normalize subscription data when using onData callback
         // This handles quantity, sortOrder, purchaseInfo, and all other field updates
         client.cache.writeFragment({
           id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
@@ -104,6 +136,50 @@ export function useShoppingListSubscriptions(userId?: string) {
           fragmentName: 'ShoppingListItemFragment',
           data: item,
         });
+
+        // Use mutation type to determine cache operations (aligns with usePantrySubscriptions.ts pattern)
+        // Apollo auto-normalizes subscription data BEFORE onData runs, so comparing old vs new
+        // values doesn't work - both will show the same value. Use mutation type instead.
+        const isCompletedMutation = mutation === MutationType.ITEM_COMPLETED;
+        const isUncompletedMutation = mutation === MutationType.ITEM_UNCOMPLETED;
+
+        // Debug logging for subscription cache updates (only in development)
+        if (__DEV__) {
+          console.log('🔍 [Subscription Cache Debug]', {
+            mutation,
+            itemId: item.id,
+            isCompletedMutation,
+            isUncompletedMutation,
+            willMoveItem: isCompletedMutation || isUncompletedMutation,
+          });
+        }
+
+        // Move item between purchased/unpurchased connections using reusable utilities
+        // These handle both itemsConnection (GetShoppingListQuery) and aliased fields (GetShoppingListItemsPaginatedQuery)
+        // If animation scheduler is available, play exit animation first before moving
+        if (isCompletedMutation) {
+          if (scheduleAnimation) {
+            // Slide right for marking as purchased
+            scheduleAnimation(item.id, 1, () => {
+              moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+              // Schedule entry animation for when item appears in Purchased section
+              scheduleEntryAnimation?.(item.id, 1);
+            });
+          } else {
+            moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+          }
+        } else if (isUncompletedMutation) {
+          if (scheduleAnimation) {
+            // Slide left for unmarking as purchased
+            scheduleAnimation(item.id, -1, () => {
+              moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+              // Schedule entry animation for when item appears in Shopping section
+              scheduleEntryAnimation?.(item.id, -1);
+            });
+          } else {
+            moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+          }
+        }
 
         // Re-sort itemsConnection edges if sortOrder changed
         // This ensures multi-client sync: when one client reorders, others see the new order

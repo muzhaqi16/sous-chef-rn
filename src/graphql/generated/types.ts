@@ -4882,6 +4882,7 @@ export enum MutationType {
   ItemAdded = 'ITEM_ADDED',
   ItemCompleted = 'ITEM_COMPLETED',
   ItemRemoved = 'ITEM_REMOVED',
+  ItemUncompleted = 'ITEM_UNCOMPLETED',
   ItemUpdated = 'ITEM_UPDATED',
   StatusChanged = 'STATUS_CHANGED',
   Updated = 'UPDATED',
@@ -7280,6 +7281,7 @@ export type ShoppingListCollaboratorsConnectionArgs = {
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ShoppingListItemFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ShoppingListItemOrderBy>;
@@ -7358,6 +7360,7 @@ export type ShoppingListCollaboratorChangedPayload = {
   collaborator?: Maybe<ShoppingListCollaborator>;
   listId: Scalars['ID']['output'];
   mutation: MutationType;
+  originatorClientId?: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
 };
@@ -7458,6 +7461,7 @@ export type ShoppingListItemChangedPayload = {
   item?: Maybe<ShoppingListItem>;
   listId: Scalars['ID']['output'];
   mutation: MutationType;
+  originatorClientId?: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   updatedFields?: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
@@ -7475,6 +7479,12 @@ export type ShoppingListItemEdge = {
   __typename?: 'ShoppingListItemEdge';
   cursor: Scalars['String']['output'];
   node: ShoppingListItem;
+};
+
+/** Filters for shopping list items pagination */
+export type ShoppingListItemFilters = {
+  /** Filter by purchase status */
+  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 /** Order by options for shopping list items */
@@ -7558,6 +7568,7 @@ export type ShoppingListStatusChangedPayload = {
   listId: Scalars['ID']['output'];
   mutation: MutationType;
   newStatus: ListStatus;
+  originatorClientId?: Maybe<Scalars['ID']['output']>;
   previousStatus?: Maybe<ListStatus>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
@@ -7603,6 +7614,7 @@ export type ShoppingListUpdatedPayload = {
   __typename?: 'ShoppingListUpdatedPayload';
   mutation: MutationType;
   node?: Maybe<ShoppingList>;
+  originatorClientId?: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   updatedFields?: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
@@ -19550,6 +19562,174 @@ export type GetDefaultShoppingListQuery = {
                         }
                       | null
                       | undefined;
+                  }
+                | null
+                | undefined;
+            };
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor?: string | null | undefined;
+          };
+        };
+      }
+    | null
+    | undefined;
+};
+
+export type GetShoppingListItemsPaginatedQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+  first: Scalars['Int']['input'];
+  unpurchasedAfter?: InputMaybe<Scalars['String']['input']>;
+  purchasedAfter?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type GetShoppingListItemsPaginatedQuery = {
+  __typename?: 'Query';
+  shoppingList?:
+    | {
+        __typename?: 'ShoppingList';
+        id: string;
+        unpurchasedItems: {
+          __typename?: 'ShoppingListItemConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListItemEdge';
+            cursor: string;
+            node: {
+              __typename?: 'ShoppingListItem';
+              id: string;
+              itemName?: string | null | undefined;
+              quantity?: number | null | undefined;
+              quantityInput?: string | null | undefined;
+              sortOrder: string;
+              unitName?: string | null | undefined;
+              category?: string | null | undefined;
+              version: number;
+              purchaseInfo: {
+                __typename?: 'ShoppingListItemPurchaseInfo';
+                isPurchased: boolean;
+              };
+              unit?:
+                | {
+                    __typename?: 'Unit';
+                    id: string;
+                    name: string;
+                    symbol: string;
+                  }
+                | null
+                | undefined;
+              item?:
+                | {
+                    __typename?: 'Item';
+                    id: string;
+                    imageUrl?: string | null | undefined;
+                    categories?:
+                      | Array<{
+                          __typename?: 'ItemCategory';
+                          id: string;
+                          isPrimary: boolean;
+                          category: {
+                            __typename?: 'Category';
+                            id: string;
+                            name: string;
+                          };
+                        }>
+                      | null
+                      | undefined;
+                    units: Array<{
+                      __typename?: 'ItemUnit';
+                      id: string;
+                      isDefault: boolean;
+                      isPreferred: boolean;
+                      displayNameSingular?: string | null | undefined;
+                      displayNamePlural?: string | null | undefined;
+                      unit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
+                    }>;
+                  }
+                | null
+                | undefined;
+            };
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor?: string | null | undefined;
+          };
+        };
+        purchasedItems: {
+          __typename?: 'ShoppingListItemConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListItemEdge';
+            cursor: string;
+            node: {
+              __typename?: 'ShoppingListItem';
+              id: string;
+              itemName?: string | null | undefined;
+              quantity?: number | null | undefined;
+              quantityInput?: string | null | undefined;
+              sortOrder: string;
+              unitName?: string | null | undefined;
+              category?: string | null | undefined;
+              version: number;
+              purchaseInfo: {
+                __typename?: 'ShoppingListItemPurchaseInfo';
+                isPurchased: boolean;
+              };
+              unit?:
+                | {
+                    __typename?: 'Unit';
+                    id: string;
+                    name: string;
+                    symbol: string;
+                  }
+                | null
+                | undefined;
+              item?:
+                | {
+                    __typename?: 'Item';
+                    id: string;
+                    imageUrl?: string | null | undefined;
+                    categories?:
+                      | Array<{
+                          __typename?: 'ItemCategory';
+                          id: string;
+                          isPrimary: boolean;
+                          category: {
+                            __typename?: 'Category';
+                            id: string;
+                            name: string;
+                          };
+                        }>
+                      | null
+                      | undefined;
+                    units: Array<{
+                      __typename?: 'ItemUnit';
+                      id: string;
+                      isDefault: boolean;
+                      isPreferred: boolean;
+                      displayNameSingular?: string | null | undefined;
+                      displayNamePlural?: string | null | undefined;
+                      unit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
+                    }>;
                   }
                 | null
                 | undefined;

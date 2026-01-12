@@ -1,15 +1,19 @@
+import { NetworkStatus } from '@apollo/client';
 import { useGetShoppingListQuery } from '#generated';
 
 export function useShoppingListDetails(listId: string | undefined) {
-  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available for detail views
-  // - errorPolicy: 'ignore' returns cached data when network fails
+  // Fetch policies per docs/apollo-client-patterns.md:
+  // - cache-and-network: Shows cache immediately, fetches fresh in background
+  // - nextFetchPolicy: cache-first prevents re-fetch on re-render/tab switch
+  // - notifyOnNetworkStatusChange: Enables tracking of refetch status
 
-  const { data, loading, error, refetch } = useGetShoppingListQuery({
+  const { data, loading, error, refetch, networkStatus } = useGetShoppingListQuery({
     variables: { id: listId ?? '' },
     skip: !listId,
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
+    notifyOnNetworkStatusChange: true,
   });
 
   // Real-time updates via subscription are now handled by SubscriptionProvider
@@ -17,10 +21,12 @@ export function useShoppingListDetails(listId: string | undefined) {
   // Apollo's normalization, eliminating the need for manual client.writeQuery
 
   const shoppingList = data?.shoppingList || null;
+  const isRefetching = networkStatus === NetworkStatus.refetch;
 
   return {
     shoppingList,
     loading,
+    isRefetching,
     error,
     refetch,
     // Convenience properties

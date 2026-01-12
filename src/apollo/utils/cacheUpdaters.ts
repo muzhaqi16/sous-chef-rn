@@ -387,6 +387,9 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
 
             const existingEdges = existingConnection?.edges || [];
 
+            // Note: We intentionally don't filter edges with temporarily unresolved nodeIds
+            // as this can cause valid items to be incorrectly removed during rapid cache operations
+
             // Check for duplicates if enabled
             if (checkDuplicates) {
               const exists = existingEdges.some(
@@ -394,7 +397,9 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
                   readField('id', edge?.node) === newItem.id,
               );
 
-              if (exists) return existingConnection;
+              if (exists) {
+                return existingConnection;
+              }
             }
 
             // Create new edge
@@ -561,9 +566,13 @@ export function createRemoveFromParentConnectionUpdater(
           ) {
             const existingEdges = existingConnection?.edges || [];
 
-            const edges = existingEdges.filter(
-              (edge: any) => readField('id', edge?.node) !== itemId,
-            );
+            // Filter out only the specific item being removed
+            // Note: We intentionally don't filter edges with temporarily unresolved nodeIds
+            // as this can cause valid items to be incorrectly removed during rapid cache operations
+            const edges = existingEdges.filter((edge: any) => {
+              const nodeId = readField('id', edge?.node);
+              return nodeId !== itemId;
+            });
 
             // Update totalCount if enabled
             const totalCount = updateTotalCount

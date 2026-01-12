@@ -46,7 +46,7 @@ const processQueue = async () => {
   if (operation) {
     try {
       await operation();
-    } catch (error) {
+    } catch {
       // Operation will handle its own error via reject
     }
   }
@@ -141,7 +141,7 @@ export async function loadCredentials(
     }
     const result = { username: creds.username, password: creds.password };
     return result;
-  } catch (err) {
+  } catch {
     // could also inspect err.code here if you want, but treating
     // any error as "no creds" is simplest:
     return null;
@@ -188,7 +188,7 @@ export async function hasCredentials(): Promise<boolean> {
           credentialsExistCache = result;
 
           return result;
-        } catch (retryErr) {
+        } catch {
           // Don't cache errors
           return false;
         }

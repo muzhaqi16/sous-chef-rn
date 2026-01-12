@@ -25,8 +25,14 @@ import {
   ServerError,
   ServerParseError,
 } from '@apollo/client/errors';
-import { isQueryComplexityError, getQueryComplexityMessage } from '#/utils/errors/queryComplexity';
-import { isVersionConflictError, getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import {
+  isQueryComplexityError,
+  getQueryComplexityMessage,
+} from '#/utils/errors/queryComplexity';
+import {
+  isVersionConflictError,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 /**
  * Result type for error operations
@@ -62,7 +68,8 @@ class ErrorService {
     AUTH_REFRESH_TOKEN_MISSING: 'Session expired. Please sign in again',
     AUTH_REFRESH_TOKEN_INVALID: 'Session expired. Please sign in again',
     AUTH_CREDENTIALS_INVALID: 'Invalid email or password',
-    AUTH_ACCOUNT_LOCKED: 'Your account has been temporarily locked for security',
+    AUTH_ACCOUNT_LOCKED:
+      'Your account has been temporarily locked for security',
     AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before continuing',
 
     // Authorization Errors
@@ -107,16 +114,20 @@ class ErrorService {
     SERVICE_OVERLOADED: 'Service is overloaded. Please try again later',
 
     // Network/Offline Errors
-    NETWORK_ERROR: "You're currently offline. Showing cached data when available.",
-    CIRCUIT_OPEN: "You're currently offline. Showing cached data when available.",
+    NETWORK_ERROR:
+      "You're currently offline. Showing cached data when available.",
+    CIRCUIT_OPEN:
+      "You're currently offline. Showing cached data when available.",
     CIRCUIT_HALF_OPEN: 'Reconnecting... You may see cached data.',
 
     // Query Complexity Errors
     QUERY_TOO_COMPLEX: 'Query is too complex. Please simplify your request.',
-    PAGINATION_LIMIT_EXCEEDED: 'Too many items requested. Maximum is 100 items per request.',
+    PAGINATION_LIMIT_EXCEEDED:
+      'Too many items requested. Maximum is 100 items per request.',
 
     // Version Control Errors
-    VERSION_CONFLICT: 'This item was updated by another user. Please refresh and try again.',
+    VERSION_CONFLICT:
+      'This item was updated by another user. Please refresh and try again.',
 
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
@@ -158,7 +169,9 @@ class ErrorService {
   }
 
   getErrorCategory(errorCode: string): string {
-    for (const [prefix, category] of Object.entries(ErrorService.ERROR_CATEGORIES)) {
+    for (const [prefix, category] of Object.entries(
+      ErrorService.ERROR_CATEGORIES,
+    )) {
       if (errorCode.startsWith(prefix)) {
         return category;
       }
@@ -199,14 +212,16 @@ class ErrorService {
       else if (CombinedGraphQLErrors.is(error)) {
         const graphQLError = error.errors[0];
         if (graphQLError) {
-          errorCode = (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
+          errorCode =
+            (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
           errorMessage = graphQLError.message;
 
           if (
             errorCode === 'VALIDATION_FAILED' &&
             graphQLError.extensions?.validationErrors
           ) {
-            validationErrors = graphQLError.extensions.validationErrors as Record<string, string>;
+            validationErrors = graphQLError.extensions
+              .validationErrors as Record<string, string>;
           }
         }
       } else if (ServerError.is(error)) {
@@ -231,7 +246,8 @@ class ErrorService {
         errorMessage = error;
       }
 
-      const userFriendlyMessage = customMessage || this.getUserFriendlyMessage(errorCode, errorMessage);
+      const userFriendlyMessage =
+        customMessage || this.getUserFriendlyMessage(errorCode, errorMessage);
 
       if (logError) {
         logger.error(`Error in ${operation}:`, {
@@ -252,7 +268,7 @@ class ErrorService {
           validationErrors,
         },
       };
-    } catch (handlerError) {
+    } catch {
       return {
         success: false,
         error: {

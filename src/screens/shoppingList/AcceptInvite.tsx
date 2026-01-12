@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,9 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {Icon} from '#utils';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { Icon } from '#utils';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useMyShoppingListInvitesQuery,
   useAcceptShoppingListInviteMutation,
@@ -23,17 +23,23 @@ type InvitationType = 'shopping_list' | 'home' | 'unknown';
 export const AcceptInvite: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const {token, inviteId} = route.params as {token?: string; inviteId?: string};
-  const {theme} = useUnistyles();
+  const { token, inviteId } = route.params as {
+    token?: string;
+    inviteId?: string;
+  };
+  const { theme } = useUnistyles();
 
   const [processing, setProcessing] = useState(false);
-  const [invitationType, setInvitationType] = useState<InvitationType>('unknown');
+  const [invitationType, setInvitationType] =
+    useState<InvitationType>('unknown');
 
   // Get shopping list invites
-  const {data: shoppingListData, loading: shoppingListLoading} = useMyShoppingListInvitesQuery();
+  const { data: shoppingListData, loading: shoppingListLoading } =
+    useMyShoppingListInvitesQuery();
 
   // Get home invites
-  const {data: homeInviteData, loading: homeInviteLoading} = useGetMyPendingInvitesQuery();
+  const { data: homeInviteData, loading: homeInviteLoading } =
+    useGetMyPendingInvitesQuery();
 
   // Mutations for shopping list invites
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
@@ -49,8 +55,8 @@ export const AcceptInvite: React.FC = () => {
   // Note: Tokens are no longer exposed in query responses for security.
   // When navigating via deep link, token comes from route params.
   // When navigating via in-app UI, inviteId is used to match.
-  const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(inv =>
-    inviteId ? inv.id === inviteId : false,
+  const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(
+    inv => (inviteId ? inv.id === inviteId : false),
   );
 
   const homeInvite = homeInviteData?.myPendingInvites?.find(inv =>
@@ -87,14 +93,14 @@ export const AcceptInvite: React.FC = () => {
     setProcessing(true);
     try {
       if (invitationType === 'shopping_list') {
-        await acceptShoppingListInvite({variables: {token: inviteToken}});
+        await acceptShoppingListInvite({ variables: { token: inviteToken } });
         Alert.alert('Success', 'Shopping list invitation accepted!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else if (invitationType === 'home') {
-        await acceptHomeInvite({variables: {token: inviteToken}});
+        await acceptHomeInvite({ variables: { token: inviteToken } });
         Alert.alert('Success', 'Home invitation accepted!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
+          { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       } else {
         Alert.alert('Error', 'Unknown invitation type');
@@ -106,12 +112,16 @@ export const AcceptInvite: React.FC = () => {
       let errorMessage = 'Failed to accept invitation. ';
 
       if (error.networkError) {
-        errorMessage += 'Network error - check your internet connection and try again.';
+        errorMessage +=
+          'Network error - check your internet connection and try again.';
       } else if (error.graphQLErrors?.length) {
         const graphQLError = error.graphQLErrors[0];
         if (graphQLError.extensions?.code === 'INVITATION_EXPIRED') {
-          errorMessage += 'This invitation has expired. Please ask for a new one.';
-        } else if (graphQLError.extensions?.code === 'INVITATION_ALREADY_ACCEPTED') {
+          errorMessage +=
+            'This invitation has expired. Please ask for a new one.';
+        } else if (
+          graphQLError.extensions?.code === 'INVITATION_ALREADY_ACCEPTED'
+        ) {
           errorMessage += 'This invitation has already been accepted.';
         } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
           errorMessage += 'Session expired - please log in again.';
@@ -150,7 +160,7 @@ export const AcceptInvite: React.FC = () => {
       'Decline Invitation',
       'Are you sure you want to decline this invitation?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Decline',
           style: 'destructive',
@@ -158,13 +168,15 @@ export const AcceptInvite: React.FC = () => {
             setProcessing(true);
             try {
               if (invitationType === 'shopping_list') {
-                await declineShoppingListInvite({variables: {token: inviteToken!}});
+                await declineShoppingListInvite({
+                  variables: { token: inviteToken! },
+                });
               } else if (invitationType === 'home') {
-                await declineHomeInvite({variables: {token: inviteToken!}});
+                await declineHomeInvite({ variables: { token: inviteToken! } });
               }
 
               navigation.goBack();
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to decline invitation');
             } finally {
               setProcessing(false);
@@ -186,15 +198,15 @@ export const AcceptInvite: React.FC = () => {
   if (!shoppingListInvite && !homeInvite) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={[styles.inviteText, {color: theme.colors.error}]}>
+        <Text style={[styles.inviteText, { color: theme.colors.error }]}>
           {invitationType === 'unknown'
             ? 'Invitation not found or expired'
-            : 'Loading invitation details...'
-          }
+            : 'Loading invitation details...'}
         </Text>
         <TouchableOpacity
           style={[styles.button, styles.declineButton]}
-          onPress={() => navigation.goBack()}>
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.declineButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -212,10 +224,10 @@ export const AcceptInvite: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Icon
-          name={invitationType === 'home' ? 'home' : 'shopping-cart'}
-          size={64}
-          color={theme.colors.primary}
-        />
+            name={invitationType === 'home' ? 'home' : 'shopping-cart'}
+            size={64}
+            color={theme.colors.primary}
+          />
         </View>
 
         <Text style={styles.title}>You've been invited!</Text>
@@ -228,32 +240,41 @@ export const AcceptInvite: React.FC = () => {
             : (shoppingListInvite?.invitedBy as any)?.profile?.displayName || // Acceptable: profile not in fragment; gracefully falls back
               shoppingListInvite?.invitedBy?.email ||
               'Someone'}{' '}
-          has invited you to {invitationType === 'home' ? 'join' : 'collaborate on'}
+          has invited you to{' '}
+          {invitationType === 'home' ? 'join' : 'collaborate on'}
         </Text>
 
         <View style={styles.inviteDetails}>
           <Text style={styles.inviteName}>
-            {invitationType === 'home'
-              ? (homeInvite as any)?.home?.name || 'Home' // Acceptable: home.name not in fragment; uses fallback
-              : (shoppingListInvite as any)?.shoppingList?.name || 'Shopping List' // Acceptable: shoppingList.name not in fragment; uses fallback
+            {
+              invitationType === 'home'
+                ? (homeInvite as any)?.home?.name || 'Home' // Acceptable: home.name not in fragment; uses fallback
+                : (shoppingListInvite as any)?.shoppingList?.name ||
+                  'Shopping List' // Acceptable: shoppingList.name not in fragment; uses fallback
             }
           </Text>
           <Text style={styles.inviteType}>
             {invitationType === 'home' ? 'Home' : 'Shopping List'}
           </Text>
           <Text style={styles.inviteRole}>
-            Role: {invitationType === 'home' ? homeInvite?.role : shoppingListInvite?.role}
+            Role:{' '}
+            {invitationType === 'home'
+              ? homeInvite?.role
+              : shoppingListInvite?.role}
           </Text>
         </View>
 
-        {((invitationType === 'shopping_list' && (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
-          (invitationType === 'home' && (homeInvite as any)?.home?.description)) && ( // Acceptable: optional field
+        {((invitationType === 'shopping_list' &&
+          (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
+          (invitationType === 'home' &&
+            (homeInvite as any)?.home?.description)) && ( // Acceptable: optional field
           <View style={styles.messageContainer}>
             <Text style={styles.messageLabel}>Description:</Text>
             <Text style={styles.message}>
-              {invitationType === 'home'
-                ? (homeInvite as any)?.home?.description // Acceptable: optional field for display only
-                : (shoppingListInvite as any)?.shoppingList?.description // Acceptable: optional field for display only
+              {
+                invitationType === 'home'
+                  ? (homeInvite as any)?.home?.description // Acceptable: optional field for display only
+                  : (shoppingListInvite as any)?.shoppingList?.description // Acceptable: optional field for display only
               }
             </Text>
           </View>
@@ -263,14 +284,16 @@ export const AcceptInvite: React.FC = () => {
           <TouchableOpacity
             style={[styles.button, styles.declineButton]}
             onPress={handleDecline}
-            disabled={processing}>
+            disabled={processing}
+          >
             <Text style={styles.declineButtonText}>Decline</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, styles.acceptButton]}
             onPress={handleAccept}
-            disabled={processing}>
+            disabled={processing}
+          >
             {processing ? (
               <ActivityIndicator size="small" color="white" />
             ) : (

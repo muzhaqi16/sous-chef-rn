@@ -44,16 +44,12 @@ export function useScreenTransition(
 
       navigationStartTime.current = performance.now();
 
-      if (__DEV__) {
-        console.log(`[ScreenTransition] ${screenName} focused`);
-      }
-
       return () => {
         // Screen is blurring/unfocusing
         navigationStartTime.current = null;
         mountTime.current = null;
       };
-    }, [enabled, screenName]),
+    }, [enabled]),
   );
 
   // Track mount time
@@ -70,12 +66,6 @@ export function useScreenTransition(
     Telemetry.histogram('screen_mount_duration_ms', mountDuration, {
       screen: screenName,
     });
-
-    if (__DEV__) {
-      console.log(
-        `[ScreenTransition] ${screenName} mounted in ${mountDuration.toFixed(2)}ms`,
-      );
-    }
 
     // Mark screen as interactive after next frame
     // This gives time for initial render to complete
@@ -99,12 +89,6 @@ export function useScreenTransition(
 
         // Record metrics in performance store for dashboard (isolated from main store)
         usePerformanceStore.getState().recordScreenTransition(screenName, mountDuration, interactiveDuration);
-
-        if (__DEV__) {
-          console.log(
-            `[ScreenTransition] ${screenName} interactive in ${interactiveDuration.toFixed(2)}ms`,
-          );
-        }
 
         // Warn if slow transition
         if (interactiveDuration > 500) {

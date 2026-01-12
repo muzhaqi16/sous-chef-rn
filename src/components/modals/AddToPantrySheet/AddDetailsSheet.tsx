@@ -21,10 +21,7 @@ import {
 } from '#components/molecules';
 import type { StorageLocation } from '#components/molecules/InlineStorageLocationAutocomplete';
 import { parseFractionalInput } from '#/utils';
-import {
-  StorageState,
-  useCreatePantryItemMutation,
-} from '#generated';
+import { StorageState, useCreatePantryItemMutation } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 const STORAGE_STATES = Object.values(StorageState);
@@ -305,7 +302,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       });
 
       onSuccess();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to add item. Please try again.');
     }
   }, [

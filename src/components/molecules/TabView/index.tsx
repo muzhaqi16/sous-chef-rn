@@ -1,11 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  useWindowDimensions,
-  ActivityIndicator,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
+import { View, useWindowDimensions, ActivityIndicator, Text } from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
@@ -14,7 +8,6 @@ import {
   Route,
 } from 'react-native-tab-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
 
 export interface TabRoute extends Route {
   key: string;
@@ -33,8 +26,6 @@ export interface TabViewProps {
   onIndexChange?: (index: number) => void;
   renderLazyPlaceholder?: (props: { route: TabRoute }) => React.ReactNode;
   swipeEnabled?: boolean;
-  onRefresh?: () => void | Promise<void>;
-  refreshing?: boolean;
 }
 
 const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
@@ -61,8 +52,6 @@ export const TabView: React.FC<TabViewProps> = ({
   onIndexChange,
   renderLazyPlaceholder,
   swipeEnabled = true,
-  onRefresh,
-  refreshing = false,
 }) => {
   const { theme } = useUnistyles();
   const layout = useWindowDimensions();
@@ -92,61 +81,33 @@ export const TabView: React.FC<TabViewProps> = ({
       }));
 
       return (
-        <View style={styles.tabBarContainer}>
-          <TabBar
-            {...props}
-            navigationState={{
-              ...props.navigationState,
-              routes: routesWithLabels,
-            }}
-            indicatorStyle={{
-              backgroundColor: theme.colors.primary,
-              height: 3,
-            }}
-            scrollEnabled={true}
-            bounces={true}
-            tabStyle={{
-              flex: 1,
-            }}
-            style={{
-              backgroundColor: theme.colors.surface,
-              elevation: 0,
-              shadowOpacity: 0,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border,
-              paddingRight: onRefresh ? 48 : 0,
-            }}
-            activeColor={theme.colors.primary}
-            inactiveColor={theme.colors.textSecondary}
-          />
-          {onRefresh && (
-            <View style={styles.refreshButtonContainer}>
-              <TouchableOpacity
-                onPress={onRefresh}
-                disabled={refreshing}
-                style={styles.refreshButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                {refreshing ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={theme.colors.primary}
-                  />
-                ) : (
-                  <Icon
-                    name="refresh"
-                    size={24}
-                    color={theme.colors.primary}
-                    library="MaterialIcons"
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        <TabBar
+          {...props}
+          navigationState={{
+            ...props.navigationState,
+            routes: routesWithLabels,
+          }}
+          indicatorStyle={{
+            backgroundColor: theme.colors.primary,
+            height: 3,
+          }}
+          scrollEnabled={false}
+          tabStyle={{
+            flex: 1,
+          }}
+          style={{
+            backgroundColor: theme.colors.surface,
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.border,
+          }}
+          activeColor={theme.colors.primary}
+          inactiveColor={theme.colors.textSecondary}
+        />
       );
     },
-    [theme, onRefresh, refreshing],
+    [theme],
   );
 
   return (
@@ -180,23 +141,5 @@ const styles = StyleSheet.create(theme => ({
   },
   placeholderText: {
     fontSize: theme.typography.fontSize.md,
-  },
-  label: {
-    fontSize: theme.typography.fontSize.sm,
-  },
-  tabBarContainer: {
-    position: 'relative',
-  },
-  refreshButtonContainer: {
-    position: 'absolute',
-    right: theme.spacing.sm,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: theme.zIndex.sticky,
-  },
-  refreshButton: {
-    padding: theme.spacing.sm,
   },
 }));
