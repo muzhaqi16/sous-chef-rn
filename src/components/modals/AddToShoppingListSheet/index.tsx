@@ -6,7 +6,11 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation, useBottomSheetBackHandler } from '#hooks';
+import {
+  useSharedBottomSheetConfigs,
+  useAppNavigation,
+  useBottomSheetBackHandler,
+} from '#hooks';
 import {
   useShoppingListSuggestions,
   ShoppingListSuggestionItem,
@@ -67,15 +71,20 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
     useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
 
-  const searchSuggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
+  const searchSuggestions =
+    autocompleteData?.autocompleteItems?.suggestions ?? [];
 
   // Fetch combined suggestions (recently deleted, frequently added, popular)
-  const { grouped, loading: loadingSuggestions, hasSuggestions, refetch } =
-    useShoppingListSuggestions({
-      shoppingListId,
-      limit: 15,
-      skip: !visible,
-    });
+  const {
+    grouped,
+    loading: loadingSuggestions,
+    hasSuggestions,
+    refetch,
+  } = useShoppingListSuggestions({
+    shoppingListId,
+    limit: 15,
+    skip: !visible,
+  });
 
   // Add shopping list item mutation with error handling
   const [addItemMutation, { loading: adding }] =
@@ -178,7 +187,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         searchBarRef.current?.clear();
         setSearchQuery('');
         onItemAdded?.();
-      } catch (error) {
+      } catch {
         toastService.error('Failed to add item. Please try again.');
       }
     },
@@ -209,7 +218,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         toastService.success(`Added ${item.name}`);
         onItemAdded?.();
         refetch();
-      } catch (error) {
+      } catch {
         toastService.error('Failed to add item. Please try again.');
       }
     },
@@ -365,7 +374,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>No suggestions yet</Text>
                     <Text style={styles.emptySubtext}>
-                      Add items to your list and they'll appear here for quick re-adding
+                      Add items to your list and they'll appear here for quick
+                      re-adding
                     </Text>
                   </View>
                 )}

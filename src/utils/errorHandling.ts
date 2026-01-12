@@ -6,8 +6,14 @@ import {
   ServerError,
   ServerParseError,
 } from '@apollo/client/errors';
-import { isQueryComplexityError, getQueryComplexityMessage } from './errors/queryComplexity';
-import { isVersionConflictError, getVersionConflictMessage } from './errors/versionConflict';
+import {
+  isQueryComplexityError,
+  getQueryComplexityMessage,
+} from './errors/queryComplexity';
+import {
+  isVersionConflictError,
+  getVersionConflictMessage,
+} from './errors/versionConflict';
 import { serializeError } from '#/utils/errorSerialization';
 
 export interface ApiErrorResponse {
@@ -99,10 +105,12 @@ export class ErrorHandler {
 
     // Query Complexity Errors (New API Limits)
     QUERY_TOO_COMPLEX: 'Query is too complex. Please simplify your request.',
-    PAGINATION_LIMIT_EXCEEDED: 'Too many items requested. Maximum is 100 items per request.',
+    PAGINATION_LIMIT_EXCEEDED:
+      'Too many items requested. Maximum is 100 items per request.',
 
     // Version Control Errors
-    VERSION_CONFLICT: 'This item was updated by another user. Please refresh and try again.',
+    VERSION_CONFLICT:
+      'This item was updated by another user. Please refresh and try again.',
 
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
@@ -275,7 +283,7 @@ export class ErrorHandler {
         isAuthError,
         validationErrors,
       };
-    } catch (handlerError) {
+    } catch {
       // Fallback error handling if anything goes wrong in processing
       return {
         code: 'ERROR_HANDLER_FAILED',
@@ -343,13 +351,16 @@ export const getErrorMessage = (error: any): string => {
 // Hook for handling errors in components
 // Memoized to prevent unstable references in effect dependencies
 export const useErrorHandler = () => {
-  return useMemo(() => ({
-    handleApolloError: ErrorHandler.handleApolloError,
-    handleGenericError: ErrorHandler.handleGenericError,
-    getUserFriendlyMessage: ErrorHandler.getUserFriendlyMessage,
-    getErrorCategory: ErrorHandler.getErrorCategory,
-    shouldRetry: ErrorHandler.shouldRetry,
-    isAuthError: ErrorHandler.isAuthError,
-    getErrorMessage,
-  }), []); // Empty deps - these are all static class methods
+  return useMemo(
+    () => ({
+      handleApolloError: ErrorHandler.handleApolloError,
+      handleGenericError: ErrorHandler.handleGenericError,
+      getUserFriendlyMessage: ErrorHandler.getUserFriendlyMessage,
+      getErrorCategory: ErrorHandler.getErrorCategory,
+      shouldRetry: ErrorHandler.shouldRetry,
+      isAuthError: ErrorHandler.isAuthError,
+      getErrorMessage,
+    }),
+    [],
+  ); // Empty deps - these are all static class methods
 };

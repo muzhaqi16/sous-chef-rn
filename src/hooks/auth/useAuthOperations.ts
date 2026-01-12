@@ -59,7 +59,10 @@ interface AuthOperationsProps {
   biometricSetup: BiometricSetupEvents;
   navigation: NavigationEvents;
   authState: AuthStateEvents;
-  shouldShowPostLoginBiometricPrompt: (user: { id: string; email: string }) => Promise<{ shouldShow: boolean; reason?: string; }>;
+  shouldShowPostLoginBiometricPrompt: (user: {
+    id: string;
+    email: string;
+  }) => Promise<{ shouldShow: boolean; reason?: string }>;
 }
 
 /**
@@ -124,7 +127,7 @@ export const useAuthOperations = ({
         }
 
         setIsLoading(false);
-      } catch (handlerError) {
+      } catch {
         // Fallback error handling - show generic message
         toast({
           message: 'Login failed. Please check your credentials and try again.',
@@ -138,7 +141,11 @@ export const useAuthOperations = ({
   );
 
   const handleLogin = useCallback(
-    async (loginResponse: any, shouldRemember?: boolean, loginCredentials?: LoginCredentials) => {
+    async (
+      loginResponse: any,
+      shouldRemember?: boolean,
+      loginCredentials?: LoginCredentials,
+    ) => {
       if (!loginResponse?.user) {
         return;
       }
@@ -182,14 +189,16 @@ export const useAuthOperations = ({
 
       // User is fully authenticated - check biometric setup eligibility
       // BUT skip during registration flow, email verification, or onboarding to prevent unwanted biometric prompts
-      if (loginCredentials &&
-          !isInRegistrationFlow &&
-          user.emailVerified &&
-          user.onBoarded) {
+      if (
+        loginCredentials &&
+        !isInRegistrationFlow &&
+        user.emailVerified &&
+        user.onBoarded
+      ) {
         try {
           const result = await shouldShowPostLoginBiometricPrompt({
             id: user.id,
-            email: loginCredentials.email
+            email: loginCredentials.email,
           });
 
           if (result.shouldShow) {
@@ -254,12 +263,7 @@ export const useAuthOperations = ({
       // If somehow user is already onboarded, go to main app
       navigation.onNavigate('main_app');
     },
-    [
-      authState,
-      handleAuthSuccess,
-      registerDeviceInBackground,
-      navigation,
-    ],
+    [authState, handleAuthSuccess, registerDeviceInBackground, navigation],
   );
 
   // Auto-login functionality
@@ -329,12 +333,7 @@ export const useAuthOperations = ({
 
       return false;
     }
-  }, [
-    credentialStorage,
-    loginMutation,
-    handleLogin,
-    handleAuthError,
-  ]);
+  }, [credentialStorage, loginMutation, handleLogin, handleAuthError]);
 
   // Auth mutations
   const login = useCallback(
@@ -344,14 +343,19 @@ export const useAuthOperations = ({
         const result = await loginMutation({ variables: { input } });
 
         if (result.data?.login) {
-          const loginCredentials = { email: input.email, password: input.password };
+          const loginCredentials = {
+            email: input.email,
+            password: input.password,
+          };
 
           // Handle login success first
           await handleLogin(result.data.login, true, loginCredentials);
 
           // Show credential storage prompt as fallback if showRememberPrompt and no biometric prompt shown
           if (showRememberPrompt) {
-            const hasStoredCreds = await credentialStorage.onCredentialCheck(input.email);
+            const hasStoredCreds = await credentialStorage.onCredentialCheck(
+              input.email,
+            );
             if (!hasStoredCreds && shouldShowCredentialPrompt()) {
               rememberMe.onShowRememberMe(loginCredentials);
               trackCredentialPromptShown();
@@ -375,7 +379,15 @@ export const useAuthOperations = ({
         setIsLoading(false);
       }
     },
-    [loginMutation, handleLogin, handleAuthError, credentialStorage, shouldShowCredentialPrompt, trackCredentialPromptShown, rememberMe],
+    [
+      loginMutation,
+      handleLogin,
+      handleAuthError,
+      credentialStorage,
+      shouldShowCredentialPrompt,
+      trackCredentialPromptShown,
+      rememberMe,
+    ],
   );
 
   const register = useCallback(
@@ -415,7 +427,13 @@ export const useAuthOperations = ({
         setIsInRegistrationFlow(false); // Clear registration flow flag
       }
     },
-    [registerMutation, handleRegistration, handleAuthError, clearRegistrationPreferences, authState],
+    [
+      registerMutation,
+      handleRegistration,
+      handleAuthError,
+      clearRegistrationPreferences,
+      authState,
+    ],
   );
 
   const logout = useCallback(

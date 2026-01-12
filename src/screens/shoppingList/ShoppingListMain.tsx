@@ -119,19 +119,16 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   } = useShoppingListScreen();
 
   // --- Actions Hook ---
-  const {
-    handleTogglePurchase,
-    handleDeleteItem,
-    handleClearAllPurchased,
-  } = useShoppingListActions({
-    currentListId,
-    items,
-    addItem,
-    toggleItem,
-    removeItem,
-    refetchItems,
-    setSearchQuery,
-  });
+  const { handleTogglePurchase, handleDeleteItem, handleClearAllPurchased } =
+    useShoppingListActions({
+      currentListId,
+      items,
+      addItem,
+      toggleItem,
+      removeItem,
+      refetchItems,
+      setSearchQuery,
+    });
 
   // --- Reordering Hook ---
   // Use raw items (with version field) for reordering - transformed items don't have version
@@ -143,7 +140,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Wrapper to match the simpler callback signature used by the list component
   const handleSortOrderUpdate = useCallback(
-    (itemId: string, afterItemId: string | null, beforeItemId: string | null) => {
+    (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) => {
       // The hook expects sortOrder values too, but calculates them internally now
       reorderItem(itemId, afterItemId, beforeItemId, null, null);
     },
@@ -294,7 +295,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
         setQuantitySheetVisible(false);
         setSelectedItemForQuantity(null);
-      } catch (error) {
+      } catch {
         // Error handled by mutation onError
       } finally {
         setQuantityUpdateLoading(false);
@@ -510,8 +511,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       Telemetry.trackScreen('ShoppingListMain', {
         list_id: currentListId,
         item_count: itemsRef.current.length,
-        purchased_count: itemsRef.current.filter(item => item.purchaseInfo?.isPurchased)
-          .length,
+        purchased_count: itemsRef.current.filter(
+          item => item.purchaseInfo?.isPurchased,
+        ).length,
         has_lists: lists.length > 0,
       });
     }, 500); // Debounce 500ms to batch rapid changes
@@ -704,8 +706,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
                     }))
                     .filter(
                       u =>
-                        u.symbol &&
-                        u.symbol.toLowerCase() !== 'undetermined',
+                        u.symbol && u.symbol.toLowerCase() !== 'undetermined',
                     ) || [],
               }
             : null

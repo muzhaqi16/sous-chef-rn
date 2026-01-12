@@ -1,4 +1,4 @@
-import { ApolloLink, Operation, FetchResult, Observable } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
@@ -12,7 +12,7 @@ interface GraphQLTiming {
 export const createTelemetryLink = () => {
   const timings = new Map<string, GraphQLTiming>();
 
-  return new ApolloLink((operation: Operation, forward) => {
+  return new ApolloLink((operation, forward) => {
     if (!Environment.shouldEnableAnalytics() && !Environment.isDevelopment()) {
       return forward(operation);
     }
@@ -44,7 +44,7 @@ export const createTelemetryLink = () => {
 
     return new Observable(observer => {
       const subscription = forward(operation).subscribe({
-        next: (response: FetchResult) => {
+        next: (response) => {
           const timing = timings.get(operationId);
           if (timing) {
             const duration = Date.now() - timing.startTime;

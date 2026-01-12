@@ -13,7 +13,13 @@ import {
   useGetHomeByJoinCodeLazyQuery,
 } from '#generated';
 import { useShallow } from 'zustand/shallow';
-import { useAppStore, selectSelectedHomeId, selectHomeState, selectSetHomeAndPantry, selectSetIsHomeSelectionReady } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectSelectedHomeId,
+  selectHomeState,
+  selectSetHomeAndPantry,
+  selectSetIsHomeSelectionReady,
+} from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
@@ -34,7 +40,7 @@ const removeFromHomesCache = createRemoveFromQueryFieldUpdater('homes', 'Home');
 
 export function useHomeManagement() {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const {setSelectedHomeId} = useAppStore(useShallow(selectHomeState));
+  const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
   const { selectedPantryId, setSelectedPantryId } = useAppStore(
     useShallow(state => ({
       selectedPantryId: state.selectedPantryId,
@@ -103,10 +109,7 @@ export function useHomeManagement() {
 
   // Preserve homes even when query fails to prevent cascade failures
   const preservedHomes = usePreservedArrayData(data?.homes);
-  const homes = useMemo(
-    () => normalizeHomes(preservedHomes),
-    [preservedHomes],
-  );
+  const homes = useMemo(() => normalizeHomes(preservedHomes), [preservedHomes]);
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = useMemo(
@@ -143,7 +146,7 @@ export function useHomeManagement() {
         console.warn('Failed to set first home as default:', message);
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedHomeId,
     remoteDefaultHomeId,
@@ -416,7 +419,11 @@ export function useHomeManagement() {
   // Helper functions using CRUD utilities
   const createHomeOperation = createAddOperation({
     mutation: createHomeMutation,
-    transformInput: (input: { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean }) => ({
+    transformInput: (input: {
+      name: string;
+      createDefaultPantry?: boolean;
+      allowJoinCode?: boolean;
+    }) => ({
       name: input.name.trim(),
       createDefaultPantry: input.createDefaultPantry ?? true,
       allowJoinCode: input.allowJoinCode ?? true,
@@ -433,7 +440,13 @@ export function useHomeManagement() {
 
   // Wrapper to support both string and object signatures
   const createHome = async (
-    nameOrInput: string | { name: string; createDefaultPantry?: boolean; allowJoinCode?: boolean },
+    nameOrInput:
+      | string
+      | {
+          name: string;
+          createDefaultPantry?: boolean;
+          allowJoinCode?: boolean;
+        },
   ) => {
     const input =
       typeof nameOrInput === 'string'
@@ -465,7 +478,7 @@ export function useHomeManagement() {
       }
 
       return true;
-    } catch (error: any) {
+    } catch {
       return false;
     }
   };
@@ -538,7 +551,7 @@ export function useHomeManagement() {
       setHomeAndPantry(previousHomeId, previousPantryId);
       setIsHomeSelectionReady(true);
       return false;
-    } catch (error: any) {
+    } catch {
       // Rollback on error and re-enable queries
       setHomeAndPantry(previousHomeId, previousPantryId);
       setIsHomeSelectionReady(true);
@@ -578,7 +591,7 @@ export function useHomeManagement() {
       });
 
       return result.data?.joinHomeByCode || false;
-    } catch (error: any) {
+    } catch {
       return false;
     }
   };
@@ -665,7 +678,9 @@ export function useHomeManagement() {
     initialLoading: !homes && loading,
     error,
     stats,
-    previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
+    previewHome: previewData?.homeByJoinCode
+      ? normalizeHome(previewData.homeByJoinCode)
+      : null,
 
     // Loading states
     creating,

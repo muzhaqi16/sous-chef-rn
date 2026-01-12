@@ -224,7 +224,7 @@ class ApolloCachePersistence {
         cacheString !== undefined &&
         cacheString !== null
       );
-    } catch (error) {
+    } catch {
       return false;
     }
   }

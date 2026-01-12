@@ -6,8 +6,15 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useAppNavigation, useBottomSheetBackHandler } from '#hooks';
-import { usePantryItemSuggestions, type PantryItemSuggestion } from '#hooks/pantry';
+import {
+  useSharedBottomSheetConfigs,
+  useAppNavigation,
+  useBottomSheetBackHandler,
+} from '#hooks';
+import {
+  usePantryItemSuggestions,
+  type PantryItemSuggestion,
+} from '#hooks/pantry';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { useAppStore } from '#store/useAppStore';
@@ -175,7 +182,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         searchBarRef.current?.clear();
         setSearchQuery('');
         refetchSuggestions();
-      } catch (error) {
+      } catch {
         toastService.error('Failed to add item. Please try again.');
       }
     },
@@ -201,7 +208,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
         toastService.success(`Added ${item.name} (Qty: 1)`);
         refetchSuggestions();
-      } catch (error) {
+      } catch {
         toastService.error('Failed to add item. Please try again.');
       }
     },
@@ -345,7 +352,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             <>
               {loadingSuggestions ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
                 </View>
               ) : !hasSuggestions ? (
                 <View style={styles.emptyContainer}>
@@ -357,10 +367,22 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               ) : (
                 <>
                   {/* Priority order: LOW_STOCK > EXPIRING_SOON > RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR */}
-                  {renderSuggestionSection('LOW STOCK', suggestionGroups.lowStock)}
-                  {renderSuggestionSection('EXPIRING SOON', suggestionGroups.expiringSoon)}
-                  {renderSuggestionSection('ADD AGAIN', suggestionGroups.recentlyDeleted)}
-                  {renderSuggestionSection('YOUR FAVORITES', suggestionGroups.frequentlyAdded)}
+                  {renderSuggestionSection(
+                    'LOW STOCK',
+                    suggestionGroups.lowStock,
+                  )}
+                  {renderSuggestionSection(
+                    'EXPIRING SOON',
+                    suggestionGroups.expiringSoon,
+                  )}
+                  {renderSuggestionSection(
+                    'ADD AGAIN',
+                    suggestionGroups.recentlyDeleted,
+                  )}
+                  {renderSuggestionSection(
+                    'YOUR FAVORITES',
+                    suggestionGroups.frequentlyAdded,
+                  )}
                   {renderSuggestionSection('POPULAR', suggestionGroups.popular)}
                 </>
               )}

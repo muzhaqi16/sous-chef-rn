@@ -110,7 +110,7 @@ export const TagInput: React.FC<TagInputProps> = ({
             onKeyPress={handleKeyPress}
             autoCapitalize="none"
             autoCorrect={false}
-            blurOnSubmit={false}
+            submitBehavior="submit"
           />
         )}
       </View>

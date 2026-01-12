@@ -14,7 +14,11 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsLiteQuery,
 } from '#generated';
-import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectUser,
+  selectSelectedHomeId,
+} from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 import { createShoppingListSchema } from '#utils';
 
@@ -25,7 +29,9 @@ type FormValues = {
 export const CreateShoppingListScreen = () => {
   const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
 
-  const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const user = useAppStore(selectUser);
   const selectedHomeId = useAppStore(selectSelectedHomeId);
 
@@ -35,13 +41,15 @@ export const CreateShoppingListScreen = () => {
   const [checkingExisting, setCheckingExisting] = useState(true);
 
   // GraphQL query - uses lightweight query for list metadata only
-  const { data: listsData, loading: listsLoading } = useGetShoppingListsLiteQuery({
-    skip: !user?.id,
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data: listsData, loading: listsLoading } =
+    useGetShoppingListsLiteQuery({
+      skip: !user?.id,
+      fetchPolicy: 'cache-and-network',
+    });
 
   const lists = listsData?.shoppingLists || [];
-  const existingList = lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
+  const existingList =
+    lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
 
   // GraphQL mutation
   const [createShoppingList] = useCreateShoppingListMutation();
@@ -74,7 +82,7 @@ export const CreateShoppingListScreen = () => {
         if (isMounted) {
           setCheckingExisting(false);
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setCheckingExisting(false);
         }
@@ -168,8 +176,8 @@ export const CreateShoppingListScreen = () => {
           </View>
 
           <Text style={styles.infoText}>
-            This was already set up. You can continue to the next step or
-            create additional ones later in settings.
+            This was already set up. You can continue to the next step or create
+            additional ones later in settings.
           </Text>
         </View>
 

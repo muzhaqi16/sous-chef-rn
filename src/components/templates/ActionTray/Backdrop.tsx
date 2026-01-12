@@ -37,7 +37,7 @@ Backdrop.displayName = 'Backdrop';
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 1)', // Will be controlled by animated opacity
   },
 });

@@ -7,6 +7,13 @@ import { FadeIn, FadeOut, LinearTransition, Easing } from 'react-native-reanimat
 export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 /**
+ * Fixed height for shopping list items used in drag calculations.
+ * 87px content + 8px margins (spacing.xs = 4px each side)
+ * Used by: SortableItem (drag math), SortableList (overrideItemLayout)
+ */
+export const DRAG_ITEM_HEIGHT = 95;
+
+/**
  * Animation preset for form show/hide transitions
  * Used for expandable forms, modals, and collapsible sections
  *

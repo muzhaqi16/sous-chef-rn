@@ -4,9 +4,20 @@ import React, {
   useMemo,
   forwardRef,
   useImperativeHandle,
+  useEffect,
 } from 'react';
-import { View, RefreshControl } from 'react-native';
-import { FlashList, ListRenderItemInfo, FlashListRef } from '@shopify/flash-list';
+import {
+  View,
+  RefreshControl,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type LayoutChangeEvent,
+} from 'react-native';
+import {
+  FlashList,
+  ListRenderItemInfo,
+  FlashListRef,
+} from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type {
@@ -23,7 +34,8 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors,
 } from './SortableListThemeContext';
-import { DragStateProvider } from './DragStateContext';
+import { DragStateProvider, useDragState } from './DragStateContext';
+import { DRAG_ITEM_HEIGHT } from '#/constants/animations';
 
 /**
  * Ref handle for SortableShoppingList
@@ -51,25 +63,171 @@ const TAB_BAR_HEIGHT = 65;
 const ItemWrapper: React.FC<{
   item: SortableShoppingListItem;
   index: number;
-  totalItemsRef: React.MutableRefObject<number>;
-}> = React.memo(
-  ({ item, index, totalItemsRef }) => {
-    // Skip rendering invalid items to prevent empty cards
-    if (!item?.id || !item?.title) {
-      return null;
-    }
-    return (
-      <SimpleDraggableItem
-        item={item}
-        index={index}
-        totalItems={totalItemsRef.current}
-        isActive={false}
-      />
-    );
-  },
-);
+  totalItemsRef: React.RefObject<number>;
+}> = React.memo(({ item, index, totalItemsRef }) => {
+  // Skip rendering invalid items to prevent empty cards
+  if (!item?.id || !item?.title) {
+    return null;
+  }
+  return (
+    <SimpleDraggableItem
+      item={item}
+      index={index}
+      totalItems={totalItemsRef.current}
+      isActive={false}
+    />
+  );
+});
 
 ItemWrapper.displayName = 'ItemWrapper';
+
+/**
+ * Inner FlashList component that can use useDragState for scroll tracking.
+ * Separated to allow accessing DragStateContext from within the provider.
+ */
+interface InnerFlashListProps {
+  validItems: SortableShoppingListItem[];
+  totalItemsRef: React.RefObject<number>;
+  flashListRef: React.RefObject<FlashListRef<SortableShoppingListItem> | null>;
+  themeColors: SortableListThemeColors;
+  insets: { bottom: number };
+  flatListProps: any;
+  ListFooterComponent?: React.ReactElement | React.ComponentType | null;
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+}
+
+const InnerFlashList: React.FC<InnerFlashListProps> = ({
+  validItems,
+  totalItemsRef,
+  flashListRef,
+  themeColors,
+  insets,
+  flatListProps,
+  ListFooterComponent,
+  onEndReached,
+  onEndReachedThreshold,
+  onRefresh,
+  refreshing,
+}) => {
+  // Get drag state context for scroll tracking
+  const { scrollOffset, contentHeight, visibleHeight, listTopY, setListRef } =
+    useDragState();
+
+  // Register FlashList ref with drag context for autoscroll
+  useEffect(() => {
+    setListRef(flashListRef.current);
+    return () => setListRef(null);
+  }, [setListRef, flashListRef]);
+
+  // Update scroll offset on scroll (for viewport-aware hover calculation)
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      scrollOffset.value = event.nativeEvent.contentOffset.y;
+    },
+    [scrollOffset],
+  );
+
+  // Update content height when list content changes
+  const handleContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      contentHeight.value = height;
+    },
+    [contentHeight],
+  );
+
+  // Update visible height and list position when layout changes
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      visibleHeight.value = event.nativeEvent.layout.height;
+      // Measure FlashList's Y position on screen for autoscroll coordinate conversion
+      // getNativeScrollRef returns the underlying ScrollView/FlatList ref
+      const nativeRef = flashListRef.current?.getNativeScrollRef?.() as
+        | {
+            measureInWindow?: (
+              cb: (x: number, y: number, w: number, h: number) => void,
+            ) => void;
+          }
+        | undefined;
+      if (nativeRef?.measureInWindow) {
+        nativeRef.measureInWindow((_x, y) => {
+          listTopY.value = y;
+        });
+      }
+    },
+    [visibleHeight, listTopY, flashListRef],
+  );
+
+  // Render item for FlashList - stable callback with no dependencies
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<SortableShoppingListItem>) => (
+      <ItemWrapper item={item} index={index} totalItemsRef={totalItemsRef} />
+    ),
+    [totalItemsRef],
+  );
+
+  // getItemType for FlashList v2 recycling optimization
+  // Note: Keep simple - docs warn "This method is called very frequently. Keep it fast."
+  const getItemType = useCallback(() => 'shopping-item', []);
+
+  // Key extractor - ensure we have a valid ID
+  const keyExtractor = useCallback(
+    (item: SortableShoppingListItem) => item?.id ?? `invalid-${Math.random()}`,
+    [],
+  );
+
+  // Override item layout for consistent drag calculations
+  const overrideItemLayout = useCallback(
+    (layout: { size?: number; span?: number }) => {
+      layout.size = DRAG_ITEM_HEIGHT;
+    },
+    [],
+  );
+
+  return (
+    <FlashList
+      ref={flashListRef}
+      data={validItems}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      getItemType={getItemType}
+      overrideItemLayout={overrideItemLayout}
+      // Scroll tracking for drag operations
+      onScroll={handleScroll}
+      onContentSizeChange={handleContentSizeChange}
+      onLayout={handleLayout}
+      scrollEventThrottle={16}
+      // FlashList v2 optimizations:
+      // - drawDistance: Pre-render buffer to reduce blank areas during fast scroll
+      // - maintainVisibleContentPosition: Disabled to prevent item movement during drag reorder
+      //   (known issue in v2: https://shopify.github.io/flash-list/docs/known-issues/)
+      drawDistance={300}
+      maintainVisibleContentPosition={{ disabled: true }}
+      showsVerticalScrollIndicator={
+        flatListProps.showsVerticalScrollIndicator ?? true
+      }
+      contentContainerStyle={{
+        paddingTop: 8,
+        paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
+      }}
+      ListFooterComponent={ListFooterComponent ?? undefined}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={onEndReachedThreshold}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing ?? false}
+            onRefresh={onRefresh}
+            tintColor={themeColors.primary}
+            colors={[themeColors.primary]}
+          />
+        ) : undefined
+      }
+    />
+  );
+};
 
 const SortableShoppingListComponent = forwardRef<
   SortableShoppingListRef,
@@ -111,239 +269,216 @@ const SortableShoppingListComponent = forwardRef<
     }));
 
     // PERFORMANCE: Single useUnistyles call for entire list
-  const { theme } = useUnistyles();
-  const themeColors = useMemo<SortableListThemeColors>(
-    () => ({
-      primary: theme.colors.primary,
-      textPrimary: theme.colors.textPrimary,
-      textSecondary: theme.colors.textSecondary,
-      surfaceVariant: theme.colors.surfaceVariant,
-      surface: theme.colors.surface,
-      border: theme.colors.border,
-    }),
-    [
-      theme.colors.primary,
-      theme.colors.textPrimary,
-      theme.colors.textSecondary,
-      theme.colors.surfaceVariant,
-      theme.colors.surface,
-      theme.colors.border,
-    ],
-  );
+    const { theme } = useUnistyles();
+    const themeColors = useMemo<SortableListThemeColors>(
+      () => ({
+        primary: theme.colors.primary,
+        textPrimary: theme.colors.textPrimary,
+        textSecondary: theme.colors.textSecondary,
+        surfaceVariant: theme.colors.surfaceVariant,
+        surface: theme.colors.surface,
+        border: theme.colors.border,
+      }),
+      [
+        theme.colors.primary,
+        theme.colors.textPrimary,
+        theme.colors.textSecondary,
+        theme.colors.surfaceVariant,
+        theme.colors.surface,
+        theme.colors.border,
+      ],
+    );
 
-  // Track currently open swipeable item
-  const openSwipeableRef = useRef<any>(null);
+    // Track currently open swipeable item
+    const openSwipeableRef = useRef<any>(null);
 
-  // Safe area insets for bottom padding
-  const insets = useSafeAreaInsets();
+    // Safe area insets for bottom padding
+    const insets = useSafeAreaInsets();
 
-  // Handle swipeable item opening
-  const handleSwipeableWillOpen = useCallback(
-    (swipeableRef: any) => {
-      if (externalOnSwipeableWillOpen) {
-        externalOnSwipeableWillOpen(swipeableRef);
-      } else {
-        if (
-          openSwipeableRef.current &&
-          openSwipeableRef.current !== swipeableRef
-        ) {
-          openSwipeableRef.current.current?.close();
+    // Handle swipeable item opening
+    const handleSwipeableWillOpen = useCallback(
+      (swipeableRef: any) => {
+        if (externalOnSwipeableWillOpen) {
+          externalOnSwipeableWillOpen(swipeableRef);
+        } else {
+          if (
+            openSwipeableRef.current &&
+            openSwipeableRef.current !== swipeableRef
+          ) {
+            openSwipeableRef.current.current?.close();
+          }
+          openSwipeableRef.current = swipeableRef;
         }
-        openSwipeableRef.current = swipeableRef;
-      }
-    },
-    [externalOnSwipeableWillOpen],
-  );
+      },
+      [externalOnSwipeableWillOpen],
+    );
 
-  const handleSwipeableClose = useCallback(() => {}, []);
+    const handleSwipeableClose = useCallback(() => {}, []);
 
-  // Prepare FlashList for layout animation before items are removed
-  // This must be called before data changes per FlashList docs
-  const handlePrepareForLayoutAnimation = useCallback(() => {
-    flashListRef.current?.prepareForLayoutAnimationRender();
-  }, []);
+    // Prepare FlashList for layout animation before items are removed
+    // This must be called before data changes per FlashList docs
+    const handlePrepareForLayoutAnimation = useCallback(() => {
+      flashListRef.current?.prepareForLayoutAnimationRender();
+    }, []);
 
-  // Keep valid items in ref for reorder callback to access current values
-  // Use a ref to avoid recreating handleReorderByDelta when items change
-  const validItemsRef = useRef<SortableShoppingListItem[]>([]);
+    // Keep valid items in ref for reorder callback to access current values
+    // Use a ref to avoid recreating handleReorderByDelta when items change
+    const validItemsRef = useRef<SortableShoppingListItem[]>([]);
 
-  // Handle reorder by index delta - converts to neighbor IDs and calls onSortOrderUpdate
-  const handleReorderByDelta = useCallback(
-    (itemId: string, indexDelta: number) => {
-      if (!onSortOrderUpdate || indexDelta === 0) return;
+    // Handle reorder by index delta - converts to neighbor IDs and calls onSortOrderUpdate
+    const handleReorderByDelta = useCallback(
+      (itemId: string, indexDelta: number) => {
+        if (!onSortOrderUpdate || indexDelta === 0) return;
 
-      const currentItems = validItemsRef.current;
-      const currentIndex = currentItems.findIndex(item => item.id === itemId);
-      if (currentIndex === -1) return;
+        const currentItems = validItemsRef.current;
+        const currentIndex = currentItems.findIndex(item => item.id === itemId);
+        if (currentIndex === -1) return;
 
-      // Calculate new index, clamped to valid range
-      const newIndex = Math.max(0, Math.min(currentItems.length - 1, currentIndex + indexDelta));
-      if (newIndex === currentIndex) return;
+        // Calculate new index, clamped to valid range
+        const newIndex = Math.max(
+          0,
+          Math.min(currentItems.length - 1, currentIndex + indexDelta),
+        );
+        if (newIndex === currentIndex) return;
 
-      // Calculate neighbor IDs for the new position
-      // afterItemId = the item that will be before this item (at newIndex - 1)
-      // beforeItemId = the item that will be after this item (at newIndex + 1)
-      // But we need to account for the moved item being removed from its current position
+        // Calculate neighbor IDs for the new position
+        // afterItemId = the item that will be before this item (at newIndex - 1)
+        // beforeItemId = the item that will be after this item (at newIndex + 1)
+        // But we need to account for the moved item being removed from its current position
 
-      let afterItemId: string | null = null;
-      let beforeItemId: string | null = null;
+        let afterItemId: string | null = null;
+        let beforeItemId: string | null = null;
 
-      if (indexDelta > 0) {
-        // Moving down - newIndex is where item will end up
-        // Item at newIndex will be "before" (actually after in visual order)
-        afterItemId = currentItems[newIndex]?.id ?? null;
-        beforeItemId = newIndex < currentItems.length - 1 ? currentItems[newIndex + 1]?.id ?? null : null;
-      } else {
-        // Moving up - newIndex is where item will end up
-        afterItemId = newIndex > 0 ? currentItems[newIndex - 1]?.id ?? null : null;
-        beforeItemId = currentItems[newIndex]?.id ?? null;
-      }
+        if (indexDelta > 0) {
+          // Moving down - newIndex is where item will end up
+          // Item at newIndex will be "before" (actually after in visual order)
+          afterItemId = currentItems[newIndex]?.id ?? null;
+          beforeItemId =
+            newIndex < currentItems.length - 1
+              ? currentItems[newIndex + 1]?.id ?? null
+              : null;
+        } else {
+          // Moving up - newIndex is where item will end up
+          afterItemId =
+            newIndex > 0 ? currentItems[newIndex - 1]?.id ?? null : null;
+          beforeItemId = currentItems[newIndex]?.id ?? null;
+        }
 
-      console.log(`📦 Reorder: ${itemId} from ${currentIndex} to ${newIndex}, after=${afterItemId}, before=${beforeItemId}`);
-      onSortOrderUpdate(itemId, afterItemId, beforeItemId);
-    },
-    [onSortOrderUpdate],
-  );
+        console.log(
+          `📦 Reorder: ${itemId} from ${currentIndex} to ${newIndex}, after=${afterItemId}, before=${beforeItemId}`,
+        );
+        onSortOrderUpdate(itemId, afterItemId, beforeItemId);
+      },
+      [onSortOrderUpdate],
+    );
 
-  // Memoize actions for context
-  const actions = useMemo<SortableListActions>(
-    () => ({
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onMoveToPantry,
-      onQuantityPress,
-      onSwipeableWillOpen: handleSwipeableWillOpen,
-      onSwipeableClose: handleSwipeableClose,
-      prepareForLayoutAnimation: handlePrepareForLayoutAnimation,
-      onSortOrderUpdate,
-      onReorderByDelta: handleReorderByDelta,
-    }),
-    [
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onMoveToPantry,
-      onQuantityPress,
-      handleSwipeableWillOpen,
-      handleSwipeableClose,
-      handlePrepareForLayoutAnimation,
-      onSortOrderUpdate,
-      handleReorderByDelta,
-    ],
-  );
+    // Memoize actions for context
+    const actions = useMemo<SortableListActions>(
+      () => ({
+        onItemPress,
+        onItemEdit,
+        onItemDelete,
+        onTogglePurchase,
+        onMoveToPantry,
+        onQuantityPress,
+        onSwipeableWillOpen: handleSwipeableWillOpen,
+        onSwipeableClose: handleSwipeableClose,
+        prepareForLayoutAnimation: handlePrepareForLayoutAnimation,
+        onSortOrderUpdate,
+        onReorderByDelta: handleReorderByDelta,
+      }),
+      [
+        onItemPress,
+        onItemEdit,
+        onItemDelete,
+        onTogglePurchase,
+        onMoveToPantry,
+        onQuantityPress,
+        handleSwipeableWillOpen,
+        handleSwipeableClose,
+        handlePrepareForLayoutAnimation,
+        onSortOrderUpdate,
+        handleReorderByDelta,
+      ],
+    );
 
-  const permissions = useMemo<SortableListPermissions>(
-    () => ({
-      canRemoveItems,
-      canEditItems,
-      canMarkPurchased,
-      canReorderItems,
-      disabled,
-    }),
-    [canRemoveItems, canEditItems, canMarkPurchased, canReorderItems, disabled],
-  );
+    const permissions = useMemo<SortableListPermissions>(
+      () => ({
+        canRemoveItems,
+        canEditItems,
+        canMarkPurchased,
+        canReorderItems,
+        disabled,
+      }),
+      [
+        canRemoveItems,
+        canEditItems,
+        canMarkPurchased,
+        canReorderItems,
+        disabled,
+      ],
+    );
 
-  // Filter out invalid items to prevent empty card renders
-  // This handles edge cases where Apollo cache returns items with missing data
-  const validItems = useMemo(
-    () => items.filter(item => item?.id && item?.title),
-    [items],
-  );
+    // Filter out invalid items to prevent empty card renders
+    // This handles edge cases where Apollo cache returns items with missing data
+    const validItems = useMemo(
+      () => items.filter(item => item?.id && item?.title),
+      [items],
+    );
 
-  // Keep ref in sync for reorder callback (avoids callback recreation)
-  validItemsRef.current = validItems;
+    // Keep ref in sync for reorder callback (avoids callback recreation)
+    validItemsRef.current = validItems;
 
-  // PERFORMANCE: Use ref for totalItems to avoid renderItem callback recreation
-  // This is critical for FlashList v2 where memoization is more important
-  const totalItemsRef = useRef(validItems.length);
-  totalItemsRef.current = validItems.length;
+    // PERFORMANCE: Use ref for totalItems to avoid renderItem callback recreation
+    // This is critical for FlashList v2 where memoization is more important
+    const totalItemsRef = useRef(validItems.length);
+    totalItemsRef.current = validItems.length;
 
-  // Render item for FlashList - stable callback with no dependencies
-  const renderItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<SortableShoppingListItem>) => (
-      <ItemWrapper item={item} index={index} totalItemsRef={totalItemsRef} />
-    ),
-    [],
-  );
-
-  // getItemType for FlashList v2 recycling optimization
-  // Note: Keep simple - docs warn "This method is called very frequently. Keep it fast."
-  const getItemType = useCallback(
-    () => 'shopping-item',
-    [],
-  );
-
-  // Key extractor - ensure we have a valid ID
-  const keyExtractor = useCallback(
-    (item: SortableShoppingListItem) => item?.id ?? `invalid-${Math.random()}`,
-    [],
-  );
-
-  // Early validation
-  if (!items || !Array.isArray(items)) {
-    console.warn('SortableList: items is not a valid array', items);
-    return null;
-  }
-
-  if (validItems.length === 0) {
-    if (ListFooterComponent) {
-      return (
-        <View style={styles.container}>
-          {React.isValidElement(ListFooterComponent)
-            ? ListFooterComponent
-            : React.createElement(ListFooterComponent as React.ComponentType)}
-        </View>
-      );
+    // Early validation
+    if (!items || !Array.isArray(items)) {
+      console.warn('SortableList: items is not a valid array', items);
+      return null;
     }
-    return null;
-  }
 
-  return (
-    <SortableListThemeContext.Provider value={themeColors}>
-      <SortableListActionsProvider actions={actions} permissions={permissions}>
-        <DragStateProvider>
+    if (validItems.length === 0) {
+      if (ListFooterComponent) {
+        return (
           <View style={styles.container}>
-            <FlashList
-            ref={flashListRef}
-            data={validItems}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            getItemType={getItemType}
-            // FlashList v2 optimizations:
-            // - drawDistance: Pre-render buffer to reduce blank areas during fast scroll
-            // - maintainVisibleContentPosition: Disabled to prevent item movement during drag reorder
-            //   (known issue in v2: https://shopify.github.io/flash-list/docs/known-issues/)
-            drawDistance={300}
-            maintainVisibleContentPosition={{ disabled: true }}
-            showsVerticalScrollIndicator={
-              flatListProps.showsVerticalScrollIndicator ?? true
-            }
-            contentContainerStyle={{
-              paddingTop: 8,
-              paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
-            }}
-            ListFooterComponent={ListFooterComponent}
-            onEndReached={onEndReached}
-            onEndReachedThreshold={onEndReachedThreshold}
-            refreshControl={
-              onRefresh ? (
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor={themeColors.primary}
-                  colors={[themeColors.primary]}
-                />
-              ) : undefined
-            }
-            />
+            {React.isValidElement(ListFooterComponent)
+              ? ListFooterComponent
+              : React.createElement(ListFooterComponent as React.ComponentType)}
           </View>
-        </DragStateProvider>
-      </SortableListActionsProvider>
-    </SortableListThemeContext.Provider>
-  );
+        );
+      }
+      return null;
+    }
+
+    return (
+      <SortableListThemeContext.Provider value={themeColors}>
+        <SortableListActionsProvider
+          actions={actions}
+          permissions={permissions}
+        >
+          <DragStateProvider>
+            <View style={styles.container}>
+              <InnerFlashList
+                validItems={validItems}
+                totalItemsRef={totalItemsRef}
+                flashListRef={flashListRef}
+                themeColors={themeColors}
+                insets={insets}
+                flatListProps={flatListProps}
+                ListFooterComponent={ListFooterComponent}
+                onEndReached={onEndReached}
+                onEndReachedThreshold={onEndReachedThreshold}
+                onRefresh={onRefresh}
+                refreshing={refreshing}
+              />
+            </View>
+          </DragStateProvider>
+        </SortableListActionsProvider>
+      </SortableListThemeContext.Provider>
+    );
   },
 );
 

@@ -309,7 +309,7 @@ export const PantrySettings: React.FC<{
           },
         });
       }
-    } catch (error) {
+    } catch {
       Alert.alert(
         'Error',
         pantryId ? 'Failed to save settings' : 'Failed to create pantry',

@@ -52,7 +52,7 @@ export interface SortableListPermissions {
 interface SortableListActionsContextValue {
   actions: SortableListActions;
   permissions: SortableListPermissions;
-  permissionsRef: React.MutableRefObject<SortableListPermissions>;
+  permissionsRef: React.RefObject<SortableListPermissions>;
 }
 
 const SortableListActionsContext = createContext<SortableListActionsContextValue | null>(null);

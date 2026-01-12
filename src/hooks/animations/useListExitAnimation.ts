@@ -3,8 +3,8 @@ import {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
   listItemExitAnimation,
   standardEasing,
@@ -145,7 +145,7 @@ export const useListExitAnimation = (itemId: string) => {
         finished => {
           'worklet';
           if (finished) {
-            runOnJS(safeCallComplete)();
+            scheduleOnRN(safeCallComplete);
           }
         },
       );
