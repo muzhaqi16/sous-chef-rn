@@ -4596,6 +4596,7 @@ enum MutationType {
   ITEM_ADDED
   ITEM_COMPLETED
   ITEM_REMOVED
+  ITEM_UNCOMPLETED
   ITEM_UPDATED
   STATUS_CHANGED
   UPDATED
@@ -6665,6 +6666,7 @@ type ShoppingListCollaboratorChangedPayload {
   collaborator: ShoppingListCollaborator
   listId: ID!
   mutation: MutationType!
+  originatorClientId: ID
   timestamp: DateTime!
   userId: ID!
 }
@@ -6757,6 +6759,7 @@ type ShoppingListItemChangedPayload {
   item: ShoppingListItem
   listId: ID!
   mutation: MutationType!
+  originatorClientId: ID
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
@@ -6908,6 +6911,7 @@ type ShoppingListStatusChangedPayload {
   listId: ID!
   mutation: MutationType!
   newStatus: ListStatus!
+  originatorClientId: ID
   previousStatus: ListStatus
   timestamp: DateTime!
   userId: ID!
@@ -6979,6 +6983,7 @@ type ShoppingListSuggestion {
 type ShoppingListUpdatedPayload {
   mutation: MutationType!
   node: ShoppingList
+  originatorClientId: ID
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
