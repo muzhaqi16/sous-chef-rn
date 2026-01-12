@@ -5,3 +5,4 @@ export { useListItemAnimation } from './useListItemAnimation';
 
 // Re-export types for convenience
 export type { AnimationDirection } from '#/types/animations';
+export type { ExitAnimationPreset } from './useListExitAnimation';

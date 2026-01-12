@@ -1,17 +1,13 @@
 import { FadeIn, FadeOut, LinearTransition, Easing } from 'react-native-reanimated';
 
+// Re-export for backward compatibility (moved to drag.ts)
+export { DRAG_ITEM_HEIGHT } from './drag';
+
 /**
  * Standard cubic bezier easing function for smooth animations
  * Equivalent to CSS ease-in-out with custom curve
  */
 export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
-
-/**
- * Fixed height for shopping list items used in drag calculations.
- * 87px content + 8px margins (spacing.xs = 4px each side)
- * Used by: SortableItem (drag math), SortableList (overrideItemLayout)
- */
-export const DRAG_ITEM_HEIGHT = 95;
 
 /**
  * Animation preset for form show/hide transitions
@@ -72,6 +68,40 @@ export const listItemExitAnimation = {
     duration: 200,
   },
   itemHeight: 95, // 87px content + 8px margins (spacing.xs = 4px each side)
+} as const;
+
+/**
+ * PERFORMANCE: Faster exit animation for checkbox toggles
+ *
+ * When a user taps a checkbox, they expect immediate feedback.
+ * This faster animation (200ms vs 300ms) provides snappier UX while
+ * still maintaining visual continuity.
+ *
+ * Timeline (200ms total):
+ * - 0-200ms: Slide (200px right) - 33% faster
+ * - 0-200ms: Fade out - starts immediately
+ * - 0-200ms: Scale to 0.97 - subtle scale for less jarring effect
+ *
+ * Used by SortableItem when checkbox is toggled (vs swipe/delete actions)
+ */
+export const listItemFastExitAnimation = {
+  slide: {
+    duration: 200,
+    distance: 200,
+  },
+  fade: {
+    delay: 0, // Start immediately for snappier feel
+    duration: 200,
+  },
+  scale: {
+    delay: 0,
+    duration: 200,
+    toValue: 0.97, // Subtler scale
+  },
+  removalDelay: 200,
+  layoutAnimation: {
+    duration: 150,
+  },
 } as const;
 
 /**

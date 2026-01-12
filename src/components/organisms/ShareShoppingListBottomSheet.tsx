@@ -1,5 +1,6 @@
 import React, {useState, useRef} from 'react';
-import {Text, StyleSheet} from 'react-native';
+import {Text} from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import BottomSheet, {BottomSheetRef} from '../molecules/BottomSheet';
 import {Button} from "../base/Button";
 import {EmailInput} from '../atoms';

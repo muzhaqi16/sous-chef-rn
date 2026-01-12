@@ -201,9 +201,11 @@ const InnerFlashList: React.FC<InnerFlashListProps> = ({
       scrollEventThrottle={16}
       // FlashList v2 optimizations:
       // - drawDistance: Pre-render buffer to reduce blank areas during fast scroll
+      //   PERFORMANCE: Increased from 300 to 500 for smoother scrolling during drag operations
       // - maintainVisibleContentPosition: Disabled to prevent item movement during drag reorder
       //   (known issue in v2: https://shopify.github.io/flash-list/docs/known-issues/)
-      drawDistance={300}
+      // Note: estimatedItemSize not used since we have overrideItemLayout with DRAG_ITEM_HEIGHT
+      drawDistance={500}
       maintainVisibleContentPosition={{ disabled: true }}
       showsVerticalScrollIndicator={
         flatListProps.showsVerticalScrollIndicator ?? true

@@ -121,6 +121,7 @@ export const DragStateProvider: React.FC<DragStateProviderProps> = ({ children }
   }, []);
 
   // Reset drag state after drop
+  // SharedValue references are stable (created once), so no deps needed
   const resetDragState = useCallback(() => {
     isDragging.value = false;
     draggedIndex.value = -1;
@@ -130,7 +131,8 @@ export const DragStateProvider: React.FC<DragStateProviderProps> = ({ children }
     dragStartScrollOffset.value = 0;
     measuredItemHeight.value = 0;
     isDropping.value = false;
-  }, [isDragging, draggedIndex, draggedItemId, currentTranslateY, draggedScale, dragStartScrollOffset, measuredItemHeight, isDropping]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Context value is stable since SharedValue references don't change
   const value: DragStateContextValue = {

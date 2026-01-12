@@ -3,16 +3,11 @@ import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { useMoveShoppingListItemMutation } from '#generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
-import {
-  GetShoppingListItemsPaginatedDocument,
-  GetShoppingListItemsPaginatedQuery,
-} from '#generated';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
-import { PAGINATION } from '#/constants/shoppingList';
 
 interface ShoppingListItem {
   id: string;
@@ -133,51 +128,69 @@ export function useItemReordering<T extends ShoppingListItem>(
           beforeItem?.sortOrder ?? null,
         );
 
-        // IMMEDIATE: Modify cache BEFORE mutation call
+        // PERFORMANCE: Batch both cache modifications into a single update
+        // This ensures FlashList sees a consistent state and reduces re-render cycles
         // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
-        // This provides instant UI feedback without fragment validation issues
-        client.cache.modify({
-          id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-          fields: {
-            sortOrder() { return newSortOrder; },
-            updatedAt() { return new Date().toISOString(); },
-          },
-        });
-
-        // IMMEDIATE: Re-sort edges in unpurchasedItems so FlashList sees new order
-        // Uses GetShoppingListItemsPaginatedDocument (the query used by usePaginatedShoppingItems)
-        const queryResult = client.cache.readQuery<GetShoppingListItemsPaginatedQuery>({
-          query: GetShoppingListItemsPaginatedDocument,
-          variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE },
-        });
-
-        if (queryResult?.shoppingList?.unpurchasedItems?.edges) {
-          // Use lexicographic comparison for fractional-indexing keys
-          // The fractional-indexing library uses alphabet '0-9A-Za-z' which is designed
-          // for standard string comparison (<, >), NOT localeCompare() which is locale-sensitive
-          const sortedEdges = [...queryResult.shoppingList.unpurchasedItems.edges]
-            .sort((a, b) => {
-              const sortA = a.node.sortOrder || '';
-              const sortB = b.node.sortOrder || '';
-              if (sortA < sortB) return -1;
-              if (sortA > sortB) return 1;
-              return 0;
+        client.cache.batch({
+          update: cache => {
+            // 1. Update the item's sortOrder and timestamp
+            cache.modify({
+              id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+              fields: {
+                sortOrder() { return newSortOrder; },
+                updatedAt() { return new Date().toISOString(); },
+              },
             });
 
-          client.cache.writeQuery({
-            query: GetShoppingListItemsPaginatedDocument,
-            variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE },
-            data: {
-              shoppingList: {
-                ...queryResult.shoppingList,
-                unpurchasedItems: {
-                  ...queryResult.shoppingList.unpurchasedItems,
-                  edges: sortedEdges,
+            // Helper to sort edges by sortOrder with secondary sort by id
+            const sortEdges = (edges: readonly any[], readField: any) => {
+              return [...edges].sort((a, b) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nodeA = readField('node', a) as any;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nodeB = readField('node', b) as any;
+                const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                if (sortA < sortB) return -1;
+                if (sortA > sortB) return 1;
+                // Secondary sort by id for deterministic ordering when sortOrder matches
+                const idA = (nodeA ? readField('id', nodeA) : '') as string || '';
+                const idB = (nodeB ? readField('id', nodeB) : '') as string || '';
+                return idA.localeCompare(idB);
+              });
+            };
+
+            // 2. Re-sort edges in itemsConnection so FlashList sees new order
+            // Uses cache.modify instead of writeQuery to target the correct cache key
+            // (writeQuery with aliases doesn't match the field policy's keyArgs: ['filters'])
+            cache.modify({
+              id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+              fields: {
+                // Target the actual field name with its keyArgs to match the cache key
+                itemsConnection(existing, { storeFieldName, readField }) {
+                  // Only modify the unpurchased connection (check filter in storeFieldName)
+                  if (!storeFieldName.includes('"isPurchased":false')) {
+                    return existing;
+                  }
+
+                  return {
+                    ...existing,
+                    edges: sortEdges(existing?.edges || [], readField),
+                  };
+                },
+                // Also target aliased fields - Apollo may cache under the alias name
+                // when using GetShoppingListItemsPaginated query
+                unpurchasedItems(existing, { readField }) {
+                  if (!existing?.edges) return existing;
+                  return {
+                    ...existing,
+                    edges: sortEdges(existing.edges, readField),
+                  };
                 },
               },
-            },
-          });
-        }
+            });
+          },
+        });
 
         // Execute mutation (NO optimisticResponse - cache already updated above)
         const result = await moveItem({

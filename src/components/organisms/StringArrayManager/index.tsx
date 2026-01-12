@@ -5,10 +5,9 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils';
 import { commonStyles } from '#/styles/commonStyles';
 
@@ -229,12 +228,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   return (
     <View style={[commonStyles.card, containerStyle]}>
       {/* Header with title and add button */}
-      <View style={styles(theme).header}>
+      <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {showAddButton && (
           <TouchableOpacity
             onPress={handleAddPress}
-            style={styles(theme).addButton}
+            style={styles.addButton}
           >
             <Icon
               library="Feather"
@@ -247,7 +246,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       </View>
 
       {/* Chip grid */}
-      <View style={styles(theme).chipContainer}>
+      <View style={styles.chipContainer}>
         {items.map((item, index) => (
           <View
             key={index}
@@ -259,7 +258,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             <Text style={commonStyles.chipText}>{item}</Text>
             <TouchableOpacity
               onPress={() => handleRemove(item)}
-              style={styles(theme).chipRemove}
+              style={styles.chipRemove}
             >
               <Icon
                 library="Feather"
@@ -284,12 +283,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         animationType="slide"
         onRequestClose={handleCancel}
       >
-        <View style={styles(theme).modalOverlay}>
-          <View style={[commonStyles.card, styles(theme).modalContent]}>
+        <View style={styles.modalOverlay}>
+          <View style={[commonStyles.card, styles.modalContent]}>
             <Text style={commonStyles.h3}>{addButtonLabel}</Text>
 
             <TextInput
-              style={[commonStyles.input, error && styles(theme).inputError]}
+              style={[commonStyles.input, error && styles.inputError]}
               value={newItem}
               onChangeText={(text) => {
                 setNewItem(text);
@@ -300,11 +299,11 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               editable={!loading}
             />
 
-            {error && <Text style={styles(theme).errorText}>{error}</Text>}
+            {error && <Text style={styles.errorText}>{error}</Text>}
 
-            <View style={styles(theme).modalButtons}>
+            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[commonStyles.button, styles(theme).modalButton]}
+                style={[commonStyles.button, styles.modalButton]}
                 onPress={handleCancel}
                 disabled={loading}
               >
@@ -315,8 +314,8 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
                 style={[
                   commonStyles.button,
                   commonStyles.buttonPrimary,
-                  styles(theme).modalButton,
-                  loading && styles(theme).buttonDisabled,
+                  styles.modalButton,
+                  loading && styles.buttonDisabled,
                 ]}
                 onPress={handleAdd}
                 disabled={loading}
@@ -342,63 +341,62 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   );
 };
 
-const styles = (theme: any) =>
-  StyleSheet.create({
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: theme.spacing.sm,
-    },
-    addButton: {
-      width: 36,
-      height: 36,
-      borderRadius: theme.radii.full,
-      backgroundColor: theme.colors.primaryLight,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    chipContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: theme.spacing.sm,
-      marginTop: theme.spacing.sm,
-    },
-    chipRemove: {
-      marginLeft: theme.spacing.xs,
-      padding: 2,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.colors.overlays.medium,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: theme.spacing.lg,
-    },
-    modalContent: {
-      width: '100%',
-      maxWidth: 400,
-      padding: theme.spacing.lg,
-    },
-    inputError: {
-      borderColor: theme.colors.danger,
-      borderWidth: 1,
-    },
-    errorText: {
-      color: theme.colors.danger,
-      fontSize: theme.typography.fontSize.sm,
-      marginTop: theme.spacing.xs,
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: theme.spacing.sm,
-      marginTop: theme.spacing.lg,
-    },
-    modalButton: {
-      flex: 1,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-  });
+const styles = StyleSheet.create(theme => ({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  chipRemove: {
+    marginLeft: theme.spacing.xs,
+    padding: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlays.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    padding: theme.spacing.lg,
+  },
+  inputError: {
+    borderColor: theme.colors.danger,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: theme.typography.fontSize.sm,
+    marginTop: theme.spacing.xs,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+}));

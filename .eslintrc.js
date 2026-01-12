@@ -23,6 +23,20 @@ module.exports = {
     },
   ],
   rules: {
+    // Enforce StyleSheet from react-native-unistyles instead of react-native
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: 'react-native',
+            importNames: ['StyleSheet'],
+            message: 'Import StyleSheet from "react-native-unistyles" instead.',
+          },
+        ],
+      },
+    ],
+
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
 
