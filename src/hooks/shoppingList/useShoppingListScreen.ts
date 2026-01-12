@@ -3,7 +3,7 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { useShoppingListsQuery } from './useShoppingListsQuery';
 import { useShoppingListSelection } from './useShoppingListSelection';
-import { useShoppingListTransform } from './useShoppingListTransform';
+import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListManagement } from './useShoppingListManagement';
 
 /**
@@ -44,16 +44,14 @@ export function useShoppingListScreen() {
     loading: itemsLoading,
   } = shoppingListManagement;
 
-  // 4. Transform: Convert raw items to UI format
-  // Transform all items for backwards compatibility
-  const { sortableItems } = useShoppingListTransform(items);
-
-  // Transform paginated items separately for tabs
-  // Force isPurchased state to match the tab's filter for consistent checkbox state
-  const { sortableItems: transformedUnpurchasedItems } =
-    useShoppingListTransform(rawUnpurchasedItems, { forcePurchasedState: false });
-  const { sortableItems: transformedPurchasedItems } =
-    useShoppingListTransform(rawPurchasedItems, { forcePurchasedState: true });
+  // 4. Transform: Convert raw items to UI format (single consolidated call)
+  // Transforms all arrays in one useMemo call for better performance
+  const { sortableItems, unpurchasedItems: transformedUnpurchasedItems, purchasedItems: transformedPurchasedItems } =
+    useShoppingListTransformMulti({
+      items,
+      rawUnpurchasedItems,
+      rawPurchasedItems,
+    });
 
   // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = useMemo(
@@ -91,6 +89,8 @@ export function useShoppingListScreen() {
     sortableItems,
     unpurchasedItems: transformedUnpurchasedItems,
     purchasedItems: transformedPurchasedItems,
+    // Raw items (for hooks that need GraphQL fragment fields like version)
+    rawUnpurchasedItems,
 
     // Loading states
     loading: listsLoading || itemsLoading,

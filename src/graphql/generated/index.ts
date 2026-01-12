@@ -4886,6 +4886,7 @@ export enum MutationType {
   ItemAdded = 'ITEM_ADDED',
   ItemCompleted = 'ITEM_COMPLETED',
   ItemRemoved = 'ITEM_REMOVED',
+  ItemUncompleted = 'ITEM_UNCOMPLETED',
   ItemUpdated = 'ITEM_UPDATED',
   StatusChanged = 'STATUS_CHANGED',
   Updated = 'UPDATED',
@@ -7363,6 +7364,7 @@ export type ShoppingListCollaboratorChangedPayload = {
   collaborator: Maybe<ShoppingListCollaborator>;
   listId: Scalars['ID']['output'];
   mutation: MutationType;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
 };
@@ -7463,6 +7465,7 @@ export type ShoppingListItemChangedPayload = {
   item: Maybe<ShoppingListItem>;
   listId: Scalars['ID']['output'];
   mutation: MutationType;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
@@ -7569,6 +7572,7 @@ export type ShoppingListStatusChangedPayload = {
   listId: Scalars['ID']['output'];
   mutation: MutationType;
   newStatus: ListStatus;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   previousStatus: Maybe<ListStatus>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
@@ -7614,6 +7618,7 @@ export type ShoppingListUpdatedPayload = {
   __typename?: 'ShoppingListUpdatedPayload';
   mutation: MutationType;
   node: Maybe<ShoppingList>;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];

@@ -8,7 +8,10 @@ import { StateCreator } from 'zustand';
 import { AppState, AppStateStatus } from 'react-native';
 import { jwtDecode } from 'jwt-decode';
 import { RootState } from '../index';
-import { scheduleTokenRefresh, cancelTokenRefresh } from '../../apollo/links/tokenScheduler';
+import {
+  scheduleTokenRefresh,
+  cancelTokenRefresh,
+} from '../../apollo/links/tokenScheduler';
 import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
 
 // ============================================
@@ -27,37 +30,50 @@ const isTokenExpiredOrExpiring = (accessToken: string | null): boolean => {
     const expiresAt = decoded.exp * 1000;
     const now = Date.now();
     // Consider expired if less than 1 minute remaining
-    return (expiresAt - now) < 60 * 1000;
+    return expiresAt - now < 60 * 1000;
   } catch {
     return true;
   }
 };
 
-let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null =
+  null;
 let lastAppState: AppStateStatus = AppState.currentState;
 
 /**
  * Initialize AppState listener for token refresh on app resume
  * Call this once at app startup (e.g., in App.tsx)
  */
-export const initAppStateTokenRefresh = (getAccessToken: () => string | null) => {
+export const initAppStateTokenRefresh = (
+  getAccessToken: () => string | null,
+) => {
   if (appStateSubscription) return; // Already initialized
 
-  appStateSubscription = AppState.addEventListener('change', async (nextAppState: AppStateStatus) => {
-    // App coming to foreground from background
-    if (lastAppState.match(/inactive|background/) && nextAppState === 'active') {
-      const accessToken = getAccessToken();
-      if (accessToken && isTokenExpiredOrExpiring(accessToken)) {
-        console.log('[AuthSlice] Token expired/expiring on app resume, refreshing...');
-        try {
-          await proactiveTokenRefresh();
-        } catch (error) {
-          console.warn('[AuthSlice] Token refresh on resume failed, reactive refresh will handle');
+  appStateSubscription = AppState.addEventListener(
+    'change',
+    async (nextAppState: AppStateStatus) => {
+      // App coming to foreground from background
+      if (
+        lastAppState.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        const accessToken = getAccessToken();
+        if (accessToken && isTokenExpiredOrExpiring(accessToken)) {
+          console.log(
+            '[AuthSlice] Token expired/expiring on app resume, refreshing...',
+          );
+          try {
+            await proactiveTokenRefresh();
+          } catch {
+            console.warn(
+              '[AuthSlice] Token refresh on resume failed, reactive refresh will handle',
+            );
+          }
         }
       }
-    }
-    lastAppState = nextAppState;
-  });
+      lastAppState = nextAppState;
+    },
+  );
 };
 
 /**

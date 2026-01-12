@@ -1,10 +1,11 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils';
 import type { StepDotProps } from './types';
 
@@ -95,8 +96,6 @@ export const StepDot: React.FC<StepDotProps> = ({
   );
 };
 
-// Static styles using React Native StyleSheet (not Unistyles)
-// This avoids mixing Unistyles with Reanimated while keeping proper TypeScript types
 const styles = StyleSheet.create({
   stepDot: {
     justifyContent: 'center',

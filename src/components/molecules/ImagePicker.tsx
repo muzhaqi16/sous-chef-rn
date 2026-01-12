@@ -100,7 +100,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
             `${permissionName} permission is required. Please enable it in your device settings.`,
           );
         }
-      } catch (error) {
+      } catch {
         // Fallback: try launching without permission check
         launchFn(DEFAULT_OPTIONS, handleImageResponse);
       }

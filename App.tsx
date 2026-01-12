@@ -77,6 +77,12 @@ const App = () => {
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');
 
+      // Track app launch event (captures theme at launch time)
+      Telemetry.trackEvent('app_launched', {
+        theme,
+        timestamp: new Date().toISOString(),
+      });
+
       // Start memory monitoring (only in dev or if enabled in settings)
       if (__DEV__) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
@@ -97,17 +103,6 @@ const App = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
-
-  // PERFORMANCE: Track app launch once on hydration
-  useEffect(() => {
-    if (isHydrated && hydrationInitializedRef.current) {
-      Telemetry.trackEvent('app_launched', {
-        theme,
-        timestamp: new Date().toISOString(),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHydrated]); // Only track on hydration, not theme changes
 
   // Track theme changes separately
   const prevThemeRef = useRef(theme);

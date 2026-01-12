@@ -37,9 +37,9 @@ interface PendingAnimation {
   timeoutId?: ReturnType<typeof setTimeout>;
 }
 
-const ListAnimationContext = createContext<ListAnimationContextType | undefined>(
-  undefined,
-);
+const ListAnimationContext = createContext<
+  ListAnimationContextType | undefined
+>(undefined);
 
 interface ListAnimationProviderProps {
   children: ReactNode;
@@ -55,13 +55,17 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
   children,
 }) => {
   // Registry of item animation trigger functions (direct call, no re-renders)
-  const animationTriggersRef = useRef<Map<string, ExitAnimationTrigger>>(new Map());
+  const animationTriggersRef = useRef<Map<string, ExitAnimationTrigger>>(
+    new Map(),
+  );
 
   // Fallback for items not registered (off-screen)
   const pendingAnimationsRef = useRef<Map<string, PendingAnimation>>(new Map());
 
   // Entry animations waiting to be claimed by mounting items
-  const pendingEntryAnimationsRef = useRef<Map<string, PendingEntryAnimation>>(new Map());
+  const pendingEntryAnimationsRef = useRef<Map<string, PendingEntryAnimation>>(
+    new Map(),
+  );
 
   /**
    * Register an item's animation trigger function.
@@ -219,22 +223,3 @@ export const useListAnimation = (): ListAnimationContextType => {
 export const useListAnimationOptional = (): ListAnimationContextType | null => {
   return useContext(ListAnimationContext) ?? null;
 };
-
-// =============================================================================
-// Backward Compatibility Aliases (deprecated - use new names)
-// =============================================================================
-
-/**
- * @deprecated Use ListAnimationProvider instead
- */
-export const ItemAnimationProvider = ListAnimationProvider;
-
-/**
- * @deprecated Use useListAnimation instead
- */
-export const useItemAnimation = useListAnimation;
-
-/**
- * @deprecated Use useListAnimationOptional instead
- */
-export const useItemAnimationOptional = useListAnimationOptional;

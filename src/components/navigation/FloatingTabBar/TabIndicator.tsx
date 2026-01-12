@@ -1,10 +1,10 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
+import { StyleSheet } from 'react-native-unistyles';
 import type { TabIndicatorProps } from './types';
 
 export const TabIndicator: React.FC<TabIndicatorProps> = ({
@@ -43,7 +43,6 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   );
 };
 
-// Static styles using React Native StyleSheet
 const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',

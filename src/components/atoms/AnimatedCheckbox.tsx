@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { Pressable } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,

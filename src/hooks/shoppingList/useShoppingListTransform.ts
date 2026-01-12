@@ -17,6 +17,82 @@ interface TransformOptions {
 }
 
 /**
+ * Options for consolidated multi-source transform.
+ * Pass multiple arrays to transform them all in a single hook call.
+ */
+interface MultiSourceTransformOptions {
+  /** All items (for backwards compatibility) */
+  items: ShoppingListItemDisplayFragment[];
+  /** Pre-filtered unpurchased items (from pagination) */
+  rawUnpurchasedItems: ShoppingListItemDisplayFragment[];
+  /** Pre-filtered purchased items (from pagination) */
+  rawPurchasedItems: ShoppingListItemDisplayFragment[];
+}
+
+/**
+ * Transform a single item to SortableShoppingListItem format.
+ * Pure function extracted for reuse across different transform modes.
+ */
+function transformItem(
+  item: ShoppingListItemDisplayFragment,
+  forcePurchasedState?: boolean,
+): SortableShoppingListItem | null {
+  // Skip items without ID or name (invalid/corrupt data)
+  if (!item.id || !item.itemName) {
+    if (__DEV__) {
+      console.warn('⚠️ Skipping invalid shopping list item:', item.id);
+    }
+    return null;
+  }
+
+  const imageUrl = getItemImageUrl(item.item);
+
+  // Use forced state if provided, otherwise read from server data
+  const isPurchasedValue = forcePurchasedState ?? item.purchaseInfo?.isPurchased;
+
+  // Create quantity config
+  const rightElementConfig: QuantityElementConfig = {
+    type: 'quantity',
+    quantity: item.quantity || 0,
+    quantityInput: item.quantityInput,
+    unit: item.unitName || item.unit?.symbol || undefined,
+    itemId: item.id,
+    disabled: isPurchasedValue ?? false,
+  };
+
+  // Create image config (only if image exists)
+  const leftElementConfig: ImageElementConfig | undefined = imageUrl
+    ? {
+        type: 'image',
+        url: imageUrl,
+        isPurchased: isPurchasedValue,
+      }
+    : undefined;
+
+  return {
+    id: item.id,
+    title: item.itemName || '',
+    subtitle: item.category || undefined,
+    sortOrder: item.sortOrder ?? 'zzz',
+    isPurchased: isPurchasedValue,
+    rightElementConfig,
+    leftElementConfig,
+  };
+}
+
+/**
+ * Transform an array of items, filtering out invalid ones.
+ */
+function transformItems(
+  items: ShoppingListItemDisplayFragment[],
+  forcePurchasedState?: boolean,
+): SortableShoppingListItem[] {
+  return items
+    .map(item => transformItem(item, forcePurchasedState))
+    .filter((item): item is SortableShoppingListItem => item !== null);
+}
+
+/**
  * useShoppingListTransform - Transform raw items to SortableShoppingListItem
  *
  * Single responsibility:
@@ -34,48 +110,12 @@ export function useShoppingListTransform(
   options?: TransformOptions,
 ) {
   const { forcePurchasedState } = options ?? {};
-  // Transform items to sortable format with configs
-  const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    return items.map((item): SortableShoppingListItem => {
-      const imageUrl = getItemImageUrl(item.item);
 
-      // Use forced state if provided, otherwise read from server data
-      // This ensures checkbox state matches the tab items are displayed in
-      const isPurchasedValue =
-        forcePurchasedState ?? item.purchaseInfo?.isPurchased;
-
-      // Create quantity config
-      // unitName from server now includes item-specific display name
-      // (e.g., "pineapples" instead of generic "count")
-      const rightElementConfig: QuantityElementConfig = {
-        type: 'quantity',
-        quantity: item.quantity || 0,
-        quantityInput: item.quantityInput,
-        unit: item.unitName || item.unit?.symbol || undefined,
-        itemId: item.id,
-        disabled: isPurchasedValue ?? false,
-      };
-
-      // Create image config (only if image exists)
-      const leftElementConfig: ImageElementConfig | undefined = imageUrl
-        ? {
-            type: 'image',
-            url: imageUrl,
-            isPurchased: isPurchasedValue,
-          }
-        : undefined;
-
-      return {
-        id: item.id,
-        title: item.itemName || '',
-        subtitle: item.category || undefined,
-        sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
-        isPurchased: isPurchasedValue,
-        rightElementConfig,
-        leftElementConfig,
-      };
-    });
-  }, [items, forcePurchasedState]);
+  // Transform items using the extracted helper function
+  const sortableItems = useMemo(
+    () => transformItems(items, forcePurchasedState),
+    [items, forcePurchasedState],
+  );
 
   // Partition by purchase status
   const { unpurchasedItems, purchasedItems } = useMemo(
@@ -91,4 +131,38 @@ export function useShoppingListTransform(
     unpurchasedItems,
     purchasedItems,
   };
+}
+
+/**
+ * useShoppingListTransformMulti - Consolidated transform for multiple item sources
+ *
+ * Use this when you have multiple arrays to transform (e.g., from paginated queries).
+ * Transforms all arrays in a single useMemo call for better performance.
+ *
+ * @example
+ * ```tsx
+ * const { sortableItems, unpurchasedItems, purchasedItems } = useShoppingListTransformMulti({
+ *   items,                // All items (combined)
+ *   rawUnpurchasedItems,  // Paginated unpurchased
+ *   rawPurchasedItems,    // Paginated purchased
+ * });
+ * ```
+ */
+export function useShoppingListTransformMulti(options: MultiSourceTransformOptions) {
+  const { items, rawUnpurchasedItems, rawPurchasedItems } = options;
+
+  // Transform all arrays in a single useMemo call
+  const result = useMemo(
+    () => ({
+      // All items (for backwards compatibility / search)
+      sortableItems: transformItems(items),
+      // Paginated unpurchased items (force isPurchased: false for checkbox consistency)
+      unpurchasedItems: transformItems(rawUnpurchasedItems, false),
+      // Paginated purchased items (force isPurchased: true for checkbox consistency)
+      purchasedItems: transformItems(rawPurchasedItems, true),
+    }),
+    [items, rawUnpurchasedItems, rawPurchasedItems],
+  );
+
+  return result;
 }

@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, FlatList } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+} from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters';
 
@@ -26,7 +33,11 @@ import {
 } from '#generated';
 
 // Store & Navigation
-import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectUser,
+  selectSelectedHomeId,
+} from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 
 // Validation & Helpers
@@ -247,7 +258,7 @@ const CreateHomeScreenComponent = () => {
         }
 
         setCheckingExisting(false);
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setCheckingExisting(false);
         }
@@ -339,7 +350,7 @@ const CreateHomeScreenComponent = () => {
   const handleAcceptInvite = async (token: string) => {
     try {
       await acceptHomeInvite({ variables: { token } });
-    } catch (error) {
+    } catch {
       // Error handled by onError in mutation
     }
   };
@@ -356,7 +367,7 @@ const CreateHomeScreenComponent = () => {
           onPress: async () => {
             try {
               await declineHomeInvite({ variables: { token } });
-            } catch (error) {
+            } catch {
               // Error handled by onError in mutation
             }
           },
@@ -366,7 +377,12 @@ const CreateHomeScreenComponent = () => {
   };
 
   // Loading state
-  if (checkingExisting || homesLoading || invitesLoading || (selectedHomeId && pantriesLoading)) {
+  if (
+    checkingExisting ||
+    homesLoading ||
+    invitesLoading ||
+    (selectedHomeId && pantriesLoading)
+  ) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
 
@@ -397,9 +413,12 @@ const CreateHomeScreenComponent = () => {
           <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
           <FlatList
             data={pendingInvites}
-            keyExtractor={(invite) => invite.id}
+            keyExtractor={invite => invite.id}
             renderItem={({ item: invite }) => {
-              const inviterName = invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
+              const inviterName =
+                invite.inviter?.profile?.displayName ||
+                invite.inviter?.email ||
+                'Someone';
               const inviteHomeName = invite.home?.name || 'Unknown Home';
 
               return (
@@ -411,12 +430,16 @@ const CreateHomeScreenComponent = () => {
                   <View style={styles.inviteDetailsContainer}>
                     <Text style={styles.inviteDetail}>
                       <Text style={styles.inviteDetailLabel}>From: </Text>
-                      <Text style={styles.inviteDetailValue}>{inviterName}</Text>
+                      <Text style={styles.inviteDetailValue}>
+                        {inviterName}
+                      </Text>
                     </Text>
 
                     <Text style={styles.inviteDetail}>
                       <Text style={styles.inviteDetailLabel}>Role: </Text>
-                      <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
+                      <Text style={styles.inviteRoleText}>
+                        {formatRole(invite.role)}
+                      </Text>
                     </Text>
                   </View>
 
@@ -424,18 +447,29 @@ const CreateHomeScreenComponent = () => {
                   <View style={styles.inviteActions}>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteDeclineButton]}
-                      onPress={() => handleDeclineInvite(invite.id, inviteHomeName)}
-                      disabled={accepting}>
-                      <Text style={styles.inviteDeclineButtonText}>Decline</Text>
+                      onPress={() =>
+                        handleDeclineInvite(invite.id, inviteHomeName)
+                      }
+                      disabled={accepting}
+                    >
+                      <Text style={styles.inviteDeclineButtonText}>
+                        Decline
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteAcceptButton]}
                       onPress={() => handleAcceptInvite(invite.id)}
-                      disabled={accepting}>
+                      disabled={accepting}
+                    >
                       {accepting ? (
-                        <ActivityIndicator size="small" color={theme.colors.white} />
+                        <ActivityIndicator
+                          size="small"
+                          color={theme.colors.white}
+                        />
                       ) : (
-                        <Text style={styles.inviteAcceptButtonText}>Accept</Text>
+                        <Text style={styles.inviteAcceptButtonText}>
+                          Accept
+                        </Text>
                       )}
                     </TouchableOpacity>
                   </View>

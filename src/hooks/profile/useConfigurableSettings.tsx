@@ -1,7 +1,13 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
-import { useAppStore, selectUser, selectSetters, selectNavigationUtils, selectPreferences } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectUser,
+  selectSetters,
+  selectNavigationUtils,
+  selectPreferences,
+} from '#store/useAppStore';
 import { useTheme, useAuth } from '#hooks';
 import {
   useUpdateUserProfileMutation,
@@ -17,9 +23,11 @@ import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
   const user = useAppStore(selectUser);
-  const {logout} = useAppStore(useShallow(selectSetters));
-  const {getUserNavigationState} = useAppStore(useShallow(selectNavigationUtils));
-  const {language, setLanguage} = useAppStore(useShallow(selectPreferences));
+  const { logout } = useAppStore(useShallow(selectSetters));
+  const { getUserNavigationState } = useAppStore(
+    useShallow(selectNavigationUtils),
+  );
+  const { language, setLanguage } = useAppStore(useShallow(selectPreferences));
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useAuth();
@@ -373,7 +381,7 @@ export const useConfigurableSettings = (profile: any) => {
                               await removeCredentials(user.email);
                               setBiometricEnabled(false);
                             }
-                          } catch (error) {
+                          } catch {
                             Alert.alert(
                               'Error',
                               'Failed to disable biometric authentication.',

@@ -70,7 +70,7 @@ export const NotificationActionHandler: React.FC<
           //     itemId: notification.payload.itemId,
           //   },
           // });
-        } catch (error) {
+        } catch {
           Alert.alert(
             'Navigation Error',
             'Could not navigate to shopping list.',
@@ -82,11 +82,8 @@ export const NotificationActionHandler: React.FC<
         // Navigate to main pantry - expired items now shown inline
         try {
           navigate('Pantry');
-        } catch (error) {
-          Alert.alert(
-            'Navigation Error',
-            'Could not navigate to pantry.',
-          );
+        } catch {
+          Alert.alert('Navigation Error', 'Could not navigate to pantry.');
         }
         break;
 
@@ -96,7 +93,7 @@ export const NotificationActionHandler: React.FC<
           // navigateTo.shoppingListMain({
           //   listId: notification.payload.listId,
           // });
-        } catch (error) {
+        } catch {
           Alert.alert(
             'Navigation Error',
             'Could not navigate to shopping list.',
@@ -108,7 +105,7 @@ export const NotificationActionHandler: React.FC<
         // Navigate to security settings
         try {
           navigateTo.profile();
-        } catch (error) {
+        } catch {
           Alert.alert('Navigation Error', 'Could not navigate to settings.');
         }
         break;
@@ -125,7 +122,7 @@ export const NotificationActionHandler: React.FC<
               onPress: () => {
                 try {
                   navigateTo.notifications();
-                } catch (error) {
+                } catch {
                   console.log('Could not navigate to notifications');
                 }
               },

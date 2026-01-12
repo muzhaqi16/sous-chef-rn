@@ -1,11 +1,8 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
+import { useApolloClient } from '@apollo/client/react';
 import { useMoveShoppingListItemMutation } from '#generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
-import {
-  GetShoppingListDocument,
-  GetShoppingListQuery,
-} from '#generated';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   handleVersionConflict,
@@ -67,106 +64,13 @@ export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,
 ) {
   const { listId, items, refetch } = options;
+  const client = useApolloClient();
 
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
-    // NO optimisticResponse - cache.modify handles instant UI feedback
-    // This avoids "Missing field" warnings from partial fragment spreads
+    // NO optimisticResponse and NO update callback
     // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
-
-    // Update cache to reflect new order immediately using cache.modify
-    // This provides instant UI feedback without the missing field warnings
-    update(cache, _result, { variables }) {
-      if (!variables?.input?.itemId || !listId) return;
-
-      try {
-        const itemId = variables.input.itemId;
-        const afterItemId = variables.input.afterItemId;
-        const beforeItemId = variables.input.beforeItemId;
-
-        // Find neighbor sortOrders from current items
-        const afterItem = afterItemId
-          ? items.find(i => i.id === afterItemId)
-          : null;
-        const beforeItem = beforeItemId
-          ? items.find(i => i.id === beforeItemId)
-          : null;
-
-        // Get sortOrder values with duplicate handling
-        let effectiveAfterSortOrder = afterItem?.sortOrder ?? null;
-        let effectiveBeforeSortOrder = beforeItem?.sortOrder ?? null;
-
-        // Handle duplicate sortOrder values gracefully
-        // Instead of blocking, recover by using only afterSortOrder
-        if (
-          effectiveAfterSortOrder !== null &&
-          effectiveBeforeSortOrder !== null &&
-          effectiveAfterSortOrder === effectiveBeforeSortOrder
-        ) {
-          console.warn('⚠️ Duplicate sortOrder in cache.modify, recovering:', {
-            afterItemId,
-            afterSortOrder: effectiveAfterSortOrder,
-            beforeItemId,
-            beforeSortOrder: effectiveBeforeSortOrder,
-          });
-          // Use only afterSortOrder - generate position after the "after" item
-          // Server will correct the order when it responds
-          effectiveBeforeSortOrder = null;
-        }
-
-        // Generate new sortOrder using fractional indexing
-        const newSortOrder = generatePosition(
-          effectiveAfterSortOrder,
-          effectiveBeforeSortOrder,
-        );
-
-        // Directly modify the cached item's sortOrder field
-        // This provides instant UI feedback without fragment validation
-        cache.modify({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-          fields: {
-            sortOrder() {
-              return newSortOrder;
-            },
-            updatedAt() {
-              return new Date().toISOString();
-            },
-          },
-        });
-
-        // Re-sort the itemsConnection edges to reflect new order
-        const queryResult = cache.readQuery<GetShoppingListQuery>({
-          query: GetShoppingListDocument,
-          variables: { id: listId },
-        });
-
-        if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
-
-        // Sort edges by sortOrder (localeCompare matches base62 ordering)
-        const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
-          (a: any, b: any) =>
-            (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-        );
-
-        // Write back sorted edges to cache
-        cache.writeQuery({
-          query: GetShoppingListDocument,
-          variables: { id: listId },
-          data: {
-            shoppingList: {
-              ...queryResult.shoppingList,
-              itemsConnection: {
-                ...queryResult.shoppingList.itemsConnection,
-                edges: sortedEdges,
-              },
-            },
-          },
-        });
-      } catch (error) {
-        console.warn('Cache update failed for moveItem:', error);
-        // Don't throw - let mutation succeed even if cache update fails
-      }
-    },
+    // We do cache.modify BEFORE the mutation call for immediate UI feedback
   });
 
   /**
@@ -196,7 +100,99 @@ export function useItemReordering<T extends ShoppingListItem>(
           return;
         }
 
-        // Execute mutation with optimistic response and cache update
+        // Calculate new sortOrder BEFORE cache update
+        const afterItem = afterItemId
+          ? items.find(i => i.id === afterItemId)
+          : null;
+        const beforeItem = beforeItemId
+          ? items.find(i => i.id === beforeItemId)
+          : null;
+
+        // Defensive validation: verify sortOrder ordering
+        // If after >= before, the visual order doesn't match sortOrder order (cache out of sync)
+        if (afterItem?.sortOrder && beforeItem?.sortOrder) {
+          if (afterItem.sortOrder >= beforeItem.sortOrder) {
+            console.warn('Invalid sortOrder state detected (after >= before), refetching...', {
+              afterId: afterItemId,
+              afterSortOrder: afterItem.sortOrder,
+              beforeId: beforeItemId,
+              beforeSortOrder: beforeItem.sortOrder,
+            });
+            refetch?.();
+            return;
+          }
+        }
+
+        const newSortOrder = generatePosition(
+          afterItem?.sortOrder ?? null,
+          beforeItem?.sortOrder ?? null,
+        );
+
+        // PERFORMANCE: Batch both cache modifications into a single update
+        // This ensures FlashList sees a consistent state and reduces re-render cycles
+        // Per apollo-client-patterns.md Pattern 5: Use cache.modify for simple field updates
+        client.cache.batch({
+          update: cache => {
+            // 1. Update the item's sortOrder and timestamp
+            cache.modify({
+              id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+              fields: {
+                sortOrder() { return newSortOrder; },
+                updatedAt() { return new Date().toISOString(); },
+              },
+            });
+
+            // Helper to sort edges by sortOrder with secondary sort by id
+            const sortEdges = (edges: readonly any[], readField: any) => {
+              return [...edges].sort((a, b) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nodeA = readField('node', a) as any;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const nodeB = readField('node', b) as any;
+                const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                if (sortA < sortB) return -1;
+                if (sortA > sortB) return 1;
+                // Secondary sort by id for deterministic ordering when sortOrder matches
+                const idA = (nodeA ? readField('id', nodeA) : '') as string || '';
+                const idB = (nodeB ? readField('id', nodeB) : '') as string || '';
+                return idA.localeCompare(idB);
+              });
+            };
+
+            // 2. Re-sort edges in itemsConnection so FlashList sees new order
+            // Uses cache.modify instead of writeQuery to target the correct cache key
+            // (writeQuery with aliases doesn't match the field policy's keyArgs: ['filters'])
+            cache.modify({
+              id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+              fields: {
+                // Target the actual field name with its keyArgs to match the cache key
+                itemsConnection(existing, { storeFieldName, readField }) {
+                  // Only modify the unpurchased connection (check filter in storeFieldName)
+                  if (!storeFieldName.includes('"isPurchased":false')) {
+                    return existing;
+                  }
+
+                  return {
+                    ...existing,
+                    edges: sortEdges(existing?.edges || [], readField),
+                  };
+                },
+                // Also target aliased fields - Apollo may cache under the alias name
+                // when using GetShoppingListItemsPaginated query
+                unpurchasedItems(existing, { readField }) {
+                  if (!existing?.edges) return existing;
+                  return {
+                    ...existing,
+                    edges: sortEdges(existing.edges, readField),
+                  };
+                },
+              },
+            });
+          },
+        });
+
+        // Execute mutation (NO optimisticResponse - cache already updated above)
         const result = await moveItem({
           variables: {
             input: {
@@ -256,7 +252,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         Alert.alert('Error', 'Failed to reorder items. Please try again.');
       }
     },
-    [listId, moveItem, items, refetch],
+    [listId, moveItem, items, refetch, client],
   );
 
   return { handleSortOrderUpdate };

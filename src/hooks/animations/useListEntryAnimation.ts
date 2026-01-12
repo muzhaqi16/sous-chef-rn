@@ -4,10 +4,7 @@ import {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import {
-  listItemEntryAnimation,
-  standardEasing,
-} from '#/constants/animations';
+import { listItemEntryAnimation, standardEasing } from '#/constants/animations';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
 /**
@@ -98,12 +95,3 @@ export const useListEntryAnimation = (itemId: string) => {
     entryAnimatedStyle,
   };
 };
-
-// =============================================================================
-// Backward Compatibility Alias (deprecated - use useListEntryAnimation)
-// =============================================================================
-
-/**
- * @deprecated Use useListEntryAnimation instead
- */
-export const useItemEntryAnimation = useListEntryAnimation;

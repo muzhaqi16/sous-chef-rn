@@ -54,7 +54,9 @@ export class BiometricManager {
   /**
    * Get appropriate access control based on device capabilities
    */
-  static async getAccessControl(options: BiometricOptions = {}): Promise<Keychain.ACCESS_CONTROL | undefined> {
+  static async getAccessControl(
+    options: BiometricOptions = {},
+  ): Promise<Keychain.ACCESS_CONTROL | undefined> {
     const {
       requireBiometric = false,
       allowDevicePasscode = true,
@@ -94,7 +96,9 @@ export class BiometricManager {
   /**
    * Get appropriate security level for Android
    */
-  static async getSecurityLevel(): Promise<Keychain.SECURITY_LEVEL | undefined> {
+  static async getSecurityLevel(): Promise<
+    Keychain.SECURITY_LEVEL | undefined
+  > {
     if (Platform.OS !== 'android') {
       return undefined;
     }
@@ -103,7 +107,10 @@ export class BiometricManager {
       // Try secure hardware first
       return Keychain.SECURITY_LEVEL.SECURE_HARDWARE;
     } catch (error) {
-      console.warn('Secure hardware not available, falling back to software:', error);
+      console.warn(
+        'Secure hardware not available, falling back to software:',
+        error,
+      );
       return Keychain.SECURITY_LEVEL.SECURE_SOFTWARE;
     }
   }
@@ -113,7 +120,7 @@ export class BiometricManager {
    */
   static async createKeychainOptions(
     service: string,
-    options: BiometricOptions = {}
+    options: BiometricOptions = {},
   ) {
     const accessControl = await BiometricManager.getAccessControl(options);
     const securityLevel = await BiometricManager.getSecurityLevel();
@@ -141,19 +148,26 @@ export class BiometricManager {
     service: string,
     username: string,
     password: string,
-    options: BiometricOptions = {}
+    options: BiometricOptions = {},
   ): Promise<{ success: boolean; method: string; error?: string }> {
     const capability = await BiometricManager.getBiometricCapability();
 
     // Strategy 1: Try with biometric protection
     if (capability.isAvailable && !options.fallbackToPassword) {
       try {
-        const biometricOptions = await BiometricManager.createKeychainOptions(service, {
-          requireBiometric: true,
-          allowDevicePasscode: options.allowDevicePasscode,
-        });
+        const biometricOptions = await BiometricManager.createKeychainOptions(
+          service,
+          {
+            requireBiometric: true,
+            allowDevicePasscode: options.allowDevicePasscode,
+          },
+        );
 
-        const success = await Keychain.setGenericPassword(username, password, biometricOptions);
+        const success = await Keychain.setGenericPassword(
+          username,
+          password,
+          biometricOptions,
+        );
         if (success) {
           return { success: true, method: 'biometric' };
         }
@@ -165,12 +179,19 @@ export class BiometricManager {
     // Strategy 2: Try with device passcode
     if (options.allowDevicePasscode !== false) {
       try {
-        const passcodeOptions = await BiometricManager.createKeychainOptions(service, {
-          requireBiometric: false,
-          allowDevicePasscode: true,
-        });
+        const passcodeOptions = await BiometricManager.createKeychainOptions(
+          service,
+          {
+            requireBiometric: false,
+            allowDevicePasscode: true,
+          },
+        );
 
-        const success = await Keychain.setGenericPassword(username, password, passcodeOptions);
+        const success = await Keychain.setGenericPassword(
+          username,
+          password,
+          passcodeOptions,
+        );
         if (success) {
           return { success: true, method: 'passcode' };
         }
@@ -187,7 +208,11 @@ export class BiometricManager {
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         };
 
-        const success = await Keychain.setGenericPassword(username, password, basicOptions);
+        const success = await Keychain.setGenericPassword(
+          username,
+          password,
+          basicOptions,
+        );
         if (success) {
           return { success: true, method: 'basic' };
         }
@@ -195,12 +220,16 @@ export class BiometricManager {
         return {
           success: false,
           method: 'none',
-          error: error.message || 'All save strategies failed'
+          error: error.message || 'All save strategies failed',
         };
       }
     }
 
-    return { success: false, method: 'none', error: 'No suitable save method available' };
+    return {
+      success: false,
+      method: 'none',
+      error: 'No suitable save method available',
+    };
   }
 
   /**
@@ -208,8 +237,13 @@ export class BiometricManager {
    */
   static async loadCredentialsWithFallback(
     service: string,
-    _options: BiometricOptions = {}
-  ): Promise<{ success: boolean; credentials?: { username: string; password: string }; method?: string; error?: string }> {
+    _options: BiometricOptions = {},
+  ): Promise<{
+    success: boolean;
+    credentials?: { username: string; password: string };
+    method?: string;
+    error?: string;
+  }> {
     const capability = await BiometricManager.getBiometricCapability();
 
     // Determine authentication prompt based on available methods
@@ -247,24 +281,36 @@ export class BiometricManager {
         };
       }
 
-      return { success: false, error: 'No credentials found or authentication cancelled' };
+      return {
+        success: false,
+        error: 'No credentials found or authentication cancelled',
+      };
     } catch (error: any) {
       // Handle specific error types
-      if (error.message?.includes('UserCancel') || error.message?.includes('UserFallback')) {
+      if (
+        error.message?.includes('UserCancel') ||
+        error.message?.includes('UserFallback')
+      ) {
         return { success: false, error: 'Authentication cancelled by user' };
       }
 
       if (error.message?.includes('BiometryNotAvailable')) {
-        return { success: false, error: 'Biometric authentication not available' };
+        return {
+          success: false,
+          error: 'Biometric authentication not available',
+        };
       }
 
       if (error.message?.includes('BiometryLockout')) {
-        return { success: false, error: 'Biometric authentication locked. Please use device passcode.' };
+        return {
+          success: false,
+          error: 'Biometric authentication locked. Please use device passcode.',
+        };
       }
 
       return {
         success: false,
-        error: error.message || 'Authentication failed'
+        error: error.message || 'Authentication failed',
       };
     }
   }
@@ -283,7 +329,7 @@ export class BiometricManager {
         },
       });
       return !!result;
-    } catch (error) {
+    } catch {
       // If any error occurs, assume no credentials
       return false;
     }
@@ -292,7 +338,9 @@ export class BiometricManager {
   /**
    * Get user-friendly biometric type name
    */
-  static getBiometricTypeName(biometryType: Keychain.BIOMETRY_TYPE | null): string {
+  static getBiometricTypeName(
+    biometryType: Keychain.BIOMETRY_TYPE | null,
+  ): string {
     switch (biometryType) {
       case Keychain.BIOMETRY_TYPE.TOUCH_ID:
         return 'Touch ID';

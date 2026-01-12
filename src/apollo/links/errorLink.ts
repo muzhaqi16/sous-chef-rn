@@ -1,4 +1,4 @@
-import { onError } from '@apollo/client/link/error';
+import { ErrorLink } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -21,7 +21,7 @@ const isApiKeyError = (code: string, msg: string) =>
 const isSubscription = (op: any) =>
   op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
 
-export const errorLink = onError(({ error, operation, forward }) => {
+export const errorLink = new ErrorLink(({ error, operation, forward }) => {
   if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
 
   // Check if token refresh is in progress to suppress cascade of auth errors

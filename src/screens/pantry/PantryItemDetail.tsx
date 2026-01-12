@@ -188,7 +188,7 @@ export const PantryItemDetail: React.FC<{
               variables: { id: itemId },
             });
             goBack();
-          } catch (error) {
+          } catch {
             Alert.alert('Error', 'Failed to delete item');
           }
         },

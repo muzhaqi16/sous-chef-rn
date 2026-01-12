@@ -1,4 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+  ReactNode,
+} from 'react';
 import type { IconLibrary } from '#/utils/iconUtils';
 
 /**
@@ -35,24 +44,38 @@ interface TabBarActionsContextType {
   setOverlayOpen: (isOpen: boolean) => void;
 }
 
-const TabBarActionsContext = createContext<TabBarActionsContextType | undefined>(undefined);
+const TabBarActionsContext = createContext<
+  TabBarActionsContextType | undefined
+>(undefined);
 
 interface TabBarActionsProviderProps {
   children: ReactNode;
 }
 
-export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({ children }) => {
+export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
+  children,
+}) => {
   // Scanner state
-  const [onScanPress, setOnScanPress] = useState<(() => void) | undefined>(undefined);
+  const [onScanPress, setOnScanPress] = useState<(() => void) | undefined>(
+    undefined,
+  );
   const [showScannerButton, setShowScannerButton] = useState(false);
 
   // Add button state
-  const [onAddPress, setOnAddPress] = useState<(() => void) | undefined>(undefined);
+  const [onAddPress, setOnAddPress] = useState<(() => void) | undefined>(
+    undefined,
+  );
   const [showAddButton, setShowAddButton] = useState(false);
 
   // Shared state
   const [activeTab, setActiveTab] = useState<string>('');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
+  // Ref to track activeTab for use in callbacks without causing re-renders
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   // Define which tabs should show buttons
   const allowedScannerTabs = ['Pantry', 'ShoppingList'];
@@ -61,45 +84,54 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({ ch
 
   // Store handlers per tab so we don't lose them during transitions
   // This prevents the add button from flickering when navigating between allowed tabs
-  const [tabHandlers, setTabHandlers] = useState<Record<string, () => void>>({});
+  const [tabHandlers, setTabHandlers] = useState<Record<string, () => void>>(
+    {},
+  );
 
-  const setScannerProps = useCallback((scanPress?: () => void, showButton: boolean = false) => {
-    // Only update if values have changed to prevent unnecessary re-renders
-    setOnScanPress(prev => {
-      // Compare function references - only update if different
-      if (prev === scanPress) return prev;
-      return scanPress || undefined;
-    });
-    setShowScannerButton(prev => {
-      // Only update if showButton value has changed
-      if (prev === showButton) return prev;
-      return showButton;
-    });
-  }, []);
-
-  const setAddProps = useCallback((addPress?: () => void, showButton: boolean = false) => {
-    // Store handler by active tab to prevent flickering during tab transitions
-    // When a screen registers its handler, we store it for that tab
-    // When a screen unregisters (cleanup), we only clear if we're leaving allowed tabs
-    if (addPress) {
-      setTabHandlers(prev => {
-        if (activeTab && prev[activeTab] !== addPress) {
-          return { ...prev, [activeTab]: addPress };
-        }
-        return prev;
+  const setScannerProps = useCallback(
+    (scanPress?: () => void, showButton: boolean = false) => {
+      // Only update if values have changed to prevent unnecessary re-renders
+      setOnScanPress(prev => {
+        // Compare function references - only update if different
+        if (prev === scanPress) return prev;
+        return scanPress || undefined;
       });
-    }
+      setShowScannerButton(prev => {
+        // Only update if showButton value has changed
+        if (prev === showButton) return prev;
+        return showButton;
+      });
+    },
+    [],
+  );
 
-    // Only update if values have changed to prevent unnecessary re-renders
-    setOnAddPress(prev => {
-      if (prev === addPress) return prev;
-      return addPress || undefined;
-    });
-    setShowAddButton(prev => {
-      if (prev === showButton) return prev;
-      return showButton;
-    });
-  }, [activeTab]);
+  const setAddProps = useCallback(
+    (addPress?: () => void, showButton: boolean = false) => {
+      // Store handler by active tab to prevent flickering during tab transitions
+      // When a screen registers its handler, we store it for that tab
+      // When a screen unregisters (cleanup), we only clear if we're leaving allowed tabs
+      if (addPress) {
+        setTabHandlers(prev => {
+          const currentTab = activeTabRef.current;
+          if (currentTab && prev[currentTab] !== addPress) {
+            return { ...prev, [currentTab]: addPress };
+          }
+          return prev;
+        });
+      }
+
+      // Only update if values have changed to prevent unnecessary re-renders
+      setOnAddPress(prev => {
+        if (prev === addPress) return prev;
+        return addPress || undefined;
+      });
+      setShowAddButton(prev => {
+        if (prev === showButton) return prev;
+        return showButton;
+      });
+    },
+    [],
+  );
 
   const setOverlayOpen = useCallback((isOpen: boolean) => {
     setIsOverlayOpen(isOpen);
@@ -110,16 +142,19 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({ ch
   }, []);
 
   // Only show buttons if the current tab is in the allowed list and button is enabled
-  const shouldShowScanner = showScannerButton && allowedScannerTabs.includes(activeTab);
+  const shouldShowScanner =
+    showScannerButton && allowedScannerTabs.includes(activeTab);
 
   // For add button: show if we're on an allowed tab AND either:
   // 1. showAddButton is true (screen has registered), OR
   // 2. We have a stored handler for this tab (prevents flicker during transitions)
   const hasStoredHandler = Boolean(activeTab && tabHandlers[activeTab]);
-  const shouldShowAdd = allowedAddTabs.includes(activeTab) && (showAddButton || hasStoredHandler);
+  const shouldShowAdd =
+    allowedAddTabs.includes(activeTab) && (showAddButton || hasStoredHandler);
 
   // Use stored handler as fallback during transitions
-  const effectiveAddPress = onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
+  const effectiveAddPress =
+    onAddPress || (activeTab ? tabHandlers[activeTab] : undefined);
 
   // Get icon configuration based on active tab
   const addButtonConfig = useMemo((): AddButtonConfig => {
@@ -135,22 +170,37 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({ ch
   }, [activeTab]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
-  const contextValue = useMemo(() => ({
-    // Scanner props
-    onScanPress,
-    showScannerButton: shouldShowScanner,
-    setScannerProps,
-    // Add button props - use effectiveAddPress to maintain handler during transitions
-    onAddPress: effectiveAddPress,
-    showAddButton: shouldShowAdd,
-    addButtonConfig,
-    setAddProps,
-    // Shared
-    activeTab,
-    setActiveTab: handleSetActiveTab,
-    isOverlayOpen,
-    setOverlayOpen,
-  }), [onScanPress, shouldShowScanner, setScannerProps, effectiveAddPress, shouldShowAdd, addButtonConfig, setAddProps, activeTab, handleSetActiveTab, isOverlayOpen, setOverlayOpen]);
+  const contextValue = useMemo(
+    () => ({
+      // Scanner props
+      onScanPress,
+      showScannerButton: shouldShowScanner,
+      setScannerProps,
+      // Add button props - use effectiveAddPress to maintain handler during transitions
+      onAddPress: effectiveAddPress,
+      showAddButton: shouldShowAdd,
+      addButtonConfig,
+      setAddProps,
+      // Shared
+      activeTab,
+      setActiveTab: handleSetActiveTab,
+      isOverlayOpen,
+      setOverlayOpen,
+    }),
+    [
+      onScanPress,
+      shouldShowScanner,
+      setScannerProps,
+      effectiveAddPress,
+      shouldShowAdd,
+      addButtonConfig,
+      setAddProps,
+      activeTab,
+      handleSetActiveTab,
+      isOverlayOpen,
+      setOverlayOpen,
+    ],
+  );
 
   return (
     <TabBarActionsContext.Provider value={contextValue}>
@@ -165,13 +215,9 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({ ch
 export const useTabBarActions = (): TabBarActionsContextType => {
   const context = useContext(TabBarActionsContext);
   if (context === undefined) {
-    throw new Error('useTabBarActions must be used within a TabBarActionsProvider');
+    throw new Error(
+      'useTabBarActions must be used within a TabBarActionsProvider',
+    );
   }
   return context;
 };
-
-// Backwards compatibility aliases (deprecated - use new names)
-/** @deprecated Use TabBarActionsProvider instead */
-export const ScannerProvider = TabBarActionsProvider;
-/** @deprecated Use useTabBarActions instead */
-export const useScanner = useTabBarActions;

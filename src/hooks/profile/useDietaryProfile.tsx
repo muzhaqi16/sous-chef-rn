@@ -1,6 +1,6 @@
-import {useCallback} from 'react';
-import {Alert} from 'react-native';
-import {useStore} from '#store';
+import { useCallback } from 'react';
+import { Alert } from 'react-native';
+import { useStore } from '#store';
 import {
   useGetDietaryProfileQuery,
   useUpdateDietaryProfileMutation,
@@ -12,8 +12,8 @@ import {
   HealthGoal,
   RestrictionSeverity,
 } from '#generated';
-import {enhanceWithVersion} from '#/apollo/utils/createOptimisticResponse';
-import {useErrorHandler} from '#/utils/errorHandling';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export interface DietaryRestriction {
   id: string;
@@ -46,13 +46,13 @@ export interface DietaryProfileData {
 
 export const useDietaryProfile = () => {
   const user = useStore(state => state.user);
-  const {handleApolloError} = useErrorHandler();
+  const { handleApolloError } = useErrorHandler();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for profile data
   // - errorPolicy: 'ignore' returns cached data when network fails
 
-  const {data, loading, networkStatus} = useGetDietaryProfileQuery({
+  const { data, loading, networkStatus } = useGetDietaryProfileQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-first',
     errorPolicy: 'ignore',
@@ -71,11 +71,14 @@ export const useDietaryProfile = () => {
 
       return {
         __typename: 'Mutation',
-        updateDietaryProfile: enhanceWithVersion(profile as any, variables.input),
+        updateDietaryProfile: enhanceWithVersion(
+          profile as any,
+          variables.input,
+        ),
       };
     },
     onError: error => {
-      const {message} = handleApolloError(error, {
+      const { message } = handleApolloError(error, {
         operation: 'Update Dietary Profile',
       });
       Alert.alert('Error', message);
@@ -87,14 +90,14 @@ export const useDietaryProfile = () => {
     errorPolicy: 'all',
     // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
     // cache.modify() handles instant UI update when server responds (~100-200ms)
-    update: (cache, {data}) => {
+    update: (cache, { data }) => {
       if (!data?.addRestriction || !profile?.id) return;
 
       // Add restriction to DietaryProfile.restrictions array (Pattern 1)
       cache.modify({
-        id: cache.identify({__typename: 'DietaryProfile', id: profile.id}),
+        id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
-          restrictions(existingRestrictions = [], {toReference, readField}) {
+          restrictions(existingRestrictions = [], { toReference, readField }) {
             const newRestrictionRef = toReference(data.addRestriction);
 
             // Check if restriction already exists (prevent duplicates)
@@ -111,7 +114,7 @@ export const useDietaryProfile = () => {
       });
     },
     onError: error => {
-      const {message} = handleApolloError(error, {
+      const { message } = handleApolloError(error, {
         operation: 'Add Dietary Restriction',
       });
       Alert.alert('Error', message);
@@ -138,7 +141,7 @@ export const useDietaryProfile = () => {
       };
     },
     onError: error => {
-      const {message} = handleApolloError(error, {
+      const { message } = handleApolloError(error, {
         operation: 'Update Dietary Restriction',
       });
       Alert.alert('Error', message);
@@ -149,7 +152,7 @@ export const useDietaryProfile = () => {
   const [removeRestriction] = useRemoveDietaryRestrictionMutation({
     errorPolicy: 'all',
     // No optimistic response for deletes (following Pattern 4 recommendation)
-    update: (cache, {data}, {variables}) => {
+    update: (cache, { data }, { variables }) => {
       if (!data?.removeRestriction || !variables?.input?.id || !profile?.id)
         return;
 
@@ -157,9 +160,9 @@ export const useDietaryProfile = () => {
 
       // Step 1: Remove from DietaryProfile.restrictions array (Pattern 4)
       cache.modify({
-        id: cache.identify({__typename: 'DietaryProfile', id: profile.id}),
+        id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
-          restrictions(existingRestrictions = [], {readField}) {
+          restrictions(existingRestrictions = [], { readField }) {
             return existingRestrictions.filter(
               (ref: any) => readField('id', ref) !== restrictionId,
             );
@@ -169,14 +172,17 @@ export const useDietaryProfile = () => {
 
       // Step 2: Evict the entity from cache
       cache.evict({
-        id: cache.identify({__typename: 'DietaryRestriction', id: restrictionId}),
+        id: cache.identify({
+          __typename: 'DietaryRestriction',
+          id: restrictionId,
+        }),
       });
 
       // Step 3: CRITICAL - Garbage collect orphaned data
       cache.gc();
     },
     onError: error => {
-      const {message} = handleApolloError(error, {
+      const { message } = handleApolloError(error, {
         operation: 'Remove Dietary Restriction',
       });
       Alert.alert('Error', message);
@@ -189,15 +195,16 @@ export const useDietaryProfile = () => {
     return {
       id: profile.id,
       userId: profile.userId,
-      restrictions: profile.restrictions?.map(r => ({
-        id: r.id,
-        diet: r.diet,
-        intolerance: r.intolerance,
-        healthGoal: r.healthGoal,
-        severity: r.severity,
-        notes: r.notes,
-        appliesToHomeId: r.appliesToHomeId,
-      })) || [],
+      restrictions:
+        profile.restrictions?.map(r => ({
+          id: r.id,
+          diet: r.diet,
+          intolerance: r.intolerance,
+          healthGoal: r.healthGoal,
+          severity: r.severity,
+          notes: r.notes,
+          appliesToHomeId: r.appliesToHomeId,
+        })) || [],
       preferredCuisines: profile.preferredCuisines || [],
       dislikedIngredients: profile.dislikedIngredients || [],
       favoriteIngredients: profile.favoriteIngredients || [],
@@ -247,7 +254,7 @@ export const useDietaryProfile = () => {
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }
@@ -280,7 +287,7 @@ export const useDietaryProfile = () => {
 
         // No refetch needed - cache.modify() + optimistic response handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }
@@ -308,7 +315,7 @@ export const useDietaryProfile = () => {
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }
@@ -329,7 +336,7 @@ export const useDietaryProfile = () => {
 
         // No refetch needed - cache.modify() + cache.evict() + cache.gc() handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }

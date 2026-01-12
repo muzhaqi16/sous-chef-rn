@@ -106,7 +106,7 @@ export const BiometricSetupModal = ({
               );
               return;
             }
-          } catch (error) {
+          } catch {
             // Biometric auth failed
             Alert.alert(
               'Authentication Failed',
@@ -241,7 +241,9 @@ export const BiometricSetupModal = ({
               </View>
 
               <Text style={styles.title}>{getBiometricTitle()}</Text>
-              <Text style={styles.description}>{getBiometricDescription()}</Text>
+              <Text style={styles.description}>
+                {getBiometricDescription()}
+              </Text>
 
               {needsPassword && (
                 <View style={styles.passwordSection}>

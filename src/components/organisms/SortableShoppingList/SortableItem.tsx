@@ -1,6 +1,7 @@
-import React, { useCallback, useLayoutEffect } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo } from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
@@ -8,11 +9,18 @@ import { LazyAnimatedCheckbox } from '#/components/atoms/LazyAnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
 import { commonStyles } from '#/styles';
 import { Icon, createPropsComparator } from '#utils';
+import { HIT_SLOP } from '#/constants/touch';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
 import { useListExitAnimation, useListEntryAnimation } from '#hooks/animations';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
+import {
+  useDragGesture,
+  useDragShift,
+  useDropCompensation,
+  useDragAnimatedStyle,
+} from '#/hooks/drag';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -25,19 +33,24 @@ interface SimpleDraggableItemProps {
       variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
     };
     rightElement?: React.ReactNode;
-    rightElementConfig?: QuantityElementConfig; // Config-based element creation
+    rightElementConfig?: QuantityElementConfig;
     leftElement?: React.ReactNode;
-    leftElementConfig?: ImageElementConfig; // Config-based element creation
+    leftElementConfig?: ImageElementConfig;
   };
+  /** Current index in the list */
+  index: number;
+  /** Total number of items in the list */
+  totalItems: number;
   isActive?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
+  index,
+  totalItems,
   isActive,
 }) => {
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
-  // This eliminates 7-8 useUnistyles calls per item
   const themeColors = useSortableListTheme();
 
   // Get actions and permissions from context (stable references)
@@ -52,65 +65,93 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     onSwipeableWillOpen,
     onSwipeableClose,
     prepareForLayoutAnimation,
+    onReorderByDelta,
   } = actions;
+
   // Read permissions from ref to always get latest values
   const {
     canRemoveItems = true,
     canEditItems = true,
     canMarkPurchased = true,
+    canReorderItems = false,
   } = permissionsRef.current;
 
+  // Determine if drag is enabled for this item
+  const isDragEnabled =
+    !item.isPurchased && canReorderItems && !!onReorderByDelta;
+
+  // Animated ref for measuring item height on drag start
+  const containerRef = useAnimatedRef<Animated.View>();
+
+  // === DRAG HOOKS (replace ~300 lines of inline logic) ===
+
+  // Pan gesture for drag-to-reorder
+  const { panGesture, isDragging, translateY } = useDragGesture(
+    {
+      itemId: item.id,
+      index,
+      totalItems,
+      enabled: isDragEnabled,
+      containerRef,
+    },
+    { onReorderByDelta },
+  );
+
+  // Shift animation for non-dragged items
+  const { shiftY } = useDragShift({ itemId: item.id, index });
+
+  // Handle index changes after cache updates (drop compensation)
+  useDropCompensation({ itemId: item.id, index, translateY, shiftY });
+
+  // Animated style for drag transforms
+  const { dragAnimatedStyle } = useDragAnimatedStyle(
+    item.id,
+    isDragging,
+    translateY,
+    shiftY,
+  );
+
+  // === ANIMATION HOOKS ===
+
   // Exit animation for smooth slide-out when toggling purchase state
-  // IMPORTANT: Pass item.id so animation state resets when FlashList recycles views
   const { exitAnimatedStyle, triggerExit } = useListExitAnimation(item.id);
-
-  // List animation context for subscription-triggered animations
-  const animationContext = useListAnimationOptional();
-
-  // PERFORMANCE: Register exit animation trigger via useLayoutEffect (O(1) direct calls)
-  // When subscription schedules an animation, it calls the registered trigger directly
-  // instead of updating context state and causing O(n) re-renders
-  useLayoutEffect(() => {
-    if (!animationContext) return;
-
-    // Register this item's animation trigger function
-    animationContext.registerAnimationTrigger(item.id, triggerExit);
-
-    return () => {
-      // Clean up registration on unmount (handles FlashList view recycling)
-      animationContext.unregisterAnimationTrigger(item.id);
-    };
-  }, [item.id, triggerExit, animationContext]);
 
   // Entry animation for items appearing in destination list after move
   const { entryAnimatedStyle } = useListEntryAnimation(item.id);
 
+  // List animation context for subscription-triggered animations
+  const animationContext = useListAnimationOptional();
+
+  // Register exit animation trigger (O(1) direct calls from subscriptions)
+  useLayoutEffect(() => {
+    if (!animationContext) return;
+    animationContext.registerAnimationTrigger(item.id, triggerExit);
+    return () => animationContext.unregisterAnimationTrigger(item.id);
+  }, [item.id, triggerExit, animationContext]);
+
   // Animated toggle handler - triggers slide animation then calls toggle
   const handleAnimatedToggle = useCallback(() => {
-    // Prepare FlashList for layout change BEFORE animation starts
-    // This is required for FlashList to properly handle item removal
-    // @see https://shopify.github.io/flash-list/docs/guides/layout-animation
-    prepareForLayoutAnimation?.();
-
-    // Slide right when marking as purchased (not currently purchased)
-    // Slide left when unmarking (currently purchased)
     const direction = item.isPurchased ? -1 : 1;
     triggerExit(direction, () => {
+      prepareForLayoutAnimation?.();
       onTogglePurchase?.(item.id);
     });
-  }, [item.id, item.isPurchased, onTogglePurchase, triggerExit, prepareForLayoutAnimation]);
+  }, [
+    item.id,
+    item.isPurchased,
+    onTogglePurchase,
+    triggerExit,
+    prepareForLayoutAnimation,
+  ]);
+
+  // === ELEMENT CREATION (kept inline per user request - state only in hooks) ===
 
   // Create rightElement from config or use provided element
-  // Uses QuantityBadge (tappable) + MoveToPantry button for purchased items
-  const rightElement = React.useMemo(() => {
-    // Priority 1: Use config-based element (performance optimized)
+  const rightElement = useMemo(() => {
     if (item.rightElementConfig?.type === 'quantity') {
       const config = item.rightElementConfig;
-
       return (
         <View style={styles.rightElementContainer}>
-          {/* Tappable quantity badge */}
-          {/* PERFORMANCE: Pass themeColors to avoid useUnistyles in QuantityBadge */}
           <QuantityBadge
             quantity={config.quantity}
             quantityInput={config.quantityInput}
@@ -120,13 +161,11 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
             isPurchased={item.isPurchased}
             themeColors={themeColors}
           />
-
-          {/* For purchased items, show "Move to Pantry" button */}
           {item.isPurchased && onMoveToPantry && (
             <TouchableOpacity
               onPress={() => onMoveToPantry(item.id)}
               style={styles.moveToPantryButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={HIT_SLOP}
             >
               <Icon
                 name="cupboard"
@@ -139,8 +178,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         </View>
       );
     }
-
-    // Priority 2: Use provided element
     return item.rightElement;
   }, [
     item.isPurchased,
@@ -152,9 +189,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     themeColors,
   ]);
 
-  // PERFORMANCE: Memoize image source object to prevent recreation on every render
-  // This prevents Image component from thinking source changed
-  const imageSource = React.useMemo(() => {
+  // Memoize image source to prevent recreation
+  const imageSource = useMemo(() => {
     if (item.leftElementConfig?.type === 'image') {
       return { uri: item.leftElementConfig.url };
     }
@@ -162,8 +198,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [item.leftElementConfig?.url, item.leftElementConfig?.type]);
 
   // Create leftElement from config or use provided element
-  const leftElement = React.useMemo(() => {
-    // Priority 1: Use config-based element (performance optimized)
+  const leftElement = useMemo(() => {
     if (item.leftElementConfig?.type === 'image') {
       const config = item.leftElementConfig;
       return (
@@ -182,18 +217,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         </View>
       );
     }
-
-    // Priority 2: Use provided element
     return item.leftElement;
   }, [item.leftElement, item.leftElementConfig, imageSource]);
 
   // Create checkbox element for marking items as purchased
-  // Only shown if user has permission to mark items as purchased
-  // PERFORMANCE: Uses LazyAnimatedCheckbox which avoids useSharedValue/useAnimatedStyle
-  // PERFORMANCE: Pass colors to avoid useUnistyles in checkbox
-  const checkboxElement = React.useMemo(() => {
+  const checkboxElement = useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
-
     return (
       <LazyAnimatedCheckbox
         checked={!!item.isPurchased}
@@ -203,15 +232,54 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         borderColor={themeColors?.border}
       />
     );
-  }, [item.isPurchased, handleAnimatedToggle, onTogglePurchase, canMarkPurchased, themeColors]);
+  }, [
+    item.isPurchased,
+    handleAnimatedToggle,
+    onTogglePurchase,
+    canMarkPurchased,
+    themeColors,
+  ]);
 
-  // Use Animated.View for exit + entry animations + inline conditional for active state
+  // Create drag handle element for reordering
+  const dragHandleElement = useMemo(() => {
+    if (item.isPurchased || !canReorderItems || !onReorderByDelta) return null;
+    return (
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={styles.dragHandle}>
+          <Icon
+            name="drag-indicator"
+            size={20}
+            color={themeColors?.textSecondary}
+            library="MaterialIcons"
+          />
+        </Animated.View>
+      </GestureDetector>
+    );
+  }, [
+    item.isPurchased,
+    canReorderItems,
+    onReorderByDelta,
+    themeColors,
+    panGesture,
+  ]);
+
+  // Safety guard: skip rendering if item is invalid
+  if (!item?.id || !item?.title) {
+    if (__DEV__) {
+      console.warn('⚠️ SortableItem: Invalid item data, skipping render');
+    }
+    return null;
+  }
+
+  // Render the item with drag animation applied when dragging
   return (
     <Animated.View
+      ref={containerRef}
       style={[
         styles.container,
         exitAnimatedStyle,
         entryAnimatedStyle,
+        isDragEnabled && dragAnimatedStyle,
         isActive && {
           opacity: 0.98,
           shadowColor: themeColors?.primary,
@@ -222,10 +290,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         },
       ]}
     >
-      {/* PERFORMANCE: LazySwipeableItem defers expensive Swipeable setup until first touch */}
       <LazySwipeableItem
+        isPreActivated={isDragEnabled}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
-        onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
+        onLongPress={
+          !isDragEnabled && onItemPress ? () => onItemPress(item.id) : undefined
+        }
         onEdit={
           canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
         }
@@ -240,7 +310,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         onSwipeableClose={onSwipeableClose}
         swipeMode="shopping"
       >
-        {/* PERFORMANCE: Pass themeColors to avoid useUnistyles in ListItem */}
         <ListItem
           title={item.title}
           subtitle={item.subtitle}
@@ -248,6 +317,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightElement={rightElement}
           leftElement={leftElement}
           checkboxElement={checkboxElement}
+          dragHandleElement={dragHandleElement}
           rightIcon={undefined}
           isPurchased={item.isPurchased}
           themeColors={themeColors}
@@ -274,22 +344,29 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
+  dragHandle: {
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
-// Only re-render when item data or drag state changes
-// Actions & permissions come from context (stable) so no need to compare them
 const arePropsEqual = createPropsComparator<SimpleDraggableItemProps>({
-  referenceKeys: ['isActive'],
+  referenceKeys: ['isActive', 'index', 'totalItems'],
   nestedComparisons: {
     item: ['id', 'title', 'subtitle', 'isPurchased', 'leftElementConfig'],
-    'item.rightElementConfig': ['quantity', 'quantityInput', 'unit', 'disabled'],
+    'item.rightElementConfig': [
+      'quantity',
+      'quantityInput',
+      'unit',
+      'disabled',
+    ],
   },
 });
 
-// PERFORMANCE: Memoize component with custom comparison
-// Custom comparator needed because config objects are recreated each render in useShoppingListTransform.
-// Compares actual field values to prevent unnecessary re-renders when data hasn't changed.
 export const SimpleDraggableItem = React.memo(
   SimpleDraggableItemComponent,
   arePropsEqual,

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils';
 
@@ -37,7 +37,8 @@ export const DragHandle = React.memo(function DragHandle({
         .minDuration(200)
         .onStart(() => {
           'worklet';
-          runOnJS(onLongPress)();
+          // Pass function reference (not arrow function) - must be defined in RN Runtime scope
+          scheduleOnRN(onLongPress);
         }),
     [disabled, onLongPress],
   );

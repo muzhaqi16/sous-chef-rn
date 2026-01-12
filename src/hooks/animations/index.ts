@@ -5,17 +5,4 @@ export { useListItemAnimation } from './useListItemAnimation';
 
 // Re-export types for convenience
 export type { AnimationDirection } from '#/types/animations';
-
-// =============================================================================
-// Backward Compatibility Aliases (deprecated - use new names)
-// =============================================================================
-
-/**
- * @deprecated Use useListExitAnimation instead
- */
-export { useItemExitAnimation } from './useListExitAnimation';
-
-/**
- * @deprecated Use useListEntryAnimation instead
- */
-export { useItemEntryAnimation } from './useListEntryAnimation';
+export type { ExitAnimationPreset } from './useListExitAnimation';

@@ -97,7 +97,9 @@ const mapDeviceType = (deviceType: string): DeviceType => {
     case 'watch':
       return DeviceType.Watch;
     default:
-      return Platform.OS === 'ios' || Platform.OS === 'android' ? DeviceType.Mobile : DeviceType.Unknown;
+      return Platform.OS === 'ios' || Platform.OS === 'android'
+        ? DeviceType.Mobile
+        : DeviceType.Unknown;
   }
 };
 
@@ -129,13 +131,21 @@ const collectSecurityInfo = async () => {
 
   try {
     // Critical security indicators
-    securityInfo.isEmulator = await DeviceInfo.isEmulator().catch(() => undefined);
+    securityInfo.isEmulator = await DeviceInfo.isEmulator().catch(
+      () => undefined,
+    );
     securityInfo.isTablet = DeviceInfo.isTablet();
-    securityInfo.firstInstallTime = await DeviceInfo.getFirstInstallTime().then(time => new Date(time).toISOString()).catch(() => undefined);
-    securityInfo.lastUpdateTime = await DeviceInfo.getLastUpdateTime().then(time => new Date(time).toISOString()).catch(() => undefined);
+    securityInfo.firstInstallTime = await DeviceInfo.getFirstInstallTime()
+      .then(time => new Date(time).toISOString())
+      .catch(() => undefined);
+    securityInfo.lastUpdateTime = await DeviceInfo.getLastUpdateTime()
+      .then(time => new Date(time).toISOString())
+      .catch(() => undefined);
 
     // Enhanced device identification (some methods return promises)
-    securityInfo.manufacturer = await DeviceInfo.getManufacturer().catch(() => undefined);
+    securityInfo.manufacturer = await DeviceInfo.getManufacturer().catch(
+      () => undefined,
+    );
     securityInfo.model = DeviceInfo.getModel();
     securityInfo.brand = DeviceInfo.getBrand();
     securityInfo.buildNumber = DeviceInfo.getBuildNumber();
@@ -145,17 +155,30 @@ const collectSecurityInfo = async () => {
     // Platform-specific security info
     if (Platform.OS === 'android') {
       try {
-        securityInfo.androidId = await DeviceInfo.getAndroidId().catch(() => undefined);
-        securityInfo.instanceId = await DeviceInfo.getInstanceId().catch(() => undefined);
-        securityInfo.deviceFingerprint = await DeviceInfo.getFingerprint().catch(() => undefined);
-        securityInfo.securityPatch = await DeviceInfo.getSecurityPatch().catch(() => undefined);
-        securityInfo.serialNumber = await DeviceInfo.getSerialNumber().catch(() => undefined);
-        securityInfo.apiLevel = await DeviceInfo.getApiLevel().catch(() => undefined);
+        securityInfo.androidId = await DeviceInfo.getAndroidId().catch(
+          () => undefined,
+        );
+        securityInfo.instanceId = await DeviceInfo.getInstanceId().catch(
+          () => undefined,
+        );
+        securityInfo.deviceFingerprint =
+          await DeviceInfo.getFingerprint().catch(() => undefined);
+        securityInfo.securityPatch = await DeviceInfo.getSecurityPatch().catch(
+          () => undefined,
+        );
+        securityInfo.serialNumber = await DeviceInfo.getSerialNumber().catch(
+          () => undefined,
+        );
+        securityInfo.apiLevel = await DeviceInfo.getApiLevel().catch(
+          () => undefined,
+        );
       } catch (error) {
         logger.warn('Some Android security info not available:', error);
       }
     } else if (Platform.OS === 'ios') {
-      securityInfo.iosVendorId = await DeviceInfo.getUniqueId().catch(() => undefined);
+      securityInfo.iosVendorId = await DeviceInfo.getUniqueId().catch(
+        () => undefined,
+      );
     }
   } catch (error) {
     logger.warn('Error collecting security info:', error);
@@ -172,13 +195,23 @@ const collectHardwareInfo = async () => {
 
   try {
     // Memory specifications (convert to strings as per schema)
-    hardwareInfo.totalMemory = await DeviceInfo.getTotalMemory().then(mem => mem.toString()).catch(() => undefined);
-    hardwareInfo.usedMemory = await DeviceInfo.getUsedMemory().then(mem => mem.toString()).catch(() => undefined);
-    hardwareInfo.maxMemory = await DeviceInfo.getMaxMemory().then(mem => mem.toString()).catch(() => undefined);
+    hardwareInfo.totalMemory = await DeviceInfo.getTotalMemory()
+      .then(mem => mem.toString())
+      .catch(() => undefined);
+    hardwareInfo.usedMemory = await DeviceInfo.getUsedMemory()
+      .then(mem => mem.toString())
+      .catch(() => undefined);
+    hardwareInfo.maxMemory = await DeviceInfo.getMaxMemory()
+      .then(mem => mem.toString())
+      .catch(() => undefined);
 
     // Storage specifications
-    hardwareInfo.totalDiskCapacity = await DeviceInfo.getTotalDiskCapacity().then(storage => storage.toString()).catch(() => undefined);
-    hardwareInfo.freeDiskStorage = await DeviceInfo.getFreeDiskStorage().then(storage => storage.toString()).catch(() => undefined);
+    hardwareInfo.totalDiskCapacity = await DeviceInfo.getTotalDiskCapacity()
+      .then(storage => storage.toString())
+      .catch(() => undefined);
+    hardwareInfo.freeDiskStorage = await DeviceInfo.getFreeDiskStorage()
+      .then(storage => storage.toString())
+      .catch(() => undefined);
 
     // App information
     try {
@@ -190,13 +223,17 @@ const collectHardwareInfo = async () => {
     // CPU architecture support
     if (Platform.OS === 'android') {
       try {
-        hardwareInfo.supportedAbis = await DeviceInfo.supportedAbis().catch(() => undefined);
+        hardwareInfo.supportedAbis = await DeviceInfo.supportedAbis().catch(
+          () => undefined,
+        );
       } catch (error) {
         logger.warn('Supported ABIs not available:', error);
       }
     } else if (Platform.OS === 'ios') {
       try {
-        hardwareInfo.supportedAbis = await DeviceInfo.supportedAbis().catch(() => undefined);
+        hardwareInfo.supportedAbis = await DeviceInfo.supportedAbis().catch(
+          () => undefined,
+        );
       } catch (error) {
         logger.warn('iOS supported ABIs not available:', error);
       }
@@ -217,21 +254,30 @@ const collectNetworkInfo = async () => {
   try {
     // Basic network info
     networkInfo.carrier = await DeviceInfo.getCarrier().catch(() => undefined);
-    networkInfo.deviceIpAddress = await DeviceInfo.getIpAddress().catch(() => undefined);
+    networkInfo.deviceIpAddress = await DeviceInfo.getIpAddress().catch(
+      () => undefined,
+    );
 
     // Connectivity states
-    networkInfo.isAirplaneMode = await DeviceInfo.isAirplaneMode().catch(() => undefined);
-    networkInfo.isLocationEnabled = await DeviceInfo.isLocationEnabled().catch(() => undefined);
+    networkInfo.isAirplaneMode = await DeviceInfo.isAirplaneMode().catch(
+      () => undefined,
+    );
+    networkInfo.isLocationEnabled = await DeviceInfo.isLocationEnabled().catch(
+      () => undefined,
+    );
 
     // Available location providers for geolocation analysis
-    const locationProviders = await DeviceInfo.getAvailableLocationProviders().catch(() => undefined);
+    const locationProviders =
+      await DeviceInfo.getAvailableLocationProviders().catch(() => undefined);
     if (locationProviders && typeof locationProviders === 'object') {
       // Convert location provider object to string array
       networkInfo.availableLocationProviders = Object.keys(locationProviders);
     }
 
     // Host names for network analysis
-    networkInfo.hostNames = await DeviceInfo.getHostNames().catch(() => undefined);
+    networkInfo.hostNames = await DeviceInfo.getHostNames().catch(
+      () => undefined,
+    );
   } catch (error) {
     logger.warn('Error collecting network info:', error);
   }
@@ -247,9 +293,15 @@ const collectBatteryInfo = async () => {
 
   try {
     // Battery status and level
-    batteryInfo.batteryLevel = await DeviceInfo.getBatteryLevel().catch(() => undefined);
-    batteryInfo.isBatteryCharging = await DeviceInfo.isBatteryCharging().catch(() => undefined);
-    batteryInfo.powerState = await DeviceInfo.getPowerState().then(state => JSON.stringify(state)).catch(() => undefined);
+    batteryInfo.batteryLevel = await DeviceInfo.getBatteryLevel().catch(
+      () => undefined,
+    );
+    batteryInfo.isBatteryCharging = await DeviceInfo.isBatteryCharging().catch(
+      () => undefined,
+    );
+    batteryInfo.powerState = await DeviceInfo.getPowerState()
+      .then(state => JSON.stringify(state))
+      .catch(() => undefined);
   } catch (error) {
     logger.warn('Error collecting battery info:', error);
   }
@@ -265,9 +317,13 @@ const collectPeripheralInfo = async () => {
 
   try {
     // Peripheral connections - important for detecting automation/bots
-    peripheralInfo.isHeadphonesConnected = await DeviceInfo.isHeadphonesConnected().catch(() => undefined);
-    peripheralInfo.isKeyboardConnected = await DeviceInfo.isKeyboardConnected().catch(() => undefined);
-    peripheralInfo.isMouseConnected = await DeviceInfo.isMouseConnected().catch(() => undefined);
+    peripheralInfo.isHeadphonesConnected =
+      await DeviceInfo.isHeadphonesConnected().catch(() => undefined);
+    peripheralInfo.isKeyboardConnected =
+      await DeviceInfo.isKeyboardConnected().catch(() => undefined);
+    peripheralInfo.isMouseConnected = await DeviceInfo.isMouseConnected().catch(
+      () => undefined,
+    );
   } catch (error) {
     logger.warn('Error collecting peripheral info:', error);
   }
@@ -283,7 +339,8 @@ const collectAdditionalInfo = async () => {
 
   try {
     // Media capabilities for fingerprinting
-    additionalInfo.supportedMediaTypes = await DeviceInfo.getSupportedMediaTypeList().catch(() => undefined);
+    additionalInfo.supportedMediaTypes =
+      await DeviceInfo.getSupportedMediaTypeList().catch(() => undefined);
   } catch (error) {
     logger.warn('Error collecting additional info:', error);
   }
@@ -315,7 +372,9 @@ const collectDisplayInfo = async () => {
   const displayInfo: Partial<DeviceInformation> = {};
 
   try {
-    displayInfo.fontScale = await DeviceInfo.getFontScale().catch(() => undefined);
+    displayInfo.fontScale = await DeviceInfo.getFontScale().catch(
+      () => undefined,
+    );
     displayInfo.hasNotch = DeviceInfo.hasNotch();
 
     // iPhone 14+ feature (may not be available in all versions)
@@ -327,7 +386,7 @@ const collectDisplayInfo = async () => {
         } else {
           displayInfo.hasDynamicIsland = false;
         }
-      } catch (error) {
+      } catch {
         displayInfo.hasDynamicIsland = false;
       }
     }
@@ -358,15 +417,21 @@ export const generateDeviceFingerprint = async (): Promise<string> => {
     ] = await Promise.all([
       DeviceInfo.getUniqueId().catch(() => null),
       Promise.resolve(DeviceInfo.getDeviceId()),
-      Platform.OS === 'android' ? DeviceInfo.getAndroidId().catch(() => null) : Promise.resolve(null),
+      Platform.OS === 'android'
+        ? DeviceInfo.getAndroidId().catch(() => null)
+        : Promise.resolve(null),
       Promise.resolve(DeviceInfo.getBrand()),
       Promise.resolve(DeviceInfo.getModel()),
       Promise.resolve(DeviceInfo.getSystemName()),
       Promise.resolve(DeviceInfo.getSystemVersion()),
       Promise.resolve(DeviceInfo.getBuildNumber()),
       DeviceInfo.getSerialNumber().catch(() => null),
-      Platform.OS === 'android' ? Promise.resolve(DeviceInfo.getFingerprint()) : Promise.resolve(null),
-      Platform.OS === 'ios' ? DeviceInfo.getUniqueId().catch(() => null) : Promise.resolve(null),
+      Platform.OS === 'android'
+        ? Promise.resolve(DeviceInfo.getFingerprint())
+        : Promise.resolve(null),
+      Platform.OS === 'ios'
+        ? DeviceInfo.getUniqueId().catch(() => null)
+        : Promise.resolve(null),
     ]);
 
     // Combine identifiers with platform info to create comprehensive fingerprint
@@ -388,7 +453,9 @@ export const generateDeviceFingerprint = async (): Promise<string> => {
 
     if (identifiers.length === 0) {
       // Fallback fingerprint if all device info fails
-      const fallback = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      const fallback = `${Platform.OS}-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 15)}`;
       logger.warn('Using fallback device fingerprint:', fallback);
       return fallback;
     }
@@ -396,7 +463,9 @@ export const generateDeviceFingerprint = async (): Promise<string> => {
     // Create hash-like fingerprint with more entropy
     const combined = identifiers.join('-');
     const base64Hash = btoa(combined).replace(/[^a-zA-Z0-9]/g, '');
-    return `${Platform.OS}-${base64Hash.substring(0, 32)}-${Date.now().toString(36)}`;
+    return `${Platform.OS}-${base64Hash.substring(0, 32)}-${Date.now().toString(
+      36,
+    )}`;
   } catch (error) {
     logger.error('Error generating device fingerprint:', error);
     // Emergency fallback
@@ -411,7 +480,8 @@ const getScreenResolution = async (): Promise<string> => {
   try {
     // For React Native, we'll get dimensions from the Dimensions API
     const { Dimensions } = require('react-native');
-    const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
+    const { width: screenWidth, height: screenHeight } =
+      Dimensions.get('screen');
 
     return `${screenWidth}x${screenHeight}`;
   } catch (error) {
@@ -423,7 +493,11 @@ const getScreenResolution = async (): Promise<string> => {
 /**
  * Gets browser information (for web platform or webview)
  */
-const getBrowserInfo = async (): Promise<{ browserName?: string; browserVersion?: string; userAgent?: string }> => {
+const getBrowserInfo = async (): Promise<{
+  browserName?: string;
+  browserVersion?: string;
+  userAgent?: string;
+}> => {
   try {
     if (Platform.OS === 'web') {
       const userAgent = await DeviceInfo.getUserAgent();
@@ -456,144 +530,158 @@ const getBrowserInfo = async (): Promise<{ browserName?: string; browserVersion?
 /**
  * Collects comprehensive device information for tracking
  */
-export const collectDeviceInformation = async (): Promise<DeviceInformation> => {
-  try {
-    logger.info('Collecting comprehensive device information...');
-
-    // Collect all information in parallel for maximum performance
-    const [
-      deviceFingerprint,
-      deviceName,
-      deviceType,
-      systemName,
-      systemVersion,
-      appVersion,
-      screenResolution,
-      browserInfo,
-      securityInfo,
-      hardwareInfo,
-      networkInfo,
-      batteryInfo,
-      peripheralInfo,
-      additionalInfo,
-      localeInfo,
-      displayInfo,
-    ] = await Promise.all([
-      generateDeviceFingerprint(),
-      DeviceInfo.getDeviceName().catch(() => `${Platform.OS} Device`),
-      Promise.resolve(DeviceInfo.getDeviceType()),
-      Promise.resolve(DeviceInfo.getSystemName()),
-      Promise.resolve(DeviceInfo.getSystemVersion()),
-      Promise.resolve(DeviceInfo.getVersion()),
-      getScreenResolution(),
-      getBrowserInfo(),
-      collectSecurityInfo(),
-      collectHardwareInfo(),
-      collectNetworkInfo(),
-      collectBatteryInfo(),
-      collectPeripheralInfo(),
-      collectAdditionalInfo(),
-      collectLocaleInfo(),
-      collectDisplayInfo(),
-    ]);
-
-    // Get timezone and language
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    let language = 'en-US';
+export const collectDeviceInformation =
+  async (): Promise<DeviceInformation> => {
     try {
-      // Use browser language detection or fallback
-      if (typeof navigator !== 'undefined' && navigator.language) {
-        language = navigator.language;
-      } else {
-        // Fallback to Intl API
-        language = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+      logger.info('Collecting comprehensive device information...');
+
+      // Collect all information in parallel for maximum performance
+      const [
+        deviceFingerprint,
+        deviceName,
+        deviceType,
+        systemName,
+        systemVersion,
+        appVersion,
+        screenResolution,
+        browserInfo,
+        securityInfo,
+        hardwareInfo,
+        networkInfo,
+        batteryInfo,
+        peripheralInfo,
+        additionalInfo,
+        localeInfo,
+        displayInfo,
+      ] = await Promise.all([
+        generateDeviceFingerprint(),
+        DeviceInfo.getDeviceName().catch(() => `${Platform.OS} Device`),
+        Promise.resolve(DeviceInfo.getDeviceType()),
+        Promise.resolve(DeviceInfo.getSystemName()),
+        Promise.resolve(DeviceInfo.getSystemVersion()),
+        Promise.resolve(DeviceInfo.getVersion()),
+        getScreenResolution(),
+        getBrowserInfo(),
+        collectSecurityInfo(),
+        collectHardwareInfo(),
+        collectNetworkInfo(),
+        collectBatteryInfo(),
+        collectPeripheralInfo(),
+        collectAdditionalInfo(),
+        collectLocaleInfo(),
+        collectDisplayInfo(),
+      ]);
+
+      // Get timezone and language
+      const timezone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      let language = 'en-US';
+      try {
+        // Use browser language detection or fallback
+        if (typeof navigator !== 'undefined' && navigator.language) {
+          language = navigator.language;
+        } else {
+          // Fallback to Intl API
+          language = Intl.DateTimeFormat().resolvedOptions().locale || 'en-US';
+        }
+      } catch {
+        // Fallback to default language
+        language = 'en-US';
       }
+
+      // Combine all collected comprehensive information
+      const deviceInfo: DeviceInformation = {
+        // Basic device info
+        deviceId: deviceFingerprint,
+        deviceName,
+        deviceType: mapDeviceType(deviceType),
+        platform: mapPlatform(),
+        osName: systemName,
+        osVersion: systemVersion,
+        appVersion,
+        screenResolution,
+        timezone,
+        language,
+        ...browserInfo,
+
+        // Enhanced security & identification
+        ...securityInfo,
+
+        // Hardware specifications
+        ...hardwareInfo,
+
+        // Network & connectivity
+        ...networkInfo,
+
+        // Battery management
+        ...batteryInfo,
+
+        // Peripheral detection (automation detection)
+        ...peripheralInfo,
+
+        // Additional tracking capabilities
+        ...additionalInfo,
+
+        // Locale information
+        ...localeInfo,
+
+        // Display characteristics
+        ...displayInfo,
+      };
+
+      logger.info('Comprehensive device information collected successfully:', {
+        deviceId: deviceInfo.deviceId,
+        deviceType: deviceInfo.deviceType,
+        platform: deviceInfo.platform,
+        manufacturer: deviceInfo.manufacturer,
+        model: deviceInfo.model,
+        isEmulator: deviceInfo.isEmulator,
+        isTablet: deviceInfo.isTablet,
+        totalMemory: deviceInfo.totalMemory,
+        batteryLevel: deviceInfo.batteryLevel,
+        carrier: deviceInfo.carrier,
+        isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
+        isKeyboardConnected: deviceInfo.isKeyboardConnected,
+        hasNotch: deviceInfo.hasNotch,
+      });
+
+      return deviceInfo;
     } catch (error) {
-      // Fallback to default language
-      language = 'en-US';
+      logger.error('Error collecting device information:', error);
+
+      // Return minimal fallback device info
+      const fallbackFingerprint = await generateDeviceFingerprint();
+      return {
+        deviceId: fallbackFingerprint,
+        deviceName: `${Platform.OS} Device`,
+        deviceType:
+          Platform.OS === 'ios' || Platform.OS === 'android'
+            ? DeviceType.Mobile
+            : DeviceType.Unknown,
+        platform: mapPlatform(),
+        osName: Platform.OS,
+        osVersion: Platform.Version.toString(),
+        appVersion: '1.0.0',
+        timezone: 'UTC',
+        language: 'en-US',
+      };
     }
-
-    // Combine all collected comprehensive information
-    const deviceInfo: DeviceInformation = {
-      // Basic device info
-      deviceId: deviceFingerprint,
-      deviceName,
-      deviceType: mapDeviceType(deviceType),
-      platform: mapPlatform(),
-      osName: systemName,
-      osVersion: systemVersion,
-      appVersion,
-      screenResolution,
-      timezone,
-      language,
-      ...browserInfo,
-
-      // Enhanced security & identification
-      ...securityInfo,
-
-      // Hardware specifications
-      ...hardwareInfo,
-
-      // Network & connectivity
-      ...networkInfo,
-
-      // Battery management
-      ...batteryInfo,
-
-      // Peripheral detection (automation detection)
-      ...peripheralInfo,
-
-      // Additional tracking capabilities
-      ...additionalInfo,
-
-      // Locale information
-      ...localeInfo,
-
-      // Display characteristics
-      ...displayInfo,
-    };
-
-    logger.info('Comprehensive device information collected successfully:', {
-      deviceId: deviceInfo.deviceId,
-      deviceType: deviceInfo.deviceType,
-      platform: deviceInfo.platform,
-      manufacturer: deviceInfo.manufacturer,
-      model: deviceInfo.model,
-      isEmulator: deviceInfo.isEmulator,
-      isTablet: deviceInfo.isTablet,
-      totalMemory: deviceInfo.totalMemory,
-      batteryLevel: deviceInfo.batteryLevel,
-      carrier: deviceInfo.carrier,
-      isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
-      isKeyboardConnected: deviceInfo.isKeyboardConnected,
-      hasNotch: deviceInfo.hasNotch,
-    });
-
-    return deviceInfo;
-  } catch (error) {
-    logger.error('Error collecting device information:', error);
-
-    // Return minimal fallback device info
-    const fallbackFingerprint = await generateDeviceFingerprint();
-    return {
-      deviceId: fallbackFingerprint,
-      deviceName: `${Platform.OS} Device`,
-      deviceType: Platform.OS === 'ios' || Platform.OS === 'android' ? DeviceType.Mobile : DeviceType.Unknown,
-      platform: mapPlatform(),
-      osName: Platform.OS,
-      osVersion: Platform.Version.toString(),
-      appVersion: '1.0.0',
-      timezone: 'UTC',
-      language: 'en-US',
-    };
-  }
-};
+  };
 
 /**
  * Helper function to validate device information before sending to API
  */
-export const validateDeviceInformation = (deviceInfo: DeviceInformation): boolean => {
-  const required = ['deviceId', 'deviceType', 'platform', 'osName', 'osVersion', 'appVersion'];
+export const validateDeviceInformation = (
+  deviceInfo: DeviceInformation,
+): boolean => {
+  const required = [
+    'deviceId',
+    'deviceType',
+    'platform',
+    'osName',
+    'osVersion',
+    'appVersion',
+  ];
 
   for (const field of required) {
     if (!deviceInfo[field as keyof DeviceInformation]) {

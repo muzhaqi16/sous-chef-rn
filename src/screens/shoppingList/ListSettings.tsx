@@ -188,7 +188,7 @@ export const ListSettings: React.FC<{
           },
         });
       }
-    } catch (error) {
+    } catch {
       toastService.error(
         listId ? 'Failed to create list' : 'Failed to save settings',
       );
@@ -327,9 +327,15 @@ export const ListSettings: React.FC<{
                   onPress={handleOpenHomePicker}
                 >
                   <Text style={styles.pickerText}>
-                    {homes?.find(h => h.id === selectedHomeId)?.name || 'Personal (No Home)'}
+                    {homes?.find(h => h.id === selectedHomeId)?.name ||
+                      'Personal (No Home)'}
                   </Text>
-                  <Icon library="Feather" name="chevron-down" size={20} color={theme.colors.textSecondary} />
+                  <Icon
+                    library="Feather"
+                    name="chevron-down"
+                    size={20}
+                    color={theme.colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
             )}
@@ -404,7 +410,7 @@ export const ListSettings: React.FC<{
           })) || []),
         ]}
         selected={selectedHomeId || ''}
-        onSelect={(value) => {
+        onSelect={value => {
           setSelectedHomeId(value || null);
           setShowHomePicker(false);
         }}

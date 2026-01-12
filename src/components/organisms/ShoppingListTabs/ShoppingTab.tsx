@@ -1,11 +1,9 @@
 import React from 'react';
-import { ScrollView, View, Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
+import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
+import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance';
-import { Icon } from '#utils';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
@@ -14,6 +12,11 @@ interface ShoppingTabProps {
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -28,6 +31,7 @@ interface ShoppingTabProps {
   canRemoveItems?: boolean;
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
+  canReorderItems?: boolean;
 }
 
 const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
@@ -37,9 +41,10 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onItemDelete,
   onTogglePurchase,
   onQuantityPress,
+  onSortOrderUpdate,
   onRefresh,
   refreshing,
-  loading,
+  loading: _loading,
   disabled,
   onSwipeableWillOpen,
   onSwipeableClose,
@@ -49,49 +54,26 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
+  canReorderItems = false,
 }) => {
-  const { theme } = useUnistyles();
-
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Show skeletons only during initial load when no data is available
-  // If we have cached items from a previous visit, show them immediately
-  // This prevents the skeleton from showing on subsequent navigations back to the screen
-  if ((loading || !isReady) && items.length === 0) {
-    return (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        {[1, 2, 3, 4, 5, 6].map(key => (
-          <ShoppingListItemSkeleton key={key} />
-        ))}
-      </ScrollView>
-    );
+  // Show skeletons until deferred render is ready
+  if (!isReady) {
+    return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }
 
-  // Empty state for shopping tab - check this BEFORE rendering DraggableFlatList
-  // This prevents VirtualizedList key warnings during the transition from items -> empty
+  // Empty state for shopping tab
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Icon
-          name="shopping-cart"
-          size={64}
-          color={theme.colors.textSecondary}
-          library="MaterialIcons"
-        />
-        <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
-          All caught up!
-        </Text>
-        <Text
-          style={[
-            styles.emptyDescription,
-            { color: theme.colors.textSecondary },
-          ]}
-        >
-          Add items to your list or unmark purchased items to see them here
-        </Text>
-      </View>
+      <EmptyState
+        icon="shopping-cart"
+        iconLibrary="MaterialIcons"
+        title="All caught up!"
+        description="Add items to your list or unmark purchased items to see them here"
+      />
     );
   }
 
@@ -103,6 +85,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       onItemDelete={onItemDelete}
       onTogglePurchase={onTogglePurchase}
       onQuantityPress={onQuantityPress}
+      onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
@@ -113,6 +96,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       canRemoveItems={canRemoveItems}
       canEditItems={canEditItems}
       canMarkPurchased={canMarkPurchased}
+      canReorderItems={canReorderItems}
     />
   );
 };
@@ -125,23 +109,3 @@ MemoizedShoppingTab.displayName = 'ShoppingTab';
 
 // Also export non-memoized for backwards compatibility
 export const ShoppingTab = ShoppingTabComponent;
-
-const styles = StyleSheet.create(theme => ({
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  emptyTitle: {
-    fontSize: theme.typography.fontSize.lg + 2,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
-    lineHeight: theme.typography.lineHeight.normal,
-  },
-}));

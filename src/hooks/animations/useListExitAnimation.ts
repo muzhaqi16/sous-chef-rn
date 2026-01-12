@@ -3,13 +3,23 @@ import {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
-import {
-  listItemExitAnimation,
-  standardEasing,
-} from '#/constants/animations';
+import { scheduleOnRN } from 'react-native-worklets';
+import { listItemExitAnimation, listItemFastExitAnimation, standardEasing } from '#/constants/animations';
 import type { AnimationDirection } from '#/types/animations';
+
+/**
+ * Animation preset type for exit animations
+ * - 'default': Standard 300ms exit animation (for swipe/delete actions)
+ * - 'fast': Quick 200ms exit animation (for checkbox toggles)
+ */
+export type ExitAnimationPreset = 'default' | 'fast';
+
+// Animation configs by preset
+const animationConfigs = {
+  default: listItemExitAnimation,
+  fast: listItemFastExitAnimation,
+} as const;
 
 /**
  * Hook for managing list item exit animations
@@ -53,6 +63,12 @@ export const useListExitAnimation = (itemId: string) => {
   // Value: 0 = no animation, 1 = animating right, -1 = animating left
   const exitDirection = useSharedValue(0);
 
+  // PERFORMANCE: Track current animation config on UI thread for smooth animation
+  // This allows exitAnimatedStyle to use the correct slide distance per preset
+  // Type annotation needed to allow both preset values (200/300 for distance, 0.95/0.97 for scale)
+  const slideDistance = useSharedValue<number>(listItemFastExitAnimation.slide.distance);
+  const scaleToValue = useSharedValue<number>(listItemFastExitAnimation.scale.toValue);
+
   // PERFORMANCE: Use useRef instead of useSharedValue for isAnimating flag
   // This avoids blocking the JS thread when checking/setting animation state
   const isAnimatingRef = useRef(false);
@@ -75,6 +91,7 @@ export const useListExitAnimation = (itemId: string) => {
   // We reset:
   // - exitDirection.value: Prevents ghost animations from previous item
   // - isAnimatingRef: Allows new animations to start (previous animation is orphaned)
+  // - slideDistance/scaleToValue: Reset to fast preset defaults
   //
   // We DON'T reset onCompleteRef because:
   // - If animation completed: callback already called and nulled by safeCallComplete
@@ -82,13 +99,16 @@ export const useListExitAnimation = (itemId: string) => {
   //   new triggerExit call will overwrite with correct callback
   useEffect(() => {
     exitDirection.value = 0;
+    slideDistance.value = listItemFastExitAnimation.slide.distance;
+    scaleToValue.value = listItemFastExitAnimation.scale.toValue;
     isAnimatingRef.current = false;
     // Note: onCompleteRef is intentionally NOT reset here
-  }, [itemId, exitDirection]);
+  }, [itemId, exitDirection, slideDistance, scaleToValue]);
 
   // Exit animated style (slide, fade, scale)
   // PERFORMANCE: Returns static values when exitDirection === 0 (no animation triggered)
   // All visual properties derive from the single animated exitDirection.value (0 to 1 or -1)
+  // Uses slideDistance and scaleToValue SharedValues to support different animation presets
   const exitAnimatedStyle = useAnimatedStyle(() => {
     // Fast path: no animation active, return static values
     if (exitDirection.value === 0) {
@@ -99,13 +119,12 @@ export const useListExitAnimation = (itemId: string) => {
     }
 
     const progress = Math.abs(exitDirection.value); // 0 to 1
-    const { slide, scale } = listItemExitAnimation;
 
     return {
       opacity: 1 - progress, // Fade out as progress increases
       transform: [
-        { translateX: exitDirection.value * slide.distance }, // Slide in direction
-        { scale: 1 - progress * (1 - scale.toValue) }, // Scale from 1 to 0.95
+        { translateX: exitDirection.value * slideDistance.value }, // Slide in direction
+        { scale: 1 - progress * (1 - scaleToValue.value) }, // Scale from 1 to target
       ],
     };
   });
@@ -122,12 +141,13 @@ export const useListExitAnimation = (itemId: string) => {
   }, []);
 
   /**
-   * Trigger exit animation with direction and completion callback
+   * Trigger exit animation with direction, completion callback, and optional preset
    * @param direction - 1 for forward/right, -1 for backward/left
    * @param onComplete - Callback fired when animation completes
+   * @param preset - Animation preset: 'default' (300ms) or 'fast' (200ms for checkbox toggles)
    */
   const triggerExit = useCallback(
-    (direction: AnimationDirection, onComplete: () => void) => {
+    (direction: AnimationDirection, onComplete: () => void, preset: ExitAnimationPreset = 'fast') => {
       // Guard against rapid toggling - non-blocking ref read
       if (isAnimatingRef.current) return;
 
@@ -135,22 +155,29 @@ export const useListExitAnimation = (itemId: string) => {
       isAnimatingRef.current = true;
       onCompleteRef.current = onComplete;
 
-      const { slide } = listItemExitAnimation;
+      // PERFORMANCE: Use faster preset by default for checkbox toggles
+      // The 'fast' preset (200ms) provides snappier feedback for common actions
+      const config = animationConfigs[preset];
+
+      // Set animation config SharedValues BEFORE starting animation
+      // This ensures exitAnimatedStyle uses the correct values
+      slideDistance.value = config.slide.distance;
+      scaleToValue.value = config.scale.toValue;
 
       // Animate exitDirection.value from 0 to 1 (or -1)
       // The useAnimatedStyle derives all visual properties from this single animated value
       exitDirection.value = withTiming(
         direction,
-        { duration: slide.duration, easing: standardEasing },
+        { duration: config.slide.duration, easing: standardEasing },
         finished => {
           'worklet';
           if (finished) {
-            runOnJS(safeCallComplete)();
+            scheduleOnRN(safeCallComplete);
           }
         },
       );
     },
-    [exitDirection, safeCallComplete],
+    [exitDirection, slideDistance, scaleToValue, safeCallComplete],
   );
 
   /**
@@ -169,12 +196,3 @@ export const useListExitAnimation = (itemId: string) => {
     resetAnimation,
   };
 };
-
-// =============================================================================
-// Backward Compatibility Alias (deprecated - use useListExitAnimation)
-// =============================================================================
-
-/**
- * @deprecated Use useListExitAnimation instead
- */
-export const useItemExitAnimation = useListExitAnimation;
