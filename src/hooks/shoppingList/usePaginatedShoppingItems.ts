@@ -4,9 +4,7 @@ import {
   ShoppingListItemDisplayFragment,
 } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
-
-// Page size for pagination
-const PAGE_SIZE = 25;
+import { PAGINATION } from '#/constants/shoppingList';
 
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
@@ -71,7 +69,7 @@ export function usePaginatedShoppingItems({
     useGetShoppingListItemsPaginatedQuery({
       variables: {
         id: listId!,
-        first: PAGE_SIZE,
+        first: PAGINATION.ITEMS_PAGE_SIZE,
       },
       skip: shouldSkip,
       fetchPolicy: 'cache-and-network',

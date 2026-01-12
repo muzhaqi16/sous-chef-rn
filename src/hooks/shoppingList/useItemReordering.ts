@@ -4,14 +4,15 @@ import { useApolloClient } from '@apollo/client/react';
 import { useMoveShoppingListItemMutation } from '#generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import {
-  GetShoppingListDocument,
-  GetShoppingListQuery,
+  GetShoppingListItemsPaginatedDocument,
+  GetShoppingListItemsPaginatedQuery,
 } from '#generated';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { PAGINATION } from '#/constants/shoppingList';
 
 interface ShoppingListItem {
   id: string;
@@ -111,6 +112,22 @@ export function useItemReordering<T extends ShoppingListItem>(
         const beforeItem = beforeItemId
           ? items.find(i => i.id === beforeItemId)
           : null;
+
+        // Defensive validation: verify sortOrder ordering
+        // If after >= before, the visual order doesn't match sortOrder order (cache out of sync)
+        if (afterItem?.sortOrder && beforeItem?.sortOrder) {
+          if (afterItem.sortOrder >= beforeItem.sortOrder) {
+            console.warn('Invalid sortOrder state detected (after >= before), refetching...', {
+              afterId: afterItemId,
+              afterSortOrder: afterItem.sortOrder,
+              beforeId: beforeItemId,
+              beforeSortOrder: beforeItem.sortOrder,
+            });
+            refetch?.();
+            return;
+          }
+        }
+
         const newSortOrder = generatePosition(
           afterItem?.sortOrder ?? null,
           beforeItem?.sortOrder ?? null,
@@ -127,24 +144,25 @@ export function useItemReordering<T extends ShoppingListItem>(
           },
         });
 
-        // IMMEDIATE: Re-sort edges in itemsConnection so FlashList sees new order
-        const queryResult = client.cache.readQuery<GetShoppingListQuery>({
-          query: GetShoppingListDocument,
-          variables: { id: listId },
+        // IMMEDIATE: Re-sort edges in unpurchasedItems so FlashList sees new order
+        // Uses GetShoppingListItemsPaginatedDocument (the query used by usePaginatedShoppingItems)
+        const queryResult = client.cache.readQuery<GetShoppingListItemsPaginatedQuery>({
+          query: GetShoppingListItemsPaginatedDocument,
+          variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE },
         });
 
-        if (queryResult?.shoppingList?.itemsConnection?.edges) {
-          const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges]
+        if (queryResult?.shoppingList?.unpurchasedItems?.edges) {
+          const sortedEdges = [...queryResult.shoppingList.unpurchasedItems.edges]
             .sort((a, b) => (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''));
 
           client.cache.writeQuery({
-            query: GetShoppingListDocument,
-            variables: { id: listId },
+            query: GetShoppingListItemsPaginatedDocument,
+            variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE },
             data: {
               shoppingList: {
                 ...queryResult.shoppingList,
-                itemsConnection: {
-                  ...queryResult.shoppingList.itemsConnection,
+                unpurchasedItems: {
+                  ...queryResult.shoppingList.unpurchasedItems,
                   edges: sortedEdges,
                 },
               },

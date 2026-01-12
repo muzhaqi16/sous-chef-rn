@@ -51,6 +51,14 @@ export const EMPTY_STATE_MESSAGES = {
 } as const;
 
 /**
+ * Pagination configuration for shopping list items
+ */
+export const PAGINATION = {
+  /** Number of items to fetch per page in shopping list queries */
+  ITEMS_PAGE_SIZE: 25,
+} as const;
+
+/**
  * Default values and configuration
  */
 export const DEFAULTS = {

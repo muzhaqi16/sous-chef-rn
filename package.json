@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "2.2.14",
+  "version": "2.2.15",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -146,6 +146,7 @@
     "@typescript-eslint/parser": "^7.18.0",
     "babel-plugin-module-resolver": "^5.0.2",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "baseline-browser-mapping": "^2.9.14",
     "detox": "^20.46.0",
     "eslint": "^8.19.0",
     "eslint-plugin-ft-flow": "^2.0.3",
