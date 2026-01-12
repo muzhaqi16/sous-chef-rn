@@ -98,9 +98,14 @@ export function usePaginatedShoppingItems({
         })
         .map(edge => edge.node)
         .sort((a, b) => {
+          // Use lexicographic comparison for fractional-indexing keys
+          // The fractional-indexing library uses alphabet '0-9A-Za-z' which is designed
+          // for standard string comparison (<, >), NOT localeCompare() which is locale-sensitive
           const sortA = a.sortOrder ?? 'zzz';
           const sortB = b.sortOrder ?? 'zzz';
-          return sortA.localeCompare(sortB);
+          if (sortA < sortB) return -1;
+          if (sortA > sortB) return 1;
+          return 0;
         });
     },
     [],

@@ -152,8 +152,17 @@ export function useItemReordering<T extends ShoppingListItem>(
         });
 
         if (queryResult?.shoppingList?.unpurchasedItems?.edges) {
+          // Use lexicographic comparison for fractional-indexing keys
+          // The fractional-indexing library uses alphabet '0-9A-Za-z' which is designed
+          // for standard string comparison (<, >), NOT localeCompare() which is locale-sensitive
           const sortedEdges = [...queryResult.shoppingList.unpurchasedItems.edges]
-            .sort((a, b) => (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''));
+            .sort((a, b) => {
+              const sortA = a.node.sortOrder || '';
+              const sortB = b.node.sortOrder || '';
+              if (sortA < sortB) return -1;
+              if (sortA > sortB) return 1;
+              return 0;
+            });
 
           client.cache.writeQuery({
             query: GetShoppingListItemsPaginatedDocument,

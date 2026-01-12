@@ -44,13 +44,16 @@ const TAB_BAR_HEIGHT = 65;
  * Item wrapper component
  * Layout animations removed to prevent conflicts with FlashList virtualization.
  * Exit animations are handled by useItemExitAnimation in SortableItem.
+ *
+ * Uses totalItemsRef instead of totalItems value to avoid renderItem callback recreation
+ * when items are added/removed. This is critical for FlashList v2 performance.
  */
 const ItemWrapper: React.FC<{
   item: SortableShoppingListItem;
   index: number;
-  totalItems: number;
+  totalItemsRef: React.MutableRefObject<number>;
 }> = React.memo(
-  ({ item, index, totalItems }) => {
+  ({ item, index, totalItemsRef }) => {
     // Skip rendering invalid items to prevent empty cards
     if (!item?.id || !item?.title) {
       return null;
@@ -59,7 +62,7 @@ const ItemWrapper: React.FC<{
       <SimpleDraggableItem
         item={item}
         index={index}
-        totalItems={totalItems}
+        totalItems={totalItemsRef.current}
         isActive={false}
       />
     );
@@ -253,12 +256,24 @@ const SortableShoppingListComponent = forwardRef<
   // Keep ref in sync for reorder callback (avoids callback recreation)
   validItemsRef.current = validItems;
 
-  // Render item for FlashList
+  // PERFORMANCE: Use ref for totalItems to avoid renderItem callback recreation
+  // This is critical for FlashList v2 where memoization is more important
+  const totalItemsRef = useRef(validItems.length);
+  totalItemsRef.current = validItems.length;
+
+  // Render item for FlashList - stable callback with no dependencies
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<SortableShoppingListItem>) => (
-      <ItemWrapper item={item} index={index} totalItems={validItems.length} />
+      <ItemWrapper item={item} index={index} totalItemsRef={totalItemsRef} />
     ),
-    [validItems.length],
+    [],
+  );
+
+  // getItemType for FlashList v2 recycling optimization
+  // Note: Keep simple - docs warn "This method is called very frequently. Keep it fast."
+  const getItemType = useCallback(
+    () => 'shopping-item',
+    [],
   );
 
   // Key extractor - ensure we have a valid ID
@@ -296,7 +311,13 @@ const SortableShoppingListComponent = forwardRef<
             data={validItems}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            extraData={validItems.length}
+            getItemType={getItemType}
+            // FlashList v2 optimizations:
+            // - drawDistance: Pre-render buffer to reduce blank areas during fast scroll
+            // - maintainVisibleContentPosition: Disabled to prevent item movement during drag reorder
+            //   (known issue in v2: https://shopify.github.io/flash-list/docs/known-issues/)
+            drawDistance={300}
+            maintainVisibleContentPosition={{ disabled: true }}
             showsVerticalScrollIndicator={
               flatListProps.showsVerticalScrollIndicator ?? true
             }

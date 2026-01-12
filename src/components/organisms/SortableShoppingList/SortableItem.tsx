@@ -91,8 +91,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   // Note: We keep local translateY for drop compensation (index change tracking)
   const isDragging = useSharedValue(false);
   const translateY = useSharedValue(0);
-  // Shift animation value - animated via useAnimatedReaction (not in useAnimatedStyle)
-  // This prevents flickering by only calling withTiming when target changes
+  // Shift animation SharedValue - animated via useAnimatedReaction to avoid
+  // starting new animations every frame (which causes thrashing)
   const shiftY = useSharedValue(0);
 
   // Use FlashList's useRecyclingState for automatic reset on view recycling
@@ -139,34 +139,41 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     }
   }, [index, prevIndex, translateY, isDragging, setPrevIndex]);
 
-  // Animate shift when target position changes (not on every frame)
-  // This prevents flickering by only calling withTiming when the computed shift target changes
+  // Shift animation using useAnimatedReaction
+  // This pattern only triggers withTiming when the target ACTUALLY changes,
+  // unlike putting withTiming inside useAnimatedStyle which runs every frame (~60fps)
   useAnimatedReaction(
     () => {
       'worklet';
-      // If I'm the dragged item, no shift
-      if (draggedIndex.value === index) {
-        return 0;
-      }
+      // CRITICAL: Read ALL SharedValues FIRST, unconditionally
+      // This ensures Reanimated tracks them all as dependencies.
+      // Early returns before reading a SharedValue will cause that value
+      // to NOT be tracked, so changes won't trigger re-evaluation!
+      const currentDraggedIndex = draggedIndex.value;
+      const isDraggingNow = globalIsDragging.value;
+      const settlingNow = isSettling.value;
+      const translateYNow = currentTranslateY.value;
+
+      // Now do conditional logic using the captured values
+      // If I'm the dragged item, no shift needed
+      if (currentDraggedIndex === index) return 0;
 
       // If not dragging and not settling, reset to 0
-      if (!globalIsDragging.value && !isSettling.value) {
-        return 0;
-      }
+      if (!isDraggingNow && !settlingNow) return 0;
 
-      // Calculate target shift based on drag position
+      // Calculate which index the dragged item is hovering over
       const ITEM_HEIGHT = listItemExitAnimation.itemHeight;
-      const hoveredIndex = draggedIndex.value + Math.round(currentTranslateY.value / ITEM_HEIGHT);
+      const hoveredIndex = currentDraggedIndex + Math.round(translateYNow / ITEM_HEIGHT);
 
-      // Moving DOWN: items between original and hovered shift UP
-      if (hoveredIndex > draggedIndex.value) {
-        if (index > draggedIndex.value && index <= hoveredIndex) {
+      // Moving DOWN: items between original and hovered positions shift UP
+      if (hoveredIndex > currentDraggedIndex) {
+        if (index > currentDraggedIndex && index <= hoveredIndex) {
           return -ITEM_HEIGHT;
         }
       }
-      // Moving UP: items between hovered and original shift DOWN
-      else if (hoveredIndex < draggedIndex.value) {
-        if (index < draggedIndex.value && index >= hoveredIndex) {
+      // Moving UP: items between hovered and original positions shift DOWN
+      else if (hoveredIndex < currentDraggedIndex) {
+        if (index < currentDraggedIndex && index >= hoveredIndex) {
           return ITEM_HEIGHT;
         }
       }
@@ -175,13 +182,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     },
     (targetShift, previousShift) => {
       'worklet';
-      // Only animate when target actually changes
+      // ONLY animate when target ACTUALLY changes - this prevents thrashing
       if (targetShift !== previousShift) {
         const duration = globalIsDragging.value ? 100 : 150;
         shiftY.value = withTiming(targetShift, { duration, easing: Easing.out(Easing.ease) });
       }
     },
-    [index] // Re-create reaction when index changes (view recycling)
+    [index], // Dependencies - index is the only JS value used in the worklet
   );
 
   // Store current values in refs for stable gesture callbacks
@@ -234,7 +241,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
       isSettling.value = false;
       draggedIndex.value = -1;
       currentTranslateY.value = 0;
-    }, 200); // Slightly longer than animation duration (150ms) to ensure settle
+    }, 300); // Increased from 200ms to ensure all shift animations complete before state reset
   }, [isSettling, draggedIndex, currentTranslateY]);
 
   // Pan gesture for drag-to-reorder (attached to drag handle only)
@@ -326,13 +333,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   });
 
   // Animated style for shift animation (for non-dragged items)
-  // Simply reads shiftY SharedValue - animation is triggered by useAnimatedReaction above
-  // This prevents flickering by not creating animations on every frame
+  // When another item is being dragged, this item shifts up/down to make space
+  // NOTE: shiftY is animated by useAnimatedReaction above - this just reads the value
   const shiftAnimatedStyle = useAnimatedStyle(() => {
     // If I'm the dragged item, don't apply shift (dragAnimatedStyle handles it)
     if (draggedIndex.value === index) {
       return {};
     }
+    // Read from shiftY SharedValue which is animated by useAnimatedReaction
     return {
       transform: [{ translateY: shiftY.value }],
     };
