@@ -187,7 +187,7 @@ export const ProfilePhotoUploadScreen: React.FC<{
         await updateProfileAvatarUrl(imageUrl);
         goBack();
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Upload Failed', 'Failed to update profile photo');
     } finally {
       setIsUploading(false);

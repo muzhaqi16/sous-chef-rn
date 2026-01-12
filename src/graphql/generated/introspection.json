@@ -33751,6 +33751,12 @@
             "deprecationReason": null
           },
           {
+            "name": "ITEM_UNCOMPLETED",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "ITEM_UPDATED",
             "description": null,
             "isDeprecated": false,
@@ -49701,6 +49707,18 @@
                 "deprecationReason": null
               },
               {
+                "name": "filters",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "ShoppingListItemFilters",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
                 "name": "first",
                 "description": null,
                 "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
@@ -50710,6 +50728,14 @@
             "deprecationReason": null
           },
           {
+            "name": "originatorClientId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "timestamp",
             "description": null,
             "args": [],
@@ -51471,6 +51497,14 @@
             "deprecationReason": null
           },
           {
+            "name": "originatorClientId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "timestamp",
             "description": null,
             "args": [],
@@ -51613,6 +51647,26 @@
         ],
         "inputFields": null,
         "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "ShoppingListItemFilters",
+        "description": "Filters for shopping list items pagination",
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "isPurchased",
+            "description": "Filter by purchase status",
+            "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
       },
@@ -52043,6 +52097,14 @@
             "deprecationReason": null
           },
           {
+            "name": "originatorClientId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "previousStatus",
             "description": null,
             "args": [],
@@ -52259,6 +52321,14 @@
               "name": "ShoppingList",
               "ofType": null
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "originatorClientId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },

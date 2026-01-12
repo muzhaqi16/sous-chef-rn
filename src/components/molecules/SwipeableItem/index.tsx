@@ -1,7 +1,10 @@
 import React, { useCallback } from 'react';
-import { Animated, View } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
-import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
+import { View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, {
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
@@ -25,7 +28,6 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1.5,
-  failOffsetY = [-20, 20],
   onSwipeableWillOpen,
   onSwipeableClose,
   testIDPrefix,
@@ -65,10 +67,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     };
   });
 
-  // PERFORMANCE: Legacy Swipeable has better list performance than Swipeable
-  // See: https://github.com/software-mansion/react-native-gesture-handler/issues/3307
   const renderRightActions = useCallback(
-    (progress: Animated.AnimatedInterpolation<number>) => {
+    (progress: SharedValue<number>) => {
       return (
         <RightActions
           onEdit={onEdit}
@@ -84,7 +84,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   );
 
   const renderLeftActions = useCallback(
-    (progress: Animated.AnimatedInterpolation<number>) => {
+    (progress: SharedValue<number>) => {
       return (
         <LeftActions
           onTogglePurchase={onTogglePurchase}
@@ -125,7 +125,6 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         rightThreshold={computedRightThreshold}
         dragOffsetFromLeftEdge={15}
         dragOffsetFromRightEdge={15}
-        failOffsetY={failOffsetY}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
         onSwipeableWillOpen={handleSwipeableWillOpen}

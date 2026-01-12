@@ -1,12 +1,18 @@
-import React, { useMemo, useCallback } from 'react';
-import { Text, Animated, Pressable } from 'react-native';
+import React, { useCallback } from 'react';
+import { Text, Pressable } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
 import { useUnistyles } from 'react-native-unistyles';
 import { ActionButtonProps } from './types';
 
 interface AnimatedActionButtonProps extends ActionButtonProps {
-  progress?: Animated.AnimatedInterpolation<number>;
+  progress?: SharedValue<number>;
   /** The index of this button (0, 1, 2...) for stagger calculation */
   index?: number;
 }
@@ -36,27 +42,29 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   const startThreshold = 0.1 + index * 0.15;
   const endThreshold = startThreshold + 0.25;
 
-  // PERFORMANCE: Use RN Animated API instead of Reanimated for better list performance
-  const animatedStyle = useMemo(() => {
+  // Use Reanimated's useAnimatedStyle for SharedValue-based animations
+  const animatedStyle = useAnimatedStyle(() => {
     if (!progress) {
       return { opacity: 1, transform: [{ scale: 1 }] };
     }
 
+    const opacity = interpolate(
+      progress.value,
+      [startThreshold, endThreshold],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+
+    const scale = interpolate(
+      progress.value,
+      [startThreshold, endThreshold],
+      [0.5, 1],
+      Extrapolation.CLAMP,
+    );
+
     return {
-      opacity: progress.interpolate({
-        inputRange: [startThreshold, endThreshold],
-        outputRange: [0, 1],
-        extrapolate: 'clamp',
-      }),
-      transform: [
-        {
-          scale: progress.interpolate({
-            inputRange: [startThreshold, endThreshold],
-            outputRange: [0.5, 1],
-            extrapolate: 'clamp',
-          }),
-        },
-      ],
+      opacity,
+      transform: [{ scale }],
     };
   }, [progress, startThreshold, endThreshold]);
 

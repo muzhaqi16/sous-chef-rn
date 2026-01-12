@@ -2,6 +2,7 @@ import { SetContextLink } from '@apollo/client/link/context';
 import { useStore } from '#store';
 import Config from 'react-native-config';
 import { LogoutCleanup } from '../logoutCleanup';
+import { getDeviceIdSync } from '#/utils/deviceId';
 
 export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Skip operations during logout to prevent unnecessary auth errors
@@ -15,6 +16,10 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Get the access token for authentication (if available)
   const token = useStore.getState().accessToken;
 
+  // Get device ID for subscription self-echo filtering
+  // Server includes this in subscription payloads as originatorClientId
+  const deviceId = getDeviceIdSync();
+
   // Operations that don't need authentication
   const publicOperations = ['RefreshToken', 'Login', 'Register', 'SignUp'];
 
@@ -27,6 +32,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       headers: {
         ...headers,
         ...(apiKey && { 'x-api-key': apiKey }),
+        ...(deviceId && { 'x-device-id': deviceId }),
       },
     };
   }
@@ -47,6 +53,8 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       ...(apiKey && { 'x-api-key': apiKey }),
       // Include authorization header only when token is available
       ...(token && { authorization: `Bearer ${token}` }),
+      // Include device ID for subscription self-echo filtering
+      ...(deviceId && { 'x-device-id': deviceId }),
     },
   };
 });

@@ -73,7 +73,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
     try {
       await onSubmit(trimmedText);
       handleClose();
-    } catch (err) {
+    } catch {
       setError('Operation failed. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -148,7 +148,10 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               disabled={isSubmitting || loading}
             >
               {isSubmitting || loading ? (
-                <ActivityIndicator size="small" color={styles.submitButtonText.color} />
+                <ActivityIndicator
+                  size="small"
+                  color={styles.submitButtonText.color}
+                />
               ) : (
                 <Text style={styles.submitButtonText}>{submitText}</Text>
               )}

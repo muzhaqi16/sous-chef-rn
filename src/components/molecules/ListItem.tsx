@@ -18,6 +18,7 @@ interface ListItemProps {
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
   checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
+  dragHandleElement?: React.ReactNode; // Optional drag handle before checkbox (for reordering)
   isPurchased?: boolean; // For strikethrough styling
   // PERFORMANCE: Optional theme colors passed from parent to avoid useUnistyles call
   themeColors?: SortableListThemeColors | null;
@@ -33,6 +34,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   rightElement,
   leftElement,
   checkboxElement,
+  dragHandleElement,
   isPurchased = false,
   themeColors,
 }) => {
@@ -86,6 +88,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {rightIcon && !rightElement && (
         <Icon name={rightIcon} size={24} color={iconColor} />
       )}
+      {/* Optional drag handle element (for reordering) - on right side */}
+      {dragHandleElement}
     </>
   );
 
@@ -136,6 +140,7 @@ const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
     marginRight: theme.spacing.xs, // Reduced since gap provides base spacing
     justifyContent: 'center',
+    flexShrink: 0, // Prevent checkbox from being compressed when no image exists
   },
   leftIcon: {
     marginRight: theme.spacing['3'],

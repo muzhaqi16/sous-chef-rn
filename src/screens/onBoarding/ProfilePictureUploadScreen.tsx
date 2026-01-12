@@ -118,7 +118,7 @@ export const ProfilePictureUploadScreen = () => {
           'Camera permission is required to take photos. Please enable it in your device settings.',
         );
       }
-    } catch (error) {
+    } catch {
       launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     }
   }, [handleImageResponse]);

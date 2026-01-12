@@ -1,12 +1,12 @@
-import {useCallback, useMemo, useEffect} from 'react';
-import {Alert} from 'react-native';
-import {useStore} from '#store';
+import { useCallback, useMemo, useEffect } from 'react';
+import { Alert } from 'react-native';
+import { useStore } from '#store';
 import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
 } from '#generated';
-import {useErrorHandler} from '#/utils/errorHandling';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export interface NotificationSettings {
   // Core toggles
@@ -45,13 +45,13 @@ export interface NotificationSettings {
 
 export const useNotificationSettings = () => {
   const user = useStore(state => state.user);
-  const {handleApolloError} = useErrorHandler();
+  const { handleApolloError } = useErrorHandler();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for settings
   // - errorPolicy: 'all' returns cached data when network fails
 
-  const {data, loading, error} = useGetNotificationPreferencesQuery({
+  const { data, loading, error } = useGetNotificationPreferencesQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-first',
     errorPolicy: 'all',
@@ -90,7 +90,7 @@ export const useNotificationSettings = () => {
       };
     },
     onError: error => {
-      const {message} = handleApolloError(error, {
+      const { message } = handleApolloError(error, {
         operation: 'Update Notification Preferences',
       });
       Alert.alert('Error', message);
@@ -107,7 +107,9 @@ export const useNotificationSettings = () => {
 
       // Pantry notifications
       expirationNotifications: preferences?.expirationNotifications ?? true,
-      expirationNotificationFrequency: preferences?.expirationNotificationFrequency ?? ExpirationFrequency.DailyMorning,
+      expirationNotificationFrequency:
+        preferences?.expirationNotificationFrequency ??
+        ExpirationFrequency.DailyMorning,
       expirationDaysThreshold: preferences?.expirationDaysThreshold ?? 3,
       lowStockAlerts: preferences?.lowStockAlerts ?? true,
       pantryChanges: preferences?.pantryChanges ?? true,
@@ -136,17 +138,20 @@ export const useNotificationSettings = () => {
   }, [preferences]);
 
   const updateNotificationSetting = useCallback(
-    async (key: keyof NotificationSettings, value: boolean | string | number | ExpirationFrequency) => {
+    async (
+      key: keyof NotificationSettings,
+      value: boolean | string | number | ExpirationFrequency,
+    ) => {
       try {
         const result = await updatePreferences({
           variables: {
-            input: {[key]: value},
+            input: { [key]: value },
           },
         });
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }
@@ -173,7 +178,7 @@ export const useNotificationSettings = () => {
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
-      } catch (error) {
+      } catch {
         // Error handled by onError handler
         return false;
       }
@@ -210,14 +215,20 @@ export const useNotificationSettings = () => {
 
   // PERFORMANCE: Use memoized settings instead of calling function
   const isQuietTime = useCallback((): boolean => {
-    if (!settings.quietHoursEnabled || !settings.quietHoursStart || !settings.quietHoursEnd) {
+    if (
+      !settings.quietHoursEnabled ||
+      !settings.quietHoursStart ||
+      !settings.quietHoursEnd
+    ) {
       return false;
     }
 
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
 
-    const [startHour, startMin] = settings.quietHoursStart.split(':').map(Number);
+    const [startHour, startMin] = settings.quietHoursStart
+      .split(':')
+      .map(Number);
     const [endHour, endMin] = settings.quietHoursEnd.split(':').map(Number);
 
     const startTime = startHour * 60 + startMin;

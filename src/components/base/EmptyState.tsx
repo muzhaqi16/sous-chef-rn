@@ -36,6 +36,9 @@ export interface EmptyStateProps {
   /** Icon color override */
   iconColor?: string;
 
+  /** Icon library (default: uses Icon component default) */
+  iconLibrary?: 'MaterialIcons' | 'Ionicons' | 'MaterialDesignIcons' | 'Feather';
+
   /** Container alignment */
   alignment?: 'flex-start' | 'center';
 
@@ -52,6 +55,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   secondaryAction,
   iconSize = 64,
   iconColor,
+  iconLibrary,
   alignment = 'center',
   style,
 }) => {
@@ -73,6 +77,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         name={icon as IconName}
         size={iconSize}
         color={iconColor || theme.colors.textSecondary}
+        library={iconLibrary}
       />
     );
   };

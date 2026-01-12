@@ -1,11 +1,14 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { Text, TouchableOpacity, Alert } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { Icon } from '#utils';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
+import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
+import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance';
+import { listItemLayoutAnimation } from '#/constants/animations';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -15,21 +18,17 @@ interface PurchasedTabProps {
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-    afterSortOrder: string | null,
-    beforeSortOrder: string | null,
-  ) => Promise<void>;
   onClearAll?: () => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
-  onDragBegin?: () => void;
-  onDragRelease?: () => void;
+  // Pagination props
+  onEndReached?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   // Permission flags
   canRemoveItems?: boolean;
   canEditItems?: boolean;
@@ -44,15 +43,14 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onSortOrderUpdate,
   onClearAll,
-  loading,
+  onRefresh,
+  refreshing,
+  loading: _loading,
   disabled,
-  isDragging,
   onSwipeableWillOpen,
   onSwipeableClose,
-  onDragBegin,
-  onDragRelease,
+  onEndReached,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
@@ -91,42 +89,20 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
     );
   }, [items.length, onClearAll]);
 
-  // Show skeletons only during initial load when no data is available
-  // If we have cached items from a previous visit, show them immediately
-  // This prevents the skeleton from showing on subsequent navigations back to the screen
-  if ((loading || !isReady) && items.length === 0) {
-    return (
-      <ScrollView contentContainerStyle={styles.skeletonContainer}>
-        {[1, 2, 3, 4, 5, 6].map(key => (
-          <ShoppingListItemSkeleton key={key} />
-        ))}
-      </ScrollView>
-    );
+  // Show skeletons until deferred render is ready
+  if (!isReady) {
+    return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }
 
-  // Empty state for purchased tab - check this BEFORE rendering DraggableFlatList
-  // This prevents VirtualizedList key warnings during the transition from items -> empty
+  // Empty state for purchased tab
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Icon
-          name="shopping-cart"
-          size={64}
-          color={theme.colors.textSecondary}
-          library="MaterialIcons"
-        />
-        <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
-          No purchased items yet
-        </Text>
-        <Text
-          style={[
-            styles.emptyDescription,
-            { color: theme.colors.textSecondary },
-          ]}
-        >
-          Check off items as you shop to see them here
-        </Text>
-      </View>
+      <EmptyState
+        icon="shopping-cart"
+        iconLibrary="MaterialIcons"
+        title="No purchased items yet"
+        description="Check off items as you shop to see them here"
+      />
     );
   }
 
@@ -139,20 +115,19 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
       onTogglePurchase={onTogglePurchase}
       onMoveToPantry={onMoveToPantry}
       onQuantityPress={onQuantityPress}
-      onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
-      isDragging={isDragging}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
       onSwipeableClose={onSwipeableClose}
-      onDragBegin={onDragBegin}
-      onDragRelease={onDragRelease}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+      onEndReached={onEndReached}
       canRemoveItems={canRemoveItems}
       canEditItems={canEditItems}
       canMarkPurchased={canMarkPurchased}
       ListFooterComponent={
         onClearAll && canRemoveItems ? (
-          <View key="purchased-footer" style={styles.footer}>
+          <Animated.View layout={listItemLayoutAnimation} style={styles.footer}>
             <TouchableOpacity style={clearButtonStyle} onPress={handleClearAll}>
               <Icon
                 name="delete-outline"
@@ -169,7 +144,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
                 Clear All Purchased
               </Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         ) : null
       }
     />
@@ -186,27 +161,6 @@ MemoizedPurchasedTab.displayName = 'PurchasedTab';
 export const PurchasedTab = PurchasedTabComponent;
 
 const styles = StyleSheet.create(theme => ({
-  skeletonContainer: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  emptyTitle: {
-    fontSize: theme.typography.fontSize.lg + 2,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptyDescription: {
-    fontSize: theme.typography.fontSize.md,
-    textAlign: 'center',
-    lineHeight: theme.typography.lineHeight.normal,
-  },
   footer: {
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl * 2,

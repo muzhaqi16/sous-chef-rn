@@ -40,8 +40,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
           <Mask id={maskId}>
             <Rect width="100%" height="100%" fill="white" />
             <Rect
-              x={left}
-              y={top}
+              transform={`translate(${left}, ${top})`}
               width={width}
               height={height}
               rx={8}
@@ -125,10 +124,10 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
 
 const styles = StyleSheet.create(() => ({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   svgOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   corner: {
     position: 'absolute',

@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import React, { useCallback, useRef, useEffect } from 'react';
+import { Pressable, Animated as RNAnimated } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { HapticService } from '#services/haptic';
 
@@ -17,11 +17,17 @@ interface LazyAnimatedCheckboxProps {
 /**
  * LazyAnimatedCheckbox - Performance-optimized checkbox for lists
  *
- * PERFORMANCE: This component avoids useSharedValue and useAnimatedStyle entirely.
- * The visual feedback from background color change is sufficient for list items.
- * This saves 8-12ms per item on initial render compared to AnimatedCheckbox.
+ * PERFORMANCE: Uses React Native's Animated API for a lightweight micro-animation
+ * that provides immediate visual feedback without the overhead of Reanimated.
+ * The spring animation (80ms) provides snappy response while the list exit
+ * animation handles the larger transition.
  *
- * For screens where animation is important, use AnimatedCheckbox instead.
+ * Animation breakdown:
+ * - On press: Immediate scale pulse (1.0 -> 0.85 -> 1.0) in ~80ms
+ * - Background color change: Instant
+ * - Haptic feedback: Immediate
+ *
+ * For screens where full animation is important, use AnimatedCheckbox instead.
  */
 export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
   React.memo(({ checked, onPress, size = 24, disabled = false, primaryColor, borderColor }) => {
@@ -32,6 +38,32 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
       primary: primaryColor ?? theme.colors.primary,
       border: borderColor ?? theme.colors.border,
     };
+
+    // PERFORMANCE: Use RN Animated for lightweight micro-animation
+    // Reanimated would add overhead for this simple bounce effect
+    const scaleAnim = useRef(new RNAnimated.Value(1)).current;
+    const prevCheckedRef = useRef(checked);
+
+    // Trigger micro-animation when checked state changes
+    useEffect(() => {
+      if (prevCheckedRef.current !== checked) {
+        prevCheckedRef.current = checked;
+        // Quick spring pulse: 1 -> 0.85 -> 1
+        RNAnimated.sequence([
+          RNAnimated.timing(scaleAnim, {
+            toValue: 0.85,
+            duration: 40,
+            useNativeDriver: true,
+          }),
+          RNAnimated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 5,
+            tension: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [checked, scaleAnim]);
 
     const handlePress = useCallback(() => {
       if (disabled) return;
@@ -46,7 +78,7 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
         disabled={disabled}
         style={{ opacity: disabled ? 0.5 : 1 }}
       >
-        <View
+        <RNAnimated.View
           style={[
             styles.container,
             {
@@ -55,21 +87,22 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
               borderRadius: 6,
               backgroundColor: checked ? colors.primary : 'transparent',
               borderColor: checked ? colors.primary : colors.border,
+              transform: [{ scale: scaleAnim }],
             },
           ]}
         >
           {checked && <Icon name="check" size={size * 0.66} color="white" />}
-        </View>
+        </RNAnimated.View>
       </Pressable>
     );
   });
 
 LazyAnimatedCheckbox.displayName = 'LazyAnimatedCheckbox';
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(() => ({
   container: {
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-});
+}));

@@ -175,7 +175,7 @@ export class DeviceKeyManager {
       return DeviceKeyManager.simpleHash(
         `${deviceId}-${bundleId}-sous-chef-fallback`,
       );
-    } catch (error) {
+    } catch {
       console.warn('Using static fallback key - security reduced');
       // Last resort - still better than the original hardcoded key
       return 'sous-chef-emergency-fallback-key-' + Platform.OS;
@@ -251,7 +251,7 @@ export class DeviceKeyManager {
     try {
       const biometryType = await Keychain.getSupportedBiometryType();
       return biometryType !== null;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -5,6 +5,7 @@ import Config from 'react-native-config';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { getDeviceIdSync } from '#/utils/deviceId';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -78,8 +79,9 @@ const createWsClient = () => {
     connectionParams: () => {
       const token = useStore.getState().accessToken;
       const apiKey = Config.API_KEY;
+      const deviceId = getDeviceIdSync();
 
-      const params: Record<string, string> = {};
+      const params: Record<string, string | undefined> = {};
 
       // Always include API key if available
       if (apiKey) {
@@ -89,6 +91,12 @@ const createWsClient = () => {
       // Include authorization only when token is available
       if (token) {
         params.authorization = `Bearer ${token}`;
+      }
+
+      // Include deviceId for subscription self-echo filtering
+      // Server will include this in subscription payloads as originatorClientId
+      if (deviceId) {
+        params.deviceId = deviceId;
       }
 
       return params;

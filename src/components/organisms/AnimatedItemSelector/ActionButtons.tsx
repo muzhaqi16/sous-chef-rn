@@ -81,14 +81,14 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ actions }) => {
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     borderRadius: theme.spacing.md,
     borderWidth: 1,
   },

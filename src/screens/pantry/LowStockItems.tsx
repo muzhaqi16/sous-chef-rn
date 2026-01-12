@@ -51,7 +51,7 @@ export const LowStockItems: React.FC = () => {
       await addToShoppingList({
         variables: { input: { shoppingListId: '', itemId } },
       });
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to add to shopping list');
     }
   };
@@ -64,7 +64,7 @@ export const LowStockItems: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         data={lowStockItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

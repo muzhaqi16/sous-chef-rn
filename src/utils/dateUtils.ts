@@ -137,7 +137,8 @@ export const safeParseDate = (value: any): Date | null => {
   if (typeof value === 'number' || !isNaN(Number(value))) {
     const timestamp = Number(value);
     if (timestamp > 0 && timestamp < 4102444800000) {
-      const msTimestamp = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+      const msTimestamp =
+        timestamp < 10000000000 ? timestamp * 1000 : timestamp;
       const date = new Date(msTimestamp);
       return !isNaN(date.getTime()) ? date : null;
     }
@@ -147,7 +148,7 @@ export const safeParseDate = (value: any): Date | null => {
   try {
     const date = new Date(value);
     return !isNaN(date.getTime()) ? date : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
