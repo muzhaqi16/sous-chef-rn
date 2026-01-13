@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.11",
-    "@sous-chef/animated-flashlist": "git+https://github.com/muzhaqi16/reanimated-flashlist.git",
+    "@sous-chef/animated-flashlist": "git+ssh://git@github.com/muzhaqi16/reanimated-flashlist.git",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",
