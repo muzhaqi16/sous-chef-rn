@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -65,7 +65,6 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.11",
-    "@sous-chef/animated-flashlist": "git+ssh://git@github.com/muzhaqi16/reanimated-flashlist.git",
     "@gorhom/bottom-sheet": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",
@@ -85,6 +84,7 @@
     "@react-navigation/stack": "^7.6.12",
     "@shopify/flash-list": "^2.2.0",
     "@shopify/react-native-skia": "^2.4.7",
+    "@souschef/reanimated-flashlist": "github:SousChefLabs/reanimated-flashlist#v0.1.7",
     "date-fns": "^4.1.0",
     "fractional-indexing": "^3.2.0",
     "graphql": "^16.12.0",

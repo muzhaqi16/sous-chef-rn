@@ -88,30 +88,34 @@ query GetShoppingList($id: ID!) {
 # Use this for dashboard/list views. Use GetShoppingList for full details.
 query GetShoppingListsLite($homeId: String) {
   shoppingLists(filters: { homeId: $homeId }) {
-    id
-    name
-    description
-    isDefault
-    totalItems
-    completedItems
-    status
-    isCompleted
-    createdAt
-    updatedAt
-    homeId
-    home {
-      id
-      name
-    }
-    ownerships {
-      id
-      userId
-      user {
+    edges {
+      node {
         id
-        email
-        profile {
-          displayName
-          avatar
+        name
+        description
+        isDefault
+        totalItems
+        completedItems
+        status
+        isCompleted
+        createdAt
+        updatedAt
+        homeId
+        home {
+          id
+          name
+        }
+        ownerships {
+          id
+          userId
+          user {
+            id
+            email
+            profile {
+              displayName
+              avatar
+            }
+          }
         }
       }
     }

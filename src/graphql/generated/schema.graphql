@@ -2522,7 +2522,49 @@ type Home {
   timezone: String
   type: HomeType!
   updatedAt: DateTime!
+  """
+  Usage statistics for this home.
+  Available for all users but primarily used by admin views.
+  """
+  usageStats: HomeUsageStats
   version: Int!
+}
+
+type HomeConnection {
+  edges: [HomeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Home connection for pagination
+"""
+type HomeEdge {
+  cursor: String!
+  node: Home!
+}
+
+"""
+Filters for querying homes.
+userId filter is admin-only - ignored for regular users.
+"""
+input HomeFilters {
+  """
+  Filter by public/private status
+  """
+  isPublic: Boolean
+  """
+  Search by home name
+  """
+  search: String
+  """
+  Filter by home type
+  """
+  type: HomeType
+  """
+  Admin-only: Filter by specific user ID (member of home)
+  """
+  userId: ID
 }
 
 type HomeInvite {
@@ -2601,6 +2643,37 @@ enum HomeType {
   OTHER
   PERSONAL
   VACATION
+}
+
+"""
+Usage statistics for a Home.
+Included when admin requests resources with stats.
+"""
+type HomeUsageStats {
+  """
+  Number of active shopping lists
+  """
+  activeShoppingListCount: Int!
+  """
+  Last activity timestamp in the home
+  """
+  lastActivityAt: DateTime
+  """
+  Total number of active members
+  """
+  memberCount: Int!
+  """
+  Total number of pantries
+  """
+  pantryCount: Int!
+  """
+  Total pantry items across all pantries
+  """
+  pantryItemCount: Int!
+  """
+  Total number of shopping lists
+  """
+  shoppingListCount: Int!
 }
 
 type IPStat {
@@ -4923,6 +4996,11 @@ type Pantry {
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
+  """
+  Usage statistics for this pantry.
+  Available for all users but primarily used by admin views.
+  """
+  usageStats: PantryUsageStats
   version: Int!
 }
 
@@ -4988,6 +5066,29 @@ type PantryExpiringItemsAlertPayload {
   pantryId: String!
   timestamp: DateTime!
   userId: String!
+}
+
+"""
+Filters for querying pantries.
+userId and homeId filters have different behavior for admins vs regular users.
+"""
+input PantryFilters {
+  """
+  Filter by home ID - optional for admins, required for regular users
+  """
+  homeId: ID
+  """
+  Filter by default status
+  """
+  isDefault: Boolean
+  """
+  Search by name, description, or location
+  """
+  search: String
+  """
+  Admin-only: Filter by specific user ID (via home membership)
+  """
+  userId: ID
 }
 
 """
@@ -5294,6 +5395,33 @@ type PantryUpdatedPayload {
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
+}
+
+"""
+Usage statistics for a Pantry.
+Included when admin requests resources with stats.
+"""
+type PantryUsageStats {
+  """
+  Total estimated value of items
+  """
+  estimatedValue: Float
+  """
+  Number of items expiring within 7 days
+  """
+  expiringItemCount: Int!
+  """
+  Total number of items
+  """
+  itemCount: Int!
+  """
+  Last activity timestamp
+  """
+  lastActivityAt: DateTime
+  """
+  Number of low stock items
+  """
+  lowStockItemCount: Int!
 }
 
 type PantryWasteAlertPayload {
@@ -5707,7 +5835,12 @@ type Query {
   homeInviteByToken(token: String!): HomeInvite
   homeInviteLogs(homeId: String!, limit: Int): [InviteLog!]!
   homeInviteStats(homeId: String!): [HomeInviteStatsGroup!]!
-  homes: [Home!]!
+  """
+  Get homes accessible to the current user.
+  For admins: Returns all homes with optional filters.
+  For regular users: Returns only homes where user is a member.
+  """
+  homes(filters: HomeFilters, pagination: PaginationInput): HomeConnection!
   inviteLogs(inviteId: String!, limit: Int): [InviteLog!]!
   inviteStats(inviteId: String!): InviteStats!
   invitesSentByMe: [HomeInvite!]!
@@ -5802,7 +5935,16 @@ type Query {
   notification(id: ID!): Notification
   notificationPreferences(userId: ID!): NotificationPreferences!
   notificationStats(filter: NotificationFilterInput): NotificationStats!
-  pantries(homeId: ID!): [Pantry!]!
+  """
+  Get pantries.
+  For admins: Returns all pantries with optional filters (homeId is optional).
+  For regular users: Requires homeId and returns pantries from that home only.
+  """
+  pantries(
+    filters: PantryFilters
+    homeId: ID
+    pagination: PaginationInput
+  ): PantryConnection!
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
   """
@@ -5970,7 +6112,15 @@ type Query {
     """
     sources: [SuggestionSource!]
   ): [ShoppingListSuggestion!]!
-  shoppingLists(filters: ShoppingListFilters): [ShoppingList!]!
+  """
+  Get shopping lists accessible to the current user.
+  For admins: Returns all lists with optional filters (including userId filter).
+  For regular users: Returns only user's lists (owned, collaborated, or home-based).
+  """
+  shoppingLists(
+    filters: ShoppingListFilters
+    pagination: PaginationInput
+  ): ShoppingListConnection!
   """
   Get a single storage location by ID
   Requires user to be a member of the home
@@ -6590,6 +6740,11 @@ type ShoppingList {
   totalCost: Float!
   totalItems: Int!
   updatedAt: DateTime!
+  """
+  Usage statistics for this shopping list.
+  Available for all users but primarily used by admin views.
+  """
+  usageStats: ShoppingListUsageStats
   version: Int!
   viewCount: Int!
 }
@@ -6709,6 +6864,10 @@ input ShoppingListFilters {
   search: String
   status: ListStatus
   tags: [String!]
+  """
+  Admin-only: Filter by specific user ID (owner or collaborator)
+  """
+  userId: ID
 }
 
 """
@@ -6987,6 +7146,37 @@ type ShoppingListUpdatedPayload {
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
+}
+
+"""
+Usage statistics for a ShoppingList.
+Included when admin requests resources with stats.
+"""
+type ShoppingListUsageStats {
+  """
+  Number of active collaborators
+  """
+  collaboratorCount: Int!
+  """
+  Number of completed/purchased items
+  """
+  completedItemCount: Int!
+  """
+  Total number of items
+  """
+  itemCount: Int!
+  """
+  Last activity timestamp
+  """
+  lastActivityAt: DateTime
+  """
+  Total share count
+  """
+  shareCount: Int!
+  """
+  Total view count
+  """
+  viewCount: Int!
 }
 
 type SkippedItem {

@@ -10,7 +10,7 @@
 import { useMemo, useRef, useCallback } from 'react';
 import { useGetHomesQuery } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo';
-import { normalizeHomes } from '#/utils/connectionUtils';
+import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 
 /**
  * Hook for fetching and managing homes query
@@ -33,7 +33,8 @@ export function useHomeQuery() {
   });
 
   // Preserve homes even when query fails to prevent cascade failures
-  const preservedHomes = usePreservedArrayData(data?.homes);
+  // Extract nodes from connection type (homes returns HomeConnection)
+  const preservedHomes = usePreservedArrayData(extractNodes(data?.homes));
   const homes = useMemo(() => normalizeHomes(preservedHomes), [preservedHomes]);
 
   // Derive default home from isDefault field (no separate query needed)

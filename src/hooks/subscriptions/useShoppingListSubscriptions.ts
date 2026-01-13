@@ -211,6 +211,36 @@ export function useShoppingListSubscriptions(
                 },
               });
             }
+
+            // Also re-sort aliased fields used by paginated query (GetShoppingListItemsPaginated)
+            // Without this, the UI reads stale sortOrder values from these cached fields
+            client.cache.modify({
+              id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
+              fields: {
+                unpurchasedItems(existing: any, { readField }: any) {
+                  if (!existing?.edges) return existing;
+                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                    const nodeA = readField('node', a);
+                    const nodeB = readField('node', b);
+                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                    return sortA.localeCompare(sortB);
+                  });
+                  return { ...existing, edges: sortedAliasedEdges };
+                },
+                purchasedItems(existing: any, { readField }: any) {
+                  if (!existing?.edges) return existing;
+                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                    const nodeA = readField('node', a);
+                    const nodeB = readField('node', b);
+                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                    return sortA.localeCompare(sortB);
+                  });
+                  return { ...existing, edges: sortedAliasedEdges };
+                },
+              },
+            });
           } catch (error) {
             console.warn('Failed to re-sort edges after subscription update:', error);
           }

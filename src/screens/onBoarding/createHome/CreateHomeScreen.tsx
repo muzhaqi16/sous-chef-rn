@@ -43,7 +43,7 @@ import { useOnboardingNavigation } from '#hooks';
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
-import { normalizeHomes } from '#/utils/connectionUtils';
+import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
 const CreateHomeScreenComponent = () => {
@@ -92,8 +92,9 @@ const CreateHomeScreenComponent = () => {
       fetchPolicy: 'cache-and-network',
     });
 
-  const homes = normalizeHomes(homesData?.homes);
-  const pantries = pantriesData?.pantries || [];
+  // Extract nodes from connection types (homes and pantries return Connection types)
+  const homes = normalizeHomes(extractNodes(homesData?.homes));
+  const pantries = extractNodes(pantriesData?.pantries);
   const pendingInvites = pendingInvitesData?.myPendingInvites || [];
   const existingHome = homes[0];
   const existingPantry = pantries.find(p => p.isDefault) || pantries[0];

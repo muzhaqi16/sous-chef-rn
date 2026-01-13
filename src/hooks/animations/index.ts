@@ -3,7 +3,7 @@ export {
   useListExitAnimation,
   useListEntryAnimation,
   type ExitAnimationPreset,
-} from '@sous-chef/animated-flashlist';
+} from '@souschef/reanimated-flashlist';
 
 // Re-export types for convenience
 export type { AnimationDirection } from '#/types/animations';

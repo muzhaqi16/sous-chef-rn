@@ -109,10 +109,13 @@ export function useItemReordering<T extends ShoppingListItem>(
           : null;
 
         // Defensive validation: verify sortOrder ordering
-        // If after >= before, the visual order doesn't match sortOrder order (cache out of sync)
+        // If after > before, the visual order doesn't match sortOrder order (cache out of sync)
+        let newSortOrder: string | undefined;
+
         if (afterItem?.sortOrder && beforeItem?.sortOrder) {
-          if (afterItem.sortOrder >= beforeItem.sortOrder) {
-            console.warn('Invalid sortOrder state detected (after >= before), refetching...', {
+          if (afterItem.sortOrder > beforeItem.sortOrder) {
+            // Cache is out of sync - visual order doesn't match sortOrder order
+            console.warn('Invalid sortOrder state (after > before), refetching...', {
               afterId: afterItemId,
               afterSortOrder: afterItem.sortOrder,
               beforeId: beforeItemId,
@@ -121,12 +124,32 @@ export function useItemReordering<T extends ShoppingListItem>(
             refetch?.();
             return;
           }
+
+          if (afterItem.sortOrder === beforeItem.sortOrder) {
+            // Collision: two items have the same sortOrder (can't insert between identical values)
+            // Fallback: insert after the duplicate block by finding next different sortOrder
+            console.warn('Duplicate sortOrder in cache, using fallback positioning', {
+              afterId: afterItemId,
+              beforeId: beforeItemId,
+              sharedSortOrder: afterItem.sortOrder,
+            });
+
+            // Find the next item with a different (higher) sortOrder
+            const nextItem = items
+              .filter(i => i.sortOrder && i.sortOrder > afterItem.sortOrder!)
+              .sort((a, b) => (a.sortOrder || '').localeCompare(b.sortOrder || ''))[0];
+
+            newSortOrder = generatePosition(afterItem.sortOrder, nextItem?.sortOrder ?? null);
+          }
         }
 
-        const newSortOrder = generatePosition(
-          afterItem?.sortOrder ?? null,
-          beforeItem?.sortOrder ?? null,
-        );
+        // Generate sortOrder normally if not already set by fallback logic
+        if (!newSortOrder) {
+          newSortOrder = generatePosition(
+            afterItem?.sortOrder ?? null,
+            beforeItem?.sortOrder ?? null,
+          );
+        }
 
         // PERFORMANCE: Batch both cache modifications into a single update
         // This ensures FlashList sees a consistent state and reduces re-render cycles
@@ -233,6 +256,21 @@ export function useItemReordering<T extends ShoppingListItem>(
           oldVersion: originalVersion,
           newVersion: serverVersion,
         });
+
+        // Ensure server's sortOrder is in cache (may differ from optimistic value)
+        // This prevents cache desync when server calculates a different sortOrder
+        if (serverSortOrder && serverSortOrder !== newSortOrder) {
+          console.log('Server returned different sortOrder, updating cache:', {
+            optimistic: newSortOrder,
+            server: serverSortOrder,
+          });
+          client.cache.modify({
+            id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+            fields: {
+              sortOrder() { return serverSortOrder; },
+            },
+          });
+        }
 
         // Mark this item as recently reordered to ignore subscription echo
         SubscriptionService.getInstance().markItemReordered(itemId);

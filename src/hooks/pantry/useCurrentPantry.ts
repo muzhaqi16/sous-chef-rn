@@ -2,7 +2,7 @@ import { useMemo, useEffect, useCallback } from 'react';
 import { useAppStore, selectPantryState, selectSelectedHomeId, selectIsHomeSelectionReady } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useGetHomesQuery } from '#generated';
-import { normalizeHomes, normalizeHome } from '#/utils/connectionUtils';
+import { normalizeHomes, normalizeHome, extractNodes } from '#/utils/connectionUtils';
 import { usePreservedArrayData } from '#/hooks/apollo';
 
 /**
@@ -32,7 +32,8 @@ export function useCurrentPantry() {
   });
 
   // Preserve homes data and normalize
-  const homes = normalizeHomes(usePreservedArrayData(homesData?.homes));
+  // Extract nodes from connection type (homes returns HomeConnection)
+  const homes = normalizeHomes(usePreservedArrayData(extractNodes(homesData?.homes)));
 
   // Get current home from cached homes
   const currentHome = useMemo(

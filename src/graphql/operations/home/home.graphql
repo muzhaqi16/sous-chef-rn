@@ -16,7 +16,11 @@ query GetHomeBasic($homeId: ID!) {
 
 query GetHomes {
   homes {
-    ...HomeDisplay
+    edges {
+      node {
+        ...HomeDisplay
+      }
+    }
   }
 }
 
