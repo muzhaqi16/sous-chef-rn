@@ -1,8 +1,9 @@
-// Generic list animation hooks
-export { useListExitAnimation } from './useListExitAnimation';
-export { useListEntryAnimation } from './useListEntryAnimation';
-export { useListItemAnimation } from './useListItemAnimation';
+// Re-export animation hooks and types from the package for convenience
+export {
+  useListExitAnimation,
+  useListEntryAnimation,
+  type ExitAnimationPreset,
+} from '@sous-chef/animated-flashlist';
 
 // Re-export types for convenience
 export type { AnimationDirection } from '#/types/animations';
-export type { ExitAnimationPreset } from './useListExitAnimation';

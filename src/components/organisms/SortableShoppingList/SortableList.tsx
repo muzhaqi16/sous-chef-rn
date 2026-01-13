@@ -20,6 +20,12 @@ import {
 } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import {
+  DragStateProvider,
+  useDragState,
+  ListAnimationProvider,
+  DEFAULT_DRAG_CONFIG,
+} from '@sous-chef/animated-flashlist';
 import type {
   SortableShoppingListProps,
   SortableShoppingListItem,
@@ -34,8 +40,6 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors,
 } from './SortableListThemeContext';
-import { DragStateProvider, useDragState } from './DragStateContext';
-import { DRAG_ITEM_HEIGHT } from '#/constants/animations';
 
 /**
  * Ref handle for SortableShoppingList
@@ -181,7 +185,7 @@ const InnerFlashList: React.FC<InnerFlashListProps> = ({
   // Override item layout for consistent drag calculations
   const overrideItemLayout = useCallback(
     (layout: { size?: number; span?: number }) => {
-      layout.size = DRAG_ITEM_HEIGHT;
+      layout.size = DEFAULT_DRAG_CONFIG.itemHeight;
     },
     [],
   );
@@ -456,30 +460,32 @@ const SortableShoppingListComponent = forwardRef<
     }
 
     return (
-      <SortableListThemeContext.Provider value={themeColors}>
-        <SortableListActionsProvider
-          actions={actions}
-          permissions={permissions}
-        >
-          <DragStateProvider>
-            <View style={styles.container}>
-              <InnerFlashList
-                validItems={validItems}
-                totalItemsRef={totalItemsRef}
-                flashListRef={flashListRef}
-                themeColors={themeColors}
-                insets={insets}
-                flatListProps={flatListProps}
-                ListFooterComponent={ListFooterComponent}
-                onEndReached={onEndReached}
-                onEndReachedThreshold={onEndReachedThreshold}
-                onRefresh={onRefresh}
-                refreshing={refreshing}
-              />
-            </View>
-          </DragStateProvider>
-        </SortableListActionsProvider>
-      </SortableListThemeContext.Provider>
+      <ListAnimationProvider>
+        <SortableListThemeContext.Provider value={themeColors}>
+          <SortableListActionsProvider
+            actions={actions}
+            permissions={permissions}
+          >
+            <DragStateProvider>
+              <View style={styles.container}>
+                <InnerFlashList
+                  validItems={validItems}
+                  totalItemsRef={totalItemsRef}
+                  flashListRef={flashListRef}
+                  themeColors={themeColors}
+                  insets={insets}
+                  flatListProps={flatListProps}
+                  ListFooterComponent={ListFooterComponent}
+                  onEndReached={onEndReached}
+                  onEndReachedThreshold={onEndReachedThreshold}
+                  onRefresh={onRefresh}
+                  refreshing={refreshing}
+                />
+              </View>
+            </DragStateProvider>
+          </SortableListActionsProvider>
+        </SortableListThemeContext.Provider>
+      </ListAnimationProvider>
     );
   },
 );
