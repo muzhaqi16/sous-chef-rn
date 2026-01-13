@@ -2007,6 +2007,11 @@ export type Home = {
   timezone: Maybe<Scalars['String']['output']>;
   type: HomeType;
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this home.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<HomeUsageStats>;
   version: Scalars['Int']['output'];
 };
 
@@ -2053,6 +2058,35 @@ export type HomeShoppingListsConnectionArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeConnection = {
+  __typename?: 'HomeConnection';
+  edges: Array<HomeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Home connection for pagination */
+export type HomeEdge = {
+  __typename?: 'HomeEdge';
+  cursor: Scalars['String']['output'];
+  node: Home;
+};
+
+/**
+ * Filters for querying homes.
+ * userId filter is admin-only - ignored for regular users.
+ */
+export type HomeFilters = {
+  /** Filter by public/private status */
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Search by home name */
+  search?: InputMaybe<Scalars['String']['input']>;
+  /** Filter by home type */
+  type?: InputMaybe<HomeType>;
+  /** Admin-only: Filter by specific user ID (member of home) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type HomeInvite = {
@@ -2138,6 +2172,26 @@ export enum HomeType {
   Personal = 'PERSONAL',
   Vacation = 'VACATION',
 }
+
+/**
+ * Usage statistics for a Home.
+ * Included when admin requests resources with stats.
+ */
+export type HomeUsageStats = {
+  __typename?: 'HomeUsageStats';
+  /** Number of active shopping lists */
+  activeShoppingListCount: Scalars['Int']['output'];
+  /** Last activity timestamp in the home */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Total number of active members */
+  memberCount: Scalars['Int']['output'];
+  /** Total number of pantries */
+  pantryCount: Scalars['Int']['output'];
+  /** Total pantry items across all pantries */
+  pantryItemCount: Scalars['Int']['output'];
+  /** Total number of shopping lists */
+  shoppingListCount: Scalars['Int']['output'];
+};
 
 export type IpStat = {
   __typename?: 'IPStat';
@@ -5200,6 +5254,11 @@ export type Pantry = {
   tags: Array<Scalars['String']['output']>;
   temperature: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this pantry.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<PantryUsageStats>;
   version: Scalars['Int']['output'];
 };
 
@@ -5290,6 +5349,21 @@ export type PantryExpiringItemsAlertPayload = {
   pantryId: Scalars['String']['output'];
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['String']['output'];
+};
+
+/**
+ * Filters for querying pantries.
+ * userId and homeId filters have different behavior for admins vs regular users.
+ */
+export type PantryFilters = {
+  /** Filter by home ID - optional for admins, required for regular users */
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+  /** Filter by default status */
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Search by name, description, or location */
+  search?: InputMaybe<Scalars['String']['input']>;
+  /** Admin-only: Filter by specific user ID (via home membership) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 /** Real-time collaborative type - never cache */
@@ -5548,6 +5622,24 @@ export type PantryUpdatedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
+};
+
+/**
+ * Usage statistics for a Pantry.
+ * Included when admin requests resources with stats.
+ */
+export type PantryUsageStats = {
+  __typename?: 'PantryUsageStats';
+  /** Total estimated value of items */
+  estimatedValue: Maybe<Scalars['Float']['output']>;
+  /** Number of items expiring within 7 days */
+  expiringItemCount: Scalars['Int']['output'];
+  /** Total number of items */
+  itemCount: Scalars['Int']['output'];
+  /** Last activity timestamp */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Number of low stock items */
+  lowStockItemCount: Scalars['Int']['output'];
 };
 
 export type PantryWasteAlertPayload = {
@@ -5895,7 +5987,12 @@ export type Query = {
   homeInviteByToken: Maybe<HomeInvite>;
   homeInviteLogs: Array<InviteLog>;
   homeInviteStats: Array<HomeInviteStatsGroup>;
-  homes: Array<Home>;
+  /**
+   * Get homes accessible to the current user.
+   * For admins: Returns all homes with optional filters.
+   * For regular users: Returns only homes where user is a member.
+   */
+  homes: HomeConnection;
   inviteLogs: Array<InviteLog>;
   inviteStats: InviteStats;
   invitesSentByMe: Array<HomeInvite>;
@@ -5955,7 +6052,12 @@ export type Query = {
   notification: Maybe<Notification>;
   notificationPreferences: NotificationPreferences;
   notificationStats: NotificationStats;
-  pantries: Array<Pantry>;
+  /**
+   * Get pantries.
+   * For admins: Returns all pantries with optional filters (homeId is optional).
+   * For regular users: Requires homeId and returns pantries from that home only.
+   */
+  pantries: PantryConnection;
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
   /**
@@ -6055,7 +6157,12 @@ export type Query = {
    * Priority: RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
    */
   shoppingListSuggestions: Array<ShoppingListSuggestion>;
-  shoppingLists: Array<ShoppingList>;
+  /**
+   * Get shopping lists accessible to the current user.
+   * For admins: Returns all lists with optional filters (including userId filter).
+   * For regular users: Returns only user's lists (owned, collaborated, or home-based).
+   */
+  shoppingLists: ShoppingListConnection;
   /**
    * Get a single storage location by ID
    * Requires user to be a member of the home
@@ -6281,6 +6388,11 @@ export type QueryHomeInviteStatsArgs = {
   homeId: Scalars['String']['input'];
 };
 
+export type QueryHomesArgs = {
+  filters?: InputMaybe<HomeFilters>;
+  pagination?: InputMaybe<PaginationInput>;
+};
+
 export type QueryInviteLogsArgs = {
   inviteId: Scalars['String']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -6425,7 +6537,9 @@ export type QueryNotificationStatsArgs = {
 };
 
 export type QueryPantriesArgs = {
-  homeId: Scalars['ID']['input'];
+  filters?: InputMaybe<PantryFilters>;
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+  pagination?: InputMaybe<PaginationInput>;
 };
 
 export type QueryPantryArgs = {
@@ -6621,6 +6735,7 @@ export type QueryShoppingListSuggestionsArgs = {
 
 export type QueryShoppingListsArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
+  pagination?: InputMaybe<PaginationInput>;
 };
 
 export type QueryStorageLocationArgs = {
@@ -7250,6 +7365,11 @@ export type ShoppingList = {
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this shopping list.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<ShoppingListUsageStats>;
   version: Scalars['Int']['output'];
   viewCount: Scalars['Int']['output'];
 };
@@ -7407,6 +7527,8 @@ export type ShoppingListFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Admin-only: Filter by specific user ID (owner or collaborator) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 /**
@@ -7622,6 +7744,26 @@ export type ShoppingListUpdatedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
+};
+
+/**
+ * Usage statistics for a ShoppingList.
+ * Included when admin requests resources with stats.
+ */
+export type ShoppingListUsageStats = {
+  __typename?: 'ShoppingListUsageStats';
+  /** Number of active collaborators */
+  collaboratorCount: Scalars['Int']['output'];
+  /** Number of completed/purchased items */
+  completedItemCount: Scalars['Int']['output'];
+  /** Total number of items */
+  itemCount: Scalars['Int']['output'];
+  /** Last activity timestamp */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Total share count */
+  shareCount: Scalars['Int']['output'];
+  /** Total view count */
+  viewCount: Scalars['Int']['output'];
 };
 
 export type SkippedItem = {
@@ -11459,7 +11601,13 @@ export type GetHomesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetHomesQuery = {
   __typename?: 'Query';
-  homes: Array<{ __typename?: 'Home' } & HomeDisplayFragment>;
+  homes: {
+    __typename?: 'HomeConnection';
+    edges: Array<{
+      __typename?: 'HomeEdge';
+      node: { __typename?: 'Home' } & HomeDisplayFragment;
+    }>;
+  };
 };
 
 export type GetMyPendingInvitesQueryVariables = Exact<{ [key: string]: never }>;
@@ -12795,17 +12943,23 @@ export type GetPantriesQueryVariables = Exact<{
 
 export type GetPantriesQuery = {
   __typename?: 'Query';
-  pantries: Array<{
-    __typename?: 'Pantry';
-    id: string;
-    homeId: string;
-    name: string;
-    isDefault: boolean;
-    createdAt: string;
-    updatedAt: string;
-    version: number;
-    tags: Array<string>;
-  }>;
+  pantries: {
+    __typename?: 'PantryConnection';
+    edges: Array<{
+      __typename?: 'PantryEdge';
+      node: {
+        __typename?: 'Pantry';
+        id: string;
+        homeId: string;
+        name: string;
+        isDefault: boolean;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        tags: Array<string>;
+      };
+    }>;
+  };
 };
 
 export type GetPantryQueryVariables = Exact<{
@@ -14317,42 +14471,51 @@ export type GetShoppingListsLiteQueryVariables = Exact<{
 
 export type GetShoppingListsLiteQuery = {
   __typename?: 'Query';
-  shoppingLists: Array<{
-    __typename?: 'ShoppingList';
-    id: string;
-    name: string;
-    description: string | null | undefined;
-    isDefault: boolean;
-    totalItems: number;
-    completedItems: number;
-    status: ListStatus;
-    isCompleted: boolean;
-    createdAt: string;
-    updatedAt: string;
-    homeId: string | null | undefined;
-    home: { __typename?: 'Home'; id: string; name: string } | null | undefined;
-    ownerships:
-      | Array<{
-          __typename?: 'ShoppingListOwnership';
-          id: string;
-          userId: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile:
-              | {
-                  __typename?: 'UserProfile';
-                  displayName: string | null | undefined;
-                  avatar: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
-        }>
-      | null
-      | undefined;
-  }>;
+  shoppingLists: {
+    __typename?: 'ShoppingListConnection';
+    edges: Array<{
+      __typename?: 'ShoppingListEdge';
+      node: {
+        __typename?: 'ShoppingList';
+        id: string;
+        name: string;
+        description: string | null | undefined;
+        isDefault: boolean;
+        totalItems: number;
+        completedItems: number;
+        status: ListStatus;
+        isCompleted: boolean;
+        createdAt: string;
+        updatedAt: string;
+        homeId: string | null | undefined;
+        home:
+          | { __typename?: 'Home'; id: string; name: string }
+          | null
+          | undefined;
+        ownerships:
+          | Array<{
+              __typename?: 'ShoppingListOwnership';
+              id: string;
+              userId: string;
+              user: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName: string | null | undefined;
+                      avatar: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
+          | null
+          | undefined;
+      };
+    }>;
+  };
 };
 
 export type GetDefaultShoppingListQueryVariables = Exact<{
@@ -27581,8 +27744,26 @@ export const GetHomesDocument = {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'HomeDisplay' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'HomeDisplay' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
               ],
             },
@@ -40249,14 +40430,56 @@ export const GetPantriesDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'homeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isDefault' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'version' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'tags' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -54128,45 +54351,15 @@ export const GetShoppingListsLiteDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalItems' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'completedItems' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'home' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'ownerships' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'userId' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'user' },
+                        name: { kind: 'Name', value: 'node' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -54176,24 +54369,120 @@ export const GetShoppingListsLiteDocument = {
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'email' },
+                              name: { kind: 'Name', value: 'name' },
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'profile' },
+                              name: { kind: 'Name', value: 'description' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isDefault' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'totalItems' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'completedItems' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'status' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isCompleted' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'homeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'home' },
                               selectionSet: {
                                 kind: 'SelectionSet',
                                 selections: [
                                   {
                                     kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'displayName',
-                                    },
+                                    name: { kind: 'Name', value: 'id' },
                                   },
                                   {
                                     kind: 'Field',
-                                    name: { kind: 'Name', value: 'avatar' },
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'ownerships' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'userId' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'user' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'email',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'profile',
+                                          },
+                                          selectionSet: {
+                                            kind: 'SelectionSet',
+                                            selections: [
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'displayName',
+                                                },
+                                              },
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'avatar',
+                                                },
+                                              },
+                                            ],
+                                          },
+                                        },
+                                      ],
+                                    },
                                   },
                                 ],
                               },

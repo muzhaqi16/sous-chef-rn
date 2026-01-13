@@ -1,8 +1,11 @@
 import { useMemo, useCallback } from 'react';
 import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
+import { extractNodes } from '#/utils/connectionUtils';
 
 // Extract the shopping list type from the lite query (metadata only)
-export type ShoppingListFromQuery = GetShoppingListsLiteQuery['shoppingLists'][number];
+// Uses NonNullable to extract the node type from the connection edges
+type ShoppingListEdge = NonNullable<GetShoppingListsLiteQuery['shoppingLists']['edges']>[number];
+export type ShoppingListFromQuery = NonNullable<NonNullable<ShoppingListEdge>['node']>;
 
 /**
  * useShoppingListsQuery - Query shopping lists with smart caching (LIGHTWEIGHT)
@@ -41,9 +44,13 @@ export function useShoppingListsQuery() {
   }, [refetch]);
 
   // Stable lists array with fallback to previous data (graceful degradation on network error)
+  // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const lists = useMemo(
-    (): ShoppingListFromQuery[] =>
-      data?.shoppingLists ?? previousData?.shoppingLists ?? [],
+    (): ShoppingListFromQuery[] => {
+      const currentNodes = extractNodes(data?.shoppingLists);
+      const previousNodes = extractNodes(previousData?.shoppingLists);
+      return currentNodes.length > 0 ? currentNodes : previousNodes;
+    },
     [data?.shoppingLists, previousData?.shoppingLists],
   );
 

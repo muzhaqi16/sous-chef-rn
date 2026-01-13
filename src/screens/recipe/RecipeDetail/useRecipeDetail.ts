@@ -23,7 +23,7 @@ import {
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useCrossTabNavigation, type CrossTabSource } from '#/hooks';
-import { normalizeRecipes } from '#/utils/connectionUtils';
+import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe';
@@ -64,8 +64,9 @@ export function useRecipeDetail() {
     useGetShoppingListsLiteQuery({
       fetchPolicy: 'cache-and-network',
     });
+  // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const shoppingLists = useMemo(
-    () => shoppingListsData?.shoppingLists || [],
+    () => extractNodes(shoppingListsData?.shoppingLists),
     [shoppingListsData],
   );
 

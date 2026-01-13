@@ -14308,6 +14308,18 @@
             "deprecationReason": null
           },
           {
+            "name": "usageStats",
+            "description": "Usage statistics for this home.\nAvailable for all users but primarily used by admin views.",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "HomeUsageStats",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "version",
             "description": null,
             "args": [],
@@ -14322,6 +14334,146 @@
         ],
         "inputFields": null,
         "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "HomeConnection",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "edges",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "HomeEdge",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pageInfo",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "PageInfo", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "totalCount",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "HomeEdge",
+        "description": "Home connection for pagination",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "cursor",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "node",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "OBJECT", "name": "Home", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "HomeFilters",
+        "description": "Filters for querying homes.\nuserId filter is admin-only - ignored for regular users.",
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "isPublic",
+            "description": "Filter by public/private status",
+            "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "search",
+            "description": "Search by home name",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "type",
+            "description": "Filter by home type",
+            "type": { "kind": "ENUM", "name": "HomeType", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "userId",
+            "description": "Admin-only: Filter by specific user ID (member of home)",
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
       },
@@ -14972,6 +15124,86 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "HomeUsageStats",
+        "description": "Usage statistics for a Home.\nIncluded when admin requests resources with stats.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "activeShoppingListCount",
+            "description": "Number of active shopping lists",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastActivityAt",
+            "description": "Last activity timestamp in the home",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "memberCount",
+            "description": "Total number of active members",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pantryCount",
+            "description": "Total number of pantries",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pantryItemCount",
+            "description": "Total pantry items across all pantries",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "shoppingListCount",
+            "description": "Total number of shopping lists",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -36067,6 +36299,18 @@
             "deprecationReason": null
           },
           {
+            "name": "usageStats",
+            "description": "Usage statistics for this pantry.\nAvailable for all users but primarily used by admin views.",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "PantryUsageStats",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "version",
             "description": null,
             "args": [],
@@ -36595,6 +36839,50 @@
         ],
         "inputFields": null,
         "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "PantryFilters",
+        "description": "Filters for querying pantries.\nuserId and homeId filters have different behavior for admins vs regular users.",
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "homeId",
+            "description": "Filter by home ID - optional for admins, required for regular users",
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "isDefault",
+            "description": "Filter by default status",
+            "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "search",
+            "description": "Search by name, description, or location",
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "userId",
+            "description": "Admin-only: Filter by specific user ID (via home membership)",
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
         "enumValues": null,
         "possibleTypes": null
       },
@@ -38546,6 +38834,70 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "PantryUsageStats",
+        "description": "Usage statistics for a Pantry.\nIncluded when admin requests resources with stats.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "estimatedValue",
+            "description": "Total estimated value of items",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "expiringItemCount",
+            "description": "Number of items expiring within 7 days",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemCount",
+            "description": "Total number of items",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastActivityAt",
+            "description": "Last activity timestamp",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lowStockItemCount",
+            "description": "Number of low stock items",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -41705,19 +42057,40 @@
           },
           {
             "name": "homes",
-            "description": null,
-            "args": [],
+            "description": "Get homes accessible to the current user.\nFor admins: Returns all homes with optional filters.\nFor regular users: Returns only homes where user is a member.",
+            "args": [
+              {
+                "name": "filters",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "HomeFilters",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "pagination",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "PaginationInput",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "OBJECT", "name": "Home", "ofType": null }
-                }
+                "kind": "OBJECT",
+                "name": "HomeConnection",
+                "ofType": null
               }
             },
             "isDeprecated": false,
@@ -43082,15 +43455,35 @@
           },
           {
             "name": "pantries",
-            "description": null,
+            "description": "Get pantries.\nFor admins: Returns all pantries with optional filters (homeId is optional).\nFor regular users: Requires homeId and returns pantries from that home only.",
             "args": [
+              {
+                "name": "filters",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "PantryFilters",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
               {
                 "name": "homeId",
                 "description": null,
+                "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "pagination",
+                "description": null,
                 "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                  "kind": "INPUT_OBJECT",
+                  "name": "PaginationInput",
+                  "ofType": null
                 },
                 "defaultValue": null,
                 "isDeprecated": false,
@@ -43101,17 +43494,9 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Pantry",
-                    "ofType": null
-                  }
-                }
+                "kind": "OBJECT",
+                "name": "PantryConnection",
+                "ofType": null
               }
             },
             "isDeprecated": false,
@@ -44729,7 +45114,7 @@
           },
           {
             "name": "shoppingLists",
-            "description": null,
+            "description": "Get shopping lists accessible to the current user.\nFor admins: Returns all lists with optional filters (including userId filter).\nFor regular users: Returns only user's lists (owned, collaborated, or home-based).",
             "args": [
               {
                 "name": "filters",
@@ -44742,23 +45127,27 @@
                 "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
+              },
+              {
+                "name": "pagination",
+                "description": null,
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "PaginationInput",
+                  "ofType": null
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
               }
             ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingList",
-                    "ofType": null
-                  }
-                }
+                "kind": "OBJECT",
+                "name": "ShoppingListConnection",
+                "ofType": null
               }
             },
             "isDeprecated": false,
@@ -50056,6 +50445,18 @@
             "deprecationReason": null
           },
           {
+            "name": "usageStats",
+            "description": "Usage statistics for this shopping list.\nAvailable for all users but primarily used by admin views.",
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ShoppingListUsageStats",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "version",
             "description": null,
             "args": [],
@@ -51048,6 +51449,14 @@
                 "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
               }
             },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "userId",
+            "description": "Admin-only: Filter by specific user ID (owner or collaborator)",
+            "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -52368,6 +52777,86 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "ShoppingListUsageStats",
+        "description": "Usage statistics for a ShoppingList.\nIncluded when admin requests resources with stats.",
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "collaboratorCount",
+            "description": "Number of active collaborators",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "completedItemCount",
+            "description": "Number of completed/purchased items",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemCount",
+            "description": "Total number of items",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "lastActivityAt",
+            "description": "Last activity timestamp",
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "shareCount",
+            "description": "Total share count",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "viewCount",
+            "description": "Total view count",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null

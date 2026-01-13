@@ -11,7 +11,7 @@ import {
 } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
-import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
   const {
@@ -65,7 +65,8 @@ export const useDefaultHome = () => {
   }, [canAttemptQueries, hasInitializedHomeData]);
 
   // Preserve homes data even when query fails - prevents cascade failures
-  const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));
+  // Extract nodes from connection type (homes returns HomeConnection)
+  const homesList = normalizeHomes(usePreservedArrayData(extractNodes(homes?.homes)));
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = useMemo(
