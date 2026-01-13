@@ -39,6 +39,7 @@ module.exports = {
           '#styles': './src/styles',
           '#types': './src/types',
           '#utils': './src/utils',
+          '@sous-chef/animated-flashlist': './packages/animated-flashlist/src',
         },
       },
     ],

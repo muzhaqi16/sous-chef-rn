@@ -32,7 +32,9 @@
       "#styles": ["./src/styles"],
       "#types": ["./src/types"],
       "#utils": ["./src/utils"],
-      "#utils/*": ["./src/utils/*"]
+      "#utils/*": ["./src/utils/*"],
+      "@sous-chef/animated-flashlist": ["./packages/animated-flashlist/src"],
+      "@sous-chef/animated-flashlist/*": ["./packages/animated-flashlist/src/*"]
     }
   }
 }
