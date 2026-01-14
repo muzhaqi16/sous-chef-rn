@@ -7,6 +7,7 @@ import {
   useGetUnitBySymbolLazyQuery,
   StorageState,
   PantryItemFragment,
+  PantryItemFragmentDoc,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
@@ -79,6 +80,7 @@ interface UpdatePantryItemParams<T extends FormDataInput = FormDataInput> {
   unitId: string | null;
   trackingUnit: UnitSelection;
   selectedLocationId: string | null;
+  selectedBrandId: string | null;
 }
 
 interface UsePantryItemFormMutationsOptions {
@@ -130,6 +132,7 @@ function buildDirtyUpdateInput(
   data: FormDataInput,
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
+  brandId: string | null,
 ): Record<string, any> {
   const input: Record<string, any> = {};
 
@@ -161,6 +164,17 @@ function buildDirtyUpdateInput(
     input.restockQuantity = data.restockQuantity
       ? parseFloat(data.restockQuantity)
       : null;
+  }
+
+  // Handle brand updates
+  if (dirtyFields.brand) {
+    if (brandId) {
+      input.brandId = brandId;           // Selected existing brand
+    } else if (data.brand?.trim()) {
+      input.brandName = data.brand.trim(); // Create new brand by name
+    } else {
+      input.brandId = null;              // Remove brand
+    }
   }
 
   return input;
@@ -233,6 +247,17 @@ export function usePantryItemFormMutations({
   // Update mutation (for non-quantity fields)
   const [updateMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
+    // Ensure full fragment including nested item.nutritions is written to cache
+    update: (cache, { data }) => {
+      if (!data?.updatePantryItem) return;
+
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'PantryItem', id: data.updatePantryItem.id }),
+        fragment: PantryItemFragmentDoc,
+        fragmentName: 'PantryItemFragment',
+        data: data.updatePantryItem,
+      });
+    },
     onError: error => {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [
@@ -251,6 +276,17 @@ export function usePantryItemFormMutations({
   // Update quantity mutation (separate endpoint for quantity/unit changes)
   const [updateQuantityMutation] = useUpdatePantryItemQuantityMutation({
     errorPolicy: 'all',
+    // Ensure full fragment including nested item.nutritions is written to cache
+    update: (cache, { data }) => {
+      if (!data?.updatePantryItemQuantity) return;
+
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'PantryItem', id: data.updatePantryItemQuantity.id }),
+        fragment: PantryItemFragmentDoc,
+        fragmentName: 'PantryItemFragment',
+        data: data.updatePantryItemQuantity,
+      });
+    },
     onError: error => {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [
@@ -376,6 +412,7 @@ export function usePantryItemFormMutations({
       unitId,
       trackingUnit,
       selectedLocationId,
+      selectedBrandId,
     }: UpdatePantryItemParams): Promise<boolean> => {
       const quantityOrUnitChanged =
         dirtyFields.quantityInput || dirtyFields.unit;
@@ -414,10 +451,25 @@ export function usePantryItemFormMutations({
         input,
         dirtyFields,
         selectedLocationId,
+        selectedBrandId,
       );
+
+      // Debug brand removal
+      console.log('[DEBUG] Brand update check:', {
+        dirtyBrand: dirtyFields.brand,
+        inputBrand: input.brand,
+        selectedBrandId,
+        updateInput,
+      });
 
       // Update other fields if any changed
       if (Object.keys(updateInput).length > 0) {
+        // Build optimistic update with brand handling
+        const optimisticUpdate: Record<string, any> = { ...updateInput };
+        if ('brandId' in updateInput && updateInput.brandId === null) {
+          optimisticUpdate.brand = null;
+        }
+
         // Fire mutation asynchronously - don't await to allow immediate navigation
         updateMutation({
           variables: { id: itemId, input: updateInput },
@@ -425,7 +477,7 @@ export function usePantryItemFormMutations({
             __typename: 'Mutation',
             updatePantryItem: enhanceWithVersion(
               currentItem as any,
-              updateInput,
+              optimisticUpdate,
             ),
           },
         }).catch(error => {

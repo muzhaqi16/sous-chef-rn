@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useTabBarActions } from '#context/TabBarActionsContext';
+import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 
@@ -19,7 +20,27 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
   descriptors,
   navigation,
 }) => {
-  const { onAddPress, showAddButton, addButtonConfig, setActiveTab, isOverlayOpen } = useTabBarActions();
+  const {
+    onAddPress,
+    showAddButton,
+    addButtonConfig,
+    isAddButtonDisabled,
+    addButtonDisabledMessage,
+    setActiveTab,
+    isOverlayOpen,
+  } = useTabBarActions();
+
+  // Handle add button press - show toast if disabled
+  const handleAddPress = useCallback(() => {
+    if (isAddButtonDisabled) {
+      toastService.info(
+        addButtonDisabledMessage ||
+          "You don't have permission to perform this action",
+      );
+      return;
+    }
+    onAddPress?.();
+  }, [isAddButtonDisabled, addButtonDisabledMessage, onAddPress]);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { theme } = useUnistyles();
@@ -107,8 +128,28 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
         canPreventDefault: true,
       });
 
-      if (!isFocused && !event.defaultPrevented) {
-        navigation.navigate(route.name, route.params);
+      if (!event.defaultPrevented) {
+        // Map tab names to their main screens for stack reset
+        const mainScreenMap: Record<string, string> = {
+          Pantry: 'PantryMain',
+          ShoppingList: 'ShoppingListMain',
+          Recipe: 'RecipeMain',
+        };
+
+        const mainScreen = mainScreenMap[route.name];
+
+        if (mainScreen) {
+          // Navigate to tab AND reset stack to main screen
+          navigation.navigate(route.name, {
+            screen: mainScreen,
+            initial: false, // Forces stack reset
+          });
+        } else {
+          // Profile or other tabs without nested stacks
+          if (!isFocused) {
+            navigation.navigate(route.name, route.params);
+          }
+        }
       }
     };
 
@@ -152,13 +193,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
         {/* First half of tabs (Pantry, ShoppingList) */}
         {state.routes.slice(0, middleIndex).map((route, index) => renderTabItem(route, index))}
 
-        {/* Center Add Button */}
-        {showAddButton && onAddPress ? (
+        {/* Center Add Button - always visible on allowed tabs */}
+        {showAddButton ? (
           <View style={styles.addButtonContainer}>
             <AddButton
-              onPress={onAddPress}
+              onPress={handleAddPress}
               icon={addButtonConfig.icon}
               iconLibrary={addButtonConfig.iconLibrary}
+              disabled={isAddButtonDisabled}
             />
           </View>
         ) : (

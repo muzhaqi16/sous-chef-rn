@@ -132,6 +132,9 @@ export function useAppNavigation() {
     push,
     popToTop,
 
+    // Raw navigation object (for advanced use cases like parent navigation)
+    navigation,
+
     // Feature navigation
     navigateTo,
   };

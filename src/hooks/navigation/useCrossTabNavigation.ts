@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { CommonActions } from '@react-navigation/native';
 import { useAppNavigation } from './useAppNavigation';
 
 export type SourceTab = 'Pantry' | 'ShoppingList' | 'Recipe';
@@ -7,24 +8,27 @@ export interface CrossTabSource {
   sourceTab?: SourceTab;
   sourceScreen?: string;
   sourceParams?: Record<string, any>;
+  /** Set to true when navigating from a modal stack (like Barcode) that needs full reset */
+  fromModalStack?: boolean;
 }
 
 /**
  * Hook for handling cross-tab navigation with proper stack cleanup.
  *
- * When navigating between tabs (e.g., Pantry → Recipe), the destination
- * stack accumulates screens. This hook ensures proper cleanup when
- * navigating back to the source tab.
+ * For tab-to-tab navigation (e.g., Recipe tab → Pantry tab), uses standard goBack().
+ * For modal-to-tab navigation (e.g., Barcode modal → Pantry tab), uses reset to dismiss modal.
  *
- * @param currentMainScreen - The main screen of the current stack (e.g., 'RecipeMain')
- *                            Used to reset the stack when navigating away
+ * Note: Tab stack reset on tab press is handled by FloatingTabBar.
+ *
+ * @param _currentMainScreen - Deprecated: no longer used but kept for API compatibility
  */
-export function useCrossTabNavigation(currentMainScreen: string) {
-  const { goBack, navigateToNested, replace } = useAppNavigation();
+export function useCrossTabNavigation(_currentMainScreen: string) {
+  const { goBack, navigation } = useAppNavigation();
 
   /**
-   * Navigate back to the source tab, cleaning up the current stack.
-   * If no source is provided, uses normal goBack().
+   * Navigate back to the source tab.
+   * - For intra-Home navigation (tab to tab): uses standard goBack()
+   * - For modal dismissal (fromModalStack: true): uses reset to fully dismiss modal
    */
   const goBackToSource = useCallback((source?: CrossTabSource) => {
     if (!source?.sourceTab) {
@@ -33,20 +37,48 @@ export function useCrossTabNavigation(currentMainScreen: string) {
       return;
     }
 
-    // Replace current screen with main screen to clean the stack
-    replace(currentMainScreen, undefined);
-
-    // Navigate to source tab
-    const mainScreenName = `${source.sourceTab}Main`;
-
-    if (source.sourceScreen && source.sourceParams) {
-      // Navigate to specific screen with params
-      navigateToNested(source.sourceTab, source.sourceScreen, source.sourceParams);
-    } else {
-      // Navigate to main screen of source tab
-      navigateToNested(source.sourceTab, mainScreenName, undefined);
+    // For tab-to-tab navigation within Home, just use goBack()
+    // The FloatingTabBar will reset the stack when user taps the tab later
+    if (!source.fromModalStack) {
+      goBack();
+      return;
     }
-  }, [currentMainScreen, goBack, navigateToNested, replace]);
+
+    // Modal dismissal scenario - use reset to fully dismiss the modal stack
+    const mainScreenName = source.sourceScreen || `${source.sourceTab}Main`;
+    const rootNavigator = navigation.getParent();
+
+    if (rootNavigator) {
+      rootNavigator.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'Home',
+              state: {
+                routes: [
+                  {
+                    name: source.sourceTab,
+                    state: {
+                      routes: [
+                        {
+                          name: mainScreenName,
+                          params: source.sourceParams,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        })
+      );
+    } else {
+      // Fallback: if no parent navigator, try normal goBack
+      goBack();
+    }
+  }, [goBack, navigation]);
 
   return { goBackToSource };
 }

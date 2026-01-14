@@ -1,26 +1,48 @@
-import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
-import { useAppNavigation } from '#hooks';
+import React, {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
+import {
+  View,
+  Image,
+  Alert,
+  Text,
+  TouchableOpacity,
+  Pressable,
+} from 'react-native';
+import { useAppNavigation, useTabBarAddButton } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { ListTemplate, HeaderAction, RecipesHeader, FolderPicker, TagPicker } from '#components';
+import {
+  ListTemplate,
+  HeaderAction,
+  RecipesHeader,
+  FolderPicker,
+  TagPicker,
+} from '#components';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#generated';
-import { useSavedRecipes, useRecipeFolders, useRecipeTags, useFolderActions } from '#/hooks/recipe';
+import {
+  useSavedRecipes,
+  useRecipeFolders,
+  useRecipeTags,
+  useFolderActions,
+} from '#/hooks/recipe';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils';
-import { useTabBarActions } from '#context';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 export const RecipeMain: React.FC = React.memo(() => {
-  const { navigate, isFocused } = useAppNavigation();
+  const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { setAddProps } = useTabBarActions();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter state
@@ -38,7 +60,11 @@ export const RecipeMain: React.FC = React.memo(() => {
   const { tags: availableTags } = useRecipeTags();
 
   // Folder management actions
-  const { renameFolder, deleteFolder, loading: folderActionLoading } = useFolderActions();
+  const {
+    renameFolder,
+    deleteFolder,
+    loading: folderActionLoading,
+  } = useFolderActions();
 
   // State for random recipes (shown when user has no saved recipes)
   const [randomRecipes, setRandomRecipes] = useState<RecipeInformation[]>([]);
@@ -48,11 +74,7 @@ export const RecipeMain: React.FC = React.memo(() => {
   const hasFetchedRandom = useRef(false);
 
   // Fetch user's saved/favorited recipes from backend
-  const {
-    recipes,
-    loading,
-    refetch,
-  } = useSavedRecipes();
+  const { recipes, loading, refetch } = useSavedRecipes();
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes
   useEffect(() => {
@@ -74,7 +96,9 @@ export const RecipeMain: React.FC = React.memo(() => {
       hasFetchedRandom.current = true;
       setLoadingRandom(true);
       try {
-        const random = await spoonacularService.getRandomRecipes({ number: 10 });
+        const random = await spoonacularService.getRandomRecipes({
+          number: 10,
+        });
         setRandomRecipes(random);
       } catch (error) {
         console.error('Failed to fetch random recipes:', error);
@@ -98,14 +122,7 @@ export const RecipeMain: React.FC = React.memo(() => {
   }, [recipes.length, randomRecipes.length]);
 
   // Register add button action - navigate to recipe search
-  useEffect(() => {
-    if (isFocused) {
-      setAddProps(() => navigate('RecipeSearch'), true);
-    }
-    return () => {
-      setAddProps(undefined, false);
-    };
-  }, [isFocused, setAddProps, navigate]);
+  useTabBarAddButton(() => navigate('RecipeSearch'));
 
   // Manual refresh to get new random recipes
   const handleRefreshRandom = useCallback(async () => {
@@ -117,7 +134,10 @@ export const RecipeMain: React.FC = React.memo(() => {
       setRandomRecipes(random);
     } catch (error) {
       console.error('Failed to fetch random recipes:', error);
-      Alert.alert('Error', 'Failed to load recipe suggestions. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to load recipe suggestions. Please try again.',
+      );
     } finally {
       setLoadingRandom(false);
     }
@@ -215,10 +235,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         badge: showRandomRecipes ? 'Suggested' : undefined,
         leftElement: imageUrl ? (
           <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.leftImage}
-            />
+            <Image source={{ uri: imageUrl }} style={styles.leftImage} />
           </View>
         ) : undefined,
         // Store whether this is an external recipe for navigation
@@ -327,13 +344,21 @@ export const RecipeMain: React.FC = React.memo(() => {
           <Icon
             name="refresh"
             size={20}
-            color={loadingRandom ? theme.colors.textSecondary : theme.colors.primary}
+            color={
+              loadingRandom ? theme.colors.textSecondary : theme.colors.primary
+            }
             library="Ionicons"
           />
         </TouchableOpacity>
       </View>
     );
-  }, [showRandomRecipes, handleRefreshRandom, loadingRandom, theme.colors.textSecondary, theme.colors.primary]);
+  }, [
+    showRandomRecipes,
+    handleRefreshRandom,
+    loadingRandom,
+    theme.colors.textSecondary,
+    theme.colors.primary,
+  ]);
 
   // Check if any filters are active
   const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
@@ -341,7 +366,10 @@ export const RecipeMain: React.FC = React.memo(() => {
   // Filter Header Component - shown when user has saved recipes
   const FilterHeader = useMemo(() => {
     // Don't show filters when showing random recipes or no folders/tags available
-    if (showRandomRecipes || (folders.length === 0 && availableTags.length === 0)) {
+    if (
+      showRandomRecipes ||
+      (folders.length === 0 && availableTags.length === 0)
+    ) {
       return SuggestedHeader;
     }
 
@@ -352,19 +380,25 @@ export const RecipeMain: React.FC = React.memo(() => {
           {/* Folder Filter */}
           <TouchableOpacity
             style={styles.filterButton}
-            onPress={() => setShowFolderPicker(true)}>
+            onPress={() => setShowFolderPicker(true)}
+          >
             <Icon
               library="Feather"
               name="folder"
               size={16}
-              color={selectedFolder ? theme.colors.primary : theme.colors.textSecondary}
+              color={
+                selectedFolder
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary
+              }
             />
             <Text
               style={[
                 styles.filterButtonText,
                 selectedFolder && styles.filterButtonTextActive,
               ]}
-              numberOfLines={1}>
+              numberOfLines={1}
+            >
               {selectedFolder || 'All Folders'}
             </Text>
             <Icon
@@ -379,21 +413,29 @@ export const RecipeMain: React.FC = React.memo(() => {
           {availableTags.length > 0 && (
             <TouchableOpacity
               style={styles.filterButton}
-              onPress={() => setShowTagPicker(true)}>
+              onPress={() => setShowTagPicker(true)}
+            >
               <Icon
                 library="Feather"
                 name="tag"
                 size={16}
-                color={selectedTags.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
+                color={
+                  selectedTags.length > 0
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary
+                }
               />
               <Text
                 style={[
                   styles.filterButtonText,
                   selectedTags.length > 0 && styles.filterButtonTextActive,
                 ]}
-                numberOfLines={1}>
+                numberOfLines={1}
+              >
                 {selectedTags.length > 0
-                  ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
+                  ? `${selectedTags.length} Tag${
+                      selectedTags.length > 1 ? 's' : ''
+                    }`
                   : 'All Tags'}
               </Text>
               <Icon
@@ -408,7 +450,8 @@ export const RecipeMain: React.FC = React.memo(() => {
           {hasActiveFilters && (
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={handleClearFilters}>
+              onPress={handleClearFilters}
+            >
               <Text style={styles.clearButtonText}>Clear</Text>
             </TouchableOpacity>
           )}

@@ -13,6 +13,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useHaptic } from '#hooks/haptic';
 import { Telemetry } from '#/services/telemetry';
+import { useClearPurchasedItems } from './mutations/useClearPurchasedItems';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -278,7 +279,13 @@ export function useShoppingListActions({
     [removeItem, haptic],
   );
 
-  // Clear all purchased handler
+  // Clear all purchased handler - uses optimistic cache clearing for instant UI
+  const { clearPurchased } = useClearPurchasedItems({
+    listId: currentListId,
+    items,
+    refetch: refetchItems,
+  });
+
   const handleClearAllPurchased = useCallback(async () => {
     const purchasedItems = items.filter(
       (item: any) => item.purchaseInfo?.isPurchased,
@@ -288,12 +295,12 @@ export function useShoppingListActions({
 
     try {
       haptic.warning();
-      await Promise.all(purchasedItems.map(item => removeItem(item.id)));
+      await clearPurchased();
     } catch {
       haptic.error();
       toastService.error('Failed to clear purchased items');
     }
-  }, [items, removeItem, haptic]);
+  }, [items, clearPurchased, haptic]);
 
   // Add item from search handler
   const handleAddItemFromSearch = useCallback(

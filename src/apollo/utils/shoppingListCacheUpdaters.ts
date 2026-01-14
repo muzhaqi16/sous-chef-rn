@@ -93,6 +93,77 @@ export const removeFromPurchasedItems = createRemoveFromParentConnectionUpdater(
 
 import type { ApolloCache } from '@apollo/client';
 
+// =============================================================================
+// Batch Clear Utilities
+// =============================================================================
+
+/**
+ * Clear ALL purchased items from cache in a single atomic operation.
+ * Updates both itemsConnection and purchasedItems alias.
+ * Used by "Clear All Purchased" button for instant UI feedback.
+ *
+ * @param cache - Apollo cache instance
+ * @param listId - Shopping list ID
+ * @param itemIds - Array of item IDs being cleared
+ */
+export function clearAllPurchasedItemsFromCache(
+  cache: ApolloCache,
+  listId: string,
+  itemIds: string[],
+): void {
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+
+  if (!parentCacheId) return;
+
+  // 1. Clear purchasedItems alias (used by GetShoppingListItemsPaginatedQuery)
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      purchasedItems(existing: any) {
+        if (!existing) return existing;
+        return {
+          ...existing,
+          edges: [],
+          totalCount: 0,
+        };
+      },
+    },
+  });
+
+  // 2. Clear itemsConnection with isPurchased:true filter variant
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      itemsConnection(existing: any, { storeFieldName }: any) {
+        const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
+        if (!isPurchasedConnection || !existing) return existing;
+        return {
+          ...existing,
+          edges: [],
+          totalCount: 0,
+        };
+      },
+    },
+  });
+
+  // 3. Evict all deleted items from cache
+  itemIds.forEach(itemId => {
+    cache.evict({
+      id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+    });
+  });
+
+  // 4. Garbage collect orphaned references
+  cache.gc();
+}
+
+// =============================================================================
+// Purchase Status Move Utilities
+// =============================================================================
+
 /**
  * Helper to update itemsConnection filtered variants when purchase status changes
  */

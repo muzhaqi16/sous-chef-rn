@@ -84,6 +84,17 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         netWeight
         primaryUpc
         alternateUpcs
+        displayUnit {
+          id
+          name
+          symbol
+        }
+        brands {
+          brand {
+            id
+            name
+          }
+        }
         units {
           isDefault
           unitId
@@ -109,6 +120,17 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
         netWeight
         description
         primaryUpc
+        displayUnit {
+          id
+          name
+          symbol
+        }
+        brands {
+          brand {
+            id
+            name
+          }
+        }
         units {
           isDefault
           unitId

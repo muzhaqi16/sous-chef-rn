@@ -589,6 +589,15 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
+/** Response for clearing purchased items from a shopping list */
+export type ClearPurchasedItemsResponse = {
+  __typename?: 'ClearPurchasedItemsResponse';
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  /** Summary of the bulk operation */
+  summary: BulkOperationSummary;
+};
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -1069,6 +1078,7 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -2007,6 +2017,11 @@ export type Home = {
   timezone: Maybe<Scalars['String']['output']>;
   type: HomeType;
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this home.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<HomeUsageStats>;
   version: Scalars['Int']['output'];
 };
 
@@ -2053,6 +2068,35 @@ export type HomeShoppingListsConnectionArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeConnection = {
+  __typename?: 'HomeConnection';
+  edges: Array<HomeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Home connection for pagination */
+export type HomeEdge = {
+  __typename?: 'HomeEdge';
+  cursor: Scalars['String']['output'];
+  node: Home;
+};
+
+/**
+ * Filters for querying homes.
+ * userId filter is admin-only - ignored for regular users.
+ */
+export type HomeFilters = {
+  /** Filter by public/private status */
+  isPublic?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Search by home name */
+  search?: InputMaybe<Scalars['String']['input']>;
+  /** Filter by home type */
+  type?: InputMaybe<HomeType>;
+  /** Admin-only: Filter by specific user ID (member of home) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type HomeInvite = {
@@ -2138,6 +2182,26 @@ export enum HomeType {
   Personal = 'PERSONAL',
   Vacation = 'VACATION',
 }
+
+/**
+ * Usage statistics for a Home.
+ * Included when admin requests resources with stats.
+ */
+export type HomeUsageStats = {
+  __typename?: 'HomeUsageStats';
+  /** Number of active shopping lists */
+  activeShoppingListCount: Scalars['Int']['output'];
+  /** Last activity timestamp in the home */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Total number of active members */
+  memberCount: Scalars['Int']['output'];
+  /** Total number of pantries */
+  pantryCount: Scalars['Int']['output'];
+  /** Total pantry items across all pantries */
+  pantryItemCount: Scalars['Int']['output'];
+  /** Total number of shopping lists */
+  shoppingListCount: Scalars['Int']['output'];
+};
 
 export type IpStat = {
   __typename?: 'IPStat';
@@ -3486,6 +3550,12 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  /**
+   * Clear all purchased items from a shopping list.
+   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Returns summary with count of cleared items.
+   */
+  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
   clearReminder: ShoppingList;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
@@ -3917,6 +3987,10 @@ export type MutationChangePasswordArgs = {
 
 export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
+};
+
+export type MutationClearPurchasedShoppingListItemsArgs = {
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationClearReminderArgs = {
@@ -4883,6 +4957,7 @@ export enum MutationType {
   Completed = 'COMPLETED',
   Created = 'CREATED',
   Deleted = 'DELETED',
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
   ItemAdded = 'ITEM_ADDED',
   ItemCompleted = 'ITEM_COMPLETED',
   ItemRemoved = 'ITEM_REMOVED',
@@ -5200,6 +5275,11 @@ export type Pantry = {
   tags: Array<Scalars['String']['output']>;
   temperature: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this pantry.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<PantryUsageStats>;
   version: Scalars['Int']['output'];
 };
 
@@ -5292,6 +5372,21 @@ export type PantryExpiringItemsAlertPayload = {
   userId: Scalars['String']['output'];
 };
 
+/**
+ * Filters for querying pantries.
+ * userId and homeId filters have different behavior for admins vs regular users.
+ */
+export type PantryFilters = {
+  /** Filter by home ID - optional for admins, required for regular users */
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+  /** Filter by default status */
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Search by name, description, or location */
+  search?: InputMaybe<Scalars['String']['input']>;
+  /** Admin-only: Filter by specific user ID (via home membership) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Real-time collaborative type - never cache */
 export type PantryItem = {
   __typename?: 'PantryItem';
@@ -5299,6 +5394,7 @@ export type PantryItem = {
   addedAt: Scalars['DateTime']['output'];
   addedBy: Maybe<User>;
   brand: Maybe<Brand>;
+  brandId: Maybe<Scalars['String']['output']>;
   condition: ItemCondition;
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -5548,6 +5644,24 @@ export type PantryUpdatedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
+};
+
+/**
+ * Usage statistics for a Pantry.
+ * Included when admin requests resources with stats.
+ */
+export type PantryUsageStats = {
+  __typename?: 'PantryUsageStats';
+  /** Total estimated value of items */
+  estimatedValue: Maybe<Scalars['Float']['output']>;
+  /** Number of items expiring within 7 days */
+  expiringItemCount: Scalars['Int']['output'];
+  /** Total number of items */
+  itemCount: Scalars['Int']['output'];
+  /** Last activity timestamp */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Number of low stock items */
+  lowStockItemCount: Scalars['Int']['output'];
 };
 
 export type PantryWasteAlertPayload = {
@@ -5895,7 +6009,12 @@ export type Query = {
   homeInviteByToken: Maybe<HomeInvite>;
   homeInviteLogs: Array<InviteLog>;
   homeInviteStats: Array<HomeInviteStatsGroup>;
-  homes: Array<Home>;
+  /**
+   * Get homes accessible to the current user.
+   * For admins: Returns all homes with optional filters.
+   * For regular users: Returns only homes where user is a member.
+   */
+  homes: HomeConnection;
   inviteLogs: Array<InviteLog>;
   inviteStats: InviteStats;
   invitesSentByMe: Array<HomeInvite>;
@@ -5955,7 +6074,12 @@ export type Query = {
   notification: Maybe<Notification>;
   notificationPreferences: NotificationPreferences;
   notificationStats: NotificationStats;
-  pantries: Array<Pantry>;
+  /**
+   * Get pantries.
+   * For admins: Returns all pantries with optional filters (homeId is optional).
+   * For regular users: Requires homeId and returns pantries from that home only.
+   */
+  pantries: PantryConnection;
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
   /**
@@ -6055,7 +6179,12 @@ export type Query = {
    * Priority: RECENTLY_DELETED > FREQUENTLY_ADDED > POPULAR
    */
   shoppingListSuggestions: Array<ShoppingListSuggestion>;
-  shoppingLists: Array<ShoppingList>;
+  /**
+   * Get shopping lists accessible to the current user.
+   * For admins: Returns all lists with optional filters (including userId filter).
+   * For regular users: Returns only user's lists (owned, collaborated, or home-based).
+   */
+  shoppingLists: ShoppingListConnection;
   /**
    * Get a single storage location by ID
    * Requires user to be a member of the home
@@ -6281,6 +6410,11 @@ export type QueryHomeInviteStatsArgs = {
   homeId: Scalars['String']['input'];
 };
 
+export type QueryHomesArgs = {
+  filters?: InputMaybe<HomeFilters>;
+  pagination?: InputMaybe<PaginationInput>;
+};
+
 export type QueryInviteLogsArgs = {
   inviteId: Scalars['String']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -6425,7 +6559,9 @@ export type QueryNotificationStatsArgs = {
 };
 
 export type QueryPantriesArgs = {
-  homeId: Scalars['ID']['input'];
+  filters?: InputMaybe<PantryFilters>;
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+  pagination?: InputMaybe<PaginationInput>;
 };
 
 export type QueryPantryArgs = {
@@ -6621,6 +6757,7 @@ export type QueryShoppingListSuggestionsArgs = {
 
 export type QueryShoppingListsArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
+  pagination?: InputMaybe<PaginationInput>;
 };
 
 export type QueryStorageLocationArgs = {
@@ -7250,6 +7387,11 @@ export type ShoppingList = {
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
+  /**
+   * Usage statistics for this shopping list.
+   * Available for all users but primarily used by admin views.
+   */
+  usageStats: Maybe<ShoppingListUsageStats>;
   version: Scalars['Int']['output'];
   viewCount: Scalars['Int']['output'];
 };
@@ -7407,6 +7549,8 @@ export type ShoppingListFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Admin-only: Filter by specific user ID (owner or collaborator) */
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 /**
@@ -7554,6 +7698,19 @@ export type ShoppingListItemStoreInfo = {
   storeSection: Maybe<Scalars['String']['output']>;
 };
 
+export type ShoppingListItemsBatchClearedPayload = {
+  __typename?: 'ShoppingListItemsBatchClearedPayload';
+  /** Count of items cleared */
+  clearedCount: Scalars['Int']['output'];
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  listId: Scalars['ID']['output'];
+  mutation: MutationType;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type ShoppingListOwnership = {
   __typename?: 'ShoppingListOwnership';
   createdAt: Scalars['DateTime']['output'];
@@ -7622,6 +7779,26 @@ export type ShoppingListUpdatedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
+};
+
+/**
+ * Usage statistics for a ShoppingList.
+ * Included when admin requests resources with stats.
+ */
+export type ShoppingListUsageStats = {
+  __typename?: 'ShoppingListUsageStats';
+  /** Number of active collaborators */
+  collaboratorCount: Scalars['Int']['output'];
+  /** Number of completed/purchased items */
+  completedItemCount: Scalars['Int']['output'];
+  /** Total number of items */
+  itemCount: Scalars['Int']['output'];
+  /** Last activity timestamp */
+  lastActivityAt: Maybe<Scalars['DateTime']['output']>;
+  /** Total share count */
+  shareCount: Scalars['Int']['output'];
+  /** Total view count */
+  viewCount: Scalars['Int']['output'];
 };
 
 export type SkippedItem = {
@@ -7901,6 +8078,7 @@ export type Subscription = {
   pantryWasteAlert: PantryWasteAlertPayload;
   riskyLoginAlerts: LoginHistory;
   shoppingListCollaboratorsChanged: Maybe<ShoppingListCollaboratorChangedPayload>;
+  shoppingListItemsBatchCleared: Maybe<ShoppingListItemsBatchClearedPayload>;
   shoppingListItemsChanged: Maybe<ShoppingListItemChangedPayload>;
   shoppingListStatusChanged: Maybe<ShoppingListStatusChangedPayload>;
   shoppingListUpdated: Maybe<ShoppingListUpdatedPayload>;
@@ -8007,6 +8185,10 @@ export type SubscriptionRiskyLoginAlertsArgs = {
 };
 
 export type SubscriptionShoppingListCollaboratorsChangedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+export type SubscriptionShoppingListItemsBatchClearedArgs = {
   listId: Scalars['ID']['input'];
 };
 
@@ -8117,6 +8299,7 @@ export enum SyncOperation {
 
 export type SyncPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8746,6 +8929,8 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -11459,7 +11644,13 @@ export type GetHomesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetHomesQuery = {
   __typename?: 'Query';
-  homes: Array<{ __typename?: 'Home' } & HomeDisplayFragment>;
+  homes: {
+    __typename?: 'HomeConnection';
+    edges: Array<{
+      __typename?: 'HomeEdge';
+      node: { __typename?: 'Home' } & HomeDisplayFragment;
+    }>;
+  };
 };
 
 export type GetMyPendingInvitesQueryVariables = Exact<{ [key: string]: never }>;
@@ -12263,6 +12454,14 @@ export type ItemByUpcFilterQuery = {
         netWeight: number | null | undefined;
         primaryUpc: string | null | undefined;
         alternateUpcs: Array<string>;
+        displayUnit:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -12299,6 +12498,14 @@ export type ItemBySkuFilterQuery = {
         netWeight: number | null | undefined;
         description: string | null | undefined;
         primaryUpc: string | null | undefined;
+        displayUnit:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -12795,17 +13002,23 @@ export type GetPantriesQueryVariables = Exact<{
 
 export type GetPantriesQuery = {
   __typename?: 'Query';
-  pantries: Array<{
-    __typename?: 'Pantry';
-    id: string;
-    homeId: string;
-    name: string;
-    isDefault: boolean;
-    createdAt: string;
-    updatedAt: string;
-    version: number;
-    tags: Array<string>;
-  }>;
+  pantries: {
+    __typename?: 'PantryConnection';
+    edges: Array<{
+      __typename?: 'PantryEdge';
+      node: {
+        __typename?: 'Pantry';
+        id: string;
+        homeId: string;
+        name: string;
+        isDefault: boolean;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        tags: Array<string>;
+      };
+    }>;
+  };
 };
 
 export type GetPantryQueryVariables = Exact<{
@@ -14317,42 +14530,51 @@ export type GetShoppingListsLiteQueryVariables = Exact<{
 
 export type GetShoppingListsLiteQuery = {
   __typename?: 'Query';
-  shoppingLists: Array<{
-    __typename?: 'ShoppingList';
-    id: string;
-    name: string;
-    description: string | null | undefined;
-    isDefault: boolean;
-    totalItems: number;
-    completedItems: number;
-    status: ListStatus;
-    isCompleted: boolean;
-    createdAt: string;
-    updatedAt: string;
-    homeId: string | null | undefined;
-    home: { __typename?: 'Home'; id: string; name: string } | null | undefined;
-    ownerships:
-      | Array<{
-          __typename?: 'ShoppingListOwnership';
-          id: string;
-          userId: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile:
-              | {
-                  __typename?: 'UserProfile';
-                  displayName: string | null | undefined;
-                  avatar: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
-        }>
-      | null
-      | undefined;
-  }>;
+  shoppingLists: {
+    __typename?: 'ShoppingListConnection';
+    edges: Array<{
+      __typename?: 'ShoppingListEdge';
+      node: {
+        __typename?: 'ShoppingList';
+        id: string;
+        name: string;
+        description: string | null | undefined;
+        isDefault: boolean;
+        totalItems: number;
+        completedItems: number;
+        status: ListStatus;
+        isCompleted: boolean;
+        createdAt: string;
+        updatedAt: string;
+        homeId: string | null | undefined;
+        home:
+          | { __typename?: 'Home'; id: string; name: string }
+          | null
+          | undefined;
+        ownerships:
+          | Array<{
+              __typename?: 'ShoppingListOwnership';
+              id: string;
+              userId: string;
+              user: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName: string | null | undefined;
+                      avatar: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
+          | null
+          | undefined;
+      };
+    }>;
+  };
 };
 
 export type GetDefaultShoppingListQueryVariables = Exact<{
@@ -14921,6 +15143,26 @@ export type MoveShoppingItemToPantryMutation = {
   moveShoppingItemToPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
+export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ClearPurchasedShoppingListItemsMutation = {
+  __typename?: 'Mutation';
+  clearPurchasedShoppingListItems: {
+    __typename?: 'ClearPurchasedItemsResponse';
+    clearedItemIds: Array<string>;
+    summary: {
+      __typename?: 'BulkOperationSummary';
+      total: number;
+      successful: number;
+      failed: number;
+      skipped: number;
+      executionTime: number;
+    };
+  };
+};
+
 export type AddItemsToShoppingListMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
   items: Array<BatchAddShoppingListItemInput> | BatchAddShoppingListItemInput;
@@ -15250,6 +15492,26 @@ export type ShoppingListStatusChangedSubscription = {
             }
           | null
           | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListItemsBatchClearedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemsBatchClearedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemsBatchCleared:
+    | {
+        __typename?: 'ShoppingListItemsBatchClearedPayload';
+        mutation: MutationType;
+        listId: string;
+        clearedItemIds: Array<string>;
+        clearedCount: number;
+        userId: string;
+        timestamp: string;
       }
     | null
     | undefined;
@@ -27581,8 +27843,26 @@ export const GetHomesDocument = {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'HomeDisplay' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'HomeDisplay' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
               ],
             },
@@ -36819,6 +37099,53 @@ export const ItemByUpcFilterDocument = {
                             },
                             {
                               kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'symbol' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brand' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
                               name: { kind: 'Name', value: 'units' },
                               selectionSet: {
                                 kind: 'SelectionSet',
@@ -37055,6 +37382,53 @@ export const ItemBySkuFilterDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'primaryUpc' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'symbol' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brand' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
                             },
                             {
                               kind: 'Field',
@@ -40249,14 +40623,56 @@ export const GetPantriesDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'homeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isDefault' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'version' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'tags' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -54128,45 +54544,15 @@ export const GetShoppingListsLiteDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalItems' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'completedItems' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'home' },
+                  name: { kind: 'Name', value: 'edges' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'ownerships' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       {
                         kind: 'Field',
-                        name: { kind: 'Name', value: 'userId' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'user' },
+                        name: { kind: 'Name', value: 'node' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -54176,24 +54562,120 @@ export const GetShoppingListsLiteDocument = {
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'email' },
+                              name: { kind: 'Name', value: 'name' },
                             },
                             {
                               kind: 'Field',
-                              name: { kind: 'Name', value: 'profile' },
+                              name: { kind: 'Name', value: 'description' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isDefault' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'totalItems' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'completedItems' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'status' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isCompleted' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'homeId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'home' },
                               selectionSet: {
                                 kind: 'SelectionSet',
                                 selections: [
                                   {
                                     kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'displayName',
-                                    },
+                                    name: { kind: 'Name', value: 'id' },
                                   },
                                   {
                                     kind: 'Field',
-                                    name: { kind: 'Name', value: 'avatar' },
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'ownerships' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'userId' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'user' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'email',
+                                          },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: {
+                                            kind: 'Name',
+                                            value: 'profile',
+                                          },
+                                          selectionSet: {
+                                            kind: 'SelectionSet',
+                                            selections: [
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'displayName',
+                                                },
+                                              },
+                                              {
+                                                kind: 'Field',
+                                                name: {
+                                                  kind: 'Name',
+                                                  value: 'avatar',
+                                                },
+                                              },
+                                            ],
+                                          },
+                                        },
+                                      ],
+                                    },
                                   },
                                 ],
                               },
@@ -62654,6 +63136,128 @@ export type MoveShoppingItemToPantryMutationOptions =
     MoveShoppingItemToPantryMutation,
     MoveShoppingItemToPantryMutationVariables
   >;
+export const ClearPurchasedShoppingListItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'ClearPurchasedShoppingListItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'clearPurchasedShoppingListItems' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'summary' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'total' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'successful' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'failed' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'skipped' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'executionTime' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedItemIds' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type ClearPurchasedShoppingListItemsMutationFn =
+  ApolloReactCommon.MutationFunction<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >;
+
+/**
+ * __useClearPurchasedShoppingListItemsMutation__
+ *
+ * To run a mutation, you first call `useClearPurchasedShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearPurchasedShoppingListItemsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearPurchasedShoppingListItemsMutation, { data, loading, error }] = useClearPurchasedShoppingListItemsMutation({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useClearPurchasedShoppingListItemsMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >(ClearPurchasedShoppingListItemsDocument, options);
+}
+export type ClearPurchasedShoppingListItemsMutationHookResult = ReturnType<
+  typeof useClearPurchasedShoppingListItemsMutation
+>;
+export type ClearPurchasedShoppingListItemsMutationResult =
+  ApolloReactCommon.MutationResult<ClearPurchasedShoppingListItemsMutation>;
+export type ClearPurchasedShoppingListItemsMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >;
 export const AddItemsToShoppingListDocument = {
   kind: 'Document',
   definitions: [
@@ -65974,6 +66578,106 @@ export type ShoppingListStatusChangedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListStatusChangedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListStatusChangedSubscription>;
+export const ShoppingListItemsBatchClearedDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'subscription',
+      name: { kind: 'Name', value: 'ShoppingListItemsBatchCleared' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'listId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'shoppingListItemsBatchCleared' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'listId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'listId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'mutation' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'listId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedItemIds' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedCount' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useShoppingListItemsBatchClearedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemsBatchClearedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemsBatchClearedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemsBatchClearedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListItemsBatchClearedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemsBatchClearedSubscription,
+    ShoppingListItemsBatchClearedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListItemsBatchClearedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemsBatchClearedSubscription,
+    ShoppingListItemsBatchClearedSubscriptionVariables
+  >(ShoppingListItemsBatchClearedDocument, options);
+}
+export type ShoppingListItemsBatchClearedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemsBatchClearedSubscription
+>;
+export type ShoppingListItemsBatchClearedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemsBatchClearedSubscription>;
 export const GetStorageLocationsDocument = {
   kind: 'Document',
   definitions: [

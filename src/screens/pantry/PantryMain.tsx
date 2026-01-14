@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { NetworkStatus } from '@apollo/client';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation, useTabBarAddButton } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
 import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
@@ -40,7 +40,7 @@ import type { FilterTabConfig } from '#components/molecules';
 const PantryMainScreen: React.FC = React.memo(() => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   useUnistyles();
-  const { setOverlayOpen, setAddProps } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarActions();
 
   // Get user profile for greeting
   const { profile } = useProfileData();
@@ -94,8 +94,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
     });
 
   // Centralized pantry selection with fallback chain
-  const { pantry, pantries, currentHome, selectedHomeId, setSelectedPantryId, isReady } =
-    useCurrentPantry();
+  const {
+    pantry,
+    pantries,
+    currentHome,
+    selectedHomeId,
+    setSelectedPantryId,
+    isReady,
+  } = useCurrentPantry();
 
   // Storage locations for custom filter tabs
   const {
@@ -108,7 +114,8 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Gate query with isReady and isFocused to prevent firing:
   // - before home selection is complete (isReady)
   // - when screen loses focus during navigation (isFocused)
-  const shouldFetchHome = isFocused && isReady && !!selectedHomeId && !currentHome;
+  const shouldFetchHome =
+    isFocused && isReady && !!selectedHomeId && !currentHome;
   const { refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId! },
     skip: !shouldFetchHome,
@@ -126,14 +133,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   });
 
   // Register add button action - open add to pantry sheet
-  useEffect(() => {
-    if (isFocused) {
-      setAddProps(() => setAddSheetVisible(true), true);
-    }
-    return () => {
-      setAddProps(undefined, false);
-    };
-  }, [isFocused, setAddProps]);
+  useTabBarAddButton(() => setAddSheetVisible(true));
 
   // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
@@ -223,7 +223,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       (location: StorageLocation) => ({
         id: location.id,
         label: location.name,
-        icon: location.icon || '📍',
+        icon: location.icon ?? undefined,
       }),
     );
 

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useGetHomesLazyQuery } from '#generated';
 import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
-import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import type { BasicPantryFragment } from '#generated';
 
 /**
@@ -24,9 +24,9 @@ export function useLazyHomeData() {
     errorPolicy: 'ignore',
   });
 
-  // Normalize homes data
+  // Normalize homes data (extract nodes from connection type)
   const homes = useMemo(() => {
-    return normalizeHomes(homesData?.homes ?? []);
+    return normalizeHomes(extractNodes(homesData?.homes));
   }, [homesData?.homes]);
 
   // Get pantries for the current home

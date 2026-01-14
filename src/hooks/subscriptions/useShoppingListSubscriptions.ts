@@ -16,6 +16,7 @@ import {
   useShoppingListItemsChangedSubscription,
   useShoppingListUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
+  useShoppingListItemsBatchClearedSubscription,
   ShoppingListItemFragmentDoc,
   ShoppingListItemDisplayFragmentDoc,
   GetShoppingListDocument,
@@ -28,6 +29,7 @@ import {
   removeFromShoppingListItemsConnection,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
+  clearAllPurchasedItemsFromCache,
 } from '#/apollo/utils';
 
 /**
@@ -211,6 +213,36 @@ export function useShoppingListSubscriptions(
                 },
               });
             }
+
+            // Also re-sort aliased fields used by paginated query (GetShoppingListItemsPaginated)
+            // Without this, the UI reads stale sortOrder values from these cached fields
+            client.cache.modify({
+              id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
+              fields: {
+                unpurchasedItems(existing: any, { readField }: any) {
+                  if (!existing?.edges) return existing;
+                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                    const nodeA = readField('node', a);
+                    const nodeB = readField('node', b);
+                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                    return sortA.localeCompare(sortB);
+                  });
+                  return { ...existing, edges: sortedAliasedEdges };
+                },
+                purchasedItems(existing: any, { readField }: any) {
+                  if (!existing?.edges) return existing;
+                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                    const nodeA = readField('node', a);
+                    const nodeB = readField('node', b);
+                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                    return sortA.localeCompare(sortB);
+                  });
+                  return { ...existing, edges: sortedAliasedEdges };
+                },
+              },
+            });
           } catch (error) {
             console.warn('Failed to re-sort edges after subscription update:', error);
           }
@@ -263,6 +295,43 @@ export function useShoppingListSubscriptions(
     variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
     ...collaboratorsHandlers,
+  });
+
+  //
+  // Shopping List Items Batch Cleared Subscription
+  // Handles when another user clears all purchased items
+  //
+  const batchClearedHandlers = subscriptionService.register({
+    subscriptionName: 'ShoppingListItemsBatchCleared',
+    entityType: 'ShoppingListItem',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.NONE, // Using custom handler
+    enableLogging: true,
+    entityId: selectedShoppingListId,
+    customOnData: (payload: any, client: any) => {
+      if (!payload || !selectedShoppingListId) return;
+
+      const payloadUserId = payload.userId;
+      const clearedItemIds = payload.clearedItemIds || [];
+
+      // Skip self-echo: if this subscription is from our own mutation, skip processing
+      if (payloadUserId && userId && payloadUserId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [Subscription] Skipping batch clear self-echo');
+        }
+        return;
+      }
+
+      // Clear purchased items from cache
+      clearAllPurchasedItemsFromCache(client.cache, selectedShoppingListId, clearedItemIds);
+    },
+  });
+
+  useShoppingListItemsBatchClearedSubscription({
+    variables: { listId: selectedShoppingListId! },
+    skip: !selectedShoppingListId,
+    ...batchClearedHandlers,
   });
 
   // Additional shopping list subscriptions can be added here:

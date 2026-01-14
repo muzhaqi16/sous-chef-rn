@@ -6,6 +6,7 @@ import {
 } from '../graphql/generated';
 import { usePreservedArrayData } from './apollo';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { extractNodes } from '#/utils/connectionUtils';
 
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
@@ -62,9 +63,10 @@ export const useItemSelector = ({
   });
 
   // Preserve data even when queries fail
-  const shoppingLists = usePreservedArrayData(shoppingListData?.shoppingLists);
-  const pantries = usePreservedArrayData(pantryData?.pantries);
-  const homes = usePreservedArrayData(homeData?.homes);
+  // Extract nodes from connection types (all return Connection types)
+  const shoppingLists = usePreservedArrayData(extractNodes(shoppingListData?.shoppingLists));
+  const pantries = usePreservedArrayData(extractNodes(pantryData?.pantries));
+  const homes = usePreservedArrayData(extractNodes(homeData?.homes));
 
   // Get the appropriate data and loading state
   const getData = () => {

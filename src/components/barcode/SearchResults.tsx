@@ -112,9 +112,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             input: {
               pantryId,
               itemId: item.id,
-              quantity: 1,
+              quantity: item.netWeight ?? 1,
               itemName: item.name,
-              itemUpc: item.upc || item.primaryUpc, // Include UPC from barcode scan
+              itemUpc: item.upc || item.primaryUpc,
+              itemDisplayUnitId: item.displayUnit?.id,
+              itemNetWeight: item.netWeight,
+              itemBrand: item.brandName,
             },
           },
         });
@@ -125,9 +128,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             input: {
               shoppingListId,
               itemId: item.id,
-              quantity: 1,
+              quantity: item.netWeight ?? 1,
               itemName: item.name,
-              // unitId/unitName removed - API calculates from item's weight
+              unitId: item.displayUnit?.id ?? item.unitId,
+              unitName: item.displayUnit?.name,
             },
           },
         });

@@ -36,4 +36,6 @@ export {
   // High-level move utilities (handles both itemsConnection and aliased fields)
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
+  // Batch clear utility
+  clearAllPurchasedItemsFromCache,
 } from './shoppingListCacheUpdaters';

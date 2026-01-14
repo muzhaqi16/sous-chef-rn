@@ -43,6 +43,18 @@ const convertToScannedItem = (
     description?: string | null;
     imageUrl?: string | null;
     primaryUpc?: string | null;
+    netWeight?: number | null;
+    displayUnit?: {
+      id: string;
+      name: string;
+      symbol: string;
+    } | null;
+    brands?: Array<{
+      brand: {
+        id: string;
+        name: string;
+      };
+    }> | null;
     units: Array<{
       unitId: string;
       isDefault?: boolean | null;
@@ -55,7 +67,16 @@ const convertToScannedItem = (
   description: item.description || undefined,
   imageUrl: item.imageUrl || undefined,
   upc: item.primaryUpc || fallbackBarcode,
-  unitId: item.units?.find((u: any) => u.isDefault)?.unitId || undefined,
+  unitId: item.units?.find((u) => u.isDefault)?.unitId || undefined,
+  netWeight: item.netWeight ?? undefined,
+  displayUnit: item.displayUnit
+    ? {
+        id: item.displayUnit.id,
+        name: item.displayUnit.name,
+        symbol: item.displayUnit.symbol,
+      }
+    : undefined,
+  brandName: item.brands?.[0]?.brand?.name ?? undefined,
 });
 
 export const useSearchResults = (barcode: string, format?: string) => {

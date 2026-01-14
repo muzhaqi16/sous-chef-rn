@@ -22,8 +22,8 @@ import {
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useCrossTabNavigation, type CrossTabSource } from '#/hooks';
-import { normalizeRecipes } from '#/utils/connectionUtils';
+import { useAppNavigation } from '#/hooks';
+import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe';
@@ -50,22 +50,17 @@ export interface RecipeDisplayData {
 
 export function useRecipeDetail() {
   const route = useRoute<RecipeDetailRouteProp>();
-  const { goBackToSource } = useCrossTabNavigation('RecipeMain');
-  const {
-    recipeId,
-    externalSource,
-    externalId,
-    sourceTab,
-    sourcePantryItemId,
-  } = route.params;
+  const { goBack } = useAppNavigation();
+  const { recipeId, externalSource, externalId } = route.params;
 
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } =
     useGetShoppingListsLiteQuery({
       fetchPolicy: 'cache-and-network',
     });
+  // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
   const shoppingLists = useMemo(
-    () => shoppingListsData?.shoppingLists || [],
+    () => extractNodes(shoppingListsData?.shoppingLists),
     [shoppingListsData],
   );
 
@@ -986,25 +981,16 @@ export function useRecipeDetail() {
     return null;
   }, [isBackendRecipe, backendRecipe, externalRecipe]);
 
-  // Smart goBack that handles cross-tab navigation
+  // Simple goBack - works for both Pantry stack and Recipe stack
   const handleGoBack = useCallback(() => {
-    const source: CrossTabSource | undefined = sourceTab
-      ? {
-          sourceTab,
-          sourceScreen: sourcePantryItemId ? 'PantryItemDetail' : undefined,
-          sourceParams: sourcePantryItemId
-            ? { itemId: sourcePantryItemId }
-            : undefined,
-        }
-      : undefined;
-
-    goBackToSource(source);
-  }, [sourceTab, sourcePantryItemId, goBackToSource]);
+    goBack();
+  }, [goBack]);
 
   return {
     // Navigation
     goBack: handleGoBack,
     recipeId,
+    externalId,
 
     // Loading/error states
     loading: loading || backendLoading,

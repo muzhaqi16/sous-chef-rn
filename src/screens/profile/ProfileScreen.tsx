@@ -10,6 +10,7 @@ import {
   useProfileData,
   useConfigurableSettings,
   useAppNavigation,
+  useTabBarAddButton,
 } from '#hooks';
 import { ActionTray, ActionTrayRef } from '#/components/templates/ActionTray';
 import { useTabBarActions } from '#/context/TabBarActionsContext';
@@ -22,12 +23,12 @@ import { Environment } from '#/utils/environment';
 const TAB_BAR_HEIGHT = 65;
 
 export const ProfileScreen = () => {
-  const { navigate, goBack, isFocused } = useAppNavigation();
+  const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, biometricLoading } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { setOverlayOpen, setAddProps } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarActions();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
 
@@ -40,17 +41,12 @@ export const ProfileScreen = () => {
   }, [profile]);
 
   // Register add button - opens quick actions tray on Profile screen
-  useEffect(() => {
-    if (isFocused) {
-      setAddProps(() => {
-        Telemetry.trackEvent('profile_quick_actions_opened', { source: 'tab_bar' });
-        actionTrayRef.current?.open();
-      }, true);
-    }
-    return () => {
-      setAddProps(undefined, false);
-    };
-  }, [isFocused, setAddProps]);
+  useTabBarAddButton(() => {
+    Telemetry.trackEvent('profile_quick_actions_opened', {
+      source: 'tab_bar',
+    });
+    actionTrayRef.current?.open();
+  });
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
@@ -114,7 +110,7 @@ export const ProfileScreen = () => {
         ]}
       >
         {sections
-          .filter((section) => {
+          .filter(section => {
             // Filter out Developer section if debug features are not enabled
             if (section.title === 'Developer') {
               return Environment.shouldEnableDebugFeatures();
@@ -122,46 +118,46 @@ export const ProfileScreen = () => {
             return true;
           })
           .map((section, index) => (
-          <SettingsSection
-            key={`section-${index}`}
-            title={section.title}
-            items={section.items.map((item: any) => {
-              // Override logout handler to include navigation
-              if (item.key === 'logout') {
-                return {
-                  ...item,
-                  testID: 'profile-logout-button',
-                  onPress: handleLogout,
-                };
-              }
-              // Handle navigation items
-              if (item.type === 'navigation') {
-                return {
-                  ...item,
-                  testID: `profile-menu-${item.key}`,
-                  onPress: () => {
-                    if (item.key === 'personalInformation') {
-                      navigate('PersonalInformation');
-                    } else if (item.key === 'notifications') {
-                      navigate('NotificationSettings');
-                    } else if (item.key === 'dietaryProfile') {
-                      navigate('DietaryProfile');
-                    } else if (item.key === 'appSettings') {
-                      navigate('AppSettings');
-                    } else if (item.key === 'debugInfo') {
-                      navigate('DebugInfo');
-                    } else if (item.key === 'performanceDashboard') {
-                      navigate('PerformanceDashboard');
-                    } else if (item.key === 'changePassword') {
-                      navigate('ChangePassword');
-                    }
-                  },
-                };
-              }
-              return item;
-            })}
-          />
-        ))}
+            <SettingsSection
+              key={`section-${index}`}
+              title={section.title}
+              items={section.items.map((item: any) => {
+                // Override logout handler to include navigation
+                if (item.key === 'logout') {
+                  return {
+                    ...item,
+                    testID: 'profile-logout-button',
+                    onPress: handleLogout,
+                  };
+                }
+                // Handle navigation items
+                if (item.type === 'navigation') {
+                  return {
+                    ...item,
+                    testID: `profile-menu-${item.key}`,
+                    onPress: () => {
+                      if (item.key === 'personalInformation') {
+                        navigate('PersonalInformation');
+                      } else if (item.key === 'notifications') {
+                        navigate('NotificationSettings');
+                      } else if (item.key === 'dietaryProfile') {
+                        navigate('DietaryProfile');
+                      } else if (item.key === 'appSettings') {
+                        navigate('AppSettings');
+                      } else if (item.key === 'debugInfo') {
+                        navigate('DebugInfo');
+                      } else if (item.key === 'performanceDashboard') {
+                        navigate('PerformanceDashboard');
+                      } else if (item.key === 'changePassword') {
+                        navigate('ChangePassword');
+                      }
+                    },
+                  };
+                }
+                return item;
+              })}
+            />
+          ))}
       </ScrollView>
 
       {BiometricModal}

@@ -14,6 +14,7 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsLiteQuery,
 } from '#generated';
+import { extractNodes } from '#/utils/connectionUtils';
 import {
   useAppStore,
   selectUser,
@@ -47,7 +48,8 @@ export const CreateShoppingListScreen = () => {
       fetchPolicy: 'cache-and-network',
     });
 
-  const lists = listsData?.shoppingLists || [];
+  // Extract nodes from connection type (shoppingLists returns ShoppingListConnection)
+  const lists = extractNodes(listsData?.shoppingLists);
   const existingList =
     lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
 

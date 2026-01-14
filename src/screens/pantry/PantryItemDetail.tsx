@@ -3,12 +3,12 @@ import {
   View,
   Text,
   Alert,
-  Image,
   ScrollView,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
@@ -16,6 +16,7 @@ import {
   StorageState,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
@@ -107,10 +108,11 @@ export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
 }> = ({ route }) => {
   const itemId = route.params.itemId;
-  const { goBack, navigateToNested, navigateTo } = useAppNavigation();
+  const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const { getCachedSuggestions, setCachedSuggestions } = useRecipeSuggestionsStore();
 
   const [addToListStatus, setAddToListStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
@@ -153,19 +155,32 @@ export const PantryItemDetail: React.FC<{
 
   const item = data?.pantryItem;
 
-  // Fetch suggested recipes based on pantry item
+  // Fetch suggested recipes based on pantry item - use cache when available
   useEffect(() => {
-    if (!item?.item?.name) return;
+    const itemName = item?.item?.name;
+    if (!itemName) return;
 
+    // Check cache first
+    const cachedRecipes = getCachedSuggestions(itemName);
+    if (cachedRecipes) {
+      setSuggestedRecipes(cachedRecipes);
+      return;
+    }
+
+    // Cache miss - fetch from API
     const fetchRecipes = async () => {
       setLoadingRecipes(true);
       try {
         const recipes = await spoonacularService.searchRecipes({
-          query: item.item?.name || '',
+          query: itemName,
           number: 5,
           addRecipeInformation: true,
         });
-        setSuggestedRecipes(recipes.results as unknown as RecipeInformation[]);
+        const results = recipes.results as unknown as RecipeInformation[];
+        setSuggestedRecipes(results);
+
+        // Cache the results
+        setCachedSuggestions(itemName, results);
       } catch (error) {
         console.error('Failed to fetch suggested recipes:', error);
       } finally {
@@ -174,7 +189,7 @@ export const PantryItemDetail: React.FC<{
     };
 
     fetchRecipes();
-  }, [item?.item?.name]);
+  }, [item?.item?.name, getCachedSuggestions, setCachedSuggestions]);
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
@@ -250,11 +265,10 @@ export const PantryItemDetail: React.FC<{
   };
 
   const handleRecipePress = (recipeId: number) => {
-    navigateToNested('Recipe', 'RecipeDetail', {
+    // Navigate within Pantry stack - back navigation works automatically
+    navigate('RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
-      sourceTab: 'Pantry',
-      sourcePantryItemId: itemId,
     });
   };
 
@@ -778,10 +792,11 @@ export const PantryItemDetail: React.FC<{
                   onPress={() => handleRecipePress(recipe.id)}
                   activeOpacity={0.8}
                 >
-                  <Image
+                  <Animated.Image
                     source={{ uri: recipe.image }}
                     style={styles.recipeImage}
                     resizeMode="cover"
+                    sharedTransitionTag={`recipe-image-${recipe.id}`}
                   />
                   <Text style={styles.recipeTitle} numberOfLines={2}>
                     {recipe.title}
