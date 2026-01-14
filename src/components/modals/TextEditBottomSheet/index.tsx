@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetView,
   BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
+import { commonStyles } from '#/styles/commonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -122,8 +123,11 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
-      <BottomSheetView
-        style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+      <BottomSheetKeyboardAwareScrollView
+        style={commonStyles.bottomSheetScrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         {/* Header with Cancel/Save at TOP */}
         <View style={styles.header}>
@@ -208,7 +212,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             )}
           />
         </View>
-      </BottomSheetView>
+      </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
 };

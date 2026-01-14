@@ -31,4 +31,5 @@ export interface AddButtonProps {
   isActive?: boolean;
   icon?: string;
   iconLibrary?: IconLibrary;
+  disabled?: boolean;
 }

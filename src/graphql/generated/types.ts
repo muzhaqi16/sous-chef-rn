@@ -585,6 +585,15 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
+/** Response for clearing purchased items from a shopping list */
+export type ClearPurchasedItemsResponse = {
+  __typename?: 'ClearPurchasedItemsResponse';
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  /** Summary of the bulk operation */
+  summary: BulkOperationSummary;
+};
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -1065,6 +1074,7 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -3536,6 +3546,12 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  /**
+   * Clear all purchased items from a shopping list.
+   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Returns summary with count of cleared items.
+   */
+  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
   clearReminder: ShoppingList;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
@@ -3967,6 +3983,10 @@ export type MutationChangePasswordArgs = {
 
 export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
+};
+
+export type MutationClearPurchasedShoppingListItemsArgs = {
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationClearReminderArgs = {
@@ -4933,6 +4953,7 @@ export enum MutationType {
   Completed = 'COMPLETED',
   Created = 'CREATED',
   Deleted = 'DELETED',
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
   ItemAdded = 'ITEM_ADDED',
   ItemCompleted = 'ITEM_COMPLETED',
   ItemRemoved = 'ITEM_REMOVED',
@@ -5369,6 +5390,7 @@ export type PantryItem = {
   addedAt: Scalars['DateTime']['output'];
   addedBy?: Maybe<User>;
   brand?: Maybe<Brand>;
+  brandId?: Maybe<Scalars['String']['output']>;
   condition: ItemCondition;
   costPerUnit?: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -7672,6 +7694,19 @@ export type ShoppingListItemStoreInfo = {
   storeSection?: Maybe<Scalars['String']['output']>;
 };
 
+export type ShoppingListItemsBatchClearedPayload = {
+  __typename?: 'ShoppingListItemsBatchClearedPayload';
+  /** Count of items cleared */
+  clearedCount: Scalars['Int']['output'];
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  listId: Scalars['ID']['output'];
+  mutation: MutationType;
+  originatorClientId?: Maybe<Scalars['ID']['output']>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type ShoppingListOwnership = {
   __typename?: 'ShoppingListOwnership';
   createdAt: Scalars['DateTime']['output'];
@@ -8039,6 +8074,7 @@ export type Subscription = {
   pantryWasteAlert: PantryWasteAlertPayload;
   riskyLoginAlerts: LoginHistory;
   shoppingListCollaboratorsChanged?: Maybe<ShoppingListCollaboratorChangedPayload>;
+  shoppingListItemsBatchCleared?: Maybe<ShoppingListItemsBatchClearedPayload>;
   shoppingListItemsChanged?: Maybe<ShoppingListItemChangedPayload>;
   shoppingListStatusChanged?: Maybe<ShoppingListStatusChangedPayload>;
   shoppingListUpdated?: Maybe<ShoppingListUpdatedPayload>;
@@ -8145,6 +8181,10 @@ export type SubscriptionRiskyLoginAlertsArgs = {
 };
 
 export type SubscriptionShoppingListCollaboratorsChangedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+export type SubscriptionShoppingListItemsBatchClearedArgs = {
   listId: Scalars['ID']['input'];
 };
 
@@ -8255,6 +8295,7 @@ export enum SyncOperation {
 
 export type SyncPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8884,6 +8925,8 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -15514,6 +15557,14 @@ export type ItemByUpcFilterQuery = {
         netWeight?: number | null | undefined;
         primaryUpc?: string | null | undefined;
         alternateUpcs: Array<string>;
+        displayUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -15550,6 +15601,14 @@ export type ItemBySkuFilterQuery = {
         netWeight?: number | null | undefined;
         description?: string | null | undefined;
         primaryUpc?: string | null | undefined;
+        displayUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -22310,6 +22369,26 @@ export type MoveShoppingItemToPantryMutation = {
   };
 };
 
+export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ClearPurchasedShoppingListItemsMutation = {
+  __typename?: 'Mutation';
+  clearPurchasedShoppingListItems: {
+    __typename?: 'ClearPurchasedItemsResponse';
+    clearedItemIds: Array<string>;
+    summary: {
+      __typename?: 'BulkOperationSummary';
+      total: number;
+      successful: number;
+      failed: number;
+      skipped: number;
+      executionTime: number;
+    };
+  };
+};
+
 export type AddItemsToShoppingListMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
   items: Array<BatchAddShoppingListItemInput> | BatchAddShoppingListItemInput;
@@ -23535,6 +23614,26 @@ export type ShoppingListStatusChangedSubscription = {
             }
           | null
           | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListItemsBatchClearedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemsBatchClearedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemsBatchCleared?:
+    | {
+        __typename?: 'ShoppingListItemsBatchClearedPayload';
+        mutation: MutationType;
+        listId: string;
+        clearedItemIds: Array<string>;
+        clearedCount: number;
+        userId: string;
+        timestamp: string;
       }
     | null
     | undefined;

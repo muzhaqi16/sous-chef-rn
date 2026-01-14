@@ -1,4 +1,10 @@
-import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import React, {
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
 import { View, Pressable } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -13,8 +19,12 @@ import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBou
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 
 // Hooks & Context
-import { useAppNavigation, useProfileData } from '#hooks';
-import { useTabBarActions, ShoppingListModalsProvider, useShoppingListModals } from '#context';
+import { useAppNavigation, useProfileData, useTabBarAddButton } from '#hooks';
+import {
+  useTabBarActions,
+  ShoppingListModalsProvider,
+  useShoppingListModals,
+} from '#context';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { useStableRef } from '#/hooks/utils';
@@ -41,8 +51,8 @@ interface ShoppingListMainContentProps {
   screenData: ReturnType<typeof useShoppingListScreen>;
 }
 
-const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> = React.memo(
-  ({ screenData }) => {
+const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
+  React.memo(({ screenData }) => {
     const {
       lists,
       listDataWithOwnership,
@@ -74,7 +84,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> = React.me
     } = screenData;
 
     // Get modal actions from context (provided by ShoppingListModalsProvider)
-    const { addItemSheet, quantityEdit, moveToPantry } = useShoppingListModals();
+    const { addItemSheet, quantityEdit, moveToPantry } =
+      useShoppingListModals();
 
     // Feature hint for swipe gesture (shows once, after items load)
     const swipeHint = useFeatureHint({
@@ -82,8 +93,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> = React.me
       showOnMount: false,
     });
 
-    const { navigate, navigateTo, isFocused } = useAppNavigation();
-    const { setScannerProps, setAddProps } = useTabBarActions();
+    const { navigate, navigateTo } = useAppNavigation();
+    const { setScannerProps } = useTabBarActions();
     const {
       theme: { colors },
     } = useUnistyles();
@@ -333,22 +344,30 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> = React.me
         clearTimeout(telemetryTimer);
         setScannerProps(undefined, false);
       };
-    }, [setScannerProps, navigateTo, currentListId, items.length, lists.length, currentListIdRef, itemsRef]);
+    }, [
+      setScannerProps,
+      navigateTo,
+      currentListId,
+      items.length,
+      lists.length,
+      currentListIdRef,
+      itemsRef,
+    ]);
 
     // Register add button action
-    useEffect(() => {
-      if (isFocused) {
-        setAddProps(() => {
-          Telemetry.trackEvent('add_item_from_tab_bar', {
-            list_id: currentListId,
-          });
-          addItemSheetOpenRef.current();
-        }, true);
-      }
-      return () => {
-        setAddProps(undefined, false);
-      };
-    }, [isFocused, setAddProps, currentListId, addItemSheetOpenRef]);
+    // Button visibility is automatic on allowed tabs; we just register handler and disabled state
+    useTabBarAddButton(
+      () => {
+        Telemetry.trackEvent('add_item_from_tab_bar', {
+          list_id: currentListId,
+        });
+        addItemSheetOpenRef.current();
+      },
+      !permissions.canAddItems,
+      permissions.canAddItems
+        ? undefined
+        : "You don't have permission to add items to this list",
+    );
 
     // Combined pagination state for footer
     const hasMore = hasMoreUnpurchased || hasMorePurchased;
@@ -457,8 +476,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> = React.me
         {/* Modals are rendered inside ShoppingListModalsProvider */}
       </View>
     );
-  },
-);
+  });
 
 /**
  * Outer screen component that:

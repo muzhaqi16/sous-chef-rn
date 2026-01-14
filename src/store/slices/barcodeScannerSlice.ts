@@ -9,6 +9,13 @@ export interface ScannedItem {
   imageUrl?: string;
   upc: string;
   unitId?: string;
+  netWeight?: number;
+  displayUnit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+  brandName?: string;
 }
 
 export interface BarcodeScannerState {

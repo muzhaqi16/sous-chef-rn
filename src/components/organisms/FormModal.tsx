@@ -1,5 +1,6 @@
 import React from 'react';
-import {View, ScrollView} from 'react-native';
+import {View} from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import {StyleSheet} from 'react-native-unistyles';
 import {Header} from '../molecules/Header';
 
@@ -44,7 +45,13 @@ export const FormModal: React.FC<FormModalProps> = ({
           },
         ]}
       />
-      <ScrollView style={styles.form}>{children}</ScrollView>
+      <KeyboardAwareScrollView
+        style={styles.form}
+        bottomOffset={16}
+        showsVerticalScrollIndicator={false}
+      >
+        {children}
+      </KeyboardAwareScrollView>
     </View>
   );
 };

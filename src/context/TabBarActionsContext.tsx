@@ -35,7 +35,20 @@ interface TabBarActionsContextType {
   onAddPress?: () => void;
   showAddButton: boolean;
   addButtonConfig: AddButtonConfig;
-  setAddProps: (onAddPress?: () => void, showButton?: boolean) => void;
+  isAddButtonDisabled: boolean;
+  addButtonDisabledMessage?: string;
+  /**
+   * Register add button handler for the current screen.
+   * Button visibility is now automatic based on active tab - always shows on allowed tabs.
+   * @param handler - callback when button is pressed
+   * @param disabled - whether button should be disabled (shows toast instead)
+   * @param disabledMessage - custom message when button is disabled
+   */
+  setAddProps: (
+    handler?: () => void,
+    disabled?: boolean,
+    disabledMessage?: string,
+  ) => void;
 
   // Shared state
   activeTab: string;
@@ -61,11 +74,14 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   );
   const [showScannerButton, setShowScannerButton] = useState(false);
 
-  // Add button state
+  // Add button state - visibility is now automatic based on active tab
   const [onAddPress, setOnAddPress] = useState<(() => void) | undefined>(
     undefined,
   );
-  const [showAddButton, setShowAddButton] = useState(false);
+  const [isAddButtonDisabled, setIsAddButtonDisabled] = useState(false);
+  const [addButtonDisabledMessage, setAddButtonDisabledMessage] = useState<
+    string | undefined
+  >(undefined);
 
   // Shared state
   const [activeTab, setActiveTab] = useState<string>('');
@@ -106,15 +122,18 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   );
 
   const setAddProps = useCallback(
-    (addPress?: () => void, showButton: boolean = false) => {
+    (
+      handler?: () => void,
+      disabled: boolean = false,
+      disabledMessage?: string,
+    ) => {
       // Store handler by active tab to prevent flickering during tab transitions
       // When a screen registers its handler, we store it for that tab
-      // When a screen unregisters (cleanup), we only clear if we're leaving allowed tabs
-      if (addPress) {
+      if (handler) {
         setTabHandlers(prev => {
           const currentTab = activeTabRef.current;
-          if (currentTab && prev[currentTab] !== addPress) {
-            return { ...prev, [currentTab]: addPress };
+          if (currentTab && prev[currentTab] !== handler) {
+            return { ...prev, [currentTab]: handler };
           }
           return prev;
         });
@@ -122,12 +141,16 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
 
       // Only update if values have changed to prevent unnecessary re-renders
       setOnAddPress(prev => {
-        if (prev === addPress) return prev;
-        return addPress || undefined;
+        if (prev === handler) return prev;
+        return handler || undefined;
       });
-      setShowAddButton(prev => {
-        if (prev === showButton) return prev;
-        return showButton;
+      setIsAddButtonDisabled(prev => {
+        if (prev === disabled) return prev;
+        return disabled;
+      });
+      setAddButtonDisabledMessage(prev => {
+        if (prev === disabledMessage) return prev;
+        return disabledMessage;
       });
     },
     [],
@@ -145,12 +168,9 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   const shouldShowScanner =
     showScannerButton && allowedScannerTabs.includes(activeTab);
 
-  // For add button: show if we're on an allowed tab AND either:
-  // 1. showAddButton is true (screen has registered), OR
-  // 2. We have a stored handler for this tab (prevents flicker during transitions)
-  const hasStoredHandler = Boolean(activeTab && tabHandlers[activeTab]);
-  const shouldShowAdd =
-    allowedAddTabs.includes(activeTab) && (showAddButton || hasStoredHandler);
+  // Add button: always show on allowed tabs (visibility is automatic)
+  // This eliminates race conditions during tab transitions
+  const shouldShowAdd = allowedAddTabs.includes(activeTab);
 
   // Use stored handler as fallback during transitions
   const effectiveAddPress =
@@ -180,6 +200,8 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
       onAddPress: effectiveAddPress,
       showAddButton: shouldShowAdd,
       addButtonConfig,
+      isAddButtonDisabled,
+      addButtonDisabledMessage,
       setAddProps,
       // Shared
       activeTab,
@@ -194,6 +216,8 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
       effectiveAddPress,
       shouldShowAdd,
       addButtonConfig,
+      isAddButtonDisabled,
+      addButtonDisabledMessage,
       setAddProps,
       activeTab,
       handleSetActiveTab,

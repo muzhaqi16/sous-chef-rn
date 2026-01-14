@@ -21,6 +21,7 @@ interface ItemInformationSectionProps {
   currentItemName?: string;
   suggestedBrands?: SuggestedBrand[];
   testID?: string;
+  onBrandSelected?: (brandId: string | null) => void;
 }
 
 const createReadOnlyComponent = (itemName: string) => {
@@ -40,6 +41,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   currentItemName,
   suggestedBrands,
   testID,
+  onBrandSelected,
 }) => {
   const readOnlyComponent = useMemo(
     () =>
@@ -68,12 +70,19 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
         },
       ];
     } else {
-      // Edit mode - item name is read-only
+      // Edit mode - item name is read-only, brand is editable
       return [
         {
           name: 'itemName',
           label: 'Item Name',
           component: readOnlyComponent,
+        },
+        {
+          name: 'brand',
+          label: 'Brand (optional)',
+          placeholder: "e.g., Kellogg's",
+          component: 'brandAutocomplete',
+          props: { suggestedBrands, onBrandSelected },
         },
       ];
     }

@@ -589,6 +589,15 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
+/** Response for clearing purchased items from a shopping list */
+export type ClearPurchasedItemsResponse = {
+  __typename?: 'ClearPurchasedItemsResponse';
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  /** Summary of the bulk operation */
+  summary: BulkOperationSummary;
+};
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -1069,6 +1078,7 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -3540,6 +3550,12 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  /**
+   * Clear all purchased items from a shopping list.
+   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Returns summary with count of cleared items.
+   */
+  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
   clearReminder: ShoppingList;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
@@ -3971,6 +3987,10 @@ export type MutationChangePasswordArgs = {
 
 export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
+};
+
+export type MutationClearPurchasedShoppingListItemsArgs = {
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationClearReminderArgs = {
@@ -4937,6 +4957,7 @@ export enum MutationType {
   Completed = 'COMPLETED',
   Created = 'CREATED',
   Deleted = 'DELETED',
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
   ItemAdded = 'ITEM_ADDED',
   ItemCompleted = 'ITEM_COMPLETED',
   ItemRemoved = 'ITEM_REMOVED',
@@ -5373,6 +5394,7 @@ export type PantryItem = {
   addedAt: Scalars['DateTime']['output'];
   addedBy: Maybe<User>;
   brand: Maybe<Brand>;
+  brandId: Maybe<Scalars['String']['output']>;
   condition: ItemCondition;
   costPerUnit: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -7676,6 +7698,19 @@ export type ShoppingListItemStoreInfo = {
   storeSection: Maybe<Scalars['String']['output']>;
 };
 
+export type ShoppingListItemsBatchClearedPayload = {
+  __typename?: 'ShoppingListItemsBatchClearedPayload';
+  /** Count of items cleared */
+  clearedCount: Scalars['Int']['output'];
+  /** IDs of items that were cleared */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  listId: Scalars['ID']['output'];
+  mutation: MutationType;
+  originatorClientId: Maybe<Scalars['ID']['output']>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type ShoppingListOwnership = {
   __typename?: 'ShoppingListOwnership';
   createdAt: Scalars['DateTime']['output'];
@@ -8043,6 +8078,7 @@ export type Subscription = {
   pantryWasteAlert: PantryWasteAlertPayload;
   riskyLoginAlerts: LoginHistory;
   shoppingListCollaboratorsChanged: Maybe<ShoppingListCollaboratorChangedPayload>;
+  shoppingListItemsBatchCleared: Maybe<ShoppingListItemsBatchClearedPayload>;
   shoppingListItemsChanged: Maybe<ShoppingListItemChangedPayload>;
   shoppingListStatusChanged: Maybe<ShoppingListStatusChangedPayload>;
   shoppingListUpdated: Maybe<ShoppingListUpdatedPayload>;
@@ -8149,6 +8185,10 @@ export type SubscriptionRiskyLoginAlertsArgs = {
 };
 
 export type SubscriptionShoppingListCollaboratorsChangedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+export type SubscriptionShoppingListItemsBatchClearedArgs = {
   listId: Scalars['ID']['input'];
 };
 
@@ -8259,6 +8299,7 @@ export enum SyncOperation {
 
 export type SyncPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  brandId?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
@@ -8888,6 +8929,8 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
@@ -12411,6 +12454,14 @@ export type ItemByUpcFilterQuery = {
         netWeight: number | null | undefined;
         primaryUpc: string | null | undefined;
         alternateUpcs: Array<string>;
+        displayUnit:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -12447,6 +12498,14 @@ export type ItemBySkuFilterQuery = {
         netWeight: number | null | undefined;
         description: string | null | undefined;
         primaryUpc: string | null | undefined;
+        displayUnit:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          brand: { __typename?: 'Brand'; id: string; name: string };
+        }>;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -15084,6 +15143,26 @@ export type MoveShoppingItemToPantryMutation = {
   moveShoppingItemToPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
+export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ClearPurchasedShoppingListItemsMutation = {
+  __typename?: 'Mutation';
+  clearPurchasedShoppingListItems: {
+    __typename?: 'ClearPurchasedItemsResponse';
+    clearedItemIds: Array<string>;
+    summary: {
+      __typename?: 'BulkOperationSummary';
+      total: number;
+      successful: number;
+      failed: number;
+      skipped: number;
+      executionTime: number;
+    };
+  };
+};
+
 export type AddItemsToShoppingListMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
   items: Array<BatchAddShoppingListItemInput> | BatchAddShoppingListItemInput;
@@ -15413,6 +15492,26 @@ export type ShoppingListStatusChangedSubscription = {
             }
           | null
           | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListItemsBatchClearedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemsBatchClearedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemsBatchCleared:
+    | {
+        __typename?: 'ShoppingListItemsBatchClearedPayload';
+        mutation: MutationType;
+        listId: string;
+        clearedItemIds: Array<string>;
+        clearedCount: number;
+        userId: string;
+        timestamp: string;
       }
     | null
     | undefined;
@@ -37000,6 +37099,53 @@ export const ItemByUpcFilterDocument = {
                             },
                             {
                               kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'symbol' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brand' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
                               name: { kind: 'Name', value: 'units' },
                               selectionSet: {
                                 kind: 'SelectionSet',
@@ -37236,6 +37382,53 @@ export const ItemBySkuFilterDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'primaryUpc' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'displayUnit' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'symbol' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'brands' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brand' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
                             },
                             {
                               kind: 'Field',
@@ -62943,6 +63136,128 @@ export type MoveShoppingItemToPantryMutationOptions =
     MoveShoppingItemToPantryMutation,
     MoveShoppingItemToPantryMutationVariables
   >;
+export const ClearPurchasedShoppingListItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'ClearPurchasedShoppingListItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'clearPurchasedShoppingListItems' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'summary' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'total' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'successful' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'failed' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'skipped' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'executionTime' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedItemIds' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type ClearPurchasedShoppingListItemsMutationFn =
+  ApolloReactCommon.MutationFunction<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >;
+
+/**
+ * __useClearPurchasedShoppingListItemsMutation__
+ *
+ * To run a mutation, you first call `useClearPurchasedShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearPurchasedShoppingListItemsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearPurchasedShoppingListItemsMutation, { data, loading, error }] = useClearPurchasedShoppingListItemsMutation({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useClearPurchasedShoppingListItemsMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >(ClearPurchasedShoppingListItemsDocument, options);
+}
+export type ClearPurchasedShoppingListItemsMutationHookResult = ReturnType<
+  typeof useClearPurchasedShoppingListItemsMutation
+>;
+export type ClearPurchasedShoppingListItemsMutationResult =
+  ApolloReactCommon.MutationResult<ClearPurchasedShoppingListItemsMutation>;
+export type ClearPurchasedShoppingListItemsMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ClearPurchasedShoppingListItemsMutation,
+    ClearPurchasedShoppingListItemsMutationVariables
+  >;
 export const AddItemsToShoppingListDocument = {
   kind: 'Document',
   definitions: [
@@ -66263,6 +66578,106 @@ export type ShoppingListStatusChangedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListStatusChangedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListStatusChangedSubscription>;
+export const ShoppingListItemsBatchClearedDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'subscription',
+      name: { kind: 'Name', value: 'ShoppingListItemsBatchCleared' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'listId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'shoppingListItemsBatchCleared' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'listId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'listId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'mutation' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'listId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedItemIds' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'clearedCount' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useShoppingListItemsBatchClearedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemsBatchClearedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemsBatchClearedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemsBatchClearedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListItemsBatchClearedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemsBatchClearedSubscription,
+    ShoppingListItemsBatchClearedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListItemsBatchClearedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemsBatchClearedSubscription,
+    ShoppingListItemsBatchClearedSubscriptionVariables
+  >(ShoppingListItemsBatchClearedDocument, options);
+}
+export type ShoppingListItemsBatchClearedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemsBatchClearedSubscription
+>;
+export type ShoppingListItemsBatchClearedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemsBatchClearedSubscription>;
 export const GetStorageLocationsDocument = {
   kind: 'Document',
   definitions: [

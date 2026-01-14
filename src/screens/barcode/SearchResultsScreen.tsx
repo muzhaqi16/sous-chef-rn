@@ -87,8 +87,10 @@ export const SearchResultsScreen: React.FC<{
     }
 
     // Use cross-tab navigation hook for proper stack cleanup
+    // Barcode is a modal stack - needs fromModalStack to fully dismiss
     const sourceData: CrossTabSource = {
       sourceTab: source === 'pantry' ? 'Pantry' : 'ShoppingList',
+      fromModalStack: true,
     };
 
     goBackToSource(sourceData);

@@ -997,6 +997,20 @@ enum ChangeType {
 }
 
 """
+Response for clearing purchased items from a shopping list
+"""
+type ClearPurchasedItemsResponse {
+  """
+  IDs of items that were cleared
+  """
+  clearedItemIds: [ID!]!
+  """
+  Summary of the bulk operation
+  """
+  summary: BulkOperationSummary!
+}
+
+"""
 Order by options for collaborators
 """
 input CollaboratorOrderBy {
@@ -1507,6 +1521,7 @@ input CreatePantryInput {
 
 input CreatePantryItemInput {
   acquisitionMethod: AcquisitionMethod
+  brandId: String
   condition: ItemCondition
   costPerUnit: Float
   expiresAt: String
@@ -4094,6 +4109,14 @@ type Mutation {
   Admin operation for maintenance.
   """
   cleanupDevices(input: DeviceCleanupInput!): DeviceCleanupResult!
+  """
+  Clear all purchased items from a shopping list.
+  Soft-deletes all items where isPurchased=true and deletedAt is not set.
+  Returns summary with count of cleared items.
+  """
+  clearPurchasedShoppingListItems(
+    shoppingListId: ID!
+  ): ClearPurchasedItemsResponse!
   clearReminder(id: ID!): ShoppingList!
   """
   Mark user onboarding as complete and send welcome email
@@ -4666,6 +4689,7 @@ enum MutationType {
   COMPLETED
   CREATED
   DELETED
+  ITEMS_BATCH_CLEARED
   ITEM_ADDED
   ITEM_COMPLETED
   ITEM_REMOVED
@@ -5099,6 +5123,7 @@ type PantryItem {
   addedAt: DateTime!
   addedBy: User
   brand: Brand
+  brandId: String
   condition: ItemCondition!
   costPerUnit: Float
   createdAt: DateTime!
@@ -7054,6 +7079,22 @@ type ShoppingListItemStoreInfo {
   storeSection: String
 }
 
+type ShoppingListItemsBatchClearedPayload {
+  """
+  Count of items cleared
+  """
+  clearedCount: Int!
+  """
+  IDs of items that were cleared
+  """
+  clearedItemIds: [ID!]!
+  listId: ID!
+  mutation: MutationType!
+  originatorClientId: ID
+  timestamp: DateTime!
+  userId: ID!
+}
+
 type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
@@ -7553,6 +7594,9 @@ type Subscription {
   shoppingListCollaboratorsChanged(
     listId: ID!
   ): ShoppingListCollaboratorChangedPayload
+  shoppingListItemsBatchCleared(
+    listId: ID!
+  ): ShoppingListItemsBatchClearedPayload
   shoppingListItemsChanged(listId: ID!): ShoppingListItemChangedPayload
   shoppingListStatusChanged(listId: ID!): ShoppingListStatusChangedPayload
   shoppingListUpdated(listId: ID!): ShoppingListUpdatedPayload
@@ -7643,6 +7687,7 @@ enum SyncOperation {
 
 input SyncPantryItemInput {
   acquisitionMethod: AcquisitionMethod
+  brandId: String
   condition: ItemCondition
   costPerUnit: Float
   expirationAlert: Boolean
@@ -8358,6 +8403,8 @@ input UpdatePantryInput {
 }
 
 input UpdatePantryItemInput {
+  brandId: String
+  brandName: String
   condition: ItemCondition
   expirationAlert: Boolean
   expiresAt: String

@@ -562,6 +562,19 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   }
 }
 
+mutation ClearPurchasedShoppingListItems($shoppingListId: ID!) {
+  clearPurchasedShoppingListItems(shoppingListId: $shoppingListId) {
+    summary {
+      total
+      successful
+      failed
+      skipped
+      executionTime
+    }
+    clearedItemIds
+  }
+}
+
 mutation AddItemsToShoppingList(
   $shoppingListId: ID!
   $items: [BatchAddShoppingListItemInput!]!
@@ -783,6 +796,17 @@ subscription ShoppingListStatusChanged($listId: ID!) {
         avatar
       }
     }
+    userId
+    timestamp
+  }
+}
+
+subscription ShoppingListItemsBatchCleared($listId: ID!) {
+  shoppingListItemsBatchCleared(listId: $listId) {
+    mutation
+    listId
+    clearedItemIds
+    clearedCount
     userId
     timestamp
   }

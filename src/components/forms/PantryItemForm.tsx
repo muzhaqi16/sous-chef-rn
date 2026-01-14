@@ -90,6 +90,7 @@ const editItemSchema = yup.object({
   location: yup.string(),
   notes: yup.string(),
   category: yup.string(),
+  brand: yup.string(),
 });
 
 interface PantryItemFormProps {
@@ -120,6 +121,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [suggestedBrands, setSuggestedBrands] = useState<
     { id: string; name: string }[]
   >([]);
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
@@ -367,6 +369,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           unitId,
           trackingUnit,
           selectedLocationId,
+          selectedBrandId,
         });
       }
     } catch (error) {
@@ -470,20 +473,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 testID="add-pantry-item-name-input"
               />
             ) : (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Item Information</Text>
-                <View style={styles.readOnlyField}>
-                  <Text style={styles.readOnlyText}>
-                    {item?.item?.name || item?.itemName || 'Unknown Item'}
-                  </Text>
-                </View>
-                {item?.brand?.name && (
-                  <View style={[styles.readOnlyField, { marginTop: 8 }]}>
-                    <Text style={styles.readOnlyLabel}>Brand</Text>
-                    <Text style={styles.readOnlyText}>{item.brand.name}</Text>
-                  </View>
-                )}
-              </View>
+              <ItemInformationSection
+                control={control}
+                errors={errors}
+                mode="edit"
+                currentItemName={item?.item?.name || item?.itemName || 'Unknown Item'}
+                suggestedBrands={suggestedBrands}
+                onBrandSelected={setSelectedBrandId}
+              />
             )}
 
             {/* Quantity Section */}

@@ -31,6 +31,7 @@ const RecipeDetailScreen: React.FC = () => {
   const {
     goBack,
     recipeId,
+    externalId,
     loading,
     error,
     backendError,
@@ -197,6 +198,7 @@ const RecipeDetailScreen: React.FC = () => {
             <Animated.Image
               source={{ uri: displayData.image }}
               style={[styles.recipeImage, imageAnimatedStyle]}
+              sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
             <TouchableOpacity onPress={goBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#1d1d1d" />

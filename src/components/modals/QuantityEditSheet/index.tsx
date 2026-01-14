@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
-  BottomSheetView,
   BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
+import { commonStyles } from '#/styles/commonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -269,8 +270,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
-      <BottomSheetView
-        style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+      <BottomSheetKeyboardAwareScrollView
+        style={commonStyles.bottomSheetScrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={16}
       >
         {/* Item Header */}
         {item && (
@@ -474,7 +478,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             {loading ? 'Saving...' : 'Save Changes'}
           </Text>
         </TouchableOpacity>
-      </BottomSheetView>
+      </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
 };
