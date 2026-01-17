@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { storage } from '#/storage/mmkv';
+import { useShowTutorials } from '#hooks/settings';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
 
@@ -57,14 +58,17 @@ export const useFeatureHint = ({
 }: UseFeatureHintOptions): UseFeatureHintReturn => {
   const storageKey = `${FEATURE_HINT_PREFIX}${featureId}`;
 
+  // Check global showTutorials setting
+  const tutorialsEnabled = useShowTutorials();
+
   // Check if hint has been shown before
   const hasBeenShown = storage.getBoolean(storageKey) ?? false;
 
   const [isVisible, setIsVisible] = useState(false);
 
-  // Show hint on mount if configured and not shown before
+  // Show hint on mount if configured, not shown before, and tutorials are enabled globally
   useEffect(() => {
-    if (showOnMount && !hasBeenShown) {
+    if (showOnMount && !hasBeenShown && tutorialsEnabled) {
       if (delay > 0) {
         const timer = setTimeout(() => {
           setIsVisible(true);
@@ -74,11 +78,14 @@ export const useFeatureHint = ({
         setIsVisible(true);
       }
     }
-  }, [showOnMount, hasBeenShown, delay]);
+  }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 
   const show = useCallback(() => {
-    setIsVisible(true);
-  }, []);
+    // Only show if tutorials are enabled globally
+    if (tutorialsEnabled) {
+      setIsVisible(true);
+    }
+  }, [tutorialsEnabled]);
 
   const hide = useCallback(() => {
     setIsVisible(false);

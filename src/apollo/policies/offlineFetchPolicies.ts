@@ -1,18 +1,23 @@
 import { WatchQueryFetchPolicy } from '@apollo/client';
 import { useStore } from '#store';
+import { useIsEffectivelyOffline } from '#hooks/settings';
 
 /**
- * Get appropriate fetch policy based on online status
+ * Get appropriate fetch policy based on online status and offline mode preference
  *
- * When online: Uses provided online policy (cache-and-network, network-only, etc.)
- * When offline: Forces cache-only to prevent network errors from clearing UI
+ * When effectively online: Uses provided online policy (cache-and-network, network-only, etc.)
+ * When effectively offline: Forces cache-only to prevent network errors from clearing UI
+ *
+ * "Effectively offline" means either:
+ * - Device has no network connectivity
+ * - User has enabled offline mode in settings
  *
  * This is the foundation of our offline-first architecture - queries automatically
- * adapt to network status without manual previousData fallbacks.
+ * adapt to network status and user preferences without manual previousData fallbacks.
  *
  * @param onlinePolicy - Policy to use when online (default: 'cache-and-network')
  * @param offlinePolicy - Policy to use when offline (default: 'cache-only')
- * @returns The appropriate fetch policy for current network status
+ * @returns The appropriate fetch policy for current network status and settings
  *
  * @example
  * ```typescript
@@ -24,7 +29,21 @@ export function useOfflineAwareFetchPolicy(
   onlinePolicy: WatchQueryFetchPolicy = 'cache-and-network',
   offlinePolicy: WatchQueryFetchPolicy = 'cache-only'
 ): WatchQueryFetchPolicy {
-  // Use selector to prevent re-renders on unrelated store changes
+  // Use selector to check if effectively offline (device offline OR offline mode enabled)
+  const isEffectivelyOffline = useIsEffectivelyOffline();
+  return isEffectivelyOffline ? offlinePolicy : onlinePolicy;
+}
+
+/**
+ * Legacy hook for device-only offline check (does not respect offline mode preference)
+ * Use useOfflineAwareFetchPolicy instead for most cases
+ *
+ * @deprecated Use useOfflineAwareFetchPolicy which also respects offline mode preference
+ */
+export function useDeviceOfflineFetchPolicy(
+  onlinePolicy: WatchQueryFetchPolicy = 'cache-and-network',
+  offlinePolicy: WatchQueryFetchPolicy = 'cache-only'
+): WatchQueryFetchPolicy {
   const isOnline = useStore(state => state.isOnline);
   return isOnline ? onlinePolicy : offlinePolicy;
 }

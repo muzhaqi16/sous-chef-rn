@@ -23,6 +23,7 @@ import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { filterByLocation, LocationFilter } from '#/utils/pantryFilters';
+import { pantryItemSearch } from '#/utils/searchUtils';
 
 import { AnimatedItemSelector } from '#components';
 import { PantryContent } from '#components/pantry';
@@ -313,15 +314,30 @@ const PantryMainScreen: React.FC = React.memo(() => {
     profile?.displayName || profile?.firstName || profile?.lastName || 'there';
   const householdName = currentHome?.name || 'Your Home';
 
-  // Sectioned items for redesigned content - filter based on location (using shared utility)
+  // Sectioned items for redesigned content - apply search filtering first, then location filter
+  const searchFilteredExpiringSoon = useMemo(() => {
+    if (!searchQuery.trim()) return sectionedItems.expiringSoonItems;
+    return sectionedItems.expiringSoonItems.filter(item =>
+      pantryItemSearch(item, searchQuery),
+    );
+  }, [sectionedItems.expiringSoonItems, searchQuery]);
+
+  const searchFilteredNormal = useMemo(() => {
+    if (!searchQuery.trim()) return sectionedItems.normalItems;
+    return sectionedItems.normalItems.filter(item =>
+      pantryItemSearch(item, searchQuery),
+    );
+  }, [sectionedItems.normalItems, searchQuery]);
+
+  // Apply location filter to search-filtered results
   const filteredExpiringSoonItems = useMemo(
-    () => filterByLocation(sectionedItems.expiringSoonItems, locationFilter),
-    [sectionedItems.expiringSoonItems, locationFilter],
+    () => filterByLocation(searchFilteredExpiringSoon, locationFilter),
+    [searchFilteredExpiringSoon, locationFilter],
   );
 
   const filteredNormalItems = useMemo(
-    () => filterByLocation(sectionedItems.normalItems, locationFilter),
-    [sectionedItems.normalItems, locationFilter],
+    () => filterByLocation(searchFilteredNormal, locationFilter),
+    [searchFilteredNormal, locationFilter],
   );
 
   return (

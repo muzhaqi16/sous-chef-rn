@@ -1,3 +1,9 @@
+/** @type {import('react-native-worklets/plugin').PluginOptions} */
+// https://docs.swmansion.com/react-native-worklets/docs/
+const workletsPluginOptions = {
+  // Your custom options.
+};
+
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
@@ -50,6 +56,6 @@ module.exports = {
       { exclude: ['error', 'warn'] },
     ],
     // react-native-worklets/plugin has to be listed last.
-    'react-native-worklets/plugin',
+    ['react-native-worklets/plugin', workletsPluginOptions],
   ].filter(Boolean),
 };

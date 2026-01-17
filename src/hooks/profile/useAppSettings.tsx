@@ -13,9 +13,6 @@ export interface AppSettings {
   showTutorials: boolean;
   autoSync: boolean;
   offlineMode: boolean;
-  shareUsageData: boolean;
-  shareWithPartners: boolean;
-  personalizedAds: boolean;
   preferredUnitSystem: UnitSystem;
   enabledFeatures: string[];
   betaFeatures: string[];
@@ -37,9 +34,6 @@ export const useAppSettings = () => {
       showTutorials: settings?.showTutorials ?? true,
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
-      shareUsageData: settings?.shareUsageData ?? true,
-      shareWithPartners: settings?.shareWithPartners ?? false,
-      personalizedAds: settings?.personalizedAds ?? false,
       preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
       enabledFeatures: settings?.enabledFeatures || [],
       betaFeatures: settings?.betaFeatures || [],
@@ -91,9 +85,6 @@ export const useAppSettings = () => {
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      shareUsageData: true,
-      shareWithPartners: false,
-      personalizedAds: false,
       preferredUnitSystem: UnitSystem.Metric,
     };
 

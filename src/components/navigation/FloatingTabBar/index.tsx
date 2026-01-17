@@ -12,6 +12,7 @@ import { useTabBarActions } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
+import { useShowNavigationLabels } from '#hooks/settings';
 
 export const TAB_BAR_HEIGHT = 65;
 
@@ -29,6 +30,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
     setActiveTab,
     isOverlayOpen,
   } = useTabBarActions();
+
+  // Navigation labels preference
+  const showNavigationLabels = useShowNavigationLabels();
 
   // Handle add button press - show toast if disabled
   const handleAddPress = useCallback(() => {
@@ -180,9 +184,11 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
             />
           )}
         </Animated.View>
-        <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
-          {label}
-        </Text>
+        {showNavigationLabels && (
+          <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+            {label}
+          </Text>
+        )}
       </TouchableOpacity>
     );
   };
