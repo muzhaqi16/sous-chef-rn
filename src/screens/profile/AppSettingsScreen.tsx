@@ -26,6 +26,10 @@ export const AppSettingsScreen: React.FC = () => {
   const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
   const setShowNavigationLabels = useAppStore(state => state.setShowNavigationLabels);
 
+  // Telemetry consent
+  const userConsent = useAppStore(state => state.userConsent);
+  const setUserConsent = useAppStore(state => state.setUserConsent);
+
   const handleSettingChange = async (key: string, value: any) => {
     setUpdating(key);
     try {
@@ -150,6 +154,13 @@ export const AppSettingsScreen: React.FC = () => {
           description="Show text labels below navigation icons"
           value={showNavigationLabels}
           onValueChange={setShowNavigationLabels}
+        />
+        <SettingSwitch
+          testID="settings-share-usage-data-switch"
+          title="Share Usage Data"
+          description="Help improve Sous Chef by sharing anonymous usage statistics"
+          value={userConsent ?? true}
+          onValueChange={setUserConsent}
         />
       </SettingSection>
 

@@ -11,6 +11,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
 import { useSharedBottomSheetConfigs } from '#hooks';
+import { Icon } from '#utils/iconUtils';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -189,14 +190,31 @@ export function BottomSheetAutocompleteInput<T>({
     [],
   );
 
-  const defaultEmptyComponent = () => (
-    <BottomSheetView
-      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
-    >
-      <Text style={styles.emptyText}>{emptyText}</Text>
-      {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
-    </BottomSheetView>
-  );
+  const defaultEmptyComponent = () => {
+    // Show offline-specific message when not online
+    if (!isOnline) {
+      return (
+        <BottomSheetView
+          style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+        >
+          <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
+          <Text style={styles.emptyText}>Search unavailable offline</Text>
+          <Text style={styles.emptySubtext}>
+            You can still type a custom value and press done
+          </Text>
+        </BottomSheetView>
+      );
+    }
+
+    return (
+      <BottomSheetView
+        style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+      >
+        <Text style={styles.emptyText}>{emptyText}</Text>
+        {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
+      </BottomSheetView>
+    );
+  };
 
   const defaultLoadingComponent = () => (
     <BottomSheetView
@@ -317,6 +335,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.md,
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,

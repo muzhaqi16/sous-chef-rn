@@ -1,4 +1,10 @@
-import React, { useCallback, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useCallback,
+  useRef,
+  useMemo,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -6,8 +12,11 @@ import {
   AnimatedFlashList,
   type AnimatedFlashListRef,
   type AnimatedRenderItemInfo,
-} from '@souschef/reanimated-flashlist';
-import type { SortableShoppingListProps, SortableShoppingListItem } from './types';
+} from '@souscheflabs/reanimated-flashlist';
+import type {
+  SortableShoppingListProps,
+  SortableShoppingListItem,
+} from './types';
 import { SimpleDraggableItem } from './SortableItem';
 import {
   SortableListActionsProvider,
@@ -122,7 +131,8 @@ const SortableShoppingListComponent = forwardRef<
 
     // Key extractor - ensure we have a valid ID
     const keyExtractor = useCallback(
-      (item: SortableShoppingListItem) => item?.id ?? `invalid-${Math.random()}`,
+      (item: SortableShoppingListItem) =>
+        item?.id ?? `invalid-${Math.random()}`,
       [],
     );
 
@@ -164,7 +174,13 @@ const SortableShoppingListComponent = forwardRef<
         canReorderItems,
         disabled,
       }),
-      [canRemoveItems, canEditItems, canMarkPurchased, canReorderItems, disabled],
+      [
+        canRemoveItems,
+        canEditItems,
+        canMarkPurchased,
+        canReorderItems,
+        disabled,
+      ],
     );
 
     // Filter out invalid items to prevent empty card renders
@@ -212,7 +228,10 @@ const SortableShoppingListComponent = forwardRef<
 
     return (
       <SortableListThemeContext.Provider value={themeColors}>
-        <SortableListActionsProvider actions={actions} permissions={permissions}>
+        <SortableListActionsProvider
+          actions={actions}
+          permissions={permissions}
+        >
           <View style={styles.container}>
             <AnimatedFlashList<SortableShoppingListItem>
               ref={flashListRef}

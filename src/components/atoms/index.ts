@@ -28,3 +28,4 @@ export { FormFieldWrapper } from './FormFieldWrapper';
 export { PressableRow } from './PressableRow';
 export { BottomSheetHeader } from './BottomSheetHeader';
 export { BottomSheetKeyboardAwareScrollView } from './BottomSheetKeyboardAwareScrollView';
+export { OfflineGate } from './OfflineGate';

@@ -4,6 +4,7 @@ import {
   SuggestionSource,
   GetShoppingListSuggestionsQuery,
 } from '#generated';
+import { useIsEffectivelyOffline } from '#hooks/settings';
 
 /** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem =
@@ -30,12 +31,14 @@ export function useShoppingListSuggestions({
   limit = 15,
   skip = false,
 }: UseShoppingListSuggestionsOptions) {
+  const isOffline = useIsEffectivelyOffline();
+
   const { data, loading, error, refetch } = useGetShoppingListSuggestionsQuery({
     variables: {
       shoppingListId: shoppingListId ?? '',
       limit,
     },
-    skip: !shoppingListId || skip,
+    skip: !shoppingListId || skip || isOffline,
     fetchPolicy: 'cache-and-network',
   });
 
@@ -73,11 +76,12 @@ export function useShoppingListSuggestions({
     grouped.popular.length > 0;
 
   return {
-    suggestions: suggestions ?? [],
+    suggestions: isOffline ? [] : (suggestions ?? []),
     grouped,
-    hasSuggestions,
+    hasSuggestions: isOffline ? false : hasSuggestions,
     loading,
     error,
     refetch,
+    isOffline,
   };
 }

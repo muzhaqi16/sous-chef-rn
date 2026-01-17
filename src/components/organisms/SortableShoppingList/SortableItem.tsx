@@ -3,7 +3,7 @@ import { View, Image, TouchableOpacity } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import type { AnimatedRenderItemInfo } from '@souschef/reanimated-flashlist';
+import type { AnimatedRenderItemInfo } from '@souscheflabs/reanimated-flashlist';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
@@ -155,10 +155,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           // Trigger exit animation immediately when checkbox is pressed
           // Direction: 1 = right (marking as purchased), -1 = left (unmarking)
           const direction = item.isPurchased ? -1 : 1;
-          triggerExitAnimation(direction, () => {
-            prepareForLayoutAnimation?.();
-            onTogglePurchase?.(item.id);
-          }, 'fast');
+          triggerExitAnimation(
+            direction,
+            () => {
+              prepareForLayoutAnimation?.();
+              onTogglePurchase?.(item.id);
+            },
+            'fast',
+          );
         }}
         animationDuration={200} // Match exit animation duration
         size={28}
@@ -212,7 +216,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
         }
         onDelete={
-          canRemoveItems && onItemDelete ? () => onItemDelete(item.id) : undefined
+          canRemoveItems && onItemDelete
+            ? () => onItemDelete(item.id)
+            : undefined
         }
         isPurchased={item.isPurchased}
         friction={1}

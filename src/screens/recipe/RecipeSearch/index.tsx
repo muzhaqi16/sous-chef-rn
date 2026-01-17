@@ -12,6 +12,7 @@ import { RecipeCardSkeleton } from '#components/base/Skeleton';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useRecipeSearch } from './useRecipeSearch';
+import { OfflineGate } from '#components/atoms';
 
 const INGREDIENT_ITEM_HEIGHT = 56;
 
@@ -184,7 +185,11 @@ export const RecipeSearch: React.FC = () => {
 
   return (
     <View style={styles.container} testID="recipe-search-screen">
-      <ListTemplate
+      <OfflineGate
+        message="Recipe search requires internet"
+        description="Connect to the internet to search for recipes from our database."
+      >
+        <ListTemplate
         title="Search Recipes"
         subtitle="Find recipes"
         items={displayItems}
@@ -380,6 +385,7 @@ export const RecipeSearch: React.FC = () => {
           </TouchableOpacity>
         </View>
       </BottomSheetAction>
+      </OfflineGate>
     </View>
   );
 };

@@ -9,6 +9,7 @@ import {
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '../../graphql/generated';
+import { useOfflineDisabled } from '#hooks';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -19,6 +20,9 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
   const shoppingListId = selectedShoppingListId;
   const [shareShoppingList] = useAddCollaboratorMutation();
+  const { isDisabled: isOffline, showOfflineMessage } = useOfflineDisabled(
+    'Sharing requires an internet connection'
+  );
 
   const handleShow = () => {
     setRenderBottomSheet(true);
@@ -50,7 +54,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   return (
     <>
       <Button
-        onPress={handleShow}
+        onPress={isOffline ? showOfflineMessage : handleShow}
         style={{margin: 16}}>
         Share Shopping List
       </Button>
@@ -64,7 +68,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
             value={email}
             onChangeText={setEmail}
           />
-          <Button onPress={handleShare}>Share</Button>
+          <Button onPress={handleShare} disabled={isOffline}>Share</Button>
           {error && <Text style={styles.errorText}>Error: {error}</Text>}
         </BottomSheet>
       )}

@@ -13,6 +13,7 @@ export { useFPSMonitor, useSimpleFPS } from './useFPSMonitor';
 
 // Rendering optimization hooks
 export { useDeferredRender } from './useDeferredRender';
+export { useDeferredCallback } from './useDeferredCallback';
 export { useProgressiveList } from './useProgressiveList';
 
 // React 18+ performance patterns

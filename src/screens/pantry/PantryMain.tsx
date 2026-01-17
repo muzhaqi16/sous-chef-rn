@@ -11,12 +11,12 @@ import { useAppNavigation, useTabBarAddButton } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
 import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
-import { useScreenTransition } from '#hooks/performance';
+import { useScreenTransition, useFilterTransitionWithDeps } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useGetHomeBasicQuery, GetStorageLocationsQuery } from '#generated';
+import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarActions } from '#context';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
@@ -197,11 +197,30 @@ const PantryMainScreen: React.FC = React.memo(() => {
     navigate,
   });
 
-  // Filter items by location for redesigned tabs (using shared utility)
-  const locationFilteredItems = useMemo(
-    () => filterByLocation(pantryItems, locationFilter),
-    [pantryItems, locationFilter],
+  // PERFORMANCE: Filter items with transition to keep UI responsive during filter changes
+  const locationFilterPredicate = useCallback(
+    (item: (typeof pantryItems)[number]) => {
+      if (locationFilter === 'all') return true;
+      switch (locationFilter) {
+        case 'fridge':
+          return item.storageState === StorageState.Refrigerated;
+        case 'freezer':
+          return item.storageState === StorageState.Frozen;
+        case 'pantry':
+          return item.storageState === StorageState.Ambient || !item.storageState;
+        default:
+          // Custom storage location filter
+          return item.storageLocation?.id === locationFilter;
+      }
+    },
+    [locationFilter],
   );
+
+  const { filteredItems: locationFilteredItems } = useFilterTransitionWithDeps({
+    items: pantryItems,
+    filterFn: locationFilterPredicate,
+    deps: [locationFilter],
+  });
 
   // Handle location filter change
   const handleLocationFilterChange = useCallback((filter: LocationFilter) => {
