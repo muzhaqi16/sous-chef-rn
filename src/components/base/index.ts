@@ -31,4 +31,11 @@ export {
   SousChefLoaderLarge,
 } from './SousChefLoader';
 
+export {
+  ShoppingEmptyIllustration,
+  ShoppingEmptyIllustrationSmall,
+  ShoppingEmptyIllustrationMedium,
+  ShoppingEmptyIllustrationLarge,
+} from './ShoppingEmptyIllustration';
+
 export { BaseSwitch } from './BaseSwitch';

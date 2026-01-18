@@ -277,6 +277,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         canEditItems: permissions.canEditItems,
         canMarkPurchased: permissions.canMarkPurchased,
         canReorderItems: permissions.canEditItems,
+        onAddItem: addItemSheet.open,
       }),
       [
         isLoadingInitial,
@@ -302,6 +303,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         hasMorePurchased,
         isLoadingMorePurchased,
         permissions,
+        addItemSheet.open,
       ],
     );
 

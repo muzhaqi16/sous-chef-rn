@@ -5,3 +5,4 @@ export * from './placeholders';
 export * from './languages';
 export * from './drag';
 export * from './touch';
+export * from './dietary';

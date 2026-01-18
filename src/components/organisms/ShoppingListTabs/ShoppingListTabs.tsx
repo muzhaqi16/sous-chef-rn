@@ -58,6 +58,8 @@ interface ShoppingListTabsProps {
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
+  // Empty state action
+  onAddItem?: () => void;
 }
 
 const ROUTES: TabRoute[] = [
@@ -99,6 +101,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
   canReorderItems = false,
+  // Empty state action
+  onAddItem,
 }) => {
   const layout = useWindowDimensions();
 
@@ -244,6 +248,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canEditItems={canEditItems}
               canMarkPurchased={canMarkPurchased}
               canReorderItems={canReorderItems}
+              purchasedCount={purchasedCount}
+              onAddItem={onAddItem}
             />
           );
         case 'purchased':
@@ -300,6 +306,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       canEditItems,
       canMarkPurchased,
       canReorderItems,
+      purchasedCount,
+      onAddItem,
     ],
   );
 

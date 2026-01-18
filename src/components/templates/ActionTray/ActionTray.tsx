@@ -111,7 +111,12 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       close();
     };
 
-    // Always render for smooth animations - control visibility with opacity and pointerEvents
+    // Conditionally render - touchable stays true during close animation
+    // to preserve smooth exit animations
+    if (!touchable) {
+      return null;
+    }
+
     return (
       <>
         {enableBackdrop && (

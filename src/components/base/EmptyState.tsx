@@ -5,8 +5,8 @@ import { Button } from './Button';
 import { IconName, Icon } from '#/utils/iconUtils';
 
 export interface EmptyStateProps {
-  /** Icon to display (can be IconName or emoji string) */
-  icon?: IconName | string;
+  /** Icon to display (can be IconName, emoji string, or React node) */
+  icon?: IconName | string | React.ReactNode;
 
   /** Title text */
   title: string;
@@ -63,6 +63,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
   const renderIcon = () => {
     if (!icon) return null;
+
+    // Check if icon is a React node (custom component)
+    if (React.isValidElement(icon)) {
+      return icon;
+    }
 
     // Check if icon is an emoji (single character or emoji sequence)
     const isEmoji =

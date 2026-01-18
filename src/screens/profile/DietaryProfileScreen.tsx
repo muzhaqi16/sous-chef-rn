@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  TextInput,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { ProfileScreenWrapper } from '#components/templates';
@@ -25,6 +18,8 @@ import { NumberInputModal } from '#/components/organisms/modal';
 import { InfoRow } from '#/components/molecules/InfoRow';
 import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
+import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet';
+import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { theme } = useUnistyles();
@@ -85,141 +80,36 @@ export const DietaryProfileScreen: React.FC = () => {
     }
   };
 
-  // Cooking preferences handlers
+  // Cooking preferences state
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
-  const [tempSkillLevel, setTempSkillLevel] = useState('');
-  const [tempPrepTime, setTempPrepTime] = useState('');
-  const [tempCookTime, setTempCookTime] = useState('');
-  const [tempBudget, setTempBudget] = useState('');
 
-  const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-
-  const handleEditCookingPrefs = () => {
-    setTempSkillLevel(profile?.cookingSkillLevel || '');
-    setTempPrepTime(String(profile?.maxPrepTimeMinutes || ''));
-    setTempCookTime(String(profile?.maxCookTimeMinutes || ''));
-    setTempBudget(String(profile?.budgetPerMeal || ''));
-    setEditingCookingPrefs(true);
-  };
-
-  const handleSaveCookingPrefs = async () => {
-    const updates: any = {};
-
-    // Validate and add skill level if provided
-    if (tempSkillLevel.trim()) {
-      updates.cookingSkillLevel = tempSkillLevel.trim();
-    }
-
-    // Validate and add prep time if provided
-    if (tempPrepTime) {
-      const prepTime = parseInt(tempPrepTime);
-      if (isNaN(prepTime) || prepTime < 0 || prepTime > 480) {
-        Alert.alert(
-          'Invalid Input',
-          'Prep time must be between 0 and 480 minutes',
-        );
-        return;
-      }
-      updates.maxPrepTimeMinutes = prepTime;
-    }
-
-    // Validate and add cook time if provided
-    if (tempCookTime) {
-      const cookTime = parseInt(tempCookTime);
-      if (isNaN(cookTime) || cookTime < 0 || cookTime > 480) {
-        Alert.alert(
-          'Invalid Input',
-          'Cook time must be between 0 and 480 minutes',
-        );
-        return;
-      }
-      updates.maxCookTimeMinutes = cookTime;
-    }
-
-    // Validate and add budget if provided
-    if (tempBudget) {
-      const budget = parseFloat(tempBudget);
-      if (isNaN(budget) || budget < 0 || budget > 1000) {
-        Alert.alert('Invalid Input', 'Budget must be between $0 and $1000');
-        return;
-      }
-      updates.budgetPerMeal = budget;
-    }
-
-    const success = await updateDietaryProfile(updates);
-
+  const handleSaveCookingPrefs = async (values: {
+    cookingSkillLevel?: string;
+    maxPrepTimeMinutes?: number;
+    maxCookTimeMinutes?: number;
+    budgetPerMeal?: number;
+  }) => {
+    const success = await updateDietaryProfile(values);
     if (success) {
       setEditingCookingPrefs(false);
-    } else {
-      Alert.alert('Error', 'Failed to update cooking preferences');
     }
+    return success;
   };
 
-  // Macro targets handlers
+  // Macro targets state
   const [editingMacros, setEditingMacros] = useState(false);
-  const [tempCalories, setTempCalories] = useState('');
-  const [tempProtein, setTempProtein] = useState('');
-  const [tempCarbs, setTempCarbs] = useState('');
-  const [tempFat, setTempFat] = useState('');
 
-  const handleEditMacros = () => {
-    setTempCalories(String(profile?.calorieTarget || ''));
-    setTempProtein(String(profile?.proteinTarget || ''));
-    setTempCarbs(String(profile?.carbsTarget || ''));
-    setTempFat(String(profile?.fatTarget || ''));
-    setEditingMacros(true);
-  };
-
-  const handleSaveMacros = async () => {
-    const updates: any = {};
-
-    // Validate and add calories if provided
-    if (tempCalories) {
-      const calories = parseInt(tempCalories);
-      if (isNaN(calories) || calories < 0 || calories > 10000) {
-        Alert.alert('Invalid Input', 'Calories must be between 0 and 10000');
-        return;
-      }
-      updates.calorieTarget = calories;
-    }
-
-    // Validate and add protein if provided
-    if (tempProtein) {
-      const protein = parseInt(tempProtein);
-      if (isNaN(protein) || protein < 0 || protein > 500) {
-        Alert.alert('Invalid Input', 'Protein must be between 0 and 500g');
-        return;
-      }
-      updates.proteinTarget = protein;
-    }
-
-    // Validate and add carbs if provided
-    if (tempCarbs) {
-      const carbs = parseInt(tempCarbs);
-      if (isNaN(carbs) || carbs < 0 || carbs > 1000) {
-        Alert.alert('Invalid Input', 'Carbs must be between 0 and 1000g');
-        return;
-      }
-      updates.carbsTarget = carbs;
-    }
-
-    // Validate and add fat if provided
-    if (tempFat) {
-      const fat = parseInt(tempFat);
-      if (isNaN(fat) || fat < 0 || fat > 500) {
-        Alert.alert('Invalid Input', 'Fat must be between 0 and 500g');
-        return;
-      }
-      updates.fatTarget = fat;
-    }
-
-    const success = await updateDietaryProfile(updates);
-
+  const handleSaveMacros = async (values: {
+    calorieTarget?: number;
+    proteinTarget?: number;
+    carbsTarget?: number;
+    fatTarget?: number;
+  }) => {
+    const success = await updateDietaryProfile(values);
     if (success) {
       setEditingMacros(false);
-    } else {
-      Alert.alert('Error', 'Failed to update macro targets');
     }
+    return success;
   };
 
   if (loading) {
@@ -368,7 +258,7 @@ export const DietaryProfileScreen: React.FC = () => {
           <View style={styles.sectionHeaderRow}>
             <Text style={commonStyles.h3}>Cooking Preferences</Text>
             <TouchableOpacity
-              onPress={handleEditCookingPrefs}
+              onPress={() => setEditingCookingPrefs(true)}
               style={styles.editButton}
             >
               <Icon
@@ -421,7 +311,7 @@ export const DietaryProfileScreen: React.FC = () => {
             <View style={styles.sectionHeaderRow}>
               <Text style={commonStyles.h3}>Macro Targets (Advanced)</Text>
               <TouchableOpacity
-                onPress={handleEditMacros}
+                onPress={() => setEditingMacros(true)}
                 style={styles.editButton}
               >
                 <Icon
@@ -484,185 +374,31 @@ export const DietaryProfileScreen: React.FC = () => {
         placeholder="e.g., 2"
       />
 
-      {/* Cooking Preferences Edit Modal */}
-      <Modal
+      {/* Cooking Preferences Sheet */}
+      <CookingPreferencesSheet
         visible={editingCookingPrefs}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditingCookingPrefs(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[commonStyles.card, styles.modalContent]}>
-            <Text style={commonStyles.h3}>Edit Cooking Preferences</Text>
+        onClose={() => setEditingCookingPrefs(false)}
+        onSave={handleSaveCookingPrefs}
+        initialValues={{
+          cookingSkillLevel: profile?.cookingSkillLevel,
+          maxPrepTimeMinutes: profile?.maxPrepTimeMinutes,
+          maxCookTimeMinutes: profile?.maxCookTimeMinutes,
+          budgetPerMeal: profile?.budgetPerMeal,
+        }}
+      />
 
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Cooking Skill Level:</Text>
-              <TouchableOpacity
-                style={[commonStyles.input, styles.pickerButton]}
-                onPress={() => {
-                  Alert.alert('Select Skill Level', '', [
-                    ...SKILL_LEVELS.map(level => ({
-                      text: level,
-                      onPress: () => setTempSkillLevel(level),
-                    })),
-                    { text: 'Cancel', style: 'cancel' },
-                  ]);
-                }}
-              >
-                <Text style={commonStyles.body}>
-                  {tempSkillLevel || 'Select...'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Max Prep Time (minutes):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempPrepTime}
-                onChangeText={setTempPrepTime}
-                keyboardType="number-pad"
-                placeholder="e.g., 30"
-              />
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Max Cook Time (minutes):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempCookTime}
-                onChangeText={setTempCookTime}
-                keyboardType="number-pad"
-                placeholder="e.g., 60"
-              />
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Budget per Meal ($):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempBudget}
-                onChangeText={setTempBudget}
-                keyboardType="decimal-pad"
-                placeholder="e.g., 15.00"
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[commonStyles.button, styles.modalButton]}
-                onPress={() => setEditingCookingPrefs(false)}
-              >
-                <Text style={commonStyles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  commonStyles.button,
-                  commonStyles.buttonPrimary,
-                  styles.modalButton,
-                ]}
-                onPress={handleSaveCookingPrefs}
-              >
-                <Text
-                  style={[
-                    commonStyles.buttonText,
-                    commonStyles.buttonTextPrimary,
-                  ]}
-                >
-                  Save
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Macro Targets Edit Modal */}
-      <Modal
+      {/* Macro Targets Sheet */}
+      <MacroTargetsSheet
         visible={editingMacros}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditingMacros(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[commonStyles.card, styles.modalContent]}>
-            <Text style={commonStyles.h3}>Edit Macro Targets</Text>
-            <Text style={[commonStyles.bodySecondary, { marginTop: 8 }]}>
-              Set your daily nutrition goals (optional)
-            </Text>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Daily Calories (kcal):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempCalories}
-                onChangeText={setTempCalories}
-                keyboardType="number-pad"
-                placeholder="e.g., 2000"
-              />
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Protein (grams):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempProtein}
-                onChangeText={setTempProtein}
-                keyboardType="number-pad"
-                placeholder="e.g., 150"
-              />
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Carbs (grams):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempCarbs}
-                onChangeText={setTempCarbs}
-                keyboardType="number-pad"
-                placeholder="e.g., 200"
-              />
-            </View>
-
-            <View style={styles.modalInput}>
-              <Text style={commonStyles.body}>Fat (grams):</Text>
-              <TextInput
-                style={commonStyles.input}
-                value={tempFat}
-                onChangeText={setTempFat}
-                keyboardType="number-pad"
-                placeholder="e.g., 70"
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[commonStyles.button, styles.modalButton]}
-                onPress={() => setEditingMacros(false)}
-              >
-                <Text style={commonStyles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  commonStyles.button,
-                  commonStyles.buttonPrimary,
-                  styles.modalButton,
-                ]}
-                onPress={handleSaveMacros}
-              >
-                <Text
-                  style={[
-                    commonStyles.buttonText,
-                    commonStyles.buttonTextPrimary,
-                  ]}
-                >
-                  Save
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setEditingMacros(false)}
+        onSave={handleSaveMacros}
+        initialValues={{
+          calorieTarget: profile?.calorieTarget,
+          proteinTarget: profile?.proteinTarget,
+          carbsTarget: profile?.carbsTarget,
+          fatTarget: profile?.fatTarget,
+        }}
+      />
     </ProfileScreenWrapper>
   );
 };
@@ -687,62 +423,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-  emptyRestrictions: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  restrictionsList: {
-    marginTop: theme.spacing.md,
-  },
-  restrictionCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  severityBadge: {
-    marginTop: theme.spacing.xs,
-  },
-  restrictionNotes: {
-    marginTop: theme.spacing.xs,
-  },
-  removeButton: {
-    padding: theme.spacing.sm,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
   editButton: {
     padding: theme.spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
-    padding: theme.spacing.lg,
-  },
-  modalInput: {
-    marginTop: theme.spacing.md,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-  },
-  pickerButton: {
-    justifyContent: 'center',
-    minHeight: 44,
   },
 }));
