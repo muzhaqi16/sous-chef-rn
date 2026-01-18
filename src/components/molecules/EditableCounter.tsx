@@ -14,6 +14,7 @@ interface EditableCounterProps {
   step?: number;
   disabled?: boolean;
   required?: boolean;
+  testID?: string;
 }
 
 /**
@@ -39,6 +40,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   step = 1,
   disabled = false,
   required = false,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
@@ -60,7 +62,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} testID={testID}>
       {label && <Label required={required}>{label}</Label>}
       <View
         style={[

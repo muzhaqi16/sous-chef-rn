@@ -49,21 +49,35 @@ export const SignUpScreen = () => {
             label: 'Name',
             placeholder: 'e.g John Doe',
             component: BaseInput,
+            props: { testID: 'signup-name-input' },
           },
-          { name: 'email', label: 'Email address', component: EmailInput },
-          { name: 'password', label: 'Password', component: PasswordInput },
+          {
+            name: 'email',
+            label: 'Email address',
+            component: EmailInput,
+            props: { testID: 'signup-email-input' },
+          },
+          {
+            name: 'password',
+            label: 'Password',
+            component: PasswordInput,
+            props: { testID: 'signup-password-input' },
+          },
           {
             name: 'confirmPassword',
             label: 'Confirm Password',
             component: PasswordInput,
+            props: { testID: 'signup-confirm-password-input' },
           },
         ]}
         control={form.control}
         errors={form.formState.errors}
         submitText={isRegistering ? 'Creating account…' : 'Sign Up'}
+        submitButtonTestID="signup-submit-button"
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Already have an account?"
         footerLinkText="Sign In"
+        footerLinkTestID="signup-login-link"
         onFooterLinkPress={() => navigateToLogin()}
         isLoading={isRegistering}
       />

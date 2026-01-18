@@ -16,9 +16,12 @@
 export { BaseScreen } from './BaseScreen';
 export { LandingAuthScreen } from './LandingAuthScreen';
 export { LoginScreen } from './LoginScreen';
+export { SignUpScreen } from './SignUpScreen';
+export { ForgotPasswordScreen } from './ForgotPasswordScreen';
 export { ShoppingListScreen } from './ShoppingListScreen';
 export { PantryScreen } from './PantryScreen';
 export { RecipesScreen } from './RecipesScreen';
+export { RecipeDetailScreen } from './RecipeDetailScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { OnboardingScreen } from './OnboardingScreen';

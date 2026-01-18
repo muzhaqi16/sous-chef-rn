@@ -19,7 +19,7 @@ export async function navigateToTab(tabName: string) {
  * Navigate to Shopping List tab
  */
 export async function navigateToShoppingList() {
-  await navigateToTab('shopping-list');
+  await navigateToTab('shoppinglist');
 }
 
 /**

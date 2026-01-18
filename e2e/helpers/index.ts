@@ -21,3 +21,12 @@ export * from './waitFor';
 
 // End-to-end flows
 export * from './flows';
+
+// Offline testing
+export * from './offline';
+
+// Permissions handling
+export * from './permissions';
+
+// Test data management
+export * from './data';

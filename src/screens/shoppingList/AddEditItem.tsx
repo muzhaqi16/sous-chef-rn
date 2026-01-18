@@ -283,6 +283,7 @@ export const AddEditItem: React.FC<{
           placeholder="e.g., Milk, Bread"
           required
           autoFocus
+          testID="edit-item-name-input"
         />
       ) : (
         <ItemAutocompleteInput
@@ -305,6 +306,7 @@ export const AddEditItem: React.FC<{
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
           placeholder="1"
+          testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
         />
         <UnitsAutocompleteInput
           label="Unit"
@@ -312,6 +314,7 @@ export const AddEditItem: React.FC<{
           onChangeText={text => updateField('unit', text)}
           onUnitSelected={handleUnitSelect}
           placeholder="pcs, kg, etc."
+          testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
         />
       </FieldRow>
 

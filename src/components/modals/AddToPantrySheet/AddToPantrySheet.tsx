@@ -356,6 +356,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             pressBehavior="close"
           />
         )}
+        // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
+        testID="add-pantry-item-modal"
       >
         <BottomSheetScrollView
           style={styles.scrollView}

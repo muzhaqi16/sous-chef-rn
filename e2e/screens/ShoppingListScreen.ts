@@ -12,7 +12,7 @@ export class ShoppingListScreen extends BaseScreen {
   protected screenID = 'shopping-list-screen';
 
   // Element IDs
-  private readonly addButton = 'shopping-list-add-button';
+  private readonly addButton = 'tab-bar-add-button';
   private readonly listContainer = 'shopping-list';
   private readonly searchInput = 'shopping-list-search-input';
   private readonly filterButton = 'shopping-list-filter-button';
@@ -63,9 +63,6 @@ export class ShoppingListScreen extends BaseScreen {
   async navigateToTab() {
     await this.tapByID('tab-shoppinglist');
     await this.waitForScreen();
-
-    // Wait for the add button in search bar to be visible
-    await this.waitForElement(this.addButton, 10000);
   }
 
   /**

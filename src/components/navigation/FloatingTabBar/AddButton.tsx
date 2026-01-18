@@ -13,6 +13,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   const { theme } = useUnistyles();
   return (
     <TouchableOpacity
+      testID="tab-bar-add-button"
       onPress={onPress}
       style={[styles.addButton, disabled && styles.addButtonDisabled]}
       activeOpacity={disabled ? 1 : 0.8}

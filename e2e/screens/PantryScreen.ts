@@ -12,7 +12,7 @@ export class PantryScreen extends BaseScreen {
   protected screenID = 'pantry-screen';
 
   // Element IDs
-  private readonly addButton = 'pantry-add-button';
+  private readonly addButton = 'tab-bar-add-button';
   private readonly scanBarcodeButton = 'pantry-scan-barcode-button';
   private readonly listContainer = 'pantry-list';
   private readonly searchInput = 'pantry-search-input';

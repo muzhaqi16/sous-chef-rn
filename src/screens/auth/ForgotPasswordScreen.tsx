@@ -48,14 +48,21 @@ export function ForgotPasswordScreen() {
         title="Forgot password"
         subtitle="Enter your email to reset"
         fields={[
-          {name: 'email', label: 'Email address', component: EmailInput},
+          {
+            name: 'email',
+            label: 'Email address',
+            component: EmailInput,
+            props: {testID: 'forgot-password-email-input'},
+          },
         ]}
         control={control}
         errors={errors}
         submitText="Send Reset Link"
+        submitButtonTestID="forgot-password-submit-button"
         onSubmit={handleSubmit(sendResetEmail)}
         footerText="Remembered it?"
         footerLinkText="Sign In"
+        footerLinkTestID="forgot-password-login-link"
         onFooterLinkPress={() => navigateToLogin()}
       />
     </AuthWrapper>

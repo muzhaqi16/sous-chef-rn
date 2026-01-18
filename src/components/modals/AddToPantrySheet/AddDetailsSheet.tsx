@@ -346,6 +346,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           pressBehavior="close"
         />
       )}
+      // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
+      testID="add-pantry-item-details-modal"
     >
       <View style={styles.container}>
         {/* Header */}
@@ -358,6 +360,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             onPress={handleConfirm}
             disabled={loading}
+            testID="add-pantry-item-submit-button"
           >
             <Text style={styles.saveButtonText}>
               {loading ? 'Adding...' : 'Add'}
@@ -401,6 +404,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 placeholder="e.g., Milk, Eggs, Bread..."
                 useBottomSheetInput
                 autoCapitalize="words"
+                testID="add-pantry-item-name-input"
               />
             </View>
 
@@ -424,6 +428,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="1"
+                testID="add-pantry-item-quantity-input"
               />
               <InlineUnitsAutocomplete
                 label="Unit"
@@ -431,6 +436,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 onChangeText={setUnit}
                 onUnitSelected={handleUnitSelected}
                 placeholder="pcs, dozen"
+                testID="add-pantry-item-unit-picker"
               />
             </FieldRow>
 

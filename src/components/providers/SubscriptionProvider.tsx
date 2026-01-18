@@ -67,10 +67,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       {/* Only initialize data and subscriptions when user is authenticated
           This prevents WebSocket connection attempts without a valid JWT token,
           eliminating "JWT token is required for WebSocket connections" errors on startup */}
+      {/* Key by userId to force remount when user changes - this ensures hooks
+          like useDefaultHome reset their refs and fetch fresh data for the new user */}
       {isAuthenticated && user?.id && (
         <>
-          <AuthenticatedDataProvider userId={user.id} />
-          <AuthenticatedSubscriptions userId={user.id} />
+          <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
+          <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
         </>
       )}
       {children}

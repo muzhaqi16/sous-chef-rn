@@ -293,6 +293,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           pressBehavior="close"
         />
       )}
+      // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
+      testID="add-shopping-item-modal"
     >
       <BottomSheetScrollView
         style={styles.scrollView}

@@ -12,29 +12,50 @@ e2e/
 │   ├── actions.ts              # Common action helpers (tap, swipe, type)
 │   ├── assertions.ts           # Custom assertion matchers
 │   ├── auth.ts                 # Authentication helpers (login, logout)
+│   ├── data.ts                 # Test data management (seed, clear)
+│   ├── flows.ts                # End-to-end flow helpers
 │   ├── navigation.ts           # Navigation utilities
+│   ├── offline.ts              # Offline testing utilities
+│   ├── permissions.ts          # Permission handling helpers
 │   ├── waitFor.ts              # Wait utilities
 │   └── index.ts                # Centralized exports
 ├── screens/
 │   ├── BaseScreen.ts            # Base class for all screen objects
 │   ├── LoginScreen.ts           # Login screen object model
-│   ├── ShoppingListScreen.ts   # Shopping list screen object model
+│   ├── SignUpScreen.ts          # Sign up screen object model
+│   ├── ForgotPasswordScreen.ts  # Forgot password screen object model
+│   ├── LandingAuthScreen.ts     # Landing auth screen object model
+│   ├── ShoppingListScreen.ts    # Shopping list screen object model
 │   ├── PantryScreen.ts          # Pantry screen object model
 │   ├── RecipesScreen.ts         # Recipes screen object model
+│   ├── RecipeDetailScreen.ts    # Recipe detail screen object model
 │   ├── ProfileScreen.ts         # Profile screen object model
 │   ├── SettingsScreen.ts        # Settings screen object model
 │   ├── OnboardingScreen.ts      # Onboarding screen object model
+│   ├── OnboardingScreens.ts     # Onboarding flow screens
 │   └── index.ts                 # Centralized exports
 ├── fixtures/
 │   └── testData.ts             # Test data and fixtures
 ├── tests/
 │   ├── auth/                   # Authentication tests
-│   ├── shoppingList/           # Shopping list tests
+│   │   ├── login.e2e.ts        # Login flow tests
+│   │   ├── signup.e2e.ts       # Sign up tests
+│   │   └── password-reset.e2e.ts # Password reset tests
 │   ├── pantry/                 # Pantry tests
+│   │   ├── pantry-crud.e2e.ts  # CRUD operations
+│   │   └── pantry-filtering.e2e.ts # Search/filter tests
+│   ├── shopping-list/          # Shopping list tests
+│   │   ├── shopping-list-crud.e2e.ts    # CRUD operations
+│   │   └── shopping-list-purchase.e2e.ts # Purchase flow tests
 │   ├── recipe/                 # Recipe tests
-│   ├── onboarding/             # Onboarding tests
+│   │   ├── recipe-browse.e2e.ts    # Browse/filter tests
+│   │   └── recipe-favorite.e2e.ts  # Favorite/organize tests
 │   ├── profile/                # Profile tests
-│   └── smoke.e2e.ts            # Smoke tests
+│   │   ├── profile-settings.e2e.ts # Settings tests
+│   │   └── profile-account.e2e.ts  # Account management tests
+│   ├── cross-feature/          # Cross-feature tests
+│   ├── smoke.e2e.ts            # Smoke tests
+│   └── core-flows.e2e.ts       # Core user journeys
 ├── init.ts                     # Detox initialization
 └── README.md                   # This file
 ```
@@ -229,10 +250,14 @@ describe('Pantry Management', () => {
 ```
 
 **Available Screen Objects:**
-- `LoginScreen` - Login, signup, forgot password flows
+- `LandingAuthScreen` - Landing page with login/signup options
+- `LoginScreen` - Login form interactions
+- `SignUpScreen` - Sign up form with validation
+- `ForgotPasswordScreen` - Password reset flow
 - `ShoppingListScreen` - Add, edit, delete, check items
 - `PantryScreen` - Manage pantry inventory, expiration dates
-- `RecipesScreen` - Search, filter, favorite recipes
+- `RecipesScreen` - Search, filter, browse recipes
+- `RecipeDetailScreen` - Recipe details, favoriting, add to list
 - `ProfileScreen` - User profile, navigate to settings
 - `SettingsScreen` - App settings, theme, notifications
 - `OnboardingScreen` - Onboarding flow navigation
@@ -260,6 +285,8 @@ describe('Pantry Management', () => {
 - `loginAsTestUser()` - Login with test credentials
 - `logout()` - Logout from app
 - `ensureLoggedIn()` - Ensure user is logged in
+- `bootstrapAuthenticatedSession()` - Setup authenticated test session
+- `signUpWithCredentials(email, password, name)` - Create new account
 
 ### Navigation (`helpers/navigation.ts`)
 - `navigateToTab(tabName)` - Navigate to bottom tab
@@ -272,6 +299,28 @@ describe('Pantry Management', () => {
 - `waitForScreen(screenTestID, timeout)` - Wait for screen to load
 - `waitAndTap(element, timeout)` - Wait then tap
 - `retry(action, maxAttempts)` - Retry action if it fails
+
+### Offline Testing (`helpers/offline.ts`)
+- `simulateOffline()` - Simulate network disconnection
+- `simulateOnline()` - Restore network connection
+- `waitForSync()` - Wait for data sync to complete
+- `testOfflineSync(mutation, verification)` - Test offline sync workflow
+
+### Permissions (`helpers/permissions.ts`)
+- `grantCameraPermission()` - Grant camera access
+- `denyCameraPermission()` - Deny camera access
+- `grantNotificationPermission()` - Grant notification permission
+- `setPermissions(permissions)` - Set multiple permissions
+- `launchWithTestPermissions()` - Launch app with common test permissions
+
+### Test Data (`helpers/data.ts`)
+- `clearPantryItems()` - Clear all pantry items
+- `clearShoppingListItems()` - Clear all shopping list items
+- `seedPantryItems(items)` - Add test items to pantry
+- `seedShoppingListItems(items)` - Add test items to shopping list
+- `generateItemName(prefix)` - Generate unique item name
+- `generateTestEmail()` - Generate unique test email
+- `resetAppData()` - Reset app to initial state
 
 ## 🎯 Test IDs
 
