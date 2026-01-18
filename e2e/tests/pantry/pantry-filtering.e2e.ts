@@ -35,7 +35,7 @@ describe('Pantry Filtering', () => {
 
   beforeEach(async () => {
     await relaunchToHomeTab();
-    await pantryScreen.waitForScreen();
+    await pantryScreen.navigateToTab();
   });
 
   describe('Search', () => {

@@ -97,49 +97,34 @@ export async function loginWithCredentials(email: string, password: string) {
  * NO synchronization disabling - uses proper waitFor conditions
  */
 export async function dismissBiometricPromptIfPresent() {
-  console.log('🔍 Checking for biometric prompts...');
+  console.log('🔍 Checking for post-login prompts...');
 
-  // Try to dismiss post-login biometric modal (appears after login)
+  // NOTE: Emulators don't support biometrics, so use very short timeouts (500ms)
+  // to avoid wasting test time on elements that won't appear.
+
+  // Try to dismiss post-login biometric modal (only on real devices)
   await waitIfPresent(
     element(by.id('post-login-biometric-prompt')),
     async () => {
       console.log('📱 Dismissing post-login biometric prompt...');
-
-      await waitForModalReady('post-login-biometric-prompt');
-
-      // Tap decline button - try by.id first, fallback to by.label
       await tapFirstAvailable([
         element(by.id('biometric-prompt-decline')),
         element(by.label('Not now')),
       ]);
-
-      // Wait for modal to close completely
-      await waitForModalClosed('post-login-biometric-prompt');
-
       console.log('✅ Biometric prompt dismissed');
     },
-    2000,
+    500, // Very short timeout - emulators don't have biometrics
   );
 
-  // Try to dismiss onboarding biometric setup screen
+  // Try to dismiss onboarding biometric setup screen (only on real devices)
   await waitIfPresent(
     element(by.id('biometric-setup-screen')),
     async () => {
       console.log('📱 Skipping onboarding biometric setup...');
-
-      await waitForScreen('biometric-setup-screen', 2000);
-
-      // Tap "Set up later" button to skip
       await tapByID('biometric-setup-skip');
-
-      // Wait for screen to disappear
-      await waitFor(element(by.id('biometric-setup-screen')))
-        .not.toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-
       console.log('✅ Biometric setup skipped');
     },
-    2000,
+    500, // Very short timeout - emulators don't have biometrics
   );
 
   // Try to dismiss feature hint overlay (appears with 2s delay in PantryMain)
@@ -147,20 +132,10 @@ export async function dismissBiometricPromptIfPresent() {
     element(by.id('feature-hint-overlay-dismiss')),
     async () => {
       console.log('💡 Dismissing feature hint overlay...');
-
-      await waitForModalReady('feature-hint-overlay', 3000);
-
-      // Tap dismiss button
-      await waitForElementAndTap(
-        element(by.id('feature-hint-overlay-dismiss')),
-      );
-
-      // Wait for overlay to disappear
-      await waitForModalClosed('feature-hint-overlay');
-
+      await element(by.id('feature-hint-overlay-dismiss')).tap();
       console.log('✅ Feature hint dismissed');
     },
-    3000, // 3s timeout to account for 2s delay in PantryMain
+    2500, // Allow 2.5s for the overlay to appear (has 2s delay)
   );
 
   console.log('✅ All post-login flows handled');
@@ -354,7 +329,11 @@ export async function bootstrapAuthenticatedSession() {
   console.log('🚀 Bootstrapping authenticated session...');
 
   // Launch the app first (required before any UI interactions)
-  await launchAppWithFabricWorkaround();
+  // Use newInstance: true to ensure clean app state and proper Detox connection
+  await launchAppWithFabricWorkaround({
+    newInstance: true,
+    permissions: { notifications: 'YES', camera: 'YES' },
+  });
 
   // Ensure we start from logged out state
   const loggedIn = await isLoggedIn();

@@ -275,6 +275,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             itemName: itemName.trim(),
             quantity,
             unitId: unitId || undefined,
+            unitName: !unitId && unit.trim() ? unit.trim() : undefined,
             storageState,
             expiresAt: expirationDate
               ? expirationDate.toISOString().split('T')[0]
@@ -309,6 +310,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pantryId,
     itemName,
     quantityInput,
+    unit,
     unitId,
     storageState,
     expirationDate,
@@ -349,7 +351,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
       testID="add-pantry-item-details-modal"
     >
-      <View style={styles.container}>
+      <View style={styles.container} testID="add-pantry-item-details-modal">
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.cancelButton}>

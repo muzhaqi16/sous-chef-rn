@@ -90,8 +90,10 @@ export const InlineUnitsAutocomplete: React.FC<
   const handleTextChange = (text: string) => {
     onChangeText(text);
     setSearchTerm(text);
-    // Clear unit selection when user types manually
-    onUnitSelected?.(null, null);
+    // Only clear unit selection when field is emptied
+    if (!text) {
+      onUnitSelected?.(null, null);
+    }
   };
 
   const handleSelectUnit = (unit: Unit) => {

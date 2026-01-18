@@ -296,6 +296,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
       testID="add-shopping-item-modal"
     >
+      <View style={{ flex: 1 }} testID="add-shopping-item-modal">
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -350,6 +351,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             icon="add"
             label="Add Manually"
             onPress={handleAddManually}
+            testID="add-shopping-add-manually-button"
           />
         </View>
 
@@ -386,6 +388,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           </>
         )}
       </BottomSheetScrollView>
+      </View>
     </BottomSheetModal>
   );
 };

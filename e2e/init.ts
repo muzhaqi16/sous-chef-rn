@@ -53,8 +53,8 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
     },
   });
 
-  // Wait for app to initialize
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  // Wait for app to initialize (5s to account for slower emulators and bundle loading)
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
   // Re-enable synchronization for test interactions
   try {

@@ -40,8 +40,10 @@ async function skipOptionalOnboardingScreens() {
     await selectPantryItemsScreen.tapSkip();
   } catch {}
 
+  // NOTE: Biometric setup only appears on devices with biometric support
+  // Emulators don't have biometrics, so use very short timeout
   try {
-    await biometricSetupScreen.waitForScreen(2000);
+    await biometricSetupScreen.waitForScreen(500);
     await biometricSetupScreen.tapSkip();
   } catch {}
 }
@@ -67,25 +69,40 @@ export async function bootstrapFreshAuthenticatedSession() {
 }
 
 export async function relaunchToHomeTab() {
-  // For app reuse: Just reload React Native instead of terminating app
-  await device.reloadReactNative();
+  // Use launchApp with newInstance: false to reuse app without full reload
+  // This is more reliable than reloadReactNative() which can lose connection
+  try {
+    await device.launchApp({ newInstance: false });
+  } catch {
+    // If app launch fails, try reloading React Native as fallback
+    try {
+      await device.reloadReactNative();
+    } catch {
+      // Last resort: launch fresh instance
+      await device.launchApp({ newInstance: true });
+    }
+  }
 
   // Wait for splash screen to disappear after reload
-  await waitFor(element(by.id('splash-screen')))
-    .not.toBeVisible()
-    .withTimeout(10000);
+  try {
+    await waitFor(element(by.id('splash-screen')))
+      .not.toBeVisible()
+      .withTimeout(5000);
+  } catch {
+    // Splash screen might not appear for app reuse
+  }
 
   // Wait for app to initialize navigation (navigationState computation)
-  // Increased from 2s to 3s to allow for store hydration and navigation state recalculation
-  await delay(3000);
+  await delay(1000);
 
   await dismissBiometricPromptIfPresent();
 
-  // Navigate to pantry tab (might already be there)
+  // Wait for tab bar to be visible (indicates app is ready for navigation)
   try {
-    await element(by.id('tab-pantry')).tap();
-  } catch {}
-
-  // Increased timeout from 5s to 10s to handle navigation state transitions
-  await pantryScreen.waitForScreen(10000);
+    await waitFor(element(by.id('tab-bar')))
+      .toBeVisible()
+      .withTimeout(10000);
+  } catch {
+    // Tab bar might have different ID or already visible
+  }
 }

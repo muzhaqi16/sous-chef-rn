@@ -62,7 +62,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   };
 
   return (
-    <View style={styles.wrapper} testID={testID}>
+    <View style={styles.wrapper}>
       {label && <Label required={required}>{label}</Label>}
       <View
         style={[
@@ -130,6 +130,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessible
           accessibilityLabel={label ? `${label} value` : 'Quantity value'}
           accessibilityHint="Tap to edit manually or use buttons to adjust"
+          testID={testID}
         />
 
         {/* Increment Button */}

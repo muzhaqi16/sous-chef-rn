@@ -359,6 +359,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
         testID="add-pantry-item-modal"
       >
+        <View style={{ flex: 1 }} testID="add-pantry-item-modal">
         <BottomSheetScrollView
           style={styles.scrollView}
           contentContainerStyle={[
@@ -411,6 +412,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               icon="add"
               label="Add Manually"
               onPress={handleAddManually}
+              testID="add-pantry-add-manually-button"
             />
           </View>
 
@@ -456,6 +458,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             </>
           )}
         </BottomSheetScrollView>
+        </View>
       </BottomSheetModal>
 
       {/* Nested Add Details Sheet */}
