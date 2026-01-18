@@ -3,8 +3,8 @@ import { View, Text, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -83,11 +83,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
           pressBehavior="close"
+          onClose={() => bottomSheetRef.current?.dismiss()}
         />
       )}
     >

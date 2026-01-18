@@ -7,9 +7,9 @@ import {
 } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -157,11 +157,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
           pressBehavior="close"
+          onClose={() => bottomSheetRef.current?.dismiss()}
         />
       )}
     >

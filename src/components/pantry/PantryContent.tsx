@@ -1,11 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import {
-  View,
-  Pressable,
-  FlatList,
-  RefreshControl,
-  ListRenderItemInfo,
-} from 'react-native';
+import { View, Pressable, RefreshControl } from 'react-native';
+import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { getItemImageUrl } from '#utils/imageUtils';
@@ -395,7 +390,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
         </View>
 
         {/* Content List */}
-        <FlatList
+        <FlashList
           data={listData}
           renderItem={renderItem}
           keyExtractor={item => item.key}
@@ -409,6 +404,8 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           }
           onEndReached={onEndReached}
           onEndReachedThreshold={0.5}
+          // FlashList optimization: pre-render 250px outside viewport
+          drawDistance={250}
         />
 
         {/* Sort Modal */}

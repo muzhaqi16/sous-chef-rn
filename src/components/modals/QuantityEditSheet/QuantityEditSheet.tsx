@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -241,11 +241,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   // Render backdrop
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
         opacity={0.5}
+        pressBehavior="close"
       />
     ),
     [],

@@ -37,8 +37,6 @@ export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   isVisible?: boolean;
   onClose?: () => void;
   onOpen?: () => void;
-  maxHeight?: number;
-  enableGestures?: boolean;
 }
 
 export interface ItemSelectorRef {

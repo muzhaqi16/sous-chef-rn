@@ -60,3 +60,5 @@ export * from './TagInput';
 export * from './BottomSheetSearchBar';
 export * from './ActionCard';
 export * from './SuggestionListItem';
+export * from './MultiSelectChipSheet';
+export * from './RestrictionSection';

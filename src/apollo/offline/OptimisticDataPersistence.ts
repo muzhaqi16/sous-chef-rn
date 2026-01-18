@@ -67,7 +67,9 @@ class OptimisticDataPersistence {
         timestamp: Date.now(),
       };
 
-      console.log(`💾 Optimistic: Queued ${entityType}.${field} for ${entityId}`, { value });
+      if (__DEV__) {
+        console.log(`💾 Optimistic: Queued ${entityType}.${field} for ${entityId}`, { value });
+      }
 
       // PERFORMANCE: Batch multiple saves into single storage write
       // Schedule flush after 100ms of inactivity
@@ -95,7 +97,9 @@ class OptimisticDataPersistence {
       const merged = { ...existing, ...this.pendingUpdates };
 
       storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(merged));
-      console.log(`💾 Optimistic: Flushed ${Object.keys(this.pendingUpdates).length} updates`);
+      if (__DEV__) {
+        console.log(`💾 Optimistic: Flushed ${Object.keys(this.pendingUpdates).length} updates`);
+      }
 
       // Invalidate cache after write
       this.cache = merged;
@@ -184,11 +188,13 @@ class OptimisticDataPersistence {
       if (Object.keys(existing).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
         this.cache = {}; // Invalidate cache
-        console.log('🧹 Optimistic: Cleared all data (storage empty)');
+        if (__DEV__) {
+          console.log('🧹 Optimistic: Cleared all data (storage empty)');
+        }
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
         this.cache = existing; // Update cache
-        if (hadData) {
+        if (__DEV__ && hadData) {
           console.log(`🧹 Optimistic: Cleared ${entityType}.${field} for ${entityId}`);
         }
       }
@@ -224,7 +230,7 @@ class OptimisticDataPersistence {
         this.cache = filtered; // Update cache
       }
 
-      if (clearedCount > 0) {
+      if (__DEV__ && clearedCount > 0) {
         console.log(`🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}:${entityId}`);
       }
     } catch (error) {
@@ -258,7 +264,7 @@ class OptimisticDataPersistence {
         this.cache = filtered; // Update cache
       }
 
-      if (clearedCount > 0) {
+      if (__DEV__ && clearedCount > 0) {
         console.log(`🧹 Optimistic: Cleared ${clearedCount} fields for ${entityType}`);
       }
     } catch (error) {
@@ -273,7 +279,9 @@ class OptimisticDataPersistence {
     try {
       storage.remove(OPTIMISTIC_DATA_KEY);
       this.cache = null; // Invalidate cache
-      console.log('🧹 Optimistic: Cleared all persisted data');
+      if (__DEV__) {
+        console.log('🧹 Optimistic: Cleared all persisted data');
+      }
     } catch (error) {
       console.error('Failed to clear all optimistic data:', error);
     }

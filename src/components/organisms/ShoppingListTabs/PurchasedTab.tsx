@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
@@ -71,7 +72,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
       <SortableShoppingList
         items={items}
         onItemPress={onItemPress}
@@ -103,3 +104,9 @@ MemoizedPurchasedTab.displayName = 'PurchasedTab';
 
 // Also export non-memoized for backwards compatibility
 export const PurchasedTab = PurchasedTabComponent;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

@@ -5,8 +5,8 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useSharedBottomSheetConfigs,
@@ -349,11 +349,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         backdropComponent={props => (
-          <BottomSheetBackdrop
+          <GlobalBottomSheetBackdrop
             {...props}
             disappearsOnIndex={-1}
             appearsOnIndex={0}
             pressBehavior="close"
+            onClose={() => bottomSheetRef.current?.dismiss()}
           />
         )}
         // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works

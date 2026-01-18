@@ -10,8 +10,8 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import BottomSheet, {
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { Button } from '../base/Button';
 import { Icon } from '#utils';
 import {
@@ -212,12 +212,13 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   ];
 
   const renderBackdrop = (props: any) => (
-    <BottomSheetBackdrop
+    <GlobalBottomSheetBackdrop
       {...props}
       appearsOnIndex={0}
       disappearsOnIndex={-1}
       opacity={0.5}
       pressBehavior="close"
+      onClose={() => bottomSheetRef.current?.close()}
     />
   );
 

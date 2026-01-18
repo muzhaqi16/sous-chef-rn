@@ -404,7 +404,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
       <AnimatedItemSelector
         ref={selectorRef}
         config={pantryConfig}
-        maxHeight={600}
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />

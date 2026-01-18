@@ -4,31 +4,42 @@ import {
   BottomSheetModal,
   BottomSheetTextInput,
   BottomSheetView,
-  BottomSheetFlatList,
+  BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
 import { useSharedBottomSheetConfigs } from '#hooks';
+import { BottomSheetHeader } from '#/components/atoms/BottomSheetHeader';
+import { AnimatedChip } from '#/components/atoms/AnimatedChip';
+import { Icon } from '#utils';
 
-export interface TagPickerProps {
+export interface MultiSelectChipSheetItem<T extends string = string> {
+  id: T;
+  label: string;
+}
+
+export interface MultiSelectChipSheetProps<T extends string = string> {
   visible: boolean;
-  tags: string[];
-  selectedTags: string[];
-  onSelect: (tags: string[]) => void;
-  onCancel: () => void;
+  title: string;
+  items: MultiSelectChipSheetItem<T>[];
+  selectedItems: T[];
+  onSelect: (items: T[]) => void;
+  onClose: () => void;
+  onDone: () => void;
   loading?: boolean;
 }
 
-export const TagPicker: React.FC<TagPickerProps> = ({
+export function MultiSelectChipSheet<T extends string = string>({
   visible,
-  tags,
-  selectedTags,
+  title,
+  items,
+  selectedItems,
   onSelect,
-  onCancel,
+  onClose,
+  onDone,
   loading = false,
-}) => {
+}: MultiSelectChipSheetProps<T>) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const animationConfigs = useSharedBottomSheetConfigs();
@@ -45,16 +56,16 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     }
   }, [visible]);
 
-  const filteredTags = useMemo(() => {
-    if (!searchQuery.trim()) return tags;
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items;
     const query = searchQuery.toLowerCase();
-    return tags.filter(tag => tag.toLowerCase().includes(query));
-  }, [tags, searchQuery]);
+    return items.filter(item => item.label.toLowerCase().includes(query));
+  }, [items, searchQuery]);
 
-  const handleToggleTag = (tag: string) => {
-    const newSelection = selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
-      : [...selectedTags, tag];
+  const handleToggleItem = (id: T) => {
+    const newSelection = selectedItems.includes(id)
+      ? selectedItems.filter(i => i !== id)
+      : [...selectedItems, id];
     onSelect(newSelection);
   };
 
@@ -62,43 +73,16 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     onSelect([]);
   };
 
-  const renderTagItem = ({ item }: { item: string }) => {
-    const isSelected = selectedTags.includes(item);
-    return (
-      <TouchableOpacity
-        style={[styles.tagItem, isSelected && styles.tagItemSelected]}
-        onPress={() => handleToggleTag(item)}>
-        <Icon
-          library="Feather"
-          name="tag"
-          size={20}
-          color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
-        />
-        <Text
-          style={[styles.tagName, isSelected && styles.tagNameSelected]}
-          numberOfLines={1}>
-          {item}
-        </Text>
-        {isSelected && (
-          <Icon
-            library="Feather"
-            name="check"
-            size={20}
-            color={theme.colors.primary}
-          />
-        )}
-      </TouchableOpacity>
-    );
-  };
+  const showSearch = items.length > 8;
 
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['55%', '70%']}
+      snapPoints={['60%', '80%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
-      onDismiss={onCancel}
+      onDismiss={onClose}
       animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.surface }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
@@ -120,12 +104,17 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           { paddingBottom: insets.bottom + 16 },
         ]}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Filter by Tags</Text>
-        </View>
+        <BottomSheetHeader
+          title={title}
+          onCancel={onClose}
+          onConfirm={onDone}
+          cancelLabel="Cancel"
+          confirmLabel="Done"
+          confirmDisabled={loading}
+        />
 
         {/* Search Input */}
-        {tags.length > 5 && (
+        {showSearch && (
           <View style={styles.searchContainer}>
             <Icon
               library="Feather"
@@ -135,7 +124,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             />
             <BottomSheetTextInput
               style={styles.searchInput}
-              placeholder="Search tags..."
+              placeholder="Search..."
               placeholderTextColor={theme.colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -144,66 +133,59 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           </View>
         )}
 
-        {/* Clear All / Selected Count */}
+        {/* Selection Counter / Clear All */}
         <View style={styles.selectionRow}>
           <Text style={styles.selectionText}>
-            {selectedTags.length === 0
-              ? 'No tags selected'
-              : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
+            {selectedItems.length === 0
+              ? 'No items selected'
+              : `${selectedItems.length} selected`}
           </Text>
-          {selectedTags.length > 0 && (
+          {selectedItems.length > 0 && (
             <TouchableOpacity onPress={handleClearAll}>
               <Text style={styles.clearText}>Clear all</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Tags List */}
+        {/* Chip Grid */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading tags...</Text>
+            <Text style={styles.loadingText}>Loading...</Text>
           </View>
-        ) : filteredTags.length > 0 ? (
-          <BottomSheetFlatList
-            data={filteredTags}
-            renderItem={renderTagItem}
-            keyExtractor={(item: string) => item}
-            extraData={selectedTags}
+        ) : filteredItems.length > 0 ? (
+          <BottomSheetScrollView
             showsVerticalScrollIndicator={false}
-            style={styles.tagList}
-            contentContainerStyle={styles.tagListContent}
-            ItemSeparatorComponent={() => <View style={styles.tagSeparator} />}
-          />
-        ) : tags.length > 0 && searchQuery ? (
+            contentContainerStyle={styles.scrollContent}
+          >
+            <View style={styles.chipContainer}>
+              {filteredItems.map(item => (
+                <AnimatedChip
+                  key={item.id}
+                  label={item.label}
+                  selected={selectedItems.includes(item.id)}
+                  onPress={() => handleToggleItem(item.id)}
+                />
+              ))}
+            </View>
+          </BottomSheetScrollView>
+        ) : items.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No tags match "{searchQuery}"</Text>
+            <Text style={styles.emptyText}>No items match "{searchQuery}"</Text>
           </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No tags available</Text>
+            <Text style={styles.emptyText}>No items available</Text>
           </View>
         )}
-
       </BottomSheetView>
     </BottomSheetModal>
   );
-};
+}
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
-    padding: theme.spacing['5'],
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -225,6 +207,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   selectionText: {
     fontSize: theme.typography.fontSize.sm,
@@ -235,39 +218,14 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: '500',
   },
-  tagItem: {
+  scrollContent: {
+    paddingBottom: theme.spacing.md,
+  },
+  chipContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    gap: theme.spacing['3'],
-  },
-  tagItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  tagName: {
-    flex: 1,
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.textPrimary,
-  },
-  tagNameSelected: {
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.divider,
-    marginVertical: theme.spacing.md,
-  },
-  tagList: {
-    maxHeight: 250,
-  },
-  tagListContent: {
-    paddingBottom: theme.spacing.sm,
-  },
-  tagSeparator: {
-    height: theme.spacing.sm,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
   },
   loadingContainer: {
     paddingVertical: theme.spacing.lg,

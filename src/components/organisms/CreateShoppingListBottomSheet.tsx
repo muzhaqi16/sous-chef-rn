@@ -3,9 +3,9 @@ import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -87,7 +87,7 @@ export const CreateShoppingListBottomSheet: React.FC<
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}

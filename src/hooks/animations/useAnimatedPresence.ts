@@ -18,6 +18,10 @@ export function useAnimatedPresence(
     initialVisible = false,
   } = props;
 
+  // Destructure callbacks for granular memoization dependencies
+  const { onOpenStart, onOpenComplete, onCloseStart, onCloseComplete } =
+    callbacks;
+
   const [shouldRender, setShouldRender] = useState(initialVisible);
   const isVisible = useSharedValue(initialVisible);
   const progress = useSharedValue(initialVisible ? 1 : 0);
@@ -28,20 +32,20 @@ export function useAnimatedPresence(
   const setRenderFalse = useCallback(() => setShouldRender(false), []);
 
   const handleOpenStart = useCallback(() => {
-    callbacks.onOpenStart?.();
-  }, [callbacks]);
+    onOpenStart?.();
+  }, [onOpenStart]);
 
   const handleOpenComplete = useCallback(() => {
-    callbacks.onOpenComplete?.();
-  }, [callbacks]);
+    onOpenComplete?.();
+  }, [onOpenComplete]);
 
   const handleCloseStart = useCallback(() => {
-    callbacks.onCloseStart?.();
-  }, [callbacks]);
+    onCloseStart?.();
+  }, [onCloseStart]);
 
   const handleCloseComplete = useCallback(() => {
-    callbacks.onCloseComplete?.();
-  }, [callbacks]);
+    onCloseComplete?.();
+  }, [onCloseComplete]);
 
   const open = useCallback(() => {
     'worklet';

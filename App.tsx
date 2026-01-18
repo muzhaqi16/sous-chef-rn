@@ -23,6 +23,7 @@ import { queueManager } from '#/apollo/offlineQueue';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
+import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
 import {
   initAppStateTokenRefresh,
   cleanupAppStateTokenRefresh,
@@ -148,19 +149,27 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar
-                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-                />
-                <StatusBarBackground />
-                <SafeAreaView style={styles.container}>
-                  <ToastProvider>
-                    <NotificationProvider>
-                      <BottomSheetModalProvider>
-                        <Navigation />
-                      </BottomSheetModalProvider>
-                    </NotificationProvider>
-                  </ToastProvider>
-                </SafeAreaView>
+                <OverlayBackdropProvider>
+                  <StatusBar
+                    barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+                  />
+                  <BottomSheetModalProvider>
+                    {/* Render order matters for stacking (no zIndex used):
+                        1. StatusBarBackground - at the back
+                        2. SafeAreaView with content
+                        3. GlobalBackdrop - covers everything including status bar
+                        4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
+                    <StatusBarBackground />
+                    <SafeAreaView style={styles.container}>
+                      <ToastProvider>
+                        <NotificationProvider>
+                          <Navigation />
+                        </NotificationProvider>
+                      </ToastProvider>
+                    </SafeAreaView>
+                    <GlobalBackdrop />
+                  </BottomSheetModalProvider>
+                </OverlayBackdropProvider>
               </SafeAreaProvider>
             </SubscriptionProvider>
           </DataProvider>

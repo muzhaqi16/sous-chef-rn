@@ -459,7 +459,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         <AnimatedItemSelector
           ref={selectorRef}
           config={listConfig}
-          maxHeight={600}
           onOpen={handleOverlayOpen}
           onClose={handleOverlayClose}
         />

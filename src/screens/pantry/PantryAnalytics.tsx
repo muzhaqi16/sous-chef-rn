@@ -630,7 +630,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   return (
     <View style={commonStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[commonStyles.rowSpaceBetween, styles.header]}>
         <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
@@ -649,7 +649,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
 const styles = StyleSheet.create(theme => ({
   header: {
-    ...commonStyles.rowSpaceBetween,
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,

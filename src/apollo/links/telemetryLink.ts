@@ -9,11 +9,19 @@ interface GraphQLTiming {
   startTime: number;
 }
 
+// Sample rate for production telemetry (10% of operations)
+const PRODUCTION_SAMPLE_RATE = 0.1;
+
 export const createTelemetryLink = () => {
   const timings = new Map<string, GraphQLTiming>();
 
   return new ApolloLink((operation, forward) => {
     if (!Environment.shouldEnableAnalytics() && !Environment.isDevelopment()) {
+      return forward(operation);
+    }
+
+    // Sample telemetry in production to reduce overhead
+    if (!Environment.isDevelopment() && Math.random() > PRODUCTION_SAMPLE_RATE) {
       return forward(operation);
     }
 

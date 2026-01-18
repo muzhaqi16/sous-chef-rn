@@ -139,7 +139,7 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.h3}>Dietary Restrictions</Text>
+        <Text style={commonStyles.subtitle}>Dietary Restrictions</Text>
         <View style={styles.sectionCard}>
           <DietaryRestrictionSelector
             existingRestrictions={profile.restrictions}
@@ -155,7 +155,7 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.h3}>Food Preferences</Text>
+        <Text style={commonStyles.subtitle}>Food Preferences</Text>
         <View style={styles.sectionCard}>
           <CuisineSelector
             selectedCuisines={(profile.preferredCuisines || []) as Cuisine[]}
@@ -196,7 +196,6 @@ export const DietaryProfileScreen: React.FC = () => {
             inputPlaceholder="e.g., Garlic, Basil, Chicken"
             addButtonLabel="Add Favorite Ingredient"
             emptyMessage="No favorite ingredients added yet"
-            chipColor={theme.colors.success + '20'}
             containerStyle={{ marginTop: theme.spacing.md }}
           />
 
@@ -221,7 +220,6 @@ export const DietaryProfileScreen: React.FC = () => {
             inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
             addButtonLabel="Add Disliked Ingredient"
             emptyMessage="No disliked ingredients added yet"
-            chipColor={theme.colors.error + '20'}
             containerStyle={{ marginTop: theme.spacing.md }}
           />
         </View>
@@ -233,7 +231,7 @@ export const DietaryProfileScreen: React.FC = () => {
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
-        <Text style={commonStyles.h3}>Nutrition Goals</Text>
+        <Text style={commonStyles.subtitle}>Nutrition Goals</Text>
         <View style={styles.sectionCard}>
           <TouchableOpacity onPress={() => setEditingMeals(true)}>
             <InfoRow label="Meals per day" value={profile.mealsPerDay} />
@@ -256,7 +254,7 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={commonStyles.h3}>Cooking Preferences</Text>
+            <Text style={commonStyles.subtitle}>Cooking Preferences</Text>
             <TouchableOpacity
               onPress={() => setEditingCookingPrefs(true)}
               style={styles.editButton}
@@ -309,7 +307,7 @@ export const DietaryProfileScreen: React.FC = () => {
         >
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={commonStyles.h3}>Macro Targets (Advanced)</Text>
+              <Text style={commonStyles.subtitle}>Macro Targets (Advanced)</Text>
               <TouchableOpacity
                 onPress={() => setEditingMacros(true)}
                 style={styles.editButton}
@@ -406,16 +404,16 @@ export const DietaryProfileScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   sectionContainer: {
     paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   sectionCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    marginTop: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   sectionHeaderRow: {
     flexDirection: 'row',

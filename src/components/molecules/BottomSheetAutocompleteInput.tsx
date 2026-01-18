@@ -2,11 +2,11 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
@@ -178,13 +178,12 @@ export function BottomSheetAutocompleteInput<T>({
 
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
         opacity={0.5}
-        enableTouchThrough={false}
-        onPress={() => bottomSheetRef.current?.dismiss()}
+        pressBehavior="close"
       />
     ),
     [],

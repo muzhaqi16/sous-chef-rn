@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
 import { commonStyles } from '#/styles/commonStyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -97,7 +97,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}

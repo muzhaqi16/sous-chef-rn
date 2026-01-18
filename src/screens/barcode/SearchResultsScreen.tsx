@@ -3,9 +3,9 @@ import { useApolloClient } from '@apollo/client/react';
 import { View, Dimensions } from 'react-native';
 import { useAppNavigation, useCrossTabNavigation, type CrossTabSource } from '#hooks';
 import BottomSheet, {
-  BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
 
 import {
@@ -101,12 +101,13 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const renderBackdrop = (props: any) => (
-    <BottomSheetBackdrop
+    <GlobalBottomSheetBackdrop
       {...props}
       appearsOnIndex={0}
       disappearsOnIndex={-1}
       opacity={0.3}
-      statusBarTranslucent={true}
+      pressBehavior="close"
+      onClose={hideBottomSheet}
     />
   );
 

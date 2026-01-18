@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
@@ -40,8 +40,11 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   // First button starts appearing at 0.1, fully visible at 0.3
   // Second button starts at 0.25, fully visible at 0.5
   // Third button starts at 0.4, fully visible at 0.7
-  const startThreshold = 0.1 + index * 0.15;
-  const endThreshold = startThreshold + 0.25;
+  // PERFORMANCE: Memoize to avoid recalculating on every render
+  const { startThreshold, endThreshold } = useMemo(() => {
+    const start = 0.1 + index * 0.15;
+    return { startThreshold: start, endThreshold: start + 0.25 };
+  }, [index]);
 
   // Use Reanimated's useAnimatedStyle for SharedValue-based animations
   const animatedStyle = useAnimatedStyle(() => {

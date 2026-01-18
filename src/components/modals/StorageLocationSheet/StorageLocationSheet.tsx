@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -76,7 +76,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
 
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}

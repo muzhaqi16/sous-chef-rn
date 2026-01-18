@@ -4,9 +4,9 @@ import { BaseSwitch } from '#components/base';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -97,7 +97,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}

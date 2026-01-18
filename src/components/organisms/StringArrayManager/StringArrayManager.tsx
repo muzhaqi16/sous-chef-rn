@@ -49,11 +49,6 @@ export interface StringArrayManagerProps {
   emptyMessage?: string;
 
   /**
-   * Chip background color
-   */
-  chipColor?: string;
-
-  /**
    * Maximum number of items allowed (optional)
    */
   maxItems?: number;
@@ -85,8 +80,6 @@ export interface StringArrayManagerProps {
  *
  * Provides a complete UI for displaying, adding, and removing string items
  * with chips, modal input, validation, and empty states.
- *
- * **Eliminates 300+ lines of duplicate code** across multiple screens.
  *
  * @example Basic usage (Dietary Profile - Cuisines)
  * ```tsx
@@ -126,17 +119,6 @@ export interface StringArrayManagerProps {
  *   transform={(tag) => tag.trim().toLowerCase()}
  * />
  * ```
- *
- * @example Custom styling
- * ```tsx
- * <StringArrayManager
- *   title="Categories"
- *   items={categories}
- *   onAdd={handleAdd}
- *   onRemove={handleRemove}
- *   chipColor={theme.colors.success + '20'}
- * />
- * ```
  */
 export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   title,
@@ -146,10 +128,9 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   inputPlaceholder = 'Enter value...',
   addButtonLabel = 'Add Item',
   emptyMessage = 'No items added yet',
-  chipColor,
   maxItems,
   validate,
-  transform = (item) => item.trim(),
+  transform = item => item.trim(),
   showAddButton = true,
   containerStyle,
 }) => {
@@ -231,10 +212,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {showAddButton && (
-          <TouchableOpacity
-            onPress={handleAddPress}
-            style={styles.addButton}
-          >
+          <TouchableOpacity onPress={handleAddPress} style={styles.addButton}>
             <Icon
               library="Feather"
               name="plus"
@@ -245,26 +223,22 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         )}
       </View>
 
-      {/* Chip grid */}
+      {/* Chip grid using static chips */}
       <View style={styles.chipContainer}>
         {items.map((item, index) => (
-          <View
-            key={index}
-            style={[
-              commonStyles.chip,
-              chipColor && { backgroundColor: chipColor },
-            ]}
-          >
-            <Text style={commonStyles.chipText}>{item}</Text>
+          <View key={index} style={styles.chipWrapper}>
+            <View style={styles.displayChip}>
+              <Text style={styles.displayChipText}>{item}</Text>
+            </View>
             <TouchableOpacity
+              style={styles.removeButton}
               onPress={() => handleRemove(item)}
-              style={styles.chipRemove}
             >
               <Icon
                 library="Feather"
-                name="x"
-                size={14}
-                color={theme.colors.textSecondary}
+                name="x-circle"
+                size={18}
+                color={theme.colors.error}
               />
             </TouchableOpacity>
           </View>
@@ -290,7 +264,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             <TextInput
               style={[commonStyles.input, error && styles.inputError]}
               value={newItem}
-              onChangeText={(text) => {
+              onChangeText={text => {
                 setNewItem(text);
                 setError(''); // Clear error on input
               }}
@@ -359,12 +333,35 @@ const styles = StyleSheet.create(theme => ({
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    gap: theme.spacing.xs,
     marginTop: theme.spacing.sm,
   },
-  chipRemove: {
-    marginLeft: theme.spacing.xs,
-    padding: 2,
+  chipWrapper: {
+    position: 'relative',
+    margin: theme.spacing.xs,
+  },
+  displayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii['2xl'],
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.chipSelectedBackground,
+  },
+  displayChipText: {
+    fontSize: theme.typography.fontSize.sm + 1,
+    fontWeight: '600',
+    color: theme.colors.chipSelectedText,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.full,
   },
   modalOverlay: {
     flex: 1,

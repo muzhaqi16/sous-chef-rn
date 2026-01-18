@@ -75,7 +75,7 @@ const ExpirationText: React.FC<{
  * Pantry item card using BaseItemCard composition
  * Displays item with emoji/image, name, expiration status, quantity, and location
  */
-export const PantryItemCard: React.FC<PantryItemCardProps> = ({
+const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   id,
   name,
   expirationText,
@@ -161,6 +161,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.warning,
   },
 }));
+
+// PERFORMANCE: Memoize to prevent unnecessary re-renders during list scrolling
+export const PantryItemCard = React.memo(PantryItemCardComponent);
 
 // PantryItemVariant alias for backwards compatibility
 export type PantryItemVariant = ItemVariant;

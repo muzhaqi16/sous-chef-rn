@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
+import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
 
 export type { FilterTabConfig, FilterTabsProps, FilterTabActionButton } from './types';
@@ -21,7 +22,7 @@ export type { FilterTabConfig, FilterTabsProps, FilterTabActionButton } from './
  *   counts={locationCounts}
  * />
  */
-export function FilterTabs<T extends string = string>({
+function FilterTabsComponent<T extends string = string>({
   tabs,
   activeTabId,
   onTabChange,
@@ -55,103 +56,19 @@ export function FilterTabs<T extends string = string>({
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
       >
-        {tabs.map((tab: FilterTabConfig<T>) => {
-          const isActive = activeTabId === tab.id;
-          const isFiltered = !isActive && filteredTabIds?.includes(tab.id);
-          const count = counts?.[tab.id];
-          const hasCount = showCounts && count !== undefined;
-
-          // Determine colors based on 3-state: active > filtered > inactive
-          const backgroundColor = isActive
-            ? theme.colors.filterTab.activeBg
-            : isFiltered
-              ? theme.colors.filterTab.filteredBg
-              : theme.colors.filterTab.inactiveBg;
-
-          const textColor = isActive
-            ? theme.colors.filterTab.activeText
-            : isFiltered
-              ? theme.colors.filterTab.filteredText
-              : theme.colors.filterTab.inactiveText;
-
-          return (
-            <Pressable
-              key={tab.id}
-              onPress={() => handleTabPress(tab)}
-              testID={`${testIDPrefix}-${tab.id}`}
-              style={[
-                styles.tab,
-                isCompact && styles.tabCompact,
-                { backgroundColor },
-              ]}
-            >
-              {tab.icon && (
-                tab.iconLibrary ? (
-                  <Icon
-                    name={tab.icon}
-                    size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
-                    color={tab.isAction ? theme.colors.primary : textColor}
-                    library={tab.iconLibrary}
-                  />
-                ) : (
-                  <Text
-                    style={[styles.tabIcon, isCompact && styles.tabIconCompact]}
-                  >
-                    {tab.icon}
-                  </Text>
-                )
-              )}
-              {!(tab.isAction && !tab.label) && (
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isCompact && styles.tabLabelCompact,
-                    { color: textColor },
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              )}
-              {hasCount && (
-                <View
-                  style={[
-                    styles.countBadge,
-                    isCompact && styles.countBadgeCompact,
-                    {
-                      backgroundColor: isActive
-                        ? theme.colors.filterTab.activeCountBg
-                        : theme.colors.filterTab.countBg,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.countText,
-                      isCompact && styles.countTextCompact,
-                      {
-                        color: isActive
-                          ? theme.colors.filterTab.activeText
-                          : isFiltered
-                            ? theme.colors.filterTab.filteredText
-                            : theme.colors.filterTab.countText,
-                      },
-                    ]}
-                  >
-                    {count}
-                  </Text>
-                </View>
-              )}
-              {tab.showDropdownIndicator && (
-                <Icon
-                  name="chevron-down"
-                  size={isCompact ? 12 : 14}
-                  color={textColor}
-                  library="Feather"
-                />
-              )}
-            </Pressable>
-          );
-        })}
+        {tabs.map((tab: FilterTabConfig<T>) => (
+          <FilterTabsItem
+            key={tab.id}
+            tab={tab}
+            isActive={activeTabId === tab.id}
+            isFiltered={!!(activeTabId !== tab.id && filteredTabIds?.includes(tab.id))}
+            count={counts?.[tab.id]}
+            showCounts={showCounts}
+            isCompact={isCompact}
+            onPress={() => handleTabPress(tab)}
+            testID={`${testIDPrefix}-${tab.id}`}
+          />
+        ))}
         {actionButton && (
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
@@ -190,6 +107,8 @@ export function FilterTabs<T extends string = string>({
   );
 }
 
+export const FilterTabs = React.memo(FilterTabsComponent) as typeof FilterTabsComponent;
+
 const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
@@ -219,34 +138,11 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
   },
-  tabIcon: {
-    fontSize: theme.typography.fontSize.sm,
-  },
-  tabIconCompact: {
-    fontSize: theme.typography.fontSize.xs,
-  },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
   },
   tabLabelCompact: {
     fontSize: theme.typography.fontSize.xs,
-  },
-  countBadge: {
-    paddingHorizontal: theme.spacing.xs + 3,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.md,
-  },
-  countBadgeCompact: {
-    paddingHorizontal: theme.spacing.xs + 1,
-    paddingVertical: 1,
-    borderRadius: theme.radii.sm,
-  },
-  countText: {
-    fontSize: theme.typography.fontSize.xs - 1,
-    fontWeight: theme.fonts.weight.bold,
-  },
-  countTextCompact: {
-    fontSize: theme.typography.fontSize.xs - 2,
   },
 }));
