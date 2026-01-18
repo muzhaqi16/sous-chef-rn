@@ -23,6 +23,7 @@ interface PantryItemCardProps {
   storageState?: string | null;
   variant?: ItemVariant;
   imageUrl?: string | null;
+  isOutOfStock?: boolean;
   onPress?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -84,6 +85,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   storageState: _storageState,
   variant = 'normal',
   imageUrl,
+  isOutOfStock,
   onPress,
   onEdit,
   onDelete,
@@ -131,7 +133,9 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       <CardContent
         title={name}
         subtitle={
-          expirationText ? (
+          isOutOfStock ? (
+            <Text style={styles.outOfStock}>Out of stock</Text>
+          ) : expirationText ? (
             <ExpirationText text={expirationText} variant={expirationVariant || 'normal'} />
           ) : undefined
         }
@@ -150,6 +154,11 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  outOfStock: {
+    fontSize: theme.typography.fontSize.sm - 1,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.warning,
   },
 }));
 

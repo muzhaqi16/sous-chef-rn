@@ -7,10 +7,10 @@ import {
 } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -165,7 +165,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         />
       )}
     >
-      <BottomSheetScrollView
+      <BottomSheetKeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
@@ -173,6 +173,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={16}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -356,7 +357,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           textAlignVertical="top"
           editable={!updating}
         />
-      </BottomSheetScrollView>
+      </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
 };

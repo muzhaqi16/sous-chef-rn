@@ -16,6 +16,12 @@ export interface FilterTabConfig<T extends string = string> {
   icon?: string;
   /** Icon library if using Icon component */
   iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  /** Custom press handler (overrides onTabChange for modal triggers) */
+  onPress?: () => void;
+  /** Show dropdown indicator (chevron-down) for modal-triggering pills */
+  showDropdownIndicator?: boolean;
+  /** Mark as action tab (uses primary color, not selectable) */
+  isAction?: boolean;
 }
 
 export interface FilterTabActionButton {
@@ -29,6 +35,8 @@ export interface FilterTabActionButton {
   onPress: () => void;
   /** Test ID for accessibility */
   testID?: string;
+  /** Whether the button is disabled (shown dimmed, no-op on press) */
+  disabled?: boolean;
 }
 
 export interface FilterTabsProps<T extends string = string> {
@@ -48,4 +56,6 @@ export interface FilterTabsProps<T extends string = string> {
   testIDPrefix?: string;
   /** Optional action button at the end of tabs (e.g., "+" to add new) */
   actionButton?: FilterTabActionButton;
+  /** Tab IDs that have active filters (shown with subtle filtered styling) */
+  filteredTabIds?: T[];
 }

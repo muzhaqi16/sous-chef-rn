@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, TouchableOpacity, Text, Switch } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { BaseSwitch } from '#components/base';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetModal,
@@ -177,7 +178,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           )}
 
           {item.type === 'switch' && (
-            <Switch
+            <BaseSwitch
               testID={`profile-${item.key}-switch`}
               value={item.value as boolean}
               onValueChange={handleSwitchChange}

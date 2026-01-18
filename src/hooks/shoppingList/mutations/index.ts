@@ -17,7 +17,7 @@ export { useAddShoppingItem } from './useAddShoppingItem';
 export { useUpdateShoppingItem } from './useUpdateShoppingItem';
 export { useRemoveShoppingItem } from './useRemoveShoppingItem';
 export { useToggleShoppingItem } from './useToggleShoppingItem';
-export { useClearPurchasedItems } from './useClearPurchasedItems';
+export { useClearShoppingListItems } from './useClearShoppingListItems';
 
 // Types
 export type { ShoppingListItemInput, ShoppingListItemUpdate } from './types';

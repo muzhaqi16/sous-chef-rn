@@ -13,7 +13,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useHaptic } from '#hooks/haptic';
 import { Telemetry } from '#/services/telemetry';
-import { useClearPurchasedItems } from './mutations/useClearPurchasedItems';
+import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -279,8 +279,8 @@ export function useShoppingListActions({
     [removeItem, haptic],
   );
 
-  // Clear all purchased handler - uses optimistic cache clearing for instant UI
-  const { clearPurchased } = useClearPurchasedItems({
+  // Clear items handler - uses optimistic cache clearing for instant UI
+  const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     items,
     refetch: refetchItems,
@@ -295,12 +295,12 @@ export function useShoppingListActions({
 
     try {
       haptic.warning();
-      await clearPurchased();
+      await clearItems(true);
     } catch {
       haptic.error();
       toastService.error('Failed to clear purchased items');
     }
-  }, [items, clearPurchased, haptic]);
+  }, [items, clearItems, haptic]);
 
   // Clear all shopping (unpurchased) items handler
   const handleClearAllShopping = useCallback(async () => {
@@ -312,14 +312,12 @@ export function useShoppingListActions({
 
     try {
       haptic.warning();
-      for (const item of unpurchasedItems) {
-        await removeItem(item.id);
-      }
+      await clearItems(false);
     } catch {
       haptic.error();
       toastService.error('Failed to clear shopping items');
     }
-  }, [items, removeItem, haptic]);
+  }, [items, clearItems, haptic]);
 
   // Add item from search handler
   const handleAddItemFromSearch = useCallback(

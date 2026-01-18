@@ -2,11 +2,9 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
-  useRef,
   useState,
 } from 'react';
 import { View, Pressable } from 'react-native';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
@@ -32,6 +30,7 @@ import {
   useShoppingListSelectorModal,
   useItemReordering,
 } from '#hooks';
+import { useSwipeableCoordinator } from '#hooks/ui';
 import {
   useTabBarActions,
   ShoppingListModalsProvider,
@@ -170,9 +169,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Stable ref to store addItemSheet.open to avoid dependency instability in useEffect
     const addItemSheetOpenRef = useStableRef(addItemSheet.open);
 
-    // Track currently open swipeable across both unpurchased and purchased lists
-    const openSwipeableRef =
-      useRef<React.RefObject<SwipeableMethods | null> | null>(null);
+    // Coordinate swipeable items so only one is open at a time
+    const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
     // Show swipe hint after items load
     useEffect(() => {
@@ -199,21 +197,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         setRefreshing(false);
       }
     }, [refetchItems]);
-
-    // Handle swipeable coordination
-    const handleSwipeableWillOpen = useCallback(
-      (ref: React.RefObject<SwipeableMethods | null>) => {
-        if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-          openSwipeableRef.current.current?.close();
-        }
-        openSwipeableRef.current = ref;
-      },
-      [],
-    );
-
-    const handleSwipeableClose = useCallback(() => {
-      openSwipeableRef.current = null;
-    }, []);
 
     // Calculate permissions for the current list
     const permissions = useMemo(() => {

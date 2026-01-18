@@ -248,7 +248,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     ...commonStyles.shadow,
     opacity: 1,
-    marginHorizontal: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
   },

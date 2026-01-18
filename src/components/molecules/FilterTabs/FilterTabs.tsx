@@ -30,12 +30,17 @@ export function FilterTabs<T extends string = string>({
   variant = 'default',
   testIDPrefix = 'filter-tab',
   actionButton,
+  filteredTabIds,
 }: FilterTabsProps<T>): React.ReactElement {
   const { theme } = useUnistyles();
 
   const handleTabPress = useCallback(
-    (tabId: T) => {
-      onTabChange(tabId);
+    (tab: FilterTabConfig<T>) => {
+      if (tab.onPress) {
+        tab.onPress();
+      } else {
+        onTabChange(tab.id);
+      }
     },
     [onTabChange],
   );
@@ -52,44 +57,61 @@ export function FilterTabs<T extends string = string>({
       >
         {tabs.map((tab: FilterTabConfig<T>) => {
           const isActive = activeTabId === tab.id;
+          const isFiltered = !isActive && filteredTabIds?.includes(tab.id);
           const count = counts?.[tab.id];
           const hasCount = showCounts && count !== undefined;
+
+          // Determine colors based on 3-state: active > filtered > inactive
+          const backgroundColor = isActive
+            ? theme.colors.filterTab.activeBg
+            : isFiltered
+              ? theme.colors.filterTab.filteredBg
+              : theme.colors.filterTab.inactiveBg;
+
+          const textColor = isActive
+            ? theme.colors.filterTab.activeText
+            : isFiltered
+              ? theme.colors.filterTab.filteredText
+              : theme.colors.filterTab.inactiveText;
 
           return (
             <Pressable
               key={tab.id}
-              onPress={() => handleTabPress(tab.id)}
+              onPress={() => handleTabPress(tab)}
               testID={`${testIDPrefix}-${tab.id}`}
               style={[
                 styles.tab,
                 isCompact && styles.tabCompact,
-                {
-                  backgroundColor: isActive
-                    ? theme.colors.filterTab.activeBg
-                    : theme.colors.filterTab.inactiveBg,
-                },
+                { backgroundColor },
               ]}
             >
               {tab.icon && (
+                tab.iconLibrary ? (
+                  <Icon
+                    name={tab.icon}
+                    size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
+                    color={tab.isAction ? theme.colors.primary : textColor}
+                    library={tab.iconLibrary}
+                  />
+                ) : (
+                  <Text
+                    style={[styles.tabIcon, isCompact && styles.tabIconCompact]}
+                  >
+                    {tab.icon}
+                  </Text>
+                )
+              )}
+              {!(tab.isAction && !tab.label) && (
                 <Text
-                  style={[styles.tabIcon, isCompact && styles.tabIconCompact]}
+                  style={[
+                    styles.tabLabel,
+                    isCompact && styles.tabLabelCompact,
+                    { color: textColor },
+                  ]}
                 >
-                  {tab.icon}
+                  {tab.label}
                 </Text>
               )}
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isCompact && styles.tabLabelCompact,
-                  {
-                    color: isActive
-                      ? theme.colors.filterTab.activeText
-                      : theme.colors.filterTab.inactiveText,
-                  },
-                ]}
-              >
-                {tab.label}
-              </Text>
               {hasCount && (
                 <View
                   style={[
@@ -109,7 +131,9 @@ export function FilterTabs<T extends string = string>({
                       {
                         color: isActive
                           ? theme.colors.filterTab.activeText
-                          : theme.colors.filterTab.countText,
+                          : isFiltered
+                            ? theme.colors.filterTab.filteredText
+                            : theme.colors.filterTab.countText,
                       },
                     ]}
                   >
@@ -117,34 +141,51 @@ export function FilterTabs<T extends string = string>({
                   </Text>
                 </View>
               )}
+              {tab.showDropdownIndicator && (
+                <Icon
+                  name="chevron-down"
+                  size={isCompact ? 12 : 14}
+                  color={textColor}
+                  library="Feather"
+                />
+              )}
             </Pressable>
           );
         })}
+        {actionButton && (
+          <Pressable
+            onPress={actionButton.disabled ? undefined : actionButton.onPress}
+            testID={actionButton.testID || `${testIDPrefix}-action`}
+            style={[
+              styles.tab,
+              isCompact && styles.tabCompact,
+              { backgroundColor: theme.colors.filterTab.inactiveBg },
+              actionButton.disabled && { opacity: 0.4 },
+            ]}
+            disabled={actionButton.disabled}
+          >
+            {actionButton.icon && (
+              <Icon
+                name={actionButton.icon}
+                size={isCompact ? 14 : 16}
+                color={theme.colors.primary}
+                library={actionButton.iconLibrary || 'MaterialIcons'}
+              />
+            )}
+            {actionButton.label && (
+              <Text
+                style={[
+                  styles.tabLabel,
+                  isCompact && styles.tabLabelCompact,
+                  { color: theme.colors.primary },
+                ]}
+              >
+                {actionButton.label}
+              </Text>
+            )}
+          </Pressable>
+        )}
       </ScrollView>
-      {actionButton && (
-        <Pressable
-          onPress={actionButton.onPress}
-          testID={actionButton.testID || `${testIDPrefix}-action`}
-          style={[
-            actionButton.label ? styles.actionLabelButton : styles.actionButton,
-            isCompact && styles.actionButtonCompact,
-            !actionButton.label && { backgroundColor: theme.colors.filterTab.inactiveBg },
-          ]}
-        >
-          {actionButton.label ? (
-            <Text style={[styles.actionLabel, { color: theme.colors.primary }]}>
-              {actionButton.label}
-            </Text>
-          ) : actionButton.icon ? (
-            <Icon
-              name={actionButton.icon}
-              size={isCompact ? 16 : 20}
-              color={theme.colors.primary}
-              library={actionButton.iconLibrary || 'MaterialIcons'}
-            />
-          ) : null}
-        </Pressable>
-      )}
     </View>
   );
 }
@@ -155,17 +196,18 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
   },
   scrollView: {
     flexShrink: 1,
   },
   scrollContent: {
     gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing['3'] + 2,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
@@ -206,27 +248,5 @@ const styles = StyleSheet.create(theme => ({
   },
   countTextCompact: {
     fontSize: theme.typography.fontSize.xs - 2,
-  },
-  actionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.sm + 2,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl,
-  },
-  actionButtonCompact: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs + 2,
-    borderRadius: theme.radii.lg,
-  },
-  actionLabelButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-  },
-  actionLabel: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: theme.fonts.weight.semibold,
   },
 }));

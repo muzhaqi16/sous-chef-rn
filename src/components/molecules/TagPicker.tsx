@@ -1,16 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetTextInput,
+  BottomSheetView,
+  BottomSheetFlatList,
+} from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
+import { useSharedBottomSheetConfigs } from '#hooks';
 
 export interface TagPickerProps {
   visible: boolean;
@@ -30,16 +30,20 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   loading = false,
 }) => {
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
+  const animationConfigs = useSharedBottomSheetConfigs();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [localSelectedTags, setLocalSelectedTags] = useState<string[]>(selectedTags);
 
-  // Sync local state when modal opens
-  React.useEffect(() => {
+  // Sync visible prop with bottom sheet ref
+  useEffect(() => {
     if (visible) {
-      setLocalSelectedTags(selectedTags);
+      bottomSheetRef.current?.present();
       setSearchQuery('');
+    } else {
+      bottomSheetRef.current?.dismiss();
     }
-  }, [visible, selectedTags]);
+  }, [visible]);
 
   const filteredTags = useMemo(() => {
     if (!searchQuery.trim()) return tags;
@@ -48,30 +52,18 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   }, [tags, searchQuery]);
 
   const handleToggleTag = (tag: string) => {
-    setLocalSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
+    const newSelection = selectedTags.includes(tag)
+      ? selectedTags.filter(t => t !== tag)
+      : [...selectedTags, tag];
+    onSelect(newSelection);
   };
 
   const handleClearAll = () => {
-    setLocalSelectedTags([]);
-  };
-
-  const handleApply = () => {
-    setSearchQuery('');
-    onSelect(localSelectedTags);
-  };
-
-  const handleCancel = () => {
-    setSearchQuery('');
-    setLocalSelectedTags(selectedTags);
-    onCancel();
+    onSelect([]);
   };
 
   const renderTagItem = ({ item }: { item: string }) => {
-    const isSelected = localSelectedTags.includes(item);
+    const isSelected = selectedTags.includes(item);
     return (
       <TouchableOpacity
         style={[styles.tagItem, isSelected && styles.tagItemSelected]}
@@ -100,111 +92,110 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Filter by Tags</Text>
-            <TouchableOpacity onPress={handleCancel}>
-              <Icon
-                library="Feather"
-                name="x"
-                size={24}
-                color={theme.colors.textPrimary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Input */}
-          {tags.length > 5 && (
-            <View style={styles.searchContainer}>
-              <Icon
-                library="Feather"
-                name="search"
-                size={18}
-                color={theme.colors.textSecondary}
-              />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search tags..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-              />
-            </View>
-          )}
-
-          {/* Clear All / Selected Count */}
-          <View style={styles.selectionRow}>
-            <Text style={styles.selectionText}>
-              {localSelectedTags.length === 0
-                ? 'No tags selected'
-                : `${localSelectedTags.length} tag${localSelectedTags.length > 1 ? 's' : ''} selected`}
-            </Text>
-            {localSelectedTags.length > 0 && (
-              <TouchableOpacity onPress={handleClearAll}>
-                <Text style={styles.clearText}>Clear all</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Tags List */}
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading tags...</Text>
-            </View>
-          ) : filteredTags.length > 0 ? (
-            <FlatList
-              data={filteredTags}
-              renderItem={renderTagItem}
-              keyExtractor={item => item}
-              showsVerticalScrollIndicator={false}
-              style={styles.tagList}
-              contentContainerStyle={styles.tagListContent}
-            />
-          ) : tags.length > 0 && searchQuery ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tags match "{searchQuery}"</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No tags available</Text>
-            </View>
-          )}
-
-          {/* Apply Button */}
-          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-            <Text style={styles.applyButtonText}>Apply Filter</Text>
-          </TouchableOpacity>
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={['55%', '70%']}
+      enablePanDownToClose
+      enableDynamicSizing={false}
+      topInset={insets.top}
+      onDismiss={onCancel}
+      animationConfigs={animationConfigs}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
+      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      backdropComponent={props => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          pressBehavior="close"
+        />
+      )}
+    >
+      <BottomSheetView
+        style={[
+          styles.bottomSheetContent,
+          { paddingBottom: insets.bottom + 16 },
+        ]}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Filter by Tags</Text>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        {/* Search Input */}
+        {tags.length > 5 && (
+          <View style={styles.searchContainer}>
+            <Icon
+              library="Feather"
+              name="search"
+              size={18}
+              color={theme.colors.textSecondary}
+            />
+            <BottomSheetTextInput
+              style={styles.searchInput}
+              placeholder="Search tags..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+            />
+          </View>
+        )}
+
+        {/* Clear All / Selected Count */}
+        <View style={styles.selectionRow}>
+          <Text style={styles.selectionText}>
+            {selectedTags.length === 0
+              ? 'No tags selected'
+              : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
+          </Text>
+          {selectedTags.length > 0 && (
+            <TouchableOpacity onPress={handleClearAll}>
+              <Text style={styles.clearText}>Clear all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* Tags List */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading tags...</Text>
+          </View>
+        ) : filteredTags.length > 0 ? (
+          <BottomSheetFlatList
+            data={filteredTags}
+            renderItem={renderTagItem}
+            keyExtractor={(item: string) => item}
+            extraData={selectedTags}
+            showsVerticalScrollIndicator={false}
+            style={styles.tagList}
+            contentContainerStyle={styles.tagListContent}
+            ItemSeparatorComponent={() => <View style={styles.tagSeparator} />}
+          />
+        ) : tags.length > 0 && searchQuery ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tags match "{searchQuery}"</Text>
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tags available</Text>
+          </View>
+        )}
+
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
+  bottomSheetContent: {
     padding: theme.spacing['5'],
-    maxHeight: '80%',
-    width: '90%',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
@@ -274,6 +265,9 @@ const styles = StyleSheet.create(theme => ({
   tagListContent: {
     paddingBottom: theme.spacing.sm,
   },
+  tagSeparator: {
+    height: theme.spacing.sm,
+  },
   loadingContainer: {
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
@@ -290,17 +284,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-  },
-  applyButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  applyButtonText: {
-    fontSize: theme.typography.fontSize.base,
-    color: theme.colors.white,
-    fontWeight: '600',
   },
 }));

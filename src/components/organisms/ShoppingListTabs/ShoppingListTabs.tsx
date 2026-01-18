@@ -158,7 +158,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
     Alert.alert(
       'Clear All Purchased Items',
-      `Are you sure you want to remove all ${purchasedItems.length} purchased items from this list?`,
+      `Are you sure you want to remove ${purchasedItems.length === 1 ? '1 purchased item' : `all ${purchasedItems.length} purchased items`} from this list?`,
       [
         {
           text: 'Cancel',
@@ -181,7 +181,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
     Alert.alert(
       'Clear All Shopping Items',
-      `Are you sure you want to remove all ${unpurchasedItems.length} items from your shopping list?`,
+      `Are you sure you want to remove ${unpurchasedItems.length === 1 ? '1 item' : `all ${unpurchasedItems.length} items`} from your shopping list?`,
       [
         {
           text: 'Cancel',

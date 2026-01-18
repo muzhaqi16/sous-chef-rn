@@ -130,7 +130,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onSwipeableClose={handleSwipeableClose}
         overshootFriction={8}
-        containerStyle={{ overflow: 'visible' }}
+        containerStyle={styles.swipeableContainer}
+        childrenContainerStyle={styles.childrenContainer}
       >
         <SwipeableContent onPress={onPress} onLongPress={onLongPress}>
           {children}

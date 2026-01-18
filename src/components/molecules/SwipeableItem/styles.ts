@@ -2,12 +2,33 @@ import { StyleSheet } from 'react-native-unistyles';
 
 // UNISTYLES FIX: Inline common style properties instead of spreading from commonStyles
 // Spreading from another Unistyles stylesheet can cause "2 unistyles styles" warnings
-export const styles = StyleSheet.create(theme => ({
-  gestureContainer: {
-    overflow: 'visible', // Allow shadow to show and actions to extend
-  },
 
-  actionsContainer: {
+// IMPORTANT: All border radii in SwipeableItem must match to prevent visual gaps during
+// swipe animations. The container, children container, and action containers all use
+// the same radius (theme.radii.lg). Mismatched radii cause sub-pixel gaps between layers.
+export const styles = StyleSheet.create(theme => {
+  // Shared border radius for all swipeable containers - DO NOT use different values
+  const SWIPEABLE_RADIUS = theme.radii.lg;
+
+  return {
+    gestureContainer: {
+      overflow: 'visible', // Allow shadow to show and actions to extend
+    },
+
+    // Container style for Swipeable component
+    swipeableContainer: {
+      overflow: 'visible' as const,
+      backgroundColor: theme.colors.charade['950'],
+      borderRadius: SWIPEABLE_RADIUS,
+    },
+
+    // Children container style for Swipeable component
+    childrenContainer: {
+      overflow: 'hidden' as const,
+      borderRadius: SWIPEABLE_RADIUS,
+    },
+
+    actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
@@ -18,8 +39,8 @@ export const styles = StyleSheet.create(theme => ({
     paddingLeft: 12, // Compensate for margin to maintain button positioning
     borderTopLeftRadius: 0, // Square edge where it meets the card
     borderBottomLeftRadius: 0,
-    borderTopRightRadius: theme.radii.md, // Rounded outer edge
-    borderBottomRightRadius: theme.radii.md,
+    borderTopRightRadius: SWIPEABLE_RADIUS, // Rounded outer edge
+    borderBottomRightRadius: SWIPEABLE_RADIUS,
   },
   leftActionsContainer: {
     flexDirection: 'row',
@@ -33,8 +54,8 @@ export const styles = StyleSheet.create(theme => ({
     paddingRight: 12, // Compensate for margin to maintain button positioning
     borderTopRightRadius: 0, // Square edge where it meets the card
     borderBottomRightRadius: 0,
-    borderTopLeftRadius: theme.radii.md, // Rounded outer edge
-    borderBottomLeftRadius: theme.radii.md,
+    borderTopLeftRadius: SWIPEABLE_RADIUS, // Rounded outer edge
+    borderBottomLeftRadius: SWIPEABLE_RADIUS,
   },
 
   actionButton: {
@@ -72,4 +93,5 @@ export const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     fontWeight: '600',
   },
-}));
+};
+});

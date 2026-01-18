@@ -6,6 +6,7 @@ import {
   FormattedItemSubtitle,
   BottomSheetHeader,
   BottomSheetKeyboardAwareScrollView,
+  DatePickerField,
 } from '#components';
 import {
   BottomSheetModal,
@@ -29,6 +30,7 @@ interface RestockPantryItemModalProps {
     unitId?: string,
     costPerUnit?: number,
     totalCost?: number,
+    expiresAt?: Date | null,
   ) => void;
 }
 
@@ -47,6 +49,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [notes, setNotes] = useState('');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -57,6 +60,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       setNotes('');
       setCostPerUnitInput('');
       setTotalCostInput('');
+      setExpiresAt(null);
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -96,6 +100,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       unitId,
       isNaN(costPerUnit!) ? undefined : costPerUnit,
       isNaN(totalCost!) ? undefined : totalCost,
+      expiresAt,
     );
     onClose();
   }, [
@@ -104,11 +109,17 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     notes,
     costPerUnitInput,
     totalCostInput,
+    expiresAt,
     onConfirm,
     onClose,
   ]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
+
+  const formatQuantity = (qty: number): string => {
+    if (Number.isInteger(qty)) return qty.toString();
+    return qty.toFixed(2).replace(/\.?0+$/, '');
+  };
 
   return (
     <BottomSheetModal
@@ -170,26 +181,24 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
             {/* Quantity Input */}
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={`Quantity to Add (${
-                  pantryItem.unit?.symbol || 'item'
-                }) *`}
+                label="Quantity to Add"
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
                 keyboardType="numeric"
                 useBottomSheetInput
+                required
               />
               {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
-                  New quantity: {newQuantity.toFixed(2)}{' '}
+                  New quantity: {formatQuantity(newQuantity)}{' '}
                   {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
 
-            {/* Cost Tracking (Optional) */}
+            {/* Cost Tracking */}
             <View style={commonStyles.bottomSheetSection}>
-              <Text style={styles.sectionLabel}>Cost (Optional)</Text>
               <View style={styles.costRow}>
                 <View style={styles.costField}>
                   <FormInput
@@ -214,16 +223,27 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               </View>
             </View>
 
-            {/* Notes (Optional) */}
+            {/* Notes */}
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Notes (Optional)"
+                label="Notes"
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Add any notes about this restock..."
                 multiline
                 numberOfLines={3}
                 useBottomSheetInput
+              />
+            </View>
+
+            {/* Expiration Date */}
+            <View style={commonStyles.bottomSheetSection}>
+              <DatePickerField
+                label="Expiration Date"
+                value={expiresAt}
+                onChange={setExpiresAt}
+                placeholder="Set new expiration"
+                minimumDate={new Date()}
               />
             </View>
           </>
@@ -234,12 +254,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  sectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
   costRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,

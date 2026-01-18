@@ -133,7 +133,17 @@ export const ItemList: React.FC<ItemListProps> = ({
   );
 
   if (items.length === 0 && emptyState) {
-    return <EmptyState {...emptyState} />;
+    return (
+      <>
+        {ListHeaderComponent &&
+          (typeof ListHeaderComponent === 'function' ? (
+            <ListHeaderComponent />
+          ) : (
+            ListHeaderComponent
+          ))}
+        <EmptyState {...emptyState} />
+      </>
+    );
   }
 
   return (

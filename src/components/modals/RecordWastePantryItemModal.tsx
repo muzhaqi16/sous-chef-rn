@@ -126,6 +126,11 @@ export const RecordWastePantryItemModal: React.FC<
 
   const remaining = pantryItem ? calculateRemaining() : null;
 
+  const formatQuantity = (qty: number): string => {
+    if (Number.isInteger(qty)) return qty.toString();
+    return qty.toFixed(2).replace(/\.?0+$/, '');
+  };
+
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
@@ -189,7 +194,8 @@ export const RecordWastePantryItemModal: React.FC<
             {/* Waste Amount Input */}
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={`Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`}
+                label="Waste Amount"
+                required
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
@@ -203,7 +209,7 @@ export const RecordWastePantryItemModal: React.FC<
                     remaining < 0 && commonStyles.bottomSheetHelperTextError,
                   ]}
                 >
-                  Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
+                  Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
                   {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
@@ -271,7 +277,7 @@ export const RecordWastePantryItemModal: React.FC<
             {/* Notes (Optional) */}
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Notes (Optional)"
+                label="Notes"
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Add any notes about this waste..."

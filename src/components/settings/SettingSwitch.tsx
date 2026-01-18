@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Switch, ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { View, Text, ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { BaseSwitch } from '#components/base';
 
 interface SettingSwitchProps {
   title: string;
@@ -24,7 +25,6 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   testID,
   containerStyle,
 }) => {
-  const { theme } = useUnistyles();
   return (
     <View style={[styles.container, disabled && styles.containerDisabled, containerStyle]}>
       <View style={styles.textContainer}>
@@ -39,17 +39,12 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
           </Text>
         )}
       </View>
-      <Switch
+      <BaseSwitch
         testID={testID}
         value={value}
         onValueChange={onValueChange}
-        disabled={disabled || loading}
-        trackColor={{
-          false: theme.colors.border,
-          true: theme.colors.primary,
-        }}
-        thumbColor={theme.colors.surface}
-        ios_backgroundColor={theme.colors.border}
+        disabled={disabled}
+        loading={loading}
       />
     </View>
   );

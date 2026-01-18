@@ -3713,8 +3713,8 @@
       },
       {
         "kind": "OBJECT",
-        "name": "ClearPurchasedItemsResponse",
-        "description": "Response for clearing purchased items from a shopping list",
+        "name": "ClearItemsResponse",
+        "description": "Response for clearing items from a shopping list",
         "isOneOf": null,
         "fields": [
           {
@@ -26117,35 +26117,6 @@
             "deprecationReason": null
           },
           {
-            "name": "clearPurchasedShoppingListItems",
-            "description": "Clear all purchased items from a shopping list.\nSoft-deletes all items where isPurchased=true and deletedAt is not set.\nReturns summary with count of cleared items.",
-            "args": [
-              {
-                "name": "shoppingListId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "ClearPurchasedItemsResponse",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "clearReminder",
             "description": null,
             "args": [
@@ -26168,6 +26139,51 @@
               "ofType": {
                 "kind": "OBJECT",
                 "name": "ShoppingList",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "clearShoppingListItems",
+            "description": "Clear items from a shopping list based on purchased status.\nSoft-deletes all items matching the purchased filter and where deletedAt is not set.\nUse purchased=true to clear purchased items, purchased=false to clear unpurchased items.\nReturns summary with count of cleared items.",
+            "args": [
+              {
+                "name": "purchased",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Boolean",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "shoppingListId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ClearItemsResponse",
                 "ofType": null
               }
             },
@@ -48857,6 +48873,14 @@
             "name": "costPerUnit",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "expiresAt",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null

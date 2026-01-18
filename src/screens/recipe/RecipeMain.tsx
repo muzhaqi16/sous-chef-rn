@@ -21,7 +21,9 @@ import {
   RecipesHeader,
   FolderPicker,
   TagPicker,
+  FilterTabs,
 } from '#components';
+import type { FilterTabConfig } from '#components';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
@@ -155,11 +157,11 @@ export const RecipeMain: React.FC = React.memo(() => {
       result = result.filter(recipe => recipe.folder === selectedFolder);
     }
 
-    // Filter by tags (recipe must have ALL selected tags)
+    // Filter by tags (recipe must have ANY of the selected tags)
     if (selectedTags.length > 0) {
       result = result.filter(recipe => {
         const recipeTags = recipe.tags || [];
-        return selectedTags.every(tag => recipeTags.includes(tag));
+        return selectedTags.some(tag => recipeTags.includes(tag));
       });
     }
 
@@ -363,111 +365,107 @@ export const RecipeMain: React.FC = React.memo(() => {
   // Check if any filters are active
   const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
 
+  // Define filter tabs with modal triggers
+  const filterTabs = useMemo(() => {
+    const tabs: FilterTabConfig<string>[] = [
+      {
+        id: 'all',
+        label: 'All',
+      },
+    ];
+
+    // Add folder pill if folders exist
+    if (folders.length > 0) {
+      tabs.push({
+        id: 'folder',
+        label: selectedFolder || 'Folders',
+        icon: '📁',
+        onPress: () => setShowFolderPicker(true),
+        showDropdownIndicator: true,
+      });
+    }
+
+    // Add tags pill if tags exist
+    if (availableTags.length > 0) {
+      tabs.push({
+        id: 'tags',
+        label:
+          selectedTags.length > 0
+            ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
+            : 'Tags',
+        icon: '🏷️',
+        onPress: () => setShowTagPicker(true),
+        showDropdownIndicator: true,
+      });
+    }
+
+    return tabs;
+  }, [folders.length, availableTags.length, selectedFolder, selectedTags]);
+
+  // Calculate counts for filter tabs
+  const filterCounts = useMemo(
+    () => ({
+      all: recipes.length,
+      folder: folders.length,
+      tags: availableTags.length,
+    }),
+    [recipes.length, folders.length, availableTags.length],
+  );
+
+  // Compute which tabs have active filters (shown with subtle filtered styling)
+  const filteredTabs = useMemo(() => {
+    const filtered: string[] = [];
+    if (selectedFolder) filtered.push('folder');
+    if (selectedTags.length > 0) filtered.push('tags');
+    return filtered;
+  }, [selectedFolder, selectedTags.length]);
+
+  // "All" is only active when no filters are applied; otherwise no tab is active
+  const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
+
   // Filter Header Component - shown when user has saved recipes
   const FilterHeader = useMemo(() => {
-    // Don't show filters when showing random recipes or no folders/tags available
-    if (
-      showRandomRecipes ||
-      (folders.length === 0 && availableTags.length === 0)
-    ) {
+    // Show suggested header when showing random recipes
+    if (showRandomRecipes) {
       return SuggestedHeader;
     }
 
+    // Don't show filter tabs if no folders/tags available
+    if (folders.length === 0 && availableTags.length === 0) {
+      return null;
+    }
+
     return (
-      <View style={styles.filterContainer}>
-        {/* Filter Row with Folder and Tags */}
-        <View style={styles.filterRow}>
-          {/* Folder Filter */}
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFolderPicker(true)}
-          >
-            <Icon
-              library="Feather"
-              name="folder"
-              size={16}
-              color={
-                selectedFolder
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.filterButtonText,
-                selectedFolder && styles.filterButtonTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {selectedFolder || 'All Folders'}
-            </Text>
-            <Icon
-              library="Feather"
-              name="chevron-down"
-              size={16}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {/* Tag Filter */}
-          {availableTags.length > 0 && (
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setShowTagPicker(true)}
-            >
-              <Icon
-                library="Feather"
-                name="tag"
-                size={16}
-                color={
-                  selectedTags.length > 0
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedTags.length > 0 && styles.filterButtonTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedTags.length > 0
-                  ? `${selectedTags.length} Tag${
-                      selectedTags.length > 1 ? 's' : ''
-                    }`
-                  : 'All Tags'}
-              </Text>
-              <Icon
-                library="Feather"
-                name="chevron-down"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-
-          {hasActiveFilters && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}
-            >
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <FilterTabs
+        tabs={filterTabs}
+        activeTabId={activeFilterTab}
+        filteredTabIds={filteredTabs}
+        onTabChange={tabId => {
+          if (tabId === 'all') {
+            handleClearFilters();
+          }
+        }}
+        counts={filterCounts}
+        actionButton={{
+          icon: 'x',
+          iconLibrary: 'Feather',
+          onPress: handleClearFilters,
+          testID: 'recipe-clear-filters',
+          disabled: !hasActiveFilters,
+        }}
+        testIDPrefix="recipe-filter-tab"
+      />
     );
   }, [
     showRandomRecipes,
     folders.length,
     availableTags.length,
-    selectedFolder,
-    selectedTags,
+    filterTabs,
+    activeFilterTab,
+    filteredTabs,
+    filterCounts,
     hasActiveFilters,
     handleClearFilters,
-    theme.colors.primary,
-    theme.colors.textSecondary,
     SuggestedHeader,
   ]);
 
@@ -530,10 +528,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         visible={showTagPicker}
         tags={availableTags}
         selectedTags={selectedTags}
-        onSelect={tags => {
-          setSelectedTags(tags);
-          setShowTagPicker(false);
-        }}
+        onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
       />
     </View>
@@ -586,46 +581,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
-  },
-  filterContainer: {
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.full,
-    gap: theme.spacing.xs,
-  },
-  filterButtonText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    maxWidth: 100,
-  },
-  filterButtonTextActive: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  clearButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    marginLeft: 'auto',
-  },
-  clearButtonText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

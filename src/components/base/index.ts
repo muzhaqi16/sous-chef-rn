@@ -30,3 +30,5 @@ export {
   SousChefLoaderMedium,
   SousChefLoaderLarge,
 } from './SousChefLoader';
+
+export { BaseSwitch } from './BaseSwitch';

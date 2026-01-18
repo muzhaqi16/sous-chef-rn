@@ -589,9 +589,9 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
-/** Response for clearing purchased items from a shopping list */
-export type ClearPurchasedItemsResponse = {
-  __typename?: 'ClearPurchasedItemsResponse';
+/** Response for clearing items from a shopping list */
+export type ClearItemsResponse = {
+  __typename?: 'ClearItemsResponse';
   /** IDs of items that were cleared */
   clearedItemIds: Array<Scalars['ID']['output']>;
   /** Summary of the bulk operation */
@@ -3550,13 +3550,14 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  clearReminder: ShoppingList;
   /**
-   * Clear all purchased items from a shopping list.
-   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Clear items from a shopping list based on purchased status.
+   * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+   * Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
    * Returns summary with count of cleared items.
    */
-  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
-  clearReminder: ShoppingList;
+  clearShoppingListItems: ClearItemsResponse;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
@@ -3989,12 +3990,13 @@ export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
 };
 
-export type MutationClearPurchasedShoppingListItemsArgs = {
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type MutationClearReminderArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationClearShoppingListItemsArgs = {
+  purchased: Scalars['Boolean']['input'];
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationCompleteReviewArgs = {
@@ -7204,6 +7206,7 @@ export type ResetPasswordResponse = {
 /** Input for restocking a pantry item - adds quantity and creates ledger record */
 export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -15143,14 +15146,15 @@ export type MoveShoppingItemToPantryMutation = {
   moveShoppingItemToPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
-export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+export type ClearShoppingListItemsMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
 }>;
 
-export type ClearPurchasedShoppingListItemsMutation = {
+export type ClearShoppingListItemsMutation = {
   __typename?: 'Mutation';
-  clearPurchasedShoppingListItems: {
-    __typename?: 'ClearPurchasedItemsResponse';
+  clearShoppingListItems: {
+    __typename?: 'ClearItemsResponse';
     clearedItemIds: Array<string>;
     summary: {
       __typename?: 'BulkOperationSummary';
@@ -64408,13 +64412,13 @@ export type MoveShoppingItemToPantryMutationOptions =
     MoveShoppingItemToPantryMutation,
     MoveShoppingItemToPantryMutationVariables
   >;
-export const ClearPurchasedShoppingListItemsDocument = {
+export const ClearShoppingListItemsDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'ClearPurchasedShoppingListItems' },
+      name: { kind: 'Name', value: 'ClearShoppingListItems' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -64427,13 +64431,27 @@ export const ClearPurchasedShoppingListItemsDocument = {
             type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'purchased' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'Boolean' },
+            },
+          },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'clearPurchasedShoppingListItems' },
+            name: { kind: 'Name', value: 'clearShoppingListItems' },
             arguments: [
               {
                 kind: 'Argument',
@@ -64441,6 +64459,14 @@ export const ClearPurchasedShoppingListItemsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'purchased' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'purchased' },
                 },
               },
             ],
@@ -64485,50 +64511,51 @@ export const ClearPurchasedShoppingListItemsDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type ClearPurchasedShoppingListItemsMutationFn =
+export type ClearShoppingListItemsMutationFn =
   ApolloReactCommon.MutationFunction<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >;
 
 /**
- * __useClearPurchasedShoppingListItemsMutation__
+ * __useClearShoppingListItemsMutation__
  *
- * To run a mutation, you first call `useClearPurchasedShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useClearPurchasedShoppingListItemsMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useClearShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearShoppingListItemsMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [clearPurchasedShoppingListItemsMutation, { data, loading, error }] = useClearPurchasedShoppingListItemsMutation({
+ * const [clearShoppingListItemsMutation, { data, loading, error }] = useClearShoppingListItemsMutation({
  *   variables: {
  *      shoppingListId: // value for 'shoppingListId'
+ *      purchased: // value for 'purchased'
  *   },
  * });
  */
-export function useClearPurchasedShoppingListItemsMutation(
+export function useClearShoppingListItemsMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
-  >(ClearPurchasedShoppingListItemsDocument, options);
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
+  >(ClearShoppingListItemsDocument, options);
 }
-export type ClearPurchasedShoppingListItemsMutationHookResult = ReturnType<
-  typeof useClearPurchasedShoppingListItemsMutation
+export type ClearShoppingListItemsMutationHookResult = ReturnType<
+  typeof useClearShoppingListItemsMutation
 >;
-export type ClearPurchasedShoppingListItemsMutationResult =
-  ApolloReactCommon.MutationResult<ClearPurchasedShoppingListItemsMutation>;
-export type ClearPurchasedShoppingListItemsMutationOptions =
+export type ClearShoppingListItemsMutationResult =
+  ApolloReactCommon.MutationResult<ClearShoppingListItemsMutation>;
+export type ClearShoppingListItemsMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >;
 export const AddItemsToShoppingListDocument = {
   kind: 'Document',

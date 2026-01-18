@@ -13,7 +13,7 @@ import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
 import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
 import { useScreenTransition, useFilterTransitionWithDeps } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
-import { useSelectorManagement } from '#hooks/ui';
+import { useSelectorManagement, useSwipeableCoordinator } from '#hooks/ui';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
@@ -93,6 +93,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
       selectorRef,
       setOverlayOpen,
     });
+
+  // Coordinate swipeable items so only one is open at a time
+  const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
   // Centralized pantry selection with fallback chain
   const {
@@ -395,6 +398,8 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onEndReached={loadMore}
         refreshing={isRefreshing}
         loading={isLoadingInitial}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
+        onSwipeableClose={handleSwipeableClose}
       />
       <AnimatedItemSelector
         ref={selectorRef}

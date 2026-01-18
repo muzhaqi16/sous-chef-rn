@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Alert, Platform, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Alert, Platform, Linking, AppState } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch, SettingSection } from '#components/settings';
@@ -22,6 +22,8 @@ export const NotificationSettingsScreen: React.FC = () => {
     isQuietTime,
   } = useNotificationSettings();
 
+  const appState = useRef(AppState.currentState);
+
   // Check permission status when screen comes into focus
   useEffect(() => {
     const checkPermsOnFocus = navigation.addListener('focus', () => {
@@ -30,6 +32,23 @@ export const NotificationSettingsScreen: React.FC = () => {
 
     return checkPermsOnFocus;
   }, [navigation, checkPermissions]);
+
+  // Re-check permissions when returning from device settings (background -> active)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        checkPermissions();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkPermissions]);
 
   const handleSettingChange = async (
     key: string,
@@ -177,7 +196,7 @@ export const NotificationSettingsScreen: React.FC = () => {
         <SettingSwitch
           title="Push Notifications"
           description="Receive push notifications on your device"
-          value={settings.pushEnabled}
+          value={settings.pushEnabled && hasPermission === true}
           onValueChange={value =>
             handleSettingChange('pushEnabled', value)
           }
