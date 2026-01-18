@@ -409,7 +409,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       };
 
       return (
-        <View style={styles.container}>
+        <View style={styles.container} testID="shopping-list-screen">
           <ShoppingListHeader
             listName="Shopping List"
             avatarUrl={profile?.avatar}

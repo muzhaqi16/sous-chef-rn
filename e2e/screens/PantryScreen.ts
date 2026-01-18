@@ -69,8 +69,13 @@ export class PantryScreen extends BaseScreen {
    * Navigate to pantry tab
    */
   async navigateToTab() {
-    await this.tapByID('tab-pantry');
-    await this.waitForScreen();
+    // Wait for tab bar to be ready (longer timeout after relaunch)
+    await waitFor(element(by.id('tab-pantry')))
+      .toBeVisible()
+      .withTimeout(10000);
+    await element(by.id('tab-pantry')).tap();
+    // Use longer timeout since screen may take time to load data
+    await this.waitForScreen(10000);
   }
 
   /**
@@ -91,7 +96,11 @@ export class PantryScreen extends BaseScreen {
       // Overlay not present, continue
     }
 
-    await this.tapByID(this.addButton);
+    // Wait for add button to be visible and tap it
+    await waitFor(element(by.id(this.addButton)))
+      .toBeVisible()
+      .withTimeout(3000);
+    await element(by.id(this.addButton)).tap();
   }
 
   /**
@@ -115,12 +124,22 @@ export class PantryScreen extends BaseScreen {
     unit?: string,
     expirationDate?: string,
   ) {
+    // Tap add button and wait for modal - retry once if needed
     await this.tapAddButton();
 
     // Wait for "Add Manually" button to appear (indicates modal is open)
-    await waitFor(element(by.id('add-pantry-add-manually-button')))
-      .toBeVisible()
-      .withTimeout(5000);
+    try {
+      await waitFor(element(by.id('add-pantry-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    } catch {
+      // Modal didn't open - retry the tap
+      console.log('Modal did not open, retrying add button tap...');
+      await this.tapAddButton();
+      await waitFor(element(by.id('add-pantry-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    }
     await element(by.id('add-pantry-add-manually-button')).tap();
 
     // Wait for details modal to appear

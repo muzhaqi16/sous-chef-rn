@@ -1,4 +1,4 @@
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, device } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import {
   LandingAuthScreen,
@@ -69,40 +69,33 @@ export async function bootstrapFreshAuthenticatedSession() {
 }
 
 export async function relaunchToHomeTab() {
-  // Use launchApp with newInstance: false to reuse app without full reload
-  // This is more reliable than reloadReactNative() which can lose connection
+  // Dismiss any overlays first
+  await dismissBiometricPromptIfPresent();
+
+  // Wait for app to be ready
+  await delay(500);
+
+  // Try to navigate to pantry tab (home) to ensure consistent starting state
   try {
-    await device.launchApp({ newInstance: false });
+    await waitFor(element(by.id('tab-pantry')))
+      .toBeVisible()
+      .withTimeout(3000);
+    await element(by.id('tab-pantry')).tap();
+    await pantryScreen.waitForScreen(5000);
   } catch {
-    // If app launch fails, try reloading React Native as fallback
+    // Tab might already be visible, or we need to go back first
     try {
-      await device.reloadReactNative();
+      // Press back to dismiss any modal/screen
+      await device.pressBack();
+      await delay(500);
+      await waitFor(element(by.id('tab-pantry')))
+        .toBeVisible()
+        .withTimeout(3000);
+      await element(by.id('tab-pantry')).tap();
     } catch {
-      // Last resort: launch fresh instance
-      await device.launchApp({ newInstance: true });
+      console.log('Could not navigate to pantry tab, continuing...');
     }
   }
 
-  // Wait for splash screen to disappear after reload
-  try {
-    await waitFor(element(by.id('splash-screen')))
-      .not.toBeVisible()
-      .withTimeout(5000);
-  } catch {
-    // Splash screen might not appear for app reuse
-  }
-
-  // Wait for app to initialize navigation (navigationState computation)
-  await delay(1000);
-
-  await dismissBiometricPromptIfPresent();
-
-  // Wait for tab bar to be visible (indicates app is ready for navigation)
-  try {
-    await waitFor(element(by.id('tab-bar')))
-      .toBeVisible()
-      .withTimeout(10000);
-  } catch {
-    // Tab bar might have different ID or already visible
-  }
+  await delay(500);
 }

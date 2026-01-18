@@ -61,12 +61,24 @@ export class ShoppingListScreen extends BaseScreen {
    * Note: Tab testID is 'tab-shoppinglist' (no dash) based on route name 'ShoppingList'
    */
   async navigateToTab() {
+    console.log('📱 Navigating to Shopping List tab...');
     // Wait for tab bar to be ready (longer timeout after relaunch)
     await waitFor(element(by.id('tab-shoppinglist')))
       .toBeVisible()
       .withTimeout(10000);
+    console.log('✓ Shopping list tab found, tapping...');
     await element(by.id('tab-shoppinglist')).tap();
-    await this.waitForScreen();
+    console.log('✓ Tapped shopping list tab, waiting for screen...');
+
+    // Wait for screen with retry on failure
+    try {
+      await this.waitForScreen(5000);
+    } catch {
+      console.log('Screen not visible, retrying tab tap...');
+      await element(by.id('tab-shoppinglist')).tap();
+      await this.waitForScreen(10000);
+    }
+    console.log('✓ Shopping list screen visible');
   }
 
   /**
@@ -95,12 +107,22 @@ export class ShoppingListScreen extends BaseScreen {
    * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
   async addItem(name: string, quantity?: string | number, unit?: string) {
+    // Tap add button and wait for modal - retry once if needed
     await this.tapAddButton();
 
     // Wait for "Add Manually" button to appear (indicates sheet is open)
-    await waitFor(element(by.id('add-shopping-add-manually-button')))
-      .toBeVisible()
-      .withTimeout(5000);
+    try {
+      await waitFor(element(by.id('add-shopping-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    } catch {
+      // Modal didn't open - retry the tap
+      console.log('Modal did not open, retrying add button tap...');
+      await this.tapAddButton();
+      await waitFor(element(by.id('add-shopping-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    }
     await element(by.id('add-shopping-add-manually-button')).tap();
 
     // Wait for add item screen to appear

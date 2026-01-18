@@ -17,6 +17,7 @@ type AnimatedCheckboxProps = {
   size?: number;
   disabled?: boolean;
   animationDuration?: number; // How long to wait before calling onToggleComplete
+  testID?: string;
 };
 
 export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
@@ -26,6 +27,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   size = 24,
   disabled = false,
   animationDuration = 400,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   const isPressed = useSharedValue(false);
@@ -117,6 +119,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
       onPressOut={handlePressOut}
       disabled={disabled}
       style={{ opacity: disabled ? 0.5 : 1 }}
+      testID={testID}
     >
       <Animated.View
         style={[

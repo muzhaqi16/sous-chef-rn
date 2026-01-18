@@ -60,6 +60,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
           accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
           accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
           accessibilityState={{ checked: isPurchased }}
+          testID={`shopping-item-checkbox-${id}`}
         >
           <View style={styles.checkbox}>
             {isPurchased && <Icon name="check" size={16} color="white" />}

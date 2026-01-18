@@ -166,6 +166,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         }}
         animationDuration={200} // Match exit animation duration
         size={28}
+        testID={`shopping-item-checkbox-${item.id}`}
       />
     );
   }, [
