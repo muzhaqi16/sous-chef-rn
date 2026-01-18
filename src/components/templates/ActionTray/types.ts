@@ -43,6 +43,7 @@ export interface UseActionTrayProps {
 export interface UseActionTrayReturn {
   translateY: SharedValue<number>;
   active: SharedValue<boolean>;
+  touchable: boolean;
   scrollTo: (destination: number) => void;
   open: () => void;
   close: () => void;

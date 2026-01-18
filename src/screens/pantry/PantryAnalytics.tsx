@@ -5,7 +5,7 @@ import { Icon } from '#utils';
 import { commonStyles } from '#styles';
 import { useAppNavigation } from '#hooks';
 import { usePantryAnalytics } from '#hooks/pantry';
-import { TabView, TabRoute } from '#components/molecules/TabView';
+import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
 import { DateRangeFilter, AnalyticsSummaryCard, ChartSection } from '#components/analytics';
 import { TrendLineChart, BreakdownPieChart, TopItemsBarChart } from '#components/charts';
 import { PeriodGranularity } from '#generated';

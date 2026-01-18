@@ -135,10 +135,10 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(_theme => ({
   container: {
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-});
+}));

@@ -148,12 +148,12 @@ const styles = StyleSheet.create(theme => ({
     shadowRadius: 3,
     elevation: 2,
     // Default styles (applied when no variant matches)
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surface,
     borderColor: theme.colors.borderLight,
     variants: {
       variant: {
         normal: {
-          backgroundColor: theme.colors.white,
+          backgroundColor: theme.colors.surface,
           borderColor: theme.colors.borderLight,
         },
         warning: {

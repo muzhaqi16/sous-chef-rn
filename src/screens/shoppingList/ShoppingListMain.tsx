@@ -10,16 +10,28 @@ import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSw
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
-import { PaginationFooter } from '#/components/organisms/PaginationFooter';
-import { AnimatedItemSelector, ListTemplate } from '#components';
+import {
+  AnimatedItemSelector,
+  ListTemplate,
+  ShoppingListHeader,
+  ShoppingListTabs,
+  PaginationFooter,
+  SwipeHintOverlay,
+} from '#components';
 import { Icon } from '#utils';
-import { ShoppingListHeader } from '#/components/molecules/ShoppingListHeader';
-import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 
 // Hooks & Context
-import { useAppNavigation, useProfileData, useTabBarAddButton } from '#hooks';
+import {
+  useAppNavigation,
+  useProfileData,
+  useTabBarAddButton,
+  useFeatureHint,
+  useShoppingListScreen,
+  useShoppingListActions,
+  useShoppingListSelectorModal,
+  useItemReordering,
+} from '#hooks';
 import {
   useTabBarActions,
   ShoppingListModalsProvider,
@@ -29,14 +41,7 @@ import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { useStableRef } from '#/hooks/utils';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { useScreenTransition } from '#hooks/performance';
-
-// Screen-specific hooks
-import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
-import { useShoppingListActions } from '#/hooks/shoppingList/useShoppingListActions';
-import { useShoppingListSelectorModal } from '#/hooks/shoppingList/useShoppingListSelectorModal';
-import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -110,16 +115,20 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     useScreenTransition('ShoppingListMain');
 
     // --- Actions Hook ---
-    const { handleTogglePurchase, handleDeleteItem, handleClearAllPurchased } =
-      useShoppingListActions({
-        currentListId,
-        items,
-        addItem,
-        toggleItem,
-        removeItem,
-        refetchItems,
-        setSearchQuery,
-      });
+    const {
+      handleTogglePurchase,
+      handleDeleteItem,
+      handleClearAllPurchased,
+      handleClearAllShopping,
+    } = useShoppingListActions({
+      currentListId,
+      items,
+      addItem,
+      toggleItem,
+      removeItem,
+      refetchItems,
+      setSearchQuery,
+    });
 
     // --- Reordering Hook ---
     const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -267,6 +276,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         refreshing,
         disabled: !!searchQuery.trim(),
         onClearAllPurchased: handleClearAllPurchased,
+        onClearAllShopping: handleClearAllShopping,
         onSwipeableWillOpen: handleSwipeableWillOpen,
         onSwipeableClose: handleSwipeableClose,
         unpurchasedItems,
@@ -295,6 +305,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         handleRefresh,
         refreshing,
         handleClearAllPurchased,
+        handleClearAllShopping,
         handleSwipeableWillOpen,
         handleSwipeableClose,
         unpurchasedItems,

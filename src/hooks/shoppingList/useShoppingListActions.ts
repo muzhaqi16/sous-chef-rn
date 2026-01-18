@@ -302,6 +302,25 @@ export function useShoppingListActions({
     }
   }, [items, clearPurchased, haptic]);
 
+  // Clear all shopping (unpurchased) items handler
+  const handleClearAllShopping = useCallback(async () => {
+    const unpurchasedItems = items.filter(
+      (item: any) => !item.purchaseInfo?.isPurchased,
+    );
+
+    if (unpurchasedItems.length === 0) return;
+
+    try {
+      haptic.warning();
+      for (const item of unpurchasedItems) {
+        await removeItem(item.id);
+      }
+    } catch {
+      haptic.error();
+      toastService.error('Failed to clear shopping items');
+    }
+  }, [items, removeItem, haptic]);
+
   // Add item from search handler
   const handleAddItemFromSearch = useCallback(
     async (itemName: string) => {
@@ -355,6 +374,7 @@ export function useShoppingListActions({
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,
+    handleClearAllShopping,
     handleAddItemFromSearch,
   };
 }

@@ -19,8 +19,10 @@ export interface FilterTabConfig<T extends string = string> {
 }
 
 export interface FilterTabActionButton {
-  /** Icon name to display */
-  icon: string;
+  /** Icon name to display (optional - can use label instead) */
+  icon?: string;
+  /** Text label to display (optional - can use icon instead) */
+  label?: string;
   /** Icon library (default: MaterialIcons) */
   iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
   /** Callback when button is pressed */

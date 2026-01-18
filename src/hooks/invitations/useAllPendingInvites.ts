@@ -6,12 +6,17 @@
  *
  * Both invitation types are added to the notification store as actionable notifications
  * that open the InvitationAcceptanceModal when tapped.
+ *
+ * PERFORMANCE OPTIMIZATION:
+ * Invitation queries are deferred by 2500ms after authentication to avoid competing
+ * with screen-critical queries (Pantry, StorageLocations) at startup.
+ * Invitations are not time-critical - users can wait a few seconds to see them.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import {
-  useMyShoppingListInvitesQuery,
-  useGetMyPendingInvitesQuery,
+  useMyShoppingListInvitesLazyQuery,
+  useGetMyPendingInvitesLazyQuery,
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
@@ -19,6 +24,7 @@ import {
   NotificationCategory,
   NotificationPriority,
 } from '#store/slices/notificationSlice';
+import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 
 /**
  * Hook to fetch and display all pending invitations (home + shopping list)
@@ -39,21 +45,48 @@ export function useAllPendingInvites(userId?: string) {
 
   // Track if we've already processed invites to prevent duplicate additions
   const processedRef = useRef(false);
+  // Track if queries have been fetched this session
+  const hasFetchedRef = useRef(false);
 
-  // Query pending shopping list invites
-  const { data: shoppingListData, error: shoppingListError } =
-    useMyShoppingListInvitesQuery({
-      skip: !userId,
+  // PERFORMANCE: Use lazy queries to defer execution until after screen-critical queries complete
+  const [fetchShoppingListInvites, { data: shoppingListData, error: shoppingListError }] =
+    useMyShoppingListInvitesLazyQuery({
       fetchPolicy: 'cache-and-network',
       errorPolicy: 'all', // Return partial data on errors
     });
 
-  // Query pending home invites
-  const { data: homeData, error: homeError } = useGetMyPendingInvitesQuery({
-    skip: !userId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all', // Return partial data on errors
-  });
+  const [fetchHomeInvites, { data: homeData, error: homeError }] =
+    useGetMyPendingInvitesLazyQuery({
+      fetchPolicy: 'cache-and-network',
+      errorPolicy: 'all', // Return partial data on errors
+    });
+
+  // Fetch both invitation types in parallel
+  const fetchInvitations = useCallback(() => {
+    if (hasFetchedRef.current || !userId) return;
+    hasFetchedRef.current = true;
+
+    // Fire both queries in parallel (non-blocking)
+    fetchShoppingListInvites();
+    fetchHomeInvites();
+
+    if (__DEV__) {
+      console.log('📬 [useAllPendingInvites] Deferred invitation queries started');
+    }
+  }, [userId, fetchShoppingListInvites, fetchHomeInvites]);
+
+  // PERFORMANCE: Defer invitation queries by 2500ms to avoid competing with
+  // screen-critical queries (Pantry, StorageLocations) at startup.
+  // Invitations are not time-critical - users can wait a few seconds to see them.
+  useDeferredCallback(fetchInvitations, !!userId, 2500);
+
+  // Reset fetch flag on logout so queries run again on next login
+  useEffect(() => {
+    if (!userId) {
+      hasFetchedRef.current = false;
+      processedRef.current = false;
+    }
+  }, [userId]);
 
   // Log partial errors in development
   useEffect(() => {

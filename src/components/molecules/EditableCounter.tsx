@@ -108,7 +108,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="remove"
             size={theme.fonts.size.md}
-            color={disabled ? '#b0b0b0' : theme.colors.white}
+            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />
         </Pressable>
 
@@ -147,7 +147,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="add"
             size={theme.fonts.size.md}
-            color={disabled ? '#b0b0b0' : theme.colors.white}
+            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />
         </Pressable>
       </View>
@@ -165,7 +165,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     height: 48,
     borderWidth: 1,
-    borderColor: '#ececec',
+    borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
     paddingHorizontal: 4,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 2,
   },
   containerDisabled: {
-    borderColor: '#d0d0d0',
+    borderColor: theme.colors.border,
   },
   button: {
     zIndex: 9,
@@ -198,6 +198,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   inputDisabled: {
-    color: '#b0b0b0',
+    color: theme.colors.iconDisabled,
   },
 }));

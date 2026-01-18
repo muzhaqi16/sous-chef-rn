@@ -11,7 +11,7 @@ import { useAppNavigation } from '#hooks';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks';
 import { StorageLocationCard } from '#components/organisms/storageLocation';
-import { StorageLocationSheet } from '#components/modals/StorageLocationSheet';
+import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
 import { commonStyles } from '#styles';
 import { Icon } from '#utils';
 

@@ -31,7 +31,7 @@ import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModa
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
 import { AddToPantrySheet } from '#components/modals/AddToPantrySheet';
-import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet';
+import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet/AddStorageLocationSheet';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useStorageLocationManagement } from '#hooks';

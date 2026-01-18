@@ -159,7 +159,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
       )}
 
       {showSearchBar && (
-        <View style={styles.searchBarWrapper}>
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
           <SearchBar
             value={searchQuery || ''}
             onChangeText={onSearchChange}
@@ -223,11 +223,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
-  },
-  searchBarWrapper: {
-    paddingHorizontal: theme.spacing.md,
   },
 }));

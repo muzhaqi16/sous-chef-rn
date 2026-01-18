@@ -84,7 +84,7 @@ class HapticFeedbackService {
    */
   isEnabled(): boolean {
     const hapticEnabled = useStore.getState().hapticFeedbackEnabled;
-    return hapticEnabled && this.supported;
+    return (hapticEnabled ?? true) && this.supported;
   }
 
   /**

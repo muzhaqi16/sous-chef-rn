@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { AddButtonProps } from './types';
@@ -47,7 +47,7 @@ const styles = StyleSheet.create(theme => ({
     },
     shadowOpacity: 0.3,
     shadowRadius: theme.radii.md,
-    elevation: 8,
+    ...(Platform.OS === 'ios' && { elevation: 8 }),
   },
   addButtonDisabled: {
     opacity: 0.4,

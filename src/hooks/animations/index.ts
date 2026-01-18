@@ -7,3 +7,12 @@ export {
 
 // Re-export types for convenience
 export type { AnimationDirection } from '#/types/animations';
+
+// Local animation hooks
+export { useAnimatedPresence } from './useAnimatedPresence';
+export type {
+  SpringConfig,
+  AnimatedPresenceCallbacks,
+  UseAnimatedPresenceProps,
+  UseAnimatedPresenceReturn,
+} from './types';

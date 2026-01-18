@@ -1,11 +1,19 @@
-import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
-import { RefreshControl } from 'react-native';
+import React, { useMemo, useCallback, useRef, useState } from 'react';
+import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { TabView, TabRoute } from '#/components/molecules/TabView';
+import { TabView, type NavigationState, type Route } from 'react-native-tab-view';
+import { FilterTabBar } from './FilterTabBar';
 import { MemoizedShoppingTab } from './ShoppingTab';
 import { MemoizedPurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
+
+type ShoppingListTabId = 'shopping' | 'purchased';
+
+interface TabRoute extends Route {
+  key: ShoppingListTabId;
+  title: string;
+}
 
 interface ShoppingListTabsProps {
   items: SortableShoppingListItem[];
@@ -33,6 +41,7 @@ interface ShoppingListTabsProps {
   disabled?: boolean;
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
+  onClearAllShopping?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   // Pagination props for shopping tab
@@ -50,6 +59,11 @@ interface ShoppingListTabsProps {
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
 }
+
+const ROUTES: TabRoute[] = [
+  { key: 'shopping', title: 'Shopping' },
+  { key: 'purchased', title: 'Purchased' },
+];
 
 const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   items,
@@ -70,6 +84,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   disabled,
   emptyState,
   onClearAllPurchased,
+  onClearAllShopping,
   onSwipeableWillOpen,
   onSwipeableClose,
   // Pagination props
@@ -80,74 +95,18 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   hasMorePurchased,
   isLoadingMorePurchased,
   // Permission props - default to true for backward compatibility
-  canAddItems = true,
   canRemoveItems = true,
   canEditItems = true,
   canMarkPurchased = true,
   canReorderItems = false,
 }) => {
+  const layout = useWindowDimensions();
+
   // Track open swipeable across both tabs
   const openSwipeableRef = useRef<any>(null);
 
-  // Track if any swipeable is open to disable tab swipe (prevents gesture conflict)
-  const [isSwipeableOpen, setIsSwipeableOpen] = useState(false);
-
-  // PERFORMANCE: Use refs for callbacks to prevent renderScene recreation
-  // This avoids expensive scene re-creation when parent callbacks change
-  const callbacksRef = useRef({
-    onItemPress,
-    onItemEdit,
-    onItemDelete,
-    onTogglePurchase,
-    onMoveToPantry,
-    onQuantityPress,
-    onSortOrderUpdate,
-    onRefresh,
-    onClearAllPurchased,
-    onSwipeableClose,
-    onEndReachedUnpurchased,
-    onEndReachedPurchased,
-  });
-
-  // PERFORMANCE: Store state props in ref to prevent renderScene recreation
-  const stateRef = useRef({
-    loading,
-    disabled,
-    refreshing,
-    canAddItems,
-    canRemoveItems,
-    canEditItems,
-    canMarkPurchased,
-    canReorderItems,
-  });
-
-  // Keep refs updated with latest callbacks and state
-  useEffect(() => {
-    callbacksRef.current = {
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onMoveToPantry,
-      onQuantityPress,
-      onSortOrderUpdate,
-      onRefresh,
-      onClearAllPurchased,
-      onSwipeableClose,
-      onEndReachedUnpurchased,
-      onEndReachedPurchased,
-    };
-    stateRef.current = {
-      loading,
-      disabled,
-      refreshing,
-      canAddItems,
-      canRemoveItems,
-      canEditItems,
-      canMarkPurchased,
-      canReorderItems,
-    };
-  });
+  // TabView navigation state
+  const [index, setIndex] = useState(0);
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
@@ -166,31 +125,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const unpurchasedCount = totalCountUnpurchased ?? unpurchasedItems.length;
   const purchasedCount = totalCountPurchased ?? purchasedItems.length;
 
-  // Tab routes with badge counts
-  // PERFORMANCE: Only recreate when badge counts actually change
-  const routes: TabRoute[] = useMemo(
-    () => [
-      {
-        key: 'shopping',
-        title: 'Shopping',
-        badge: unpurchasedCount,
-      },
-      {
-        key: 'purchased',
-        title: 'Purchased',
-        badge: purchasedCount,
-      },
-    ],
-    [unpurchasedCount, purchasedCount],
-  );
-
-  // Handle tab index change - close any open swipeable
-  const handleIndexChange = useCallback((_newIndex: number) => {
+  // Handle tab change - close any open swipeable
+  const handleIndexChange = useCallback((newIndex: number) => {
     if (openSwipeableRef.current) {
       openSwipeableRef.current.current?.close();
       openSwipeableRef.current = null;
     }
-    setIsSwipeableOpen(false);
+    setIndex(newIndex);
   }, []);
 
   // Wrap swipeable handlers to use shared ref across tabs
@@ -200,100 +141,187 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         openSwipeableRef.current.current?.close();
       }
       openSwipeableRef.current = ref;
-      setIsSwipeableOpen(true);
       onSwipeableWillOpen?.(ref);
     },
     [onSwipeableWillOpen],
   );
 
-  // Handle swipeable close - reset state to re-enable tab swipe
+  // Handle swipeable close
   const handleSwipeableClose = useCallback(() => {
     openSwipeableRef.current = null;
-    setIsSwipeableOpen(false);
-    callbacksRef.current.onSwipeableClose?.();
-  }, []);
+    onSwipeableClose?.();
+  }, [onSwipeableClose]);
 
-  // Render scene for each tab
-  // PERFORMANCE: Use refs for callbacks, items, AND state to prevent scene recreation
-  // renderScene only recreates when stable handlers change (never for state/data changes)
-  // All dynamic data accessed via refs - child components re-render via their own React.memo
+  // Handle clear all purchased with confirmation dialog
+  const handleClearAllWithConfirmation = useCallback(() => {
+    if (purchasedItems.length === 0) return;
+
+    Alert.alert(
+      'Clear All Purchased Items',
+      `Are you sure you want to remove all ${purchasedItems.length} purchased items from this list?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            await onClearAllPurchased?.();
+          },
+        },
+      ],
+    );
+  }, [purchasedItems.length, onClearAllPurchased]);
+
+  // Handle clear all shopping (unpurchased) items with confirmation dialog
+  const handleClearAllShoppingWithConfirmation = useCallback(() => {
+    if (unpurchasedItems.length === 0) return;
+
+    Alert.alert(
+      'Clear All Shopping Items',
+      `Are you sure you want to remove all ${unpurchasedItems.length} items from your shopping list?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            await onClearAllShopping?.();
+          },
+        },
+      ],
+    );
+  }, [unpurchasedItems.length, onClearAllShopping]);
+
+  // Get the current clear handler based on active tab (by index)
+  const currentClearHandler =
+    index === 0
+      ? handleClearAllShoppingWithConfirmation
+      : handleClearAllWithConfirmation;
+
+  // Get current items count for the active tab
+  const currentItems = index === 0 ? unpurchasedItems : purchasedItems;
+  const showClear = canRemoveItems && currentItems.length > 0;
+
+  // Tab badge counts
+  const counts = useMemo(
+    () => ({
+      shopping: unpurchasedCount,
+      purchased: purchasedCount,
+    }),
+    [unpurchasedCount, purchasedCount],
+  );
+
+  // Render scene for TabView
   const renderScene = useCallback(
     ({ route }: { route: TabRoute }) => {
-      // Access latest callbacks and state from refs to avoid stale closures
-      const callbacks = callbacksRef.current;
-      const state = stateRef.current;
-
       switch (route.key) {
         case 'shopping':
           return (
             <MemoizedShoppingTab
               items={unpurchasedItems}
-              onItemPress={callbacks.onItemPress}
-              onItemEdit={callbacks.onItemEdit}
-              onItemDelete={callbacks.onItemDelete}
-              onTogglePurchase={callbacks.onTogglePurchase}
-              onQuantityPress={callbacks.onQuantityPress}
-              onSortOrderUpdate={callbacks.onSortOrderUpdate}
-              onRefresh={callbacks.onRefresh}
+              onItemPress={onItemPress}
+              onItemEdit={onItemEdit}
+              onItemDelete={onItemDelete}
+              onTogglePurchase={onTogglePurchase}
+              onQuantityPress={onQuantityPress}
+              onSortOrderUpdate={onSortOrderUpdate}
+              onRefresh={onRefresh}
               refreshing={refreshing}
-              loading={state.loading}
-              disabled={state.disabled}
+              loading={loading}
+              disabled={disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={handleSwipeableClose}
-              onEndReached={callbacks.onEndReachedUnpurchased}
+              onEndReached={onEndReachedUnpurchased}
               hasMore={hasMoreUnpurchased}
               isLoadingMore={isLoadingMoreUnpurchased}
-              canRemoveItems={state.canRemoveItems}
-              canEditItems={state.canEditItems}
-              canMarkPurchased={state.canMarkPurchased}
-              canReorderItems={state.canReorderItems}
+              canRemoveItems={canRemoveItems}
+              canEditItems={canEditItems}
+              canMarkPurchased={canMarkPurchased}
+              canReorderItems={canReorderItems}
             />
           );
-
         case 'purchased':
           return (
             <MemoizedPurchasedTab
               items={purchasedItems}
-              onItemPress={callbacks.onItemPress}
-              onItemEdit={callbacks.onItemEdit}
-              onItemDelete={callbacks.onItemDelete}
-              onTogglePurchase={callbacks.onTogglePurchase}
-              onMoveToPantry={callbacks.onMoveToPantry}
-              onQuantityPress={callbacks.onQuantityPress}
-              onClearAll={callbacks.onClearAllPurchased}
-              onRefresh={callbacks.onRefresh}
+              onItemPress={onItemPress}
+              onItemEdit={onItemEdit}
+              onItemDelete={onItemDelete}
+              onTogglePurchase={onTogglePurchase}
+              onMoveToPantry={onMoveToPantry}
+              onQuantityPress={onQuantityPress}
+              onRefresh={onRefresh}
               refreshing={refreshing}
-              disabled={state.disabled}
-              loading={state.loading}
+              disabled={disabled}
+              loading={loading}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={handleSwipeableClose}
-              onEndReached={callbacks.onEndReachedPurchased}
+              onEndReached={onEndReachedPurchased}
               hasMore={hasMorePurchased}
               isLoadingMore={isLoadingMorePurchased}
-              canRemoveItems={state.canRemoveItems}
-              canEditItems={state.canEditItems}
-              canMarkPurchased={state.canMarkPurchased}
+              canRemoveItems={canRemoveItems}
+              canEditItems={canEditItems}
+              canMarkPurchased={canMarkPurchased}
             />
           );
-
         default:
           return null;
       }
     },
-    // PERFORMANCE: Include filtered arrays to ensure tabs update when items change
-    // The memoized filter functions ensure these only change when items actually change
-    // NOTE: refreshing must be in deps so RefreshControl updates when refresh completes
     [
       unpurchasedItems,
       purchasedItems,
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      onMoveToPantry,
+      onQuantityPress,
+      onSortOrderUpdate,
+      onRefresh,
       refreshing,
-      hasMoreUnpurchased,
-      hasMorePurchased,
-      isLoadingMoreUnpurchased,
-      isLoadingMorePurchased,
+      loading,
+      disabled,
       handleSwipeableWillOpen,
       handleSwipeableClose,
+      onEndReachedUnpurchased,
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      onEndReachedPurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased,
+      canRemoveItems,
+      canEditItems,
+      canMarkPurchased,
+      canReorderItems,
     ],
+  );
+
+  // Custom tab bar renderer
+  const renderTabBar = useCallback(
+    (props: { navigationState: NavigationState<TabRoute>; jumpTo: (key: string) => void }) => (
+      <FilterTabBar
+        navigationState={props.navigationState}
+        jumpTo={props.jumpTo}
+        counts={counts}
+        actionButton={
+          showClear
+            ? {
+                label: 'Clear',
+                onPress: currentClearHandler,
+                testID: 'shopping-list-clear-all',
+              }
+            : undefined
+        }
+      />
+    ),
+    [counts, showClear, currentClearHandler],
   );
 
   // If no items at all AND not loading, show empty state
@@ -317,23 +345,23 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   }
 
   return (
-    <TabView
-      routes={routes}
-      renderScene={renderScene}
-      initialTabIndex={0}
-      lazy={true}
-      lazyPreloadDistance={0}
-      onIndexChange={handleIndexChange}
-      swipeEnabled={!isSwipeableOpen}
-    />
+    <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
+      <TabView
+        navigationState={{ index, routes: ROUTES }}
+        renderScene={renderScene}
+        renderTabBar={renderTabBar}
+        onIndexChange={handleIndexChange}
+        initialLayout={{ width: layout.width }}
+        swipeEnabled={true}
+        lazy={true}
+        lazyPreloadDistance={0}
+        overScrollMode="never"
+      />
+    </View>
   );
 };
 
 // PERFORMANCE: Memoize with shallow comparison
-// Since we use refs internally for callbacks and items, we only need to check:
-// - items array reference
-// - loading/disabled/refreshing state
-// Callbacks are accessed via refs so changing references don't matter
 const MemoizedShoppingListTabs = React.memo(ShoppingListTabs);
 
 // Export memoized version as default to ensure it's always used with optimization

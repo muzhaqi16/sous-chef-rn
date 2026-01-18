@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
@@ -78,26 +79,28 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   }
 
   return (
-    <SortableShoppingList
-      items={items}
-      onItemPress={onItemPress}
-      onItemEdit={onItemEdit}
-      onItemDelete={onItemDelete}
-      onTogglePurchase={onTogglePurchase}
-      onQuantityPress={onQuantityPress}
-      onSortOrderUpdate={onSortOrderUpdate}
-      disabled={disabled}
-      showsVerticalScrollIndicator={true}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      onSwipeableClose={onSwipeableClose}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      onEndReached={onEndReached}
-      canRemoveItems={canRemoveItems}
-      canEditItems={canEditItems}
-      canMarkPurchased={canMarkPurchased}
-      canReorderItems={canReorderItems}
-    />
+    <View style={{ flex: 1 }}>
+      <SortableShoppingList
+        items={items}
+        onItemPress={onItemPress}
+        onItemEdit={onItemEdit}
+        onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
+        onQuantityPress={onQuantityPress}
+        onSortOrderUpdate={onSortOrderUpdate}
+        disabled={disabled}
+        showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        onEndReached={onEndReached}
+        canRemoveItems={canRemoveItems}
+        canEditItems={canEditItems}
+        canMarkPurchased={canMarkPurchased}
+        canReorderItems={canReorderItems}
+      />
+    </View>
   );
 };
 

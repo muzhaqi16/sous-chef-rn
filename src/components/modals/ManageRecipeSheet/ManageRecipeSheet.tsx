@@ -489,7 +489,7 @@ const styles = StyleSheet.create(theme => ({
   },
   createButtonText: {
     fontSize: theme.fonts.size.base,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontWeight: '600',
   },
   createButtonTextDisabled: {

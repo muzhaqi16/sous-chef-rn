@@ -13,3 +13,4 @@ export {
   type ShoppingListSuggestionItem,
   type GroupedSuggestions,
 } from './useShoppingListSuggestions';
+export {useShoppingListActions} from './useShoppingListActions';

@@ -140,14 +140,14 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
           <View
             style={[
               styles.fadeLeft,
-              { backgroundColor: theme.colors.background },
+              { backgroundColor: theme.colors.surface },
             ]}
             pointerEvents="none"
           />
           <View
             style={[
               styles.fadeRight,
-              { backgroundColor: theme.colors.background },
+              { backgroundColor: theme.colors.surface },
             ]}
             pointerEvents="none"
           />
@@ -295,7 +295,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceVariant,
     marginRight: theme.spacing.sm,
     alignItems: 'center',
     minWidth: 90,

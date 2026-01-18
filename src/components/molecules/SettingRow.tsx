@@ -1,14 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, TouchableOpacity, Text, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  View,
-  TouchableOpacity,
-  Text,
-  Switch,
-  Modal,
-  ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
@@ -17,7 +16,7 @@ import {
 } from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils';
-import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet';
+import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 
 export interface SettingRowProps {
   item: any;
@@ -31,9 +30,25 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isLast,
 }) => {
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const animationConfigs = useSharedBottomSheetConfigs();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
+
+  useBottomSheetBackHandler(bottomSheetRef, modalVisible);
+
+  // Sync bottom sheet visibility with state
+  useEffect(() => {
+    if (item.type === 'modal') {
+      if (modalVisible) {
+        bottomSheetRef.current?.present();
+      } else {
+        bottomSheetRef.current?.dismiss();
+      }
+    }
+  }, [modalVisible, item.type]);
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);
@@ -78,6 +93,19 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const handleTextEditClose = useCallback(() => {
     setTextEditVisible(false);
   }, []);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+        pressBehavior="close"
+      />
+    ),
+    [],
+  );
 
   // Build accessibility label based on setting type
   const getAccessibilityLabel = () => {
@@ -227,54 +255,46 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         keyboardType={item.key === 'phone' ? 'phone-pad' : 'default'}
       />
 
-      {/* Selection Modal */}
+      {/* Selection Bottom Sheet */}
       {item.type === 'modal' && item.options && (
-        <Modal visible={modalVisible} animationType="slide">
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
+        <BottomSheetModal
+          ref={bottomSheetRef}
+          enableDynamicSizing
+          enablePanDownToClose
+          backdropComponent={renderBackdrop}
+          onDismiss={() => setModalVisible(false)}
+          animationConfigs={animationConfigs}
+          handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
+          backgroundStyle={{ backgroundColor: theme.colors.background }}
+        >
+          <BottomSheetView
+            style={[styles.sheetContent, { paddingBottom: insets.bottom + 16 }]}
+          >
+            <Text style={styles.sheetTitle}>{item.label}</Text>
+            <View style={styles.sheetDivider} />
+            {item.options.map((opt: any) => (
               <TouchableOpacity
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCloseButton}
+                key={opt.value}
+                style={styles.sheetOption}
+                onPress={handleModalOptionPress(opt.value)}
                 accessibilityRole="button"
-                accessibilityLabel="Close"
-                accessibilityHint="Close selection modal"
+                accessibilityLabel={opt.label}
+                accessibilityHint={`Select ${opt.label}`}
+                accessibilityState={{ selected: item.value === opt.value }}
               >
-                <Icon
-                  library="Feather"
-                  name="x"
-                  size={24}
-                  color={theme.colors.textPrimary}
-                />
+                <Text style={styles.sheetOptionText}>{opt.label}</Text>
+                {item.value === opt.value && (
+                  <Icon
+                    library="Feather"
+                    name="check"
+                    size={20}
+                    color={theme.colors.primary}
+                  />
+                )}
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>{item.label}</Text>
-              <View style={styles.modalHeaderSpacer} />
-            </View>
-
-            <ScrollView>
-              {item.options.map((opt: any) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={styles.modalOption}
-                  onPress={handleModalOptionPress(opt.value)}
-                  accessibilityRole="button"
-                  accessibilityLabel={opt.label}
-                  accessibilityHint={`Select ${opt.label}`}
-                  accessibilityState={{ selected: item.value === opt.value }}
-                >
-                  <Text style={styles.modalOptionText}>{opt.label}</Text>
-                  {item.value === opt.value && (
-                    <Icon
-                      library="Feather"
-                      name="check"
-                      size={20}
-                      color={theme.colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
+            ))}
+          </BottomSheetView>
+        </BottomSheetModal>
       )}
     </>
   );
@@ -313,42 +333,28 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
+  sheetContent: {
+    paddingHorizontal: theme.spacing.lg,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
-  },
-  modalTitle: {
+  sheetTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    flex: 1,
+    paddingVertical: theme.spacing.sm,
   },
-  modalCloseButton: {
-    padding: theme.spacing.xs,
-    minWidth: 60,
+  sheetDivider: {
+    height: 1,
+    backgroundColor: theme.colors.divider,
+    marginBottom: theme.spacing.sm,
   },
-  modalHeaderSpacer: {
-    width: theme.sizes.button.sm,
-  },
-  modalOption: {
+  sheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
+    paddingHorizontal: theme.spacing.sm,
   },
-  modalOptionText: {
+  sheetOptionText: {
     fontSize: theme.typography.fontSize.md,
     flex: 1,
     color: theme.colors.textPrimary,

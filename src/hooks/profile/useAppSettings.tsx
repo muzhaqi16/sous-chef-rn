@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStore} from '#store';
 import {
   useGetUserSettingsQuery,
@@ -49,14 +49,13 @@ export const useAppSettings = () => {
           },
         });
 
-        await refetch();
         return true;
       } catch (error) {
         console.error('Failed to update app setting:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updateSettings],
   );
 
   const updateMultipleSettings = useCallback(
@@ -68,14 +67,13 @@ export const useAppSettings = () => {
           },
         });
 
-        await refetch();
         return true;
       } catch (error) {
         console.error('Failed to update app settings:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updateSettings],
   );
 
   const resetToDefaults = useCallback(async () => {
@@ -91,8 +89,10 @@ export const useAppSettings = () => {
     return updateMultipleSettings(defaultSettings);
   }, [updateMultipleSettings]);
 
+  const memoizedSettings = useMemo(() => getAppSettings(), [getAppSettings]);
+
   return {
-    settings: getAppSettings(),
+    settings: memoizedSettings,
     loading,
     updateAppSetting,
     updateMultipleSettings,

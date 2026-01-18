@@ -81,30 +81,32 @@ export const TabView: React.FC<TabViewProps> = ({
       }));
 
       return (
-        <TabBar
-          {...props}
-          navigationState={{
-            ...props.navigationState,
-            routes: routesWithLabels,
-          }}
-          indicatorStyle={{
-            backgroundColor: theme.colors.primary,
-            height: 3,
-          }}
-          scrollEnabled={false}
-          tabStyle={{
-            flex: 1,
-          }}
-          style={{
-            backgroundColor: theme.colors.surface,
-            elevation: 0,
-            shadowOpacity: 0,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.colors.border,
-          }}
-          activeColor={theme.colors.primary}
-          inactiveColor={theme.colors.textSecondary}
-        />
+        <View style={styles.tabBarContainer}>
+          <TabBar
+            {...props}
+            navigationState={{
+              ...props.navigationState,
+              routes: routesWithLabels,
+            }}
+            indicatorStyle={{
+              backgroundColor: theme.colors.primary,
+              height: 3,
+            }}
+            scrollEnabled={false}
+            tabStyle={{
+              flex: 1,
+            }}
+            style={{
+              backgroundColor: theme.colors.surface,
+              elevation: 0,
+              shadowOpacity: 0,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.colors.border,
+            }}
+            activeColor={theme.colors.primary}
+            inactiveColor={theme.colors.textSecondary}
+          />
+        </View>
       );
     },
     [theme],
@@ -141,5 +143,9 @@ const styles = StyleSheet.create(theme => ({
   },
   placeholderText: {
     fontSize: theme.typography.fontSize.md,
+  },
+  tabBarContainer: {
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.background,
   },
 }));

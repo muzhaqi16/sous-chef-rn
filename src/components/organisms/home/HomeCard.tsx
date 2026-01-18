@@ -177,7 +177,7 @@ const styles = StyleSheet.create(theme => ({
         offsetY: 4,
         blurRadius: 15,
         spreadDistance: 1,
-        color: '#0000001A',
+        color: theme.colors.black + '1A',
       },
     ],
   },

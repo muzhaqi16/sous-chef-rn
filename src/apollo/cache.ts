@@ -420,6 +420,18 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
+          pantryItemSuggestions: {
+            // Different pantries have different suggestions - cache separately
+            keyArgs: ['pantryId', 'limit'],
+            merge(existing = [], incoming) {
+              // Suggestions are server-generated, so incoming replaces existing
+              // Preserve existing if network request failed
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
           // Item-level queries (return items within a list/pantry)
           pantryItems: {
             keyArgs: ['pantryId'],

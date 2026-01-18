@@ -34,7 +34,7 @@ export * from './CollapsiblePurchasedSection';
 export * from './EditableField';
 export * from './NavigationRow';
 export * from './InfoRow';
-export * from './TabView';
+export { TabView } from './TabView/TabView';
 export * from './FilterTabs';
 export * from './SectionHeader';
 export * from './AlertBanner';

@@ -13,6 +13,7 @@ import { Navigation } from '#navigation';
 import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
+import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#services/performance';
@@ -148,10 +149,9 @@ const App = () => {
             <SubscriptionProvider>
               <SafeAreaProvider>
                 <StatusBar
-                  translucent
-                  backgroundColor="transparent"
                   barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
                 />
+                <StatusBarBackground />
                 <SafeAreaView style={styles.container}>
                   <ToastProvider>
                     <NotificationProvider>

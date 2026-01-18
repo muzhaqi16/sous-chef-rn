@@ -17,6 +17,7 @@ import type {
   SortableShoppingListProps,
   SortableShoppingListItem,
 } from './types';
+import { HapticService } from '#services/haptic';
 import { SimpleDraggableItem } from './SortableItem';
 import {
   SortableListActionsProvider,
@@ -207,6 +208,27 @@ const SortableShoppingListComponent = forwardRef<
       [canReorderItems],
     );
 
+    // Handle haptic feedback from drag operations
+    const handleHapticFeedback = useCallback(
+      (type: 'light' | 'medium' | 'heavy' | 'selection') => {
+        switch (type) {
+          case 'light':
+            HapticService.light();
+            break;
+          case 'medium':
+            HapticService.medium();
+            break;
+          case 'heavy':
+            HapticService.heavy();
+            break;
+          case 'selection':
+            HapticService.selection();
+            break;
+        }
+      },
+      [],
+    );
+
     // Early validation
     if (!items || !Array.isArray(items)) {
       console.warn('SortableList: items is not a valid array', items);
@@ -241,6 +263,7 @@ const SortableShoppingListComponent = forwardRef<
               dragEnabled={canReorderItems}
               canDrag={canDrag}
               onReorderByNeighbors={onSortOrderUpdate}
+              onHapticFeedback={handleHapticFeedback}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }

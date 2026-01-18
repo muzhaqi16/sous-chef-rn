@@ -35,13 +35,13 @@ export const Backdrop = memo<BackdropProps>(({
 
 Backdrop.displayName = 'Backdrop';
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   backdrop: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 1)', // Will be controlled by animated opacity
+    backgroundColor: theme.colors.black, // Opacity controlled by animated style
   },
-});
+}));

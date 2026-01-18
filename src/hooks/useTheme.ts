@@ -30,22 +30,14 @@ export const useTheme = () => {
   const effectiveTheme = resolveEffectiveTheme();
 
   // Update Unistyles theme when effective theme changes
+  // This handles both explicit theme changes and system preference changes
+  // since effectiveTheme is derived from both userThemePreference and systemColorScheme
   useEffect(() => {
     // Only set theme if it's different from current
     if (UnistylesRuntime.themeName !== effectiveTheme) {
       UnistylesRuntime.setTheme(effectiveTheme);
     }
   }, [effectiveTheme]);
-
-  // Update system theme detection when system changes (only if user prefers system)
-  useEffect(() => {
-    if (
-      userThemePreference === 'SYSTEM' &&
-      UnistylesRuntime.themeName !== effectiveTheme
-    ) {
-      UnistylesRuntime.setTheme(effectiveTheme);
-    }
-  }, [systemColorScheme, userThemePreference, effectiveTheme]);
 
   return {
     // Current effective theme ('light' or 'dark')

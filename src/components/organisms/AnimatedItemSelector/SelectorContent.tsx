@@ -63,12 +63,12 @@ export const SelectorContent = <T extends SelectableItem>({
   );
 
   // PERFORMANCE: getItemLayout for better scroll performance
-  // Item height = paddingVertical (32) + text (~24) + border (2) + marginBottom (8) ≈ 66px
+  // Item height = paddingVertical (16) + text (~24) + border (2) + marginBottom (16) ≈ 58px
   // Only use when renderCustomItem is not provided (standard items have fixed height)
   const getItemLayout = !renderCustomItem
     ? (_data: ArrayLike<T> | null | undefined, index: number) => ({
-        length: 66,
-        offset: 66 * index,
+        length: 58,
+        offset: 58 * index,
         index,
       })
     : undefined;

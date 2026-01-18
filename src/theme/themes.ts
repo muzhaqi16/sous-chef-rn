@@ -184,8 +184,16 @@ export const darkTheme = {
     // Validation colors - for forms
     validation: colors.validation,
 
-    // Pantry redesign colors
-    expiration: colors.expiration,
+    // Pantry redesign colors - dark mode specific expiration colors
+    expiration: {
+      expiredBg: 'rgba(220, 38, 38, 0.15)',      // Subtle red tint
+      expiredBorder: 'rgba(220, 38, 38, 0.3)',   // Slightly visible red border
+      expiredText: '#FCA5A5',                     // Lighter red for readability
+      expiredIconBg: 'rgba(220, 38, 38, 0.2)',   // Subtle red for icon bg
+      warningText: '#FDBA74',                     // Lighter orange for readability
+      warningBg: 'rgba(234, 88, 12, 0.15)',      // Subtle orange tint
+      warningBorder: 'rgba(234, 88, 12, 0.3)',   // Slightly visible orange border
+    },
     filterTab: colors.filterTab,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,

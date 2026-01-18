@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useGetStorageLocationsQuery,
-  useGetStorageLocationTreeQuery,
+  useGetStorageLocationTreeLazyQuery,
   useCreateStorageLocationMutation,
   useUpdateStorageLocationMutation,
   useDeleteStorageLocationMutation,
@@ -68,21 +68,47 @@ function buildTreeFromFlatList(locations: any[]): any[] {
  */
 export function useStorageLocationManagement(homeId: string | undefined) {
   const shouldSkip = !homeId;
+  // Track if tree query has been fetched
+  const hasTreeFetchedRef = useRef(false);
 
-  // Queries
+  // PERFORMANCE OPTIMIZATION:
+  // Use cache-first to show cached data instantly, then background refresh with nextFetchPolicy.
+  // This reduces initial network load and shows UI immediately.
   const { data, loading, error, refetch } = useGetStorageLocationsQuery({
     variables: { homeId: homeId ?? '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first', // Show cached data instantly
+    nextFetchPolicy: 'cache-and-network', // Background refresh on subsequent fetches
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  const { data: treeData } = useGetStorageLocationTreeQuery({
-    variables: { homeId: homeId ?? '' },
-    skip: shouldSkip,
-    fetchPolicy: 'cache-and-network',
+  // PERFORMANCE: Tree query is lazy - only needed for management screens, not filter tabs.
+  // The flat list query above is sufficient for most UI needs.
+  // We can build a tree from the flat list as a fallback.
+  const [fetchTree, { data: treeData }] = useGetStorageLocationTreeLazyQuery({
+    fetchPolicy: 'cache-first',
+    nextFetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
+
+  // Fetch tree data after initial locations load (deferred, non-blocking)
+  useEffect(() => {
+    if (!shouldSkip && homeId && data?.storageLocations && !hasTreeFetchedRef.current) {
+      hasTreeFetchedRef.current = true;
+      // Defer tree fetch to avoid competing with screen-critical queries
+      const timeoutId = setTimeout(() => {
+        fetchTree({ variables: { homeId } });
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [shouldSkip, homeId, data?.storageLocations, fetchTree]);
+
+  // Reset fetch flag when homeId changes
+  useEffect(() => {
+    if (!homeId) {
+      hasTreeFetchedRef.current = false;
+    }
+  }, [homeId]);
 
   // CRUD operations utilities
   const { createAddOperation } = useCrudOperations();

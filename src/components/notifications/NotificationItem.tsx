@@ -66,7 +66,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           <Icon
             name="close"
             size={20}
-            color={theme.colors.textTertiary || '#999'}
+            color={theme.colors.textTertiary}
           />
         </TouchableOpacity>
       )}
@@ -80,10 +80,10 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
   },
   unreadContainer: {
-    backgroundColor: theme.colors.primaryLight || '#E3F2FD',
+    backgroundColor: theme.colors.primaryLight,
   },
   iconContainer: {
     width: 40,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.md,
   },
   unreadIconContainer: {
-    backgroundColor: theme.colors.primary || '#62B1F6',
+    backgroundColor: theme.colors.primary,
     opacity: 0.2,
   },
   contentContainer: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create(theme => ({
   },
   timestamp: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary || '#999',
+    color: theme.colors.textTertiary,
   },
   dismissButton: {
     padding: theme.spacing.xs,

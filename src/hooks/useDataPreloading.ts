@@ -1,8 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useDeferredCallback } from './performance/useDeferredCallback';
 import {
-  useGetCommonUnitsQuery,
+  useGetCommonUnitsLazyQuery,
   useGetShoppingListsLiteLazyQuery,
   useGetPantryLazyQuery,
   useMySavedRecipesLazyQuery,
@@ -40,12 +40,15 @@ export function useDataPreloading() {
   const hasCachedUnitsRef = useRef(false);
   // Track if background preload has run this session
   const hasPreloadedRef = useRef(false);
+  // Track if units query has been fetched this session
+  const hasUnitsQueryFetchedRef = useRef(false);
+  // Track loading state for deferred units query
+  const [unitsLoading, setUnitsLoading] = useState(false);
+  const [unitsError, setUnitsError] = useState<Error | undefined>(undefined);
 
-  // Preload common units data when authenticated
-  // Uses cache-and-network to show cached data immediately while fetching fresh data
-  // Only loads frequently-used units (~10-50) instead of all 1000+ units
-  const { data, loading, error } = useGetCommonUnitsQuery({
-    skip: !isAuthenticated,
+  // PERFORMANCE: Use lazy query for common units to defer execution
+  // Units are only needed when user opens add item sheet - not at startup
+  const [fetchCommonUnits, { data }] = useGetCommonUnitsLazyQuery({
     fetchPolicy: 'cache-and-network', // Show cache, then update from network
     errorPolicy: 'ignore', // Don't fail on network errors, use cached data
   });
@@ -65,6 +68,30 @@ export function useDataPreloading() {
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
   });
+
+  // Fetch common units with deferred execution
+  const fetchUnits = useCallback(async () => {
+    if (hasUnitsQueryFetchedRef.current || !isOnline) return;
+    hasUnitsQueryFetchedRef.current = true;
+
+    if (__DEV__) {
+      console.log('📦 [useDataPreloading] Deferred common units query started');
+    }
+
+    setUnitsLoading(true);
+    try {
+      await fetchCommonUnits();
+    } catch (err) {
+      setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
+    } finally {
+      setUnitsLoading(false);
+    }
+  }, [isOnline, fetchCommonUnits]);
+
+  // PERFORMANCE: Defer common units query by 1500ms to avoid competing with
+  // screen-critical queries (Pantry, StorageLocations) at startup.
+  // Units are only needed when user opens add item sheet.
+  useDeferredCallback(fetchUnits, isAuthenticated && isOnline, 1500);
 
   // Background preload function - fires all queries in parallel
   const runBackgroundPreload = useCallback(() => {
@@ -96,16 +123,18 @@ export function useDataPreloading() {
     runBackgroundPreload();
   }, isAuthenticated && isOnline);
 
-  // Reset preload flag on logout so it runs again on next login
+  // Reset preload flags on logout so queries run again on next login
   useEffect(() => {
     if (!isAuthenticated) {
       hasPreloadedRef.current = false;
+      hasUnitsQueryFetchedRef.current = false;
+      hasCachedUnitsRef.current = false;
     }
   }, [isAuthenticated]);
 
   return {
-    isPreloading: loading,
-    preloadError: error,
+    isPreloading: unitsLoading,
+    preloadError: unitsError,
     unitsLoaded: cachedUnits.length > 0,
   };
 }

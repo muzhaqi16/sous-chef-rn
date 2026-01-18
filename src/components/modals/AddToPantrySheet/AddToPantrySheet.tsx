@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 import { View, Text, ActivityIndicator } from 'react-native';
+// Note: LinearTransition removed due to JSI assertion failure on app launch
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -22,6 +24,8 @@ import {
   useCreatePantryItemMutation,
   useAutocompleteItemsLazyQuery,
   useGetPantryQuery,
+  GetPantryItemSuggestionsDocument,
+  GetPantryItemSuggestionsQuery,
   ItemSuggestion,
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -53,6 +57,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const animationConfigs = useSharedBottomSheetConfigs();
   const { navigateTo } = useAppNavigation();
   useBottomSheetBackHandler(bottomSheetRef, visible);
+  const client = useApolloClient();
 
   // Online status for autocomplete
   const isOnline = useAppStore(state => state.isOnline);
@@ -64,6 +69,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [showAddDetails, setShowAddDetails] = useState(false);
   const [prefilledItemName, setPrefilledItemName] = useState('');
 
+  // Track items currently animating out
+  const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
+
+  // Defer query execution until sheet animation completes
+  const [shouldFetch, setShouldFetch] = useState(false);
+
   // Autocomplete query
   const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
     useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
@@ -72,6 +83,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     autocompleteData?.autocompleteItems?.suggestions ?? [];
 
   // Fetch pantry item suggestions (replaces popular items and recently deleted)
+  // Defer fetch until shouldFetch is true to avoid blocking sheet animation
   const {
     grouped: suggestionGroups,
     loading: loadingSuggestions,
@@ -80,7 +92,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   } = usePantryItemSuggestions({
     pantryId,
     limit: 15,
-    skip: !visible,
+    skip: !visible || !shouldFetch,
   });
 
   // Fetch pantry to get storage locations
@@ -95,6 +107,28 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     ? normalizePantry(pantryData.pantry)
     : null;
   const storageLocations = normalizedPantry?.storageLocations || [];
+
+  // Helper to optimistically remove item from suggestions cache (prevents flickering)
+  const removeFromSuggestionsCache = useCallback(
+    (itemId: string) => {
+      client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
+        {
+          query: GetPantryItemSuggestionsDocument,
+          variables: { pantryId: pantryId!, limit: 15 },
+        },
+        data => {
+          if (!data) return data;
+          return {
+            ...data,
+            pantryItemSuggestions: data.pantryItemSuggestions.filter(
+              s => s.itemId !== itemId,
+            ),
+          };
+        },
+      );
+    },
+    [client.cache, pantryId],
+  );
 
   // Create pantry item mutation for quick add
   const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation(
@@ -138,8 +172,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       setSearchQuery('');
       setShowAddDetails(false);
       setPrefilledItemName('');
+
+      // Defer fetch until after sheet animation (50ms)
+      const timer = setTimeout(() => setShouldFetch(true), 50);
+      return () => clearTimeout(timer);
     } else {
       bottomSheetRef.current?.dismiss();
+      setShouldFetch(false); // Reset on close
     }
   }, [visible, pantryId]);
 
@@ -160,59 +199,70 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     setShowAddDetails(true);
   }, []);
 
-  // Handle quick add from autocomplete suggestion
+  // Handle quick add from autocomplete suggestion (fire-and-forget pattern)
   const handleQuickAddSearchSuggestion = useCallback(
-    async (item: ItemSuggestion) => {
+    (item: ItemSuggestion) => {
       if (!pantryId || creating) return;
 
-      try {
-        await createPantryItem({
-          variables: {
-            input: {
-              pantryId,
-              itemId: item.id,
-              itemName: item.name,
-              quantity: 1,
-            },
-          },
-        });
+      // 1. Show toast immediately (don't wait for mutation)
+      toastService.success(`Added ${item.name} (Qty: 1)`);
 
-        toastService.success(`Added ${item.name} (Qty: 1)`);
-        // Clear search after adding
-        searchBarRef.current?.clear();
-        setSearchQuery('');
-        refetchSuggestions();
-      } catch {
+      // 2. Clear search after adding
+      searchBarRef.current?.clear();
+      setSearchQuery('');
+
+      // 3. Optimistically remove from suggestions cache
+      removeFromSuggestionsCache(item.id);
+
+      // 4. Fire mutation without await
+      createPantryItem({
+        variables: {
+          input: {
+            pantryId,
+            itemId: item.id,
+            itemName: item.name,
+            quantity: 1,
+          },
+        },
+      }).catch(() => {
         toastService.error('Failed to add item. Please try again.');
-      }
+      });
     },
-    [pantryId, creating, createPantryItem, refetchSuggestions],
+    [pantryId, creating, createPantryItem, removeFromSuggestionsCache],
   );
 
-  // Handle quick add from pantry item suggestion
+  // Handle quick add from pantry item suggestion (fire-and-forget pattern)
   const handleQuickAddSuggestion = useCallback(
-    async (item: PantryItemSuggestion) => {
-      if (!pantryId || creating) return;
+    (item: PantryItemSuggestion) => {
+      if (!pantryId || creating || exitingItems.has(item.itemId)) return;
 
-      try {
-        await createPantryItem({
-          variables: {
-            input: {
-              pantryId,
-              itemId: item.itemId,
-              itemName: item.name,
-              quantity: 1,
-            },
+      // 1. Start exit animation immediately (optimistic)
+      setExitingItems(prev => new Set(prev).add(item.itemId));
+
+      // 2. Show toast immediately (don't wait for mutation)
+      toastService.success(`Added ${item.name} (Qty: 1)`);
+
+      // 3. Fire mutation without await
+      createPantryItem({
+        variables: {
+          input: {
+            pantryId,
+            itemId: item.itemId,
+            itemName: item.name,
+            quantity: 1,
           },
+        },
+      }).catch(() => {
+        // On error: remove from exiting, show error toast
+        setExitingItems(prev => {
+          const next = new Set(prev);
+          next.delete(item.itemId);
+          return next;
         });
-
-        toastService.success(`Added ${item.name} (Qty: 1)`);
-        refetchSuggestions();
-      } catch {
-        toastService.error('Failed to add item. Please try again.');
-      }
+        toastService.error('Failed to add item');
+      });
     },
-    [pantryId, creating, createPantryItem, refetchSuggestions],
+    [pantryId, creating, exitingItems, createPantryItem],
   );
 
   // Handle successful add from details sheet
@@ -236,7 +286,20 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Show suggestions when search is empty
   const showSuggestions = !showSearchResults;
 
-  // Render a suggestion item with image
+  // Handle exit animation complete - remove from cache and exiting state
+  const handleExitComplete = useCallback(
+    (itemId: string) => {
+      removeFromSuggestionsCache(itemId);
+      setExitingItems(prev => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    },
+    [removeFromSuggestionsCache],
+  );
+
+  // Render a suggestion item with image and animation props
   const renderSuggestionItem = useCallback(
     (item: PantryItemSuggestion) => (
       <SuggestionListItem
@@ -246,10 +309,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         subtitle={item.category}
         placeholderIcon="inventory-2"
         onQuickAdd={() => handleQuickAddSuggestion(item)}
-        quickAddDisabled={creating}
+        quickAddDisabled={creating || exitingItems.has(item.itemId)}
+        isExiting={exitingItems.has(item.itemId)}
+        onExitComplete={() => handleExitComplete(item.itemId)}
       />
     ),
-    [creating, handleQuickAddSuggestion],
+    [creating, exitingItems, handleQuickAddSuggestion, handleExitComplete],
   );
 
   // Render a section of suggestions

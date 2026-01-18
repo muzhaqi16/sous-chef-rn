@@ -76,11 +76,11 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   errorText: {
-    color: 'red',
-    marginTop: 10,
+    color: theme.colors.error,
+    marginTop: theme.spacing.sm,
   },
-});
+}));
 
 export default ShareShoppingListBottomSheet;

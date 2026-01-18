@@ -83,18 +83,32 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
       // Update isDefault field on all homes in cache
       cache.modify({
         fields: {
-          homes: (existingHomes = [], { readField }) => {
-            return existingHomes.map((homeRef: any) => {
+          homes: (existingHomes, { readField }) => {
+            // Handle connection type: homes has { edges: [...] }
+            if (!existingHomes || !existingHomes.edges) {
+              return existingHomes;
+            }
+
+            // Iterate through edges to update isDefault on each home
+            existingHomes.edges.forEach((edge: any) => {
+              const homeRef = edge?.node || edge;
+              if (!homeRef) return;
+
               const homeId = readField('id', homeRef);
-              // Update isDefault field on each home
-              cache.modify({
-                id: cache.identify(homeRef),
-                fields: {
-                  isDefault: () => homeId === variables.homeId,
-                },
-              });
-              return homeRef;
+              const cacheId = cache.identify(homeRef);
+
+              if (cacheId) {
+                cache.modify({
+                  id: cacheId,
+                  fields: {
+                    isDefault: () => homeId === variables.homeId,
+                  },
+                });
+              }
             });
+
+            // Return existing unchanged - we modified entities directly
+            return existingHomes;
           },
         },
       });

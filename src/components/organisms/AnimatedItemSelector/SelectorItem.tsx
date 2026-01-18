@@ -1,14 +1,12 @@
 import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import Animated, {
-  LinearTransition,
-  FadeInUp,
-} from 'react-native-reanimated';
+import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import type { SelectorItemProps, SelectableItem } from './types';
 
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedTouchableOpacity =
+  Animated.createAnimatedComponent(TouchableOpacity);
 
 export const SelectorItem = <T extends SelectableItem>({
   item,
@@ -33,18 +31,10 @@ export const SelectorItem = <T extends SelectableItem>({
     <AnimatedTouchableOpacity
       entering={FadeInUp.delay(index * 40).springify()}
       layout={LinearTransition}
-      style={[
-        styles.item,
-        isSelected && styles.selectedItem,
-      ]}
+      style={[styles.item, isSelected && styles.selectedItem]}
       onPress={onPress}
     >
-      <Text
-        style={[
-          styles.itemText,
-          isSelected && styles.selectedItemText,
-        ]}
-      >
+      <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
         {String(item[displayProperty])}
       </Text>
       {isSelected && (
@@ -63,7 +53,7 @@ const styles = StyleSheet.create(theme => ({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.spacing.sm,
     backgroundColor: theme.colors.surface,

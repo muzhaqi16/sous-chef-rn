@@ -1,66 +1,58 @@
 import { useCallback } from 'react';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { useAnimatedPresence } from '#/hooks/animations';
 import type { UseActionTrayProps, UseActionTrayReturn } from '../types';
+
+const SPRING_CONFIG = { mass: 0.4, damping: 15, stiffness: 150 };
 
 export const useActionTray = ({
   maxHeight,
   onClose,
   onOpen,
 }: UseActionTrayProps): UseActionTrayReturn => {
+  const presence = useAnimatedPresence({
+    springConfig: SPRING_CONFIG,
+    callbacks: {
+      onOpenStart: onOpen,
+      onCloseComplete: onClose,
+    },
+  });
+
+  // Keep translateY separate for gesture compatibility
   const translateY = useSharedValue(maxHeight);
-  const active = useSharedValue(false);
 
   const scrollTo = useCallback(
     (destination: number) => {
       'worklet';
-      active.value = destination !== maxHeight;
+      translateY.value = withSpring(destination, SPRING_CONFIG);
 
-      translateY.value = withSpring(destination, {
-        mass: 0.4,
-        damping: 15,
-        stiffness: 150,
-      });
+      if (destination === 0) {
+        presence.open();
+      } else if (destination === maxHeight) {
+        presence.close();
+      }
     },
-    [maxHeight, active, translateY],
+    [maxHeight, translateY, presence],
   );
 
   const open = useCallback(() => {
     'worklet';
-    if (onOpen) {
-      scheduleOnRN(onOpen);
-    }
     scrollTo(0);
-  }, [scrollTo, onOpen]);
+  }, [scrollTo]);
 
   const close = useCallback(() => {
     'worklet';
-    if (onClose) {
-      scheduleOnRN(onClose);
-    }
     scrollTo(maxHeight);
-  }, [maxHeight, scrollTo, onClose]);
-
-  const isActive = useCallback(() => {
-    return active.value;
-  }, [active]);
-
-  const toggle = useCallback(() => {
-    'worklet';
-    if (active.value) {
-      close();
-    } else {
-      open();
-    }
-  }, [active, close, open]);
+  }, [scrollTo, maxHeight]);
 
   return {
     translateY,
-    active,
+    active: presence.isVisible,
+    touchable: presence.shouldRender,
     scrollTo,
     open,
     close,
-    isActive,
-    toggle,
+    isActive: presence.isActive,
+    toggle: presence.toggle,
   };
 };

@@ -43,10 +43,10 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(_theme => ({
   indicator: {
     position: 'absolute',
     height: '100%',
     opacity: 0.35,
   },
-});
+}));

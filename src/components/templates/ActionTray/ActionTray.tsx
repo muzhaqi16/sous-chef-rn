@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useMemo } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -30,7 +30,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     },
     ref,
   ) => {
-    const { translateY, active, scrollTo, open, close, isActive, toggle } =
+    const { translateY, active, touchable, scrollTo, open, close, isActive, toggle } =
       useActionTray({
         maxHeight,
         onClose,
@@ -90,6 +90,19 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       };
     }, [MAX_TRANSLATE_Y]);
 
+    // Fade based on translateY position for smooth visibility transitions
+    const visibilityStyle = useAnimatedStyle(
+      () => ({
+        opacity: interpolate(
+          translateY.value,
+          [maxHeight, 0],
+          [0, 1],
+          Extrapolation.CLAMP,
+        ),
+      }),
+      [maxHeight],
+    );
+
     const handleBackdropTap = () => {
       close();
     };
@@ -98,15 +111,17 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       close();
     };
 
-    // FIX: translateY animation MUST be on the container with position: absolute
-    // Otherwise the container stays visible even when "closed"
+    // Always render for smooth animations - control visibility with opacity and pointerEvents
     return (
       <>
         {enableBackdrop && (
           <Backdrop onTap={handleBackdropTap} isActive={active} />
         )}
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.container, { maxHeight }, trayStyle, style]}>
+          <Animated.View
+            style={[styles.container, { maxHeight }, trayStyle, visibilityStyle, style]}
+            pointerEvents={touchable ? 'auto' : 'none'}
+          >
             <ActionTrayContent
               title={title}
               showCloseButton={showCloseButton}
@@ -127,21 +142,29 @@ export type { ActionTrayRef, ActionTrayProps } from './types';
 
 const styles = UnistylesStyleSheet.create(theme => ({
   container: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
     width: '95%',
     position: 'absolute',
     bottom: 30,
     borderCurve: 'continuous',
     alignSelf: 'center',
     padding: theme.spacing.lg,
-    // Add shadow for better visual separation
-    shadowColor: theme.colors.textPrimary,
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    // Apply shadows only on iOS to prevent visual artifacts in Android edge-to-edge mode
+    ...(Platform.OS === 'ios'
+      ? {
+          shadowColor: theme.colors.textPrimary,
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 8,
+        }
+      : {
+          elevation: 0,
+        }),
   },
 }));

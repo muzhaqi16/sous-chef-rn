@@ -64,11 +64,11 @@ const ReusableBottomSheet = forwardRef<
   );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    padding: 16,
+    padding: theme.spacing.md,
   },
-});
+}));
 
 export default ReusableBottomSheet;
