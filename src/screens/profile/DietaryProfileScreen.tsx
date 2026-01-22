@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -35,7 +35,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
-  const handleRemoveRestriction = (id: string) => {
+  const handleRemoveRestriction = useCallback((id: string) => {
     Alert.alert(
       'Remove Restriction',
       'Are you sure you want to remove this dietary restriction?',
@@ -53,10 +53,10 @@ export const DietaryProfileScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
       ],
     );
-  };
+  }, [removeDietaryRestriction]);
 
   // Batch add restrictions handler
-  const handleAddRestrictions = async (
+  const handleAddRestrictions = useCallback(async (
     restrictions: {
       diet?: Diet;
       intolerance?: Intolerance;
@@ -78,12 +78,12 @@ export const DietaryProfileScreen: React.FC = () => {
       console.error('Error adding restrictions:', error);
       return false;
     }
-  };
+  }, [addDietaryRestriction]);
 
   // Cooking preferences state
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
 
-  const handleSaveCookingPrefs = async (values: {
+  const handleSaveCookingPrefs = useCallback(async (values: {
     cookingSkillLevel?: string;
     maxPrepTimeMinutes?: number;
     maxCookTimeMinutes?: number;
@@ -94,12 +94,12 @@ export const DietaryProfileScreen: React.FC = () => {
       setEditingCookingPrefs(false);
     }
     return success;
-  };
+  }, [updateDietaryProfile]);
 
   // Macro targets state
   const [editingMacros, setEditingMacros] = useState(false);
 
-  const handleSaveMacros = async (values: {
+  const handleSaveMacros = useCallback(async (values: {
     calorieTarget?: number;
     proteinTarget?: number;
     carbsTarget?: number;
@@ -110,7 +110,78 @@ export const DietaryProfileScreen: React.FC = () => {
       setEditingMacros(false);
     }
     return success;
-  };
+  }, [updateDietaryProfile]);
+
+  // Cuisine handlers
+  const handleAddCuisine = useCallback(async (cuisine: Cuisine) => {
+    const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
+    return await updateDietaryProfile({
+      preferredCuisines: [...currentCuisines, cuisine],
+    });
+  }, [profile?.preferredCuisines, updateDietaryProfile]);
+
+  const handleRemoveCuisine = useCallback(async (cuisine: Cuisine) => {
+    const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
+    await updateDietaryProfile({
+      preferredCuisines: currentCuisines.filter(c => c !== cuisine),
+    });
+  }, [profile?.preferredCuisines, updateDietaryProfile]);
+
+  // Ingredient handlers
+  const handleAddFavoriteIngredient = useCallback(async (ingredient: string) => {
+    return await updateDietaryProfile({
+      favoriteIngredients: [...(profile?.favoriteIngredients || []), ingredient],
+    });
+  }, [profile?.favoriteIngredients, updateDietaryProfile]);
+
+  const handleRemoveFavoriteIngredient = useCallback(async (ingredient: string) => {
+    await updateDietaryProfile({
+      favoriteIngredients: (profile?.favoriteIngredients || []).filter(
+        i => i !== ingredient,
+      ),
+    });
+  }, [profile?.favoriteIngredients, updateDietaryProfile]);
+
+  const handleAddDislikedIngredient = useCallback(async (ingredient: string) => {
+    return await updateDietaryProfile({
+      dislikedIngredients: [...(profile?.dislikedIngredients || []), ingredient],
+    });
+  }, [profile?.dislikedIngredients, updateDietaryProfile]);
+
+  const handleRemoveDislikedIngredient = useCallback(async (ingredient: string) => {
+    await updateDietaryProfile({
+      dislikedIngredients: (profile?.dislikedIngredients || []).filter(
+        i => i !== ingredient,
+      ),
+    });
+  }, [profile?.dislikedIngredients, updateDietaryProfile]);
+
+  // Modal handlers
+  const handleOpenMeals = useCallback(() => setEditingMeals(true), []);
+  const handleCloseMeals = useCallback(() => setEditingMeals(false), []);
+  const handleOpenSnacks = useCallback(() => setEditingSnacks(true), []);
+  const handleCloseSnacks = useCallback(() => setEditingSnacks(false), []);
+  const handleOpenCookingPrefs = useCallback(() => setEditingCookingPrefs(true), []);
+  const handleCloseCookingPrefs = useCallback(() => setEditingCookingPrefs(false), []);
+  const handleOpenMacros = useCallback(() => setEditingMacros(true), []);
+  const handleCloseMacros = useCallback(() => setEditingMacros(false), []);
+
+  const handleSaveMeals = useCallback(async (value: number) => {
+    return await updateDietaryProfile({ mealsPerDay: value });
+  }, [updateDietaryProfile]);
+
+  const handleSaveSnacks = useCallback(async (value: number) => {
+    return await updateDietaryProfile({ snacksPerDay: value });
+  }, [updateDietaryProfile]);
+
+  // Memoize container style
+  const favoriteContainerStyle = useMemo(() => (
+    { marginTop: theme.spacing.md }
+  ), [theme.spacing.md]);
+
+  const dislikedContainerStyle = useMemo(() => (
+    { marginTop: theme.spacing.md }
+  ), [theme.spacing.md]);
 
   if (loading) {
     return (
@@ -159,68 +230,30 @@ export const DietaryProfileScreen: React.FC = () => {
         <View style={styles.sectionCard}>
           <CuisineSelector
             selectedCuisines={(profile.preferredCuisines || []) as Cuisine[]}
-            onAdd={async (cuisine: Cuisine) => {
-              const currentCuisines = (profile.preferredCuisines ||
-                []) as Cuisine[];
-              return await updateDietaryProfile({
-                preferredCuisines: [...currentCuisines, cuisine],
-              });
-            }}
-            onRemove={async (cuisine: Cuisine) => {
-              const currentCuisines = (profile.preferredCuisines ||
-                []) as Cuisine[];
-              await updateDietaryProfile({
-                preferredCuisines: currentCuisines.filter(c => c !== cuisine),
-              });
-            }}
+            onAdd={handleAddCuisine}
+            onRemove={handleRemoveCuisine}
           />
 
           <StringArrayManager
             title="Favorite Ingredients"
             items={profile.favoriteIngredients}
-            onAdd={async ingredient => {
-              return await updateDietaryProfile({
-                favoriteIngredients: [
-                  ...profile.favoriteIngredients,
-                  ingredient,
-                ],
-              });
-            }}
-            onRemove={async ingredient => {
-              await updateDietaryProfile({
-                favoriteIngredients: profile.favoriteIngredients.filter(
-                  i => i !== ingredient,
-                ),
-              });
-            }}
+            onAdd={handleAddFavoriteIngredient}
+            onRemove={handleRemoveFavoriteIngredient}
             inputPlaceholder="e.g., Garlic, Basil, Chicken"
             addButtonLabel="Add Favorite Ingredient"
             emptyMessage="No favorite ingredients added yet"
-            containerStyle={{ marginTop: theme.spacing.md }}
+            containerStyle={favoriteContainerStyle}
           />
 
           <StringArrayManager
             title="Disliked Ingredients"
             items={profile.dislikedIngredients}
-            onAdd={async ingredient => {
-              return await updateDietaryProfile({
-                dislikedIngredients: [
-                  ...profile.dislikedIngredients,
-                  ingredient,
-                ],
-              });
-            }}
-            onRemove={async ingredient => {
-              await updateDietaryProfile({
-                dislikedIngredients: profile.dislikedIngredients.filter(
-                  i => i !== ingredient,
-                ),
-              });
-            }}
+            onAdd={handleAddDislikedIngredient}
+            onRemove={handleRemoveDislikedIngredient}
             inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
             addButtonLabel="Add Disliked Ingredient"
             emptyMessage="No disliked ingredients added yet"
-            containerStyle={{ marginTop: theme.spacing.md }}
+            containerStyle={dislikedContainerStyle}
           />
         </View>
       </Animated.View>
@@ -233,10 +266,10 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <Text style={commonStyles.subtitle}>Nutrition Goals</Text>
         <View style={styles.sectionCard}>
-          <TouchableOpacity onPress={() => setEditingMeals(true)}>
+          <TouchableOpacity onPress={handleOpenMeals}>
             <InfoRow label="Meals per day" value={profile.mealsPerDay} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setEditingSnacks(true)}>
+          <TouchableOpacity onPress={handleOpenSnacks}>
             <InfoRow
               label="Snacks per day"
               value={profile.snacksPerDay}
@@ -256,7 +289,7 @@ export const DietaryProfileScreen: React.FC = () => {
           <View style={styles.sectionHeaderRow}>
             <Text style={commonStyles.subtitle}>Cooking Preferences</Text>
             <TouchableOpacity
-              onPress={() => setEditingCookingPrefs(true)}
+              onPress={handleOpenCookingPrefs}
               style={styles.editButton}
             >
               <Icon
@@ -309,7 +342,7 @@ export const DietaryProfileScreen: React.FC = () => {
             <View style={styles.sectionHeaderRow}>
               <Text style={commonStyles.subtitle}>Macro Targets (Advanced)</Text>
               <TouchableOpacity
-                onPress={() => setEditingMacros(true)}
+                onPress={handleOpenMacros}
                 style={styles.editButton}
               >
                 <Icon
@@ -350,10 +383,8 @@ export const DietaryProfileScreen: React.FC = () => {
         visible={editingMeals}
         title="Meals Per Day"
         value={profile.mealsPerDay}
-        onSave={async value => {
-          return await updateDietaryProfile({ mealsPerDay: value });
-        }}
-        onCancel={() => setEditingMeals(false)}
+        onSave={handleSaveMeals}
+        onCancel={handleCloseMeals}
         min={1}
         max={6}
         placeholder="e.g., 3"
@@ -363,10 +394,8 @@ export const DietaryProfileScreen: React.FC = () => {
         visible={editingSnacks}
         title="Snacks Per Day"
         value={profile.snacksPerDay}
-        onSave={async value => {
-          return await updateDietaryProfile({ snacksPerDay: value });
-        }}
-        onCancel={() => setEditingSnacks(false)}
+        onSave={handleSaveSnacks}
+        onCancel={handleCloseSnacks}
         min={0}
         max={5}
         placeholder="e.g., 2"
@@ -375,7 +404,7 @@ export const DietaryProfileScreen: React.FC = () => {
       {/* Cooking Preferences Sheet */}
       <CookingPreferencesSheet
         visible={editingCookingPrefs}
-        onClose={() => setEditingCookingPrefs(false)}
+        onClose={handleCloseCookingPrefs}
         onSave={handleSaveCookingPrefs}
         initialValues={{
           cookingSkillLevel: profile?.cookingSkillLevel,
@@ -388,7 +417,7 @@ export const DietaryProfileScreen: React.FC = () => {
       {/* Macro Targets Sheet */}
       <MacroTargetsSheet
         visible={editingMacros}
-        onClose={() => setEditingMacros(false)}
+        onClose={handleCloseMacros}
         onSave={handleSaveMacros}
         initialValues={{
           calorieTarget: profile?.calorieTarget,

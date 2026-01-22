@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 
@@ -67,30 +67,30 @@ interface PantryItemFormData {
 }
 
 // Schema for add mode
-const addItemSchema = yup.object({
-  itemName: yup.string().required('Item name is required'),
-  quantityInput: yup.string().required('Quantity is required'),
-  unit: yup.string(), // Tracking unit
-  minQuantity: yup.string(),
-  restockQuantity: yup.string(),
-  storageState: yup.string().oneOf(Object.values(StorageState)),
-  location: yup.string(),
-  notes: yup.string(),
-  category: yup.string(),
-  brand: yup.string(),
+const addItemSchema = object({
+  itemName: string().required('Item name is required'),
+  quantityInput: string().required('Quantity is required'),
+  unit: string(), // Tracking unit
+  minQuantity: string(),
+  restockQuantity: string(),
+  storageState: string().oneOf(Object.values(StorageState)),
+  location: string(),
+  notes: string(),
+  category: string(),
+  brand: string(),
 });
 
 // Schema for edit mode
-const editItemSchema = yup.object({
-  quantityInput: yup.string().required('Quantity is required'),
-  unit: yup.string(), // Tracking unit
-  minQuantity: yup.string(),
-  restockQuantity: yup.string(),
-  storageState: yup.string().oneOf(Object.values(StorageState)),
-  location: yup.string(),
-  notes: yup.string(),
-  category: yup.string(),
-  brand: yup.string(),
+const editItemSchema = object({
+  quantityInput: string().required('Quantity is required'),
+  unit: string(), // Tracking unit
+  minQuantity: string(),
+  restockQuantity: string(),
+  storageState: string().oneOf(Object.values(StorageState)),
+  location: string(),
+  notes: string(),
+  category: string(),
+  brand: string(),
 });
 
 interface PantryItemFormProps {

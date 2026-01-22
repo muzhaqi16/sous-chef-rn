@@ -1,9 +1,18 @@
-import * as Keychain from 'react-native-keychain';
+import {
+  ACCESS_CONTROL,
+  SECURITY_LEVEL,
+  ACCESSIBLE,
+  BIOMETRY_TYPE,
+  getSupportedBiometryType,
+  setGenericPassword,
+  getGenericPassword,
+  type AuthenticationPrompt,
+} from 'react-native-keychain';
 import { Platform } from 'react-native';
 
 export interface BiometricCapability {
   isAvailable: boolean;
-  biometryType: Keychain.BIOMETRY_TYPE | null;
+  biometryType: BIOMETRY_TYPE | null;
   error?: string;
 }
 
@@ -29,7 +38,7 @@ export class BiometricManager {
     }
 
     try {
-      const biometryType = await Keychain.getSupportedBiometryType();
+      const biometryType = await getSupportedBiometryType();
 
       const capability: BiometricCapability = {
         isAvailable: biometryType !== null,
@@ -56,7 +65,7 @@ export class BiometricManager {
    */
   static async getAccessControl(
     options: BiometricOptions = {},
-  ): Promise<Keychain.ACCESS_CONTROL | undefined> {
+  ): Promise<ACCESS_CONTROL | undefined> {
     const {
       requireBiometric = false,
       allowDevicePasscode = true,
@@ -73,15 +82,15 @@ export class BiometricManager {
     // If biometric is available, prefer it
     if (capability.isAvailable) {
       if (allowDevicePasscode) {
-        return Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE;
+        return ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE;
       } else {
-        return Keychain.ACCESS_CONTROL.BIOMETRY_ANY;
+        return ACCESS_CONTROL.BIOMETRY_ANY;
       }
     }
 
     // Fallback strategies when biometric is not available
     if (allowDevicePasscode) {
-      return Keychain.ACCESS_CONTROL.DEVICE_PASSCODE;
+      return ACCESS_CONTROL.DEVICE_PASSCODE;
     }
 
     if (fallbackToPassword) {
@@ -97,7 +106,7 @@ export class BiometricManager {
    * Get appropriate security level for Android
    */
   static async getSecurityLevel(): Promise<
-    Keychain.SECURITY_LEVEL | undefined
+    SECURITY_LEVEL | undefined
   > {
     if (Platform.OS !== 'android') {
       return undefined;
@@ -105,13 +114,13 @@ export class BiometricManager {
 
     try {
       // Try secure hardware first
-      return Keychain.SECURITY_LEVEL.SECURE_HARDWARE;
+      return SECURITY_LEVEL.SECURE_HARDWARE;
     } catch (error) {
       console.warn(
         'Secure hardware not available, falling back to software:',
         error,
       );
-      return Keychain.SECURITY_LEVEL.SECURE_SOFTWARE;
+      return SECURITY_LEVEL.SECURE_SOFTWARE;
     }
   }
 
@@ -127,7 +136,7 @@ export class BiometricManager {
 
     const keychainOptions: any = {
       service,
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     };
 
     if (accessControl) {
@@ -163,7 +172,7 @@ export class BiometricManager {
           },
         );
 
-        const success = await Keychain.setGenericPassword(
+        const success = await setGenericPassword(
           username,
           password,
           biometricOptions,
@@ -187,7 +196,7 @@ export class BiometricManager {
           },
         );
 
-        const success = await Keychain.setGenericPassword(
+        const success = await setGenericPassword(
           username,
           password,
           passcodeOptions,
@@ -205,10 +214,10 @@ export class BiometricManager {
       try {
         const basicOptions = {
           service,
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+          accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
         };
 
-        const success = await Keychain.setGenericPassword(
+        const success = await setGenericPassword(
           username,
           password,
           basicOptions,
@@ -247,7 +256,7 @@ export class BiometricManager {
     const capability = await BiometricManager.getBiometricCapability();
 
     // Determine authentication prompt based on available methods
-    let authPrompt: Keychain.AuthenticationPrompt;
+    let authPrompt: AuthenticationPrompt;
     if (capability.isAvailable) {
       authPrompt = {
         title: 'Unlock your saved credentials',
@@ -265,7 +274,7 @@ export class BiometricManager {
     }
 
     try {
-      const result = await Keychain.getGenericPassword({
+      const result = await getGenericPassword({
         service,
         authenticationPrompt: authPrompt,
       });
@@ -321,7 +330,7 @@ export class BiometricManager {
   static async hasCredentials(service: string): Promise<boolean> {
     try {
       // Try to check without triggering authentication
-      const result = await Keychain.getGenericPassword({
+      const result = await getGenericPassword({
         service,
         authenticationPrompt: {
           title: 'Check credentials',
@@ -339,18 +348,18 @@ export class BiometricManager {
    * Get user-friendly biometric type name
    */
   static getBiometricTypeName(
-    biometryType: Keychain.BIOMETRY_TYPE | null,
+    biometryType: BIOMETRY_TYPE | null,
   ): string {
     switch (biometryType) {
-      case Keychain.BIOMETRY_TYPE.TOUCH_ID:
+      case BIOMETRY_TYPE.TOUCH_ID:
         return 'Touch ID';
-      case Keychain.BIOMETRY_TYPE.FACE_ID:
+      case BIOMETRY_TYPE.FACE_ID:
         return 'Face ID';
-      case Keychain.BIOMETRY_TYPE.FINGERPRINT:
+      case BIOMETRY_TYPE.FINGERPRINT:
         return 'Fingerprint';
-      case Keychain.BIOMETRY_TYPE.FACE:
+      case BIOMETRY_TYPE.FACE:
         return 'Face Recognition';
-      case Keychain.BIOMETRY_TYPE.IRIS:
+      case BIOMETRY_TYPE.IRIS:
         return 'Iris Recognition';
       default:
         return 'Biometric Authentication';

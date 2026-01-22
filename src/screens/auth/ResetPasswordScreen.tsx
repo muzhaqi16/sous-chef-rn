@@ -9,7 +9,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import * as yup from 'yup';
+import { object, string, ref } from 'yup';
 import { Icon } from '#utils';
 import { PasswordInput } from '#components/atoms';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -27,19 +27,17 @@ interface ResetPasswordForm {
   confirmPassword: string;
 }
 
-const resetPasswordSchema = yup.object().shape({
-  newPassword: yup
-    .string()
+const resetPasswordSchema = object().shape({
+  newPassword: string()
     .required('Password is required')
     .min(8, 'Password must be at least 8 characters')
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
       'Password must contain at least one uppercase letter, one lowercase letter, and one number'
     ),
-  confirmPassword: yup
-    .string()
+  confirmPassword: string()
     .required('Please confirm your password')
-    .oneOf([yup.ref('newPassword')], 'Passwords must match'),
+    .oneOf([ref('newPassword')], 'Passwords must match'),
 });
 
 export const ResetPasswordScreen: React.FC = () => {

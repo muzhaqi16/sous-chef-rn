@@ -12,7 +12,7 @@ import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { object, string, type AnyObjectSchema } from 'yup';
 
 interface TextEditBottomSheetProps {
   visible: boolean;
@@ -22,7 +22,7 @@ interface TextEditBottomSheetProps {
   initialValue: string;
   fieldKey: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  validationSchema?: yup.AnyObjectSchema;
+  validationSchema?: AnyObjectSchema;
   onSave: (value: string) => void;
   onClose: () => void;
   multiline?: boolean;
@@ -65,7 +65,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   useBottomSheetBackHandler(bottomSheetRef, visible);
 
   // Default schema if none provided
-  const schema = validationSchema || yup.object({ [fieldKey]: yup.string() });
+  const schema = validationSchema || object({ [fieldKey]: string() });
 
   const form = useForm({
     resolver: yupResolver(schema),

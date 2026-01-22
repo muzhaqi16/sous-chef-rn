@@ -1,9 +1,8 @@
-import * as yup from 'yup';
+import { object, string, array } from 'yup';
 import {emailRule} from './common';
 
 // home name rule
-const homeNameRule = yup
-  .string()
+const homeNameRule = string()
   .required('Home name is required')
   .min(2, 'Home name must be at least 2 characters')
   .max(50, 'Home name must be less than 50 characters')
@@ -14,16 +13,14 @@ const homeNameRule = yup
   .trim();
 
 // pantry name rule
-const pantryNameRule = yup
-  .string()
+const pantryNameRule = string()
   .required('Pantry name is required')
   .min(2, 'Pantry name must be at least 2 characters')
   .max(50, 'Pantry name must be less than 50 characters')
   .trim();
 
 // shopping list name rule
-const shoppingListNameRule = yup
-  .string()
+const shoppingListNameRule = string()
   .required('Shopping list name is required')
   .min(2, 'Shopping list name must be at least 2 characters')
   .max(50, 'Shopping list name must be less than 50 characters')
@@ -35,8 +32,8 @@ const inviteEmailRule = emailRule.lowercase().trim();
 // ----------------------------------------------------------------------------
 
 export const getCreateHomeSchema = (needsHome: boolean = true) => {
-  return yup.object<{homeName: string; pantryName: string}>().shape({
-    homeName: needsHome ? homeNameRule : yup.string().notRequired(),
+  return object<{homeName: string; pantryName: string}>().shape({
+    homeName: needsHome ? homeNameRule : string().notRequired(),
     pantryName: pantryNameRule,
   });
 };
@@ -51,7 +48,7 @@ export const getCreateHomeSchema = (needsHome: boolean = true) => {
 // ----------------------------------------------------------------------------
 
 // 7) create shopping list schema
-export const createShoppingListSchema = yup.object({
+export const createShoppingListSchema = object({
   shoppingListName: shoppingListNameRule,
 });
 
@@ -66,7 +63,7 @@ export const getCreateShoppingListSchema = () => createShoppingListSchema;
 // ----------------------------------------------------------------------------
 
 // 8) invite members schema
-export const inviteMembersSchema = yup.object({
+export const inviteMembersSchema = object({
   email: inviteEmailRule,
 });
 
@@ -85,10 +82,9 @@ export const getInviteMembersSchema = () => inviteMembersSchema;
 // ----------------------------------------------------------------------------
 
 // 9) select pantry items schema (optional selection)
-export const selectPantryItemsSchema = yup.object({
-  selectedItems: yup
-    .array()
-    .of(yup.string())
+export const selectPantryItemsSchema = object({
+  selectedItems: array()
+    .of(string())
     .max(5, 'You can select up to 5 items'),
 });
 

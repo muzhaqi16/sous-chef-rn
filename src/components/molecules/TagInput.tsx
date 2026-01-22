@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -24,6 +24,16 @@ export const TagInput: React.FC<TagInputProps> = ({
   const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const filteredSuggestions = useMemo(() => {
     if (!inputValue.trim()) return [];
@@ -100,8 +110,12 @@ export const TagInput: React.FC<TagInputProps> = ({
             onFocus={() => setIsFocused(true)}
             onBlur={() => {
               setIsFocused(false);
+              // Clear any existing timeout before setting a new one
+              if (blurTimeoutRef.current) {
+                clearTimeout(blurTimeoutRef.current);
+              }
               // Delay to allow suggestion tap
-              setTimeout(() => {
+              blurTimeoutRef.current = setTimeout(() => {
                 if (inputValue.trim()) {
                   handleAddTag(inputValue);
                 }
