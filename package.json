@@ -101,7 +101,7 @@
     "react-native-keyboard-controller": "^1.20.4",
     "react-native-keychain": "^10.0.0",
     "react-native-mmkv": "^4.1.1",
-    "react-native-nitro-modules": "^0.32.1",
+    "react-native-nitro-modules": "^0.32.2",
     "react-native-pager-view": "^7.0.2",
     "react-native-permissions": "^5.4.4",
     "react-native-reanimated": "^4.2.1",
@@ -118,9 +118,10 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@babel/cli": "^7.28.6",
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
-    "@babel/runtime": "^7.28.4",
+    "@babel/runtime": "^7.28.6",
     "@eslint/js": "^9.39.2",
     "@graphql-codegen/add": "^6.0.0",
     "@graphql-codegen/cli": "^6.0.0",
