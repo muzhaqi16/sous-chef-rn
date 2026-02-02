@@ -1,6 +1,7 @@
 module.exports = {
   root: true,
   extends: '@react-native',
+  plugins: ['no-barrel-files'],
   ignorePatterns: ['e2e/**/*'],
   env: {
     jest: true,
@@ -23,6 +24,9 @@ module.exports = {
     },
   ],
   rules: {
+    // Prevent barrel file imports for better tree shaking
+    'no-barrel-files/no-barrel-files': 'warn',
+
     // Enforce StyleSheet from react-native-unistyles instead of react-native
     'no-restricted-imports': [
       'error',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
@@ -19,10 +19,26 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   onDismiss,
 }) => {
   const {theme} = useUnistyles();
+
+  const handlePress = useCallback(() => {
+    onPress(notification);
+  }, [notification, onPress]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.(notification.id);
+  }, [notification.id, onDismiss]);
+
+  const formattedTimestamp = useMemo(() => {
+    const date = safeParseDate(notification.sentAt);
+    return date
+      ? formatDistanceToNow(date, {addSuffix: true})
+      : 'Recently';
+  }, [notification.sentAt]);
+
   return (
     <TouchableOpacity
       style={[styles.container, !notification.isRead && styles.unreadContainer]}
-      onPress={() => onPress(notification)}
+      onPress={handlePress}
       activeOpacity={0.7}>
       <View
         style={[
@@ -49,19 +65,14 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           {notification.message}
         </Text>
         <Text style={styles.timestamp}>
-          {(() => {
-            const date = safeParseDate(notification.sentAt);
-            return date
-              ? formatDistanceToNow(date, {addSuffix: true})
-              : 'Recently';
-          })()}
+          {formattedTimestamp}
         </Text>
       </View>
 
       {onDismiss && (
         <TouchableOpacity
           style={styles.dismissButton}
-          onPress={() => onDismiss(notification.id)}
+          onPress={handleDismiss}
           hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon
             name="close"

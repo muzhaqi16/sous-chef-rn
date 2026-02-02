@@ -1,9 +1,8 @@
-import * as yup from 'yup';
+import { object, string } from 'yup';
 import { nameRule } from './common';
 
 // display name rule
-const displayNameRule = yup
-  .string()
+const displayNameRule = string()
   .min(3, 'Display name must be at least 3 characters')
   .max(30, 'Display name must be less than 30 characters')
   .matches(
@@ -12,11 +11,10 @@ const displayNameRule = yup
   );
 
 // bio rule
-const bioRule = yup.string().max(500, 'Bio must be less than 500 characters');
+const bioRule = string().max(500, 'Bio must be less than 500 characters');
 
 // phone rule - flexible format allowing spaces, dashes, parentheses
-const phoneRule = yup
-  .string()
+const phoneRule = string()
   .test('valid-phone', 'Please enter a valid phone number', value => {
     if (!value) return true; // Allow empty (optional field)
     // Strip all non-digit characters except leading +
@@ -32,14 +30,12 @@ const phoneRule = yup
   });
 
 // website/URL rule
-const urlRule = yup
-  .string()
+const urlRule = string()
   .url('Please enter a valid URL')
   .matches(/^https?:\/\/.+/, 'URL must start with http:// or https://');
 
 // date of birth rule - simplified
-const dateOfBirthRule = yup
-  .string()
+const dateOfBirthRule = string()
   .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
   .test('valid-date', 'Please enter a valid date', value => {
     if (!value) return true;
@@ -70,16 +66,14 @@ const dateOfBirthRule = yup
   });
 
 // gender rule
-const genderRule = yup
-  .string()
+const genderRule = string()
   .oneOf(
     ['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'],
     'Please select a valid gender',
   );
 
 // profile visibility rule
-const profileVisibilityRule = yup
-  .string()
+const profileVisibilityRule = string()
   .oneOf(
     ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'],
     'Please select a valid visibility option',
@@ -89,17 +83,17 @@ const profileVisibilityRule = yup
 
 // Individual field schemas for profile editing
 export const profileFieldSchemas = {
-  firstName: yup.object({ firstName: nameRule }),
-  lastName: yup.object({ lastName: nameRule }),
-  displayName: yup.object({ displayName: displayNameRule }),
-  bio: yup.object({ bio: bioRule }),
-  phone: yup.object({ phone: phoneRule }),
-  website: yup.object({ website: urlRule }),
-  dateOfBirth: yup.object({ dateOfBirth: dateOfBirthRule }),
-  avatar: yup.object({ avatar: urlRule }),
-  coverImage: yup.object({ coverImage: urlRule }),
-  gender: yup.object({ gender: genderRule }),
-  profileVisibility: yup.object({ profileVisibility: profileVisibilityRule }),
+  firstName: object({ firstName: nameRule }),
+  lastName: object({ lastName: nameRule }),
+  displayName: object({ displayName: displayNameRule }),
+  bio: object({ bio: bioRule }),
+  phone: object({ phone: phoneRule }),
+  website: object({ website: urlRule }),
+  dateOfBirth: object({ dateOfBirth: dateOfBirthRule }),
+  avatar: object({ avatar: urlRule }),
+  coverImage: object({ coverImage: urlRule }),
+  gender: object({ gender: genderRule }),
+  profileVisibility: object({ profileVisibility: profileVisibilityRule }),
 };
 
 // Function to get validation schema for a specific field (matches your pattern)
@@ -108,8 +102,8 @@ export const getValidationSchemaForField = (fieldKey: string) => {
     profileFieldSchemas[fieldKey as keyof typeof profileFieldSchemas];
 
   if (!schema) {
-    return yup.object({
-      [fieldKey]: yup.string(),
+    return object({
+      [fieldKey]: string(),
     });
   }
 
@@ -117,7 +111,7 @@ export const getValidationSchemaForField = (fieldKey: string) => {
 };
 
 // Complete profile validation schema (for full form validation if needed)
-export const profileSchema = yup.object({
+export const profileSchema = object({
   firstName: nameRule.optional(),
   lastName: nameRule.optional(),
   displayName: displayNameRule.optional(),

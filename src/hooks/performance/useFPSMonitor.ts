@@ -55,6 +55,7 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
   const fpsHistoryRef = useRef<number[]>([]);
   const lowFPSCountRef = useRef(0);
   const logTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fpsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Frame counting loop
   const countFrame = useCallback(() => {
@@ -132,16 +133,12 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     rafIdRef.current = requestAnimationFrame(countFrame);
 
     // Start FPS calculation interval
-    const fpsInterval = setInterval(updateFPS, 100);
+    fpsIntervalRef.current = setInterval(updateFPS, 100);
 
     // Start periodic logging
     logTimerRef.current = setInterval(logStats, logInterval);
 
     console.log('[PERF] FPS monitor: started');
-
-    return () => {
-      clearInterval(fpsInterval);
-    };
   }, [isMonitoring, countFrame, updateFPS, logStats, logInterval]);
 
   // Stop monitoring
@@ -149,6 +146,10 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
+    }
+    if (fpsIntervalRef.current) {
+      clearInterval(fpsIntervalRef.current);
+      fpsIntervalRef.current = null;
     }
     if (logTimerRef.current) {
       clearInterval(logTimerRef.current);
@@ -178,9 +179,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
   // Auto-start on mount if enabled
   useEffect(() => {
     if (autoStart && __DEV__) {
-      const cleanup = startMonitoring();
+      startMonitoring();
       return () => {
-        cleanup?.();
         stopMonitoring();
       };
     }
@@ -191,6 +191,9 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     return () => {
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
+      }
+      if (fpsIntervalRef.current) {
+        clearInterval(fpsIntervalRef.current);
       }
       if (logTimerRef.current) {
         clearInterval(logTimerRef.current);

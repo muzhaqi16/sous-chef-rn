@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import {
   BottomSheetModal,
@@ -12,6 +12,10 @@ import { Input } from '#components/base/Input';
 import { useStore } from '#store';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { Icon } from '#utils/iconUtils';
+
+// Memoized separator component to prevent re-renders
+const AutocompleteSeparator = memo(() => <View style={styles.separator} />);
+AutocompleteSeparator.displayName = 'AutocompleteSeparator';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -259,7 +263,7 @@ export function BottomSheetAutocompleteInput<T>({
               onPress: () => handleSelectItem(item),
             });
           }}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={AutocompleteSeparator}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
