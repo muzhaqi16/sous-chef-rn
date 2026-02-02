@@ -4,7 +4,7 @@ import {
   useGetPantriesQuery,
   useGetHomesQuery,
 } from '../graphql/generated';
-import { usePreservedArrayData } from './apollo';
+import { usePreservedArrayData } from './apollo/usePreservedQueryData';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 

@@ -1,13 +1,11 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import {
-  BaseItemCard,
-  CardLeftSlot,
-  CardContent,
-  CardRightSlot,
-  CardVariant,
-} from '../molecules/BaseItemCard';
+import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
+import { CardLeftSlot } from '../molecules/BaseItemCard/CardLeftSlot';
+import { CardContent } from '../molecules/BaseItemCard/CardContent';
+import { CardRightSlot } from '../molecules/BaseItemCard/CardRightSlot';
+import type { CardVariant } from '../molecules/BaseItemCard/types';
 
 export type ItemVariant = 'normal' | 'warning' | 'expired';
 

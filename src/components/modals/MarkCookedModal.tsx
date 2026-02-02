@@ -6,12 +6,12 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { BottomSheetHeader } from '#components/atoms';
-import { parseFractionalInput } from '#/utils';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 interface MarkCookedModalProps {
   visible: boolean;

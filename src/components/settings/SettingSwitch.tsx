@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 
 interface SettingSwitchProps {
   title: string;

@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { PasswordInput } from '#components/atoms';
+import { Icon } from '#utils/iconUtils';
+import { PasswordInput } from '#components/atoms/PasswordInput';
 import { IconButton } from '#components/atoms/IconButton';
 import { useChangePasswordMutation } from '#generated';
 import { useToast } from '#hooks/useToast';
-import { useAppNavigation } from '#hooks';
-import { changePasswordSchema } from '#utils/validation';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { changePasswordSchema } from '#utils/validation/auth';
 
 interface ChangePasswordForm {
   currentPassword: string;

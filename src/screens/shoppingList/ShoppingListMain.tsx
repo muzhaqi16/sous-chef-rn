@@ -8,39 +8,32 @@ import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
-import {
-  AnimatedItemSelector,
-  ListTemplate,
-  ShoppingListHeader,
-  ShoppingListTabs,
-  PaginationFooter,
-  SwipeHintOverlay,
-} from '#components';
-import { Icon } from '#utils';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { ListTemplate } from '#components/templates/ListTemplate';
+import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { SwipeHintOverlay } from '#components/organisms/SwipeHintOverlay';
+import { Icon } from '#utils/iconUtils';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
 // Hooks & Context
-import {
-  useAppNavigation,
-  useProfileData,
-  useTabBarAddButton,
-  useFeatureHint,
-  useShoppingListScreen,
-  useShoppingListActions,
-  useShoppingListSelectorModal,
-  useItemReordering,
-} from '#hooks';
-import { useSwipeableCoordinator } from '#hooks/ui';
-import {
-  useTabBarActions,
-  ShoppingListModalsProvider,
-  useShoppingListModals,
-} from '#context';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useFeatureHint } from '#hooks/useFeatureHint';
+import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
+import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
+import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
+import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useStableRef } from '#/hooks/utils';
+import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import { useScreenTransition } from '#hooks/performance';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';

@@ -3,11 +3,7 @@ import { useSearchableList } from '../useSearchableList';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
 import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
-import { useShoppingListItemMutations } from './useShoppingListItemMutations';
-import type { ShoppingListItemInput, ShoppingListItemUpdate } from './useShoppingListItemMutations';
-
-// Re-export types for consumers
-export type { ShoppingListItemInput, ShoppingListItemUpdate };
+import { useShoppingListItemMutations } from './mutations/useShoppingListItemMutations';
 
 /**
  * useShoppingListManagement - Composition hook for shopping list data management

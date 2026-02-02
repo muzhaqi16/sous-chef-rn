@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { commonStyles } from '#/styles';
+import { Icon } from '#utils/iconUtils';
+import { commonStyles } from '#/styles/commonStyles';
 import type { CardLeftSlotProps } from './types';
 
 /**

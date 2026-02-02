@@ -3,7 +3,7 @@ import { useAppStore, selectPantryState, selectSelectedHomeId, selectIsHomeSelec
 import { useShallow } from 'zustand/react/shallow';
 import { useGetHomesQuery } from '#generated';
 import { normalizeHomes, normalizeHome, extractNodes } from '#/utils/connectionUtils';
-import { usePreservedArrayData } from '#/hooks/apollo';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 
 /**
  * Hook for resolving the current pantry with fallback chain:

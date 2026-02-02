@@ -7,8 +7,8 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
-import { HapticService } from '#services/haptic';
+import { Icon } from '#utils/iconUtils';
+import { HapticService } from '#services/haptic/HapticService';
 
 type AnimatedCheckboxProps = {
   checked: boolean;

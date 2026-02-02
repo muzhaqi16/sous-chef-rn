@@ -1,12 +1,14 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import { useAppNavigation, useDefaultHome, usePantryManagement } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useDefaultHome } from '#hooks/home/useDefaultHome';
+import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useDietaryProfile } from '#/hooks/profile/useDietaryProfile';
-import { spoonacularService } from '#/services/recipeApi';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { SearchRecipesResult, RecipeSearchResult } from '#/services/recipeApi/types';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useScreenTransition } from '#hooks/performance';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useGetHomeQuery, ReligiousDiet } from '#generated';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
 

@@ -10,9 +10,9 @@ import {
   Platform,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { PasswordInput } from '#components/atoms';
-import { useAuth } from '#hooks';
+import { Icon } from '#utils/iconUtils';
+import { PasswordInput } from '#components/atoms/PasswordInput';
+import { useAuth } from '#hooks/auth/useAuth';
 
 interface BiometricSetupModalProps {
   visible: boolean;

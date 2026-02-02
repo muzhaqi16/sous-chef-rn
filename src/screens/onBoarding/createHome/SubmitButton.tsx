@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button} from '#components';
+import {Button} from '#components/base/Button';
 
 export const SubmitButton = ({
   isCreating,

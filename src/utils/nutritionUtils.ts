@@ -9,7 +9,7 @@ import type {
   NutritionHighlight,
   NutrientEntry,
   NutrientCategory,
-} from '#types';
+} from '#/types/nutrition';
 
 // =============================================================================
 // PARSING

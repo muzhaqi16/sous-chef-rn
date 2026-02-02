@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { enableAutoReconnect, disableAutoReconnect, reconnectWebSocket } from '#/apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';

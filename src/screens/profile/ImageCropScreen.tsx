@@ -16,8 +16,8 @@ import Animated, {
   clamp,
 } from 'react-native-reanimated';
 import { useRoute, RouteProp } from '@react-navigation/native';
-import { useSafeNavigation } from '#hooks';
-import { Icon } from '#utils';
+import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';

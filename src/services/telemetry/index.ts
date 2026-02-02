@@ -114,7 +114,5 @@ export const Telemetry = {
   initialize: () => telemetryService.initialize(),
 };
 
-export { TelemetryService } from './TelemetryService';
-export * from './types';
 
 export default telemetryService;

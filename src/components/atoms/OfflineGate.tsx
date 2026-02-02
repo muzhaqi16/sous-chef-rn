@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { Icon } from '#utils/iconUtils';
 
 interface OfflineGateProps {

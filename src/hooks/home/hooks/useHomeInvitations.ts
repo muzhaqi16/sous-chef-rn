@@ -196,5 +196,5 @@ export function useHomeInvitations({
   };
 }
 
-// Re-export MembershipRole for convenience
-export { MembershipRole };
+// MembershipRole is available from '#generated' directly
+// import { MembershipRole } from '#generated';

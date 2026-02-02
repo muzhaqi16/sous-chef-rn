@@ -1,6 +1,6 @@
 import { WatchQueryFetchPolicy } from '@apollo/client';
 import { useStore } from '#store';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 /**
  * Get appropriate fetch policy based on online status and offline mode preference

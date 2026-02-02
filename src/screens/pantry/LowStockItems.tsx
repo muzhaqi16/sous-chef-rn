@@ -9,13 +9,15 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { Icon } from '#utils';
-import { SwipeableItem, ScreenHeader } from '#components';
-import { PantryItemSkeleton } from '#components/base/Skeleton';
-import { usePantryManagement, useAppNavigation } from '#hooks';
+import { Icon } from '#utils/iconUtils';
+import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import { ScreenHeader } from '#components/molecules/ScreenHeader';
+import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAddItemToShoppingListMutation } from '#generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
-import { commonStyles } from '#styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 export const LowStockItems: React.FC = () => {
   const { theme } = useUnistyles();

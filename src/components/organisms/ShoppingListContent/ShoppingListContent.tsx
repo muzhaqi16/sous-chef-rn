@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { EmptyState } from '#components/base/EmptyState';
-import { SortableShoppingList, CollapsiblePurchasedSection } from '#components';
-import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
+import { SortableShoppingList } from '#components/organisms/SortableShoppingList/SortableList';
+import { CollapsiblePurchasedSection } from '#components/molecules/CollapsiblePurchasedSection';
+import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList/types';
 
 interface ShoppingListContentProps {
   items: SortableShoppingListItem[];

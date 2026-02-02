@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
-import { spoonacularService } from '#/services/recipeApi';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
   useGetRecipeQuery,
@@ -22,11 +22,11 @@ import {
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useAppNavigation } from '#/hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
-import { useRecipePreload } from '#/hooks/recipe';
+import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ProfileScreenWrapper } from '#components/templates';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { Environment } from '#/utils/environment';
 import Config from 'react-native-config';
 import { Platform } from 'react-native';

@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { RestrictionSection } from '#/components/molecules/RestrictionSection';
-import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet';
+import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
+import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
 
 // Lifestyle dietary choices

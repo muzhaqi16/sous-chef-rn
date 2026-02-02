@@ -8,8 +8,9 @@ import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwip
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
-import { commonStyles } from '#/styles';
-import { Icon, createPropsComparator } from '#utils';
+import { commonStyles } from '#/styles/commonStyles';
+import { Icon } from '#utils/iconUtils';
+import { createPropsComparator } from '#utils/memoUtils';
 import { HIT_SLOP } from '#/constants/touch';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';

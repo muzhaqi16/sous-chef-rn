@@ -21,14 +21,14 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 
-import { useBarcodeScanner } from '#hooks';
+import { useBarcodeScanner } from '#hooks/useBarcodeScanner';
 import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
-import { HapticService } from '#services/haptic';
+import { HapticService } from '#services/haptic/HapticService';
 
 const { height: screenHeight } = Dimensions.get('window');
 

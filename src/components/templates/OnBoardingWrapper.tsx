@@ -1,4 +1,4 @@
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import React, { ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { OnboardingSteps } from '#components/navigation/OnboardingSteps';
-import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation';
-import { useOnboardingContextSafe } from '#context';
+import { OnboardingSteps } from '#components/navigation/OnboardingSteps/OnboardingSteps';
+import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation/OnboardingNavigation';
+import { useOnboardingContextSafe } from '#/context/OnboardingContext';
 import type { NavigationAction } from '#components/navigation/OnboardingNavigation/types';
 
 interface OnboardingWrapperProps {

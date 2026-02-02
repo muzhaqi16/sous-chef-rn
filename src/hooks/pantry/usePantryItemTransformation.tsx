@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Image, Text } from 'react-native';
 import { getItemImageUrl } from '#utils/imageUtils';
-import { commonStyles } from '#/styles';
+import { commonStyles } from '#/styles/commonStyles';
 import { StorageState } from '#generated';
 
 // Location type for filtering

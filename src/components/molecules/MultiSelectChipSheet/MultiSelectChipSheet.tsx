@@ -9,10 +9,10 @@ import {
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { BottomSheetHeader } from '#/components/atoms/BottomSheetHeader';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;

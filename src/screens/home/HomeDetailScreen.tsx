@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { useAppNavigation, useHomeDetailManagement } from '#hooks';
-import { commonStyles } from '#styles';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useHomeDetailManagement } from '#hooks/home/useHomeDetailManagement';
+import { commonStyles } from '#/styles/commonStyles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
-import { EditableField, NavigationRow } from '#components/molecules';
-import { HomeMembersSection } from '#components/organisms/home';
+import { EditableField } from '#components/molecules/EditableField';
+import { NavigationRow } from '#components/molecules/NavigationRow';
+import { HomeMembersSection } from '#components/organisms/home/HomeMembersSection';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useAppStore, selectUser } from '#store/useAppStore';
-import { Icon } from '#utils';
-import { Button } from '#components/base';
+import { Icon } from '#utils/iconUtils';
+import { Button } from '#components/base/Button';
 
 type RouteParams = {
   homeId: string;

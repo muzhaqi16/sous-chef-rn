@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { Label } from '#components/atoms';
+import { Label } from '#components/atoms/Label';
 
 interface SuggestedBrand {
   id: string;

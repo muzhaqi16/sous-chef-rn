@@ -5,9 +5,9 @@ import {
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Title } from '../atoms';
+import { Title } from '../atoms/Title';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface BottomSheetActionProps {

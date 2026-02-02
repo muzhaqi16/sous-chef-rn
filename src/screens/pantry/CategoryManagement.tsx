@@ -1,10 +1,10 @@
 import React, {useMemo} from 'react';
 import {View, Text, FlatList, TouchableOpacity} from 'react-native';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {useNavigation} from '@react-navigation/native';
-import {usePantryManagement} from '#hooks';
+import {usePantryManagement} from '#hooks/home/pantry/usePantryManagement';
 import {useCurrentPantry} from '#hooks/pantry/useCurrentPantry';
-import {commonStyles} from '#styles';
+import {commonStyles} from '#/styles/commonStyles';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export const CategoryManagement: React.FC = () => {

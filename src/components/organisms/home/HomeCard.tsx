@@ -7,7 +7,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { HomeInviteFragment } from '#generated';

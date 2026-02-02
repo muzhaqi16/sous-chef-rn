@@ -27,7 +27,7 @@ import {
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { normalizeHome } from '#/utils/connectionUtils';
-import { useCrudOperations } from '#/hooks/utils';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
 
 interface UseHomeMutationsOptions {

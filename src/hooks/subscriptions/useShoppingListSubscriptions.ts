@@ -22,7 +22,7 @@ import {
   GetShoppingListDocument,
   GetShoppingListQuery,
 } from '#generated';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
 import {
   addToShoppingListItemsConnection,
@@ -30,7 +30,7 @@ import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   clearAllPurchasedItemsFromCache,
-} from '#/apollo/utils';
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 
 /**
  * Animation scheduler function type for coordinating exit animations

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useCanUseNetwork } from '#hooks/settings';
+import { useCanUseNetwork } from '#hooks/settings/useOfflineMode';
 
 /**
  * Hook for disabling actions when offline.

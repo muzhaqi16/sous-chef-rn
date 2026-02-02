@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, ScrollView, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Chip from '../atoms/Chip';
@@ -38,13 +38,29 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  const filterConfigs: FilterConfig[] = [
-    { id: 'expiring', label: 'Expiring', color: theme.colors.warning },
-    { id: 'expired', label: 'Expired', color: theme.colors.error },
-    { id: 'lowStock', label: 'Low Stock', color: theme.colors.warning },
-    { id: 'refrigerated', label: 'Refrigerated', color: theme.colors.info },
-    { id: 'frozen', label: 'Frozen', color: theme.colors.primary },
-  ];
+  const filterConfigs = useMemo<FilterConfig[]>(
+    () => [
+      { id: 'expiring', label: 'Expiring', color: theme.colors.warning },
+      { id: 'expired', label: 'Expired', color: theme.colors.error },
+      { id: 'lowStock', label: 'Low Stock', color: theme.colors.warning },
+      { id: 'refrigerated', label: 'Refrigerated', color: theme.colors.info },
+      { id: 'frozen', label: 'Frozen', color: theme.colors.primary },
+    ],
+    [theme.colors],
+  );
+
+  // Pre-compute badge styles to avoid inline object creation
+  const badgeStyles = useMemo(
+    () =>
+      filterConfigs.reduce(
+        (acc, config) => {
+          acc[config.id] = [styles.badge, { backgroundColor: config.color }];
+          return acc;
+        },
+        {} as Record<FilterType, (typeof styles.badge | { backgroundColor: string })[]>,
+      ),
+    [filterConfigs],
+  );
 
   const getFilterCount = useCallback(
     (filterId: FilterType): number => {
@@ -79,9 +95,10 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
     [activeFilters, onFilterChange],
   );
 
-  // Only show filters that have items
-  const visibleFilters = filterConfigs.filter(
-    config => getFilterCount(config.id) > 0,
+  // Only show filters that have items - memoized to avoid re-filtering on every render
+  const visibleFilters = useMemo(
+    () => filterConfigs.filter(config => getFilterCount(config.id) > 0),
+    [filterConfigs, getFilterCount],
   );
 
   // Don't render anything if no filters have items
@@ -108,9 +125,7 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
                 onPress={() => handleFilterToggle(config.id)}
               />
               {isSelected && count > 0 && (
-                <View
-                  style={[styles.badge, { backgroundColor: config.color }]}
-                >
+                <View style={badgeStyles[config.id]}>
                   <Text style={styles.badgeText}>{count}</Text>
                 </View>
               )}

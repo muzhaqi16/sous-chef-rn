@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextStyle } from 'react-native';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';

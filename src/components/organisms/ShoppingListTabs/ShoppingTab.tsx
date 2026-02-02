@@ -1,12 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SortableShoppingList } from '../SortableShoppingList';
-import type { SortableShoppingListItem } from '../SortableShoppingList';
-import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
+import { SortableShoppingList } from '../SortableShoppingList/SortableList';
+import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/base/EmptyState';
 import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
-import { useDeferredRender } from '#hooks/performance';
+import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];

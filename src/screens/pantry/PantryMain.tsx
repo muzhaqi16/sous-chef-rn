@@ -7,35 +7,40 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { NetworkStatus } from '@apollo/client';
-import { useAppNavigation, useTabBarAddButton } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
-import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
-import { useScreenTransition, useFilterTransitionWithDeps } from '#hooks/performance';
-import { useScannerSetup } from '#hooks/scanner';
-import { useSelectorManagement, useSwipeableCoordinator } from '#hooks/ui';
+import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
+import { usePantryItemActions } from '#hooks/pantry/usePantryItemActions';
+import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useFilterTransitionWithDeps } from '#hooks/performance/useFilterTransition';
+import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
+import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
-import { useTabBarActions } from '#context';
-import { useFeatureHint } from '#/hooks/useFeatureHint';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { filterByLocation, LocationFilter } from '#/utils/pantryFilters';
 import { pantryItemSearch } from '#/utils/searchUtils';
 
-import { AnimatedItemSelector } from '#components';
-import { PantryContent } from '#components/pantry';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { PantryContent } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
-import { AddToPantrySheet } from '#components/modals/AddToPantrySheet';
+import { AddToPantrySheet } from '#components/modals/AddToPantrySheet/AddToPantrySheet';
 import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet/AddStorageLocationSheet';
-import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { useStorageLocationManagement } from '#hooks';
-import type { FilterTabConfig } from '#components/molecules';
+import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
+import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 const PantryMainScreen: React.FC = React.memo(() => {

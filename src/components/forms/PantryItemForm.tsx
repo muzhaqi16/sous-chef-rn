@@ -29,7 +29,7 @@ import {
   parseQuantityInput,
   emptyUnitSelection,
   type UnitSelection,
-} from '#hooks/pantry';
+} from '#hooks/pantry/usePantryItemFormMutations';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   DynamicFormFields,

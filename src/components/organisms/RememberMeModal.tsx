@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, TouchableOpacity, Text, Modal} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 
 export const RememberMeModal: React.FC<{
   visible: boolean;

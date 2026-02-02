@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { ActionTray } from '#components/templates/ActionTray';
+import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { SelectorContent } from './SelectorContent';
 import type {
@@ -39,15 +39,3 @@ export const AnimatedItemSelector = forwardRef<
 });
 
 AnimatedItemSelector.displayName = 'AnimatedItemSelector';
-
-// Export types and components
-export type {
-  SelectorConfig,
-  ActionButtonConfig,
-  ItemSelectorRef,
-  AnimatedItemSelectorProps,
-} from './types';
-
-export { ActionButtons } from './ActionButtons';
-export { SelectorContent } from './SelectorContent';
-export { SelectorItem } from './SelectorItem';

@@ -1,13 +1,10 @@
-import {
-  colors,
-  spacing,
-  typography,
-  fonts,
-  radii,
-  shadows,
-  sizes,
-  zIndex,
-} from './foundations';
+import { colors } from './foundations/colors';
+import { spacing } from './foundations/spacing';
+import { typography, fonts } from './foundations/typography';
+import { radii } from './foundations/radii';
+import { shadows } from './foundations/shadows';
+import { sizes } from './foundations/sizes';
+import { zIndex } from './foundations/zIndex';
 
 const commonTheme = {
   spacing,

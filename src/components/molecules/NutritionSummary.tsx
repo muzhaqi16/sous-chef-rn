@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import type { NutritionsData, NutritionHighlight } from '#types';
+import { Icon } from '#utils/iconUtils';
+import type { NutritionsData, NutritionHighlight } from '#/types/nutrition';
 import {
   parseNutritions,
   extractMacroSummary,

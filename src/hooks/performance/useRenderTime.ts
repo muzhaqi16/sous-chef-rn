@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Telemetry } from '#/services/telemetry';
-import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance';
+import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
 
 /**

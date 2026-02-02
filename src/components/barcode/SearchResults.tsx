@@ -7,7 +7,7 @@ import {
   useCreatePantryItemMutation,
   useAddItemToShoppingListMutation,
 } from '#generated';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater for ShoppingList.itemsConnection
 const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
-import { BaseSwitch } from '#components/base';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetModal,
@@ -8,7 +8,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
@@ -16,7 +17,7 @@ import {
   getPlaceholderForField,
 } from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
 
 export interface SettingRowProps {

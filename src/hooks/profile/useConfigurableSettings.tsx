@@ -8,7 +8,8 @@ import {
   selectNavigationUtils,
   selectPreferences,
 } from '#store/useAppStore';
-import { useTheme, useAuth } from '#hooks';
+import { useTheme } from '#hooks/useTheme';
+import { useAuth } from '#hooks/auth/useAuth';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
@@ -16,7 +17,7 @@ import {
 } from '#generated';
 import { ThemePreference } from '#store/slices/preferencesSlice';
 
-import { PROFILE_SETTINGS_CONFIG } from '#config';
+import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';

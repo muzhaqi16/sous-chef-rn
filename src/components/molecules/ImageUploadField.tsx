@@ -7,10 +7,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {ImagePicker, ImageFile} from './ImagePicker';
-import {useImageUpload} from '#hooks';
-import {commonStyles} from '#styles';
+import {useImageUpload} from '#hooks/useImageUpload';
+import {commonStyles} from '#/styles/commonStyles';
 import {ImageUploadPurpose} from '#generated';
 
 interface ImageUploadFieldProps {

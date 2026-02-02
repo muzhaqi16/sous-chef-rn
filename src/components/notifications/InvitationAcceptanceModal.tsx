@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useApolloClient } from '@apollo/client/react';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
 import {
   useAcceptHomeInviteMutation,
@@ -19,7 +19,7 @@ import {
   MyShoppingListInvitesDocument,
   MyShoppingListInvitesQuery,
 } from '#generated';
-import { createAddToQueryFieldUpdater } from '#/apollo/utils';
+import { createAddToQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';

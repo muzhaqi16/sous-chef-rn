@@ -1,9 +1,7 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  RecipeMain,
-  RecipeDetail,
-  RecipeSearch,
-} from '#screens/recipe';
+import { RecipeMain } from '#screens/recipe/RecipeMain';
+import { RecipeDetail } from '#screens/recipe/RecipeDetail';
+import { RecipeSearch } from '#screens/recipe/RecipeSearch';
 
 export type RecipeStackParamList = {
   RecipeMain: undefined;

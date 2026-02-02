@@ -1,11 +1,9 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  LandingAuthScreen,
-  LoginScreen,
-  SignUpScreen,
-  ForgotPasswordScreen,
-  CodeVerificationScreen,
-} from '#screens/auth';
+import { LandingAuthScreen } from '#screens/auth/LandingAuthScreen';
+import { LoginScreen } from '#screens/auth/LoginScreen';
+import { SignUpScreen } from '#screens/auth/SignUpScreen';
+import { ForgotPasswordScreen } from '#screens/auth/ForgotPasswordScreen';
+import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 
 export type AuthStackParamList = {
   LandingAuth: undefined;

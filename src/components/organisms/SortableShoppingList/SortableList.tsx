@@ -17,7 +17,7 @@ import type {
   SortableShoppingListProps,
   SortableShoppingListItem,
 } from './types';
-import { HapticService } from '#services/haptic';
+import { HapticService } from '#services/haptic/HapticService';
 import { SimpleDraggableItem } from './SortableItem';
 import {
   SortableListActionsProvider,

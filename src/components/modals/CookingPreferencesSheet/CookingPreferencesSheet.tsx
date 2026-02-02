@@ -7,11 +7,11 @@ import {
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
-import { BottomSheetHeader } from '#components/atoms';
-import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;

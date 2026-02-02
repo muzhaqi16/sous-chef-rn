@@ -1,4 +1,4 @@
-import type { ItemImage, ImageSize, ImageTab } from '#types';
+import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
 
 /**
  * Extracts the image URL from an item

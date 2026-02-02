@@ -11,7 +11,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { useHaptic } from '#hooks/haptic';
+import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 

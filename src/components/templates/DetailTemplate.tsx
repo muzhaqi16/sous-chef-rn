@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, ScrollView, Text, RefreshControl } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { Header, HeaderAction, HeaderVariant } from '../molecules/Header';
 import { Button } from '../base/Button';
-import { commonStyles } from '#/styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface DetailSection {
   title?: string;

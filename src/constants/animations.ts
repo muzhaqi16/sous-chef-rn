@@ -1,7 +1,7 @@
 import { FadeIn, FadeOut, LinearTransition, Easing } from 'react-native-reanimated';
 
-// Re-export for backward compatibility (moved to drag.ts)
-export { DRAG_ITEM_HEIGHT } from './drag';
+// Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
+// Import directly: import { DRAG_ITEM_HEIGHT } from '#/constants/drag';
 
 /**
  * Standard cubic bezier easing function for smooth animations

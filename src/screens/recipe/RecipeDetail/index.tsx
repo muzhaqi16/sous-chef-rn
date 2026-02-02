@@ -17,14 +17,16 @@ import Animated, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { BottomSheetAction, FolderPicker } from '#components';
+import { BottomSheetAction } from '#components/templates/BottomSheetAction';
+import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
 import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet/ManageRecipeSheet';
-import { useRecipeFolders, useRecipeTags } from '#/hooks/recipe';
+import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
+import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeDetail } from './useRecipeDetail';
-import { IngredientCard } from './components';
+import { IngredientCard } from './components/IngredientCard';
 
 const RecipeDetailScreen: React.FC = () => {
   const { theme } = useUnistyles();

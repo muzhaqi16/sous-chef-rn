@@ -6,7 +6,7 @@ import Animated, {
   FadeOut,
   LinearTransition,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { ActionTrayContentProps } from './types';
 
 export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({

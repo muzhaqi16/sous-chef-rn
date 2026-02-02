@@ -15,7 +15,7 @@
 import {
   useNotificationUpdatedSubscription,
 } from '#generated';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
 
 /**

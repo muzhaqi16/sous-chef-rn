@@ -1,14 +1,8 @@
 import React, { useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { GreetingHeaderProps } from './types';
-
-export type {
-  GreetingHeaderProps,
-  HouseholdBadgeConfig,
-  SearchConfig,
-} from './types';
 
 /**
  * Generic greeting header with user info, optional household badge, and search

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { formatInviteStatus, getInviteStatusColor } from '#utils/formatters';
+import { Icon } from '#utils/iconUtils';
+import { formatInviteStatus, getInviteStatusColor } from '#/utils/formatters/inviteFormatters';
 
 interface Invite {
   id: string;

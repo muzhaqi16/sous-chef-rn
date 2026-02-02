@@ -9,44 +9,37 @@ import {
   selectPostLoginState,
 } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
-import { SplashScreen } from '#screens';
-import {
-  AuthStack,
-  OnboardingStack,
-  HomeTabs,
-  BarcodeStack,
-  NotificationStack,
-} from './stacks';
-import {
-  HomeManagement,
-  ProfilePhotoUploadScreen,
-  ImageCropScreen,
-  NotFoundScreen,
-} from '#screens';
-import { HomeDetailScreen, StorageLocationsScreen } from '#screens/home';
-import {
-  CodeVerificationScreen,
-  EmailVerificationDeepLinkScreen,
-  ResetPasswordScreen,
-} from '#screens/auth';
-import { AcceptInvite } from '#screens/shoppingList';
-import {
-  DeleteAccountScreen,
-  DietaryProfileScreen,
-  AppSettingsScreen,
-  PersonalInformationScreen,
-  PerformanceDashboard,
-  DebugInfo,
-  ChangePasswordScreen,
-} from '#screens/profile';
-import { NotificationSettingsScreen } from '#screens/notifications';
+import { SplashScreen } from '#screens/SplashScreen';
+import { NotFoundScreen } from '#screens/NotFoundScreen';
+import { AuthStack } from './stacks/AuthStack';
+import { OnboardingStack } from './stacks/OnboardingStack';
+import { HomeTabs } from './stacks/HomeTabs';
+import { BarcodeStack } from './stacks/BarcodeStack';
+import { NotificationStack } from './stacks/NotificationStack';
+import { HomeManagement } from '#screens/home/HomeManagement';
+import { HomeDetailScreen } from '#screens/home/HomeDetailScreen';
+import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
+import { ProfilePhotoUploadScreen } from '#screens/profile/ProfilePhotoUploadScreen';
+import { ImageCropScreen } from '#screens/profile/ImageCropScreen';
+import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
+import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
+import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
+import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { DeleteAccountScreen } from '#screens/profile/DeleteAccountScreen';
+import { DietaryProfileScreen } from '#screens/profile/DietaryProfileScreen';
+import { AppSettingsScreen } from '#screens/profile/AppSettingsScreen';
+import { PersonalInformationScreen } from '#screens/profile/PersonalInformationScreen';
+import { PerformanceDashboard } from '#screens/profile/PerformanceDashboard';
+import { DebugInfo } from '#screens/profile/DebugInfo';
+import { ChangePasswordScreen } from '#screens/profile/ChangePasswordScreen';
+import { NotificationSettingsScreen } from '#screens/notifications/NotificationSettingsScreen';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import {
   NavigationErrorBoundary,
   AuthErrorBoundary,
 } from '#components/providers/ErrorBoundary';
-import { PostLoginBiometricPrompt } from '#components/organisms';
+import { PostLoginBiometricPrompt } from '#components/organisms/PostLoginBiometricPrompt';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 
 export type RootStackParamList = {

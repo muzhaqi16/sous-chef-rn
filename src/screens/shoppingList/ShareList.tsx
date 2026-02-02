@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -16,13 +16,13 @@ import {
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '#generated';
-import { useShoppingListDetails } from '#/hooks';
+import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useAppStore, selectUser } from '#store/useAppStore';
-import { Button } from '#components/base';
-import { OfflineGate } from '#components/atoms';
+import { Button } from '#components/base/Button';
+import { OfflineGate } from '#components/atoms/OfflineGate';
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (status: string) => {

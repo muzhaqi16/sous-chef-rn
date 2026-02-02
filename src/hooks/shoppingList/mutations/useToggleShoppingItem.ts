@@ -20,7 +20,7 @@ import {
   removeFromUnpurchasedItems,
   addToPurchasedItems,
   removeFromPurchasedItems,
-} from '#/apollo/utils';
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from './utils';
 

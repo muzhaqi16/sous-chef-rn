@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { UserHeader, SearchBar } from '#components';
+import { UserHeader } from '#components/molecules/UserHeader';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { Header, HeaderAction } from '../molecules/Header';
 import { ItemList } from '../organisms/ItemList';
 import { SearchBarAction } from '#components/molecules/SearchBar';

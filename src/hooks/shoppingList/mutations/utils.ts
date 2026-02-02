@@ -5,7 +5,7 @@
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 // Helper to detect if error is network-related (skip alerts, let queue handle retry)
 export const isNetworkError = (error: any): boolean => {

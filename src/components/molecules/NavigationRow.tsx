@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import type { Icon as IconType } from '#utils';
+import { Icon } from '#utils/iconUtils';
+import type { Icon as IconType } from '#utils/iconUtils';
 
 interface NavigationRowProps {
   icon: React.ComponentProps<typeof IconType>['name'];

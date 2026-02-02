@@ -13,31 +13,28 @@ import {
   TouchableOpacity,
   Pressable,
 } from 'react-native';
-import { useAppNavigation, useTabBarAddButton } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import {
-  ListTemplate,
-  HeaderAction,
-  RecipesHeader,
-  FolderPicker,
-  TagPicker,
-  FilterTabs,
-} from '#components';
-import type { FilterTabConfig } from '#components';
+import { ListTemplate } from '#components/templates/ListTemplate';
+import type { HeaderAction } from '#components/molecules/Header';
+import { RecipesHeader } from '#components/molecules/RecipesHeader';
+import { FolderPicker } from '#components/molecules/FolderPicker';
+import { TagPicker } from '#components/molecules/TagPicker';
+import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#generated';
-import {
-  useSavedRecipes,
-  useRecipeFolders,
-  useRecipeTags,
-  useFolderActions,
-} from '#/hooks/recipe';
-import { spoonacularService } from '#/services/recipeApi';
+import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
+import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
+import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
+import { useFolderActions } from '#/hooks/recipe/useFolderActions';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
 

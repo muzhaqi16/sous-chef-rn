@@ -1,5 +1,5 @@
 import { useCallback, RefObject } from 'react';
-import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 
 interface UseSelectorManagementOptions {
   /**

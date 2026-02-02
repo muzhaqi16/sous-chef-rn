@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {NotificationItem} from '#store/slices/notificationSlice';
 
 interface UrgentNotificationsBannerProps {

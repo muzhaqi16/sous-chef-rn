@@ -1,18 +1,16 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Image, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import {
-  ListTemplate,
-  SearchBarAction,
-  HeaderAction,
-  BottomSheetAction,
-} from '#components';
+import { ListTemplate } from '#components/templates/ListTemplate';
+import type { SearchBarAction } from '#components/molecules/SearchBar';
+import type { HeaderAction } from '#components/molecules/Header';
+import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { ItemList } from '#components/organisms/ItemList';
-import { RecipeCardSkeleton } from '#components/base/Skeleton';
+import { RecipeCardSkeleton } from '#components/base/Skeleton/RecipeCardSkeleton';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useRecipeSearch } from './useRecipeSearch';
-import { OfflineGate } from '#components/atoms';
+import { OfflineGate } from '#components/atoms/OfflineGate';
 
 const INGREDIENT_ITEM_HEIGHT = 56;
 

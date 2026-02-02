@@ -13,7 +13,7 @@ import BottomSheet, {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { Button } from '../base/Button';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import {
   CollaboratorRole,
   useUpdateCollaboratorRoleMutation,

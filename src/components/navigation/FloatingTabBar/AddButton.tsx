@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { AddButtonProps } from './types';
 
 export const AddButton: React.FC<AddButtonProps> = ({

@@ -6,7 +6,7 @@ import { FilterTabBar } from './FilterTabBar';
 import { MemoizedShoppingTab } from './ShoppingTab';
 import { MemoizedPurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
-import type { SortableShoppingListItem } from '../SortableShoppingList';
+import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
 

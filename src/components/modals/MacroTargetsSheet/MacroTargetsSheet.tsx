@@ -6,11 +6,11 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
-import { BottomSheetHeader } from '#components/atoms';
-import { DIETARY_LIMITS } from '#/constants';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { DIETARY_LIMITS } from '#/constants/dietary';
 
 interface MacroTargetsSheetProps {
   visible: boolean;

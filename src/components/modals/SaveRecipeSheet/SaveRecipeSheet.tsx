@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,10 @@ import {
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
-import { TagInput } from '#components';
-import { Icon } from '#utils';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { TagInput } from '#components/molecules/TagInput';
+import { Icon } from '#utils/iconUtils';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -97,8 +98,10 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   }, [newFolderName]);
 
   // Dedupe folders with "Favorites" first, then existing folders, then locally created folders
-  const allFolders = [...new Set([...folders, ...localFolders])];
-  const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
+  const displayFolders = useMemo(() => {
+    const allFolders = [...new Set([...folders, ...localFolders])];
+    return ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
+  }, [folders, localFolders]);
 
   return (
     <BottomSheetModal

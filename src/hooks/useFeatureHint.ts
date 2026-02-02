@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings';
+import { useShowTutorials } from '#hooks/settings/useSettings';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
 

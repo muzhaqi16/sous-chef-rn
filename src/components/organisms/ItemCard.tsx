@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { SwipeableItem } from '#components';
+import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface ItemCardProps {
   id: string;

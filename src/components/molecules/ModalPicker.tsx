@@ -1,7 +1,7 @@
 import React from 'react';
 import {Modal, View, Text, TouchableOpacity, ScrollView} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#/utils';
+import {Icon} from '#/utils/iconUtils';
 
 export interface ModalPickerProps {
   label: string;

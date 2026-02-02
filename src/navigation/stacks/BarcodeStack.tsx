@@ -1,5 +1,6 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {BarcodeScannerScreen, SearchResultsScreen} from '#screens/barcode';
+import { BarcodeScannerScreen } from '#screens/barcode/BarcodeScannerScreen';
+import { SearchResultsScreen } from '#screens/barcode/SearchResultsScreen';
 
 export type BarcodeStackParamList = {
   BarcodeScanner:

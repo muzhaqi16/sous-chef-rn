@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch, SettingSection } from '#components/settings';
-import { ProfileScreenWrapper } from '#components/templates';
+import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSection } from '#components/settings/SettingSection';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';

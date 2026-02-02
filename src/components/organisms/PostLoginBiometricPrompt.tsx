@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { useAuth } from '#hooks';
+import { Icon } from '#utils/iconUtils';
+import { useAuth } from '#hooks/auth/useAuth';
 
 interface PostLoginBiometricPromptProps {
   visible: boolean;

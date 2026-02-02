@@ -3,9 +3,10 @@ import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
-import { NutritionSummary, NutritionDetailList } from '#components/molecules';
-import { useAppNavigation } from '#hooks';
-import { commonStyles } from '#styles';
+import { NutritionSummary } from '#components/molecules/NutritionSummary';
+import { NutritionDetailList } from '#components/molecules/NutritionDetailList';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { commonStyles } from '#/styles/commonStyles';
 import type { PantryStackParamList } from '#navigation/stacks/PantryStack';
 
 type NutritionScreenRouteProp = RouteProp<PantryStackParamList, 'NutritionScreen'>;

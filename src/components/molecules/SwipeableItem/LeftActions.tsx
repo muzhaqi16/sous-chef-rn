@@ -1,7 +1,7 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
 import { useUnistyles } from 'react-native-unistyles';
-import { HapticService } from '#/services/haptic';
+import { HapticService } from '#/services/haptic/HapticService';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';

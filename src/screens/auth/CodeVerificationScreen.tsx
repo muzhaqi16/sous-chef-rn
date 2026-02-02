@@ -2,7 +2,9 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text } from 'react-native';
 import { GraphQLError } from 'graphql';
-import { AuthWrapper, AuthFormTemplate, CodeInputAdapter } from '#components';
+import { AuthWrapper } from '#components/templates/AuthWrapper';
+import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
+import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
 import { useAppStore } from '#store/useAppStore';
 import {
   useVerifyEmailMutation,

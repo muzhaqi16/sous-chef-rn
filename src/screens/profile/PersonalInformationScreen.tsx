@@ -1,8 +1,9 @@
 import React, { useMemo, useCallback } from 'react';
-import { SettingsSection } from '#components';
-import { ProfileScreenWrapper } from '#components/templates';
-import { useProfileData, useAuth } from '#hooks';
-import { PERSONAL_INFO_CONFIG } from '#config';
+import { SettingsSection } from '#components/organisms/SettingsSection';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useAuth } from '#hooks/auth/useAuth';
+import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
 import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
 import { useApolloClient } from '@apollo/client/react';
 import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';

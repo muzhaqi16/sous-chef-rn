@@ -7,7 +7,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, IconLibrary } from '#utils';
+import { Icon, IconLibrary } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './PantryContent';
 
 interface PantrySortModalProps {

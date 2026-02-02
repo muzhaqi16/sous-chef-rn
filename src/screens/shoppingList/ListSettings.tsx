@@ -8,11 +8,12 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useShoppingListDetails, useAppNavigation } from '#/hooks';
+import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
-import { useShoppingListsQuery } from '#hooks/shoppingList';
+import { useShoppingListsQuery } from '#hooks/shoppingList/useShoppingListsQuery';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
   useUpdateShoppingListMutation,
@@ -21,12 +22,12 @@ import {
   GetShoppingListsLiteDocument,
   ShoppingList,
 } from '#generated';
-import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
+import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   isShoppingListOwner,
   getShoppingListRole,
