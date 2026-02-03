@@ -9,16 +9,15 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
-  AnimatedFlashList,
-  type AnimatedFlashListRef,
-  type AnimatedRenderItemInfo,
-} from '@souscheflabs/reanimated-flashlist';
+  FlashList,
+  type FlashListRef,
+  type ListRenderItemInfo,
+} from '@shopify/flash-list';
 import type {
   SortableShoppingListProps,
   SortableShoppingListItem,
 } from './types';
-import { HapticService } from '#services/haptic/HapticService';
-import { SimpleDraggableItem } from './SortableItem';
+import { SwipeableListItem } from './SortableItem';
 import {
   SortableListActionsProvider,
   type SortableListActions,
@@ -34,11 +33,7 @@ import {
  * Exposes methods for parent components to control list behavior
  */
 export interface SortableShoppingListRef {
-  /**
-   * Call this before removing items to prepare FlashList for layout animation.
-   * This prevents visual gaps when items are toggled between lists.
-   */
-  prepareForLayoutAnimation: () => void;
+  // No methods currently exposed - placeholder for future functionality
 }
 
 // Tab bar height constant (65px from FloatingTabBar)
@@ -73,15 +68,11 @@ const SortableShoppingListComponent = forwardRef<
     },
     ref,
   ) => {
-    // Ref to AnimatedFlashList
-    const flashListRef = useRef<AnimatedFlashListRef>(null);
+    // Ref to FlashList
+    const flashListRef = useRef<FlashListRef<SortableShoppingListItem>>(null);
 
     // Expose methods to parent via ref
-    useImperativeHandle(ref, () => ({
-      prepareForLayoutAnimation: () => {
-        flashListRef.current?.prepareForLayoutAnimation();
-      },
-    }));
+    useImperativeHandle(ref, () => ({}));
 
     // PERFORMANCE: Single useUnistyles call for entire list
     const { theme } = useUnistyles();
@@ -148,11 +139,7 @@ const SortableShoppingListComponent = forwardRef<
         onQuantityPress,
         onSwipeableWillOpen: handleSwipeableWillOpen,
         onSwipeableClose: handleSwipeableClose,
-        prepareForLayoutAnimation: () => {
-          flashListRef.current?.prepareForLayoutAnimation();
-        },
         onSortOrderUpdate,
-        onReorderByDelta: undefined, // No longer needed - AnimatedFlashList handles this
       }),
       [
         onItemPress,
@@ -191,41 +178,12 @@ const SortableShoppingListComponent = forwardRef<
       [items],
     );
 
-    // Render item function - passes AnimatedFlashList info to SimpleDraggableItem
+    // Render item function - passes FlashList info to SwipeableListItem
     // Note: Invalid items are already filtered in validItems, no null check needed
     const renderItem = useCallback(
-      (info: AnimatedRenderItemInfo<SortableShoppingListItem>) => (
-        <SimpleDraggableItem {...info} />
+      (info: ListRenderItemInfo<SortableShoppingListItem>) => (
+        <SwipeableListItem {...info} />
       ),
-      [],
-    );
-
-    // Determine if an item can be dragged
-    const canDrag = useCallback(
-      (item: SortableShoppingListItem) => {
-        return !item.isPurchased && canReorderItems;
-      },
-      [canReorderItems],
-    );
-
-    // Handle haptic feedback from drag operations
-    const handleHapticFeedback = useCallback(
-      (type: 'light' | 'medium' | 'heavy' | 'selection') => {
-        switch (type) {
-          case 'light':
-            HapticService.light();
-            break;
-          case 'medium':
-            HapticService.medium();
-            break;
-          case 'heavy':
-            HapticService.heavy();
-            break;
-          case 'selection':
-            HapticService.selection();
-            break;
-        }
-      },
       [],
     );
 
@@ -255,15 +213,11 @@ const SortableShoppingListComponent = forwardRef<
           permissions={permissions}
         >
           <View style={styles.container}>
-            <AnimatedFlashList<SortableShoppingListItem>
+            <FlashList<SortableShoppingListItem>
               ref={flashListRef}
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              dragEnabled={canReorderItems}
-              canDrag={canDrag}
-              onReorderByNeighbors={onSortOrderUpdate}
-              onHapticFeedback={handleHapticFeedback}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }

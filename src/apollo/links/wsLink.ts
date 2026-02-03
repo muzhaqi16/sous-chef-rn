@@ -123,6 +123,11 @@ const createWsClient = () => {
         // Suppress this specific error to reduce log noise during normal token refresh cycles
         const isAuthError = event?.code === 4500;
 
+        // Detect HTTP 401 rejection (happens when token is expired on initial connect)
+        const is401Rejection = event?.code === 1006 &&
+          typeof event?.reason === 'string' &&
+          event.reason.includes('401');
+
         if (__DEV__ && !isAuthError) {
           logger.info('🔌 WebSocket closed:', {
             code: event?.code,
@@ -132,10 +137,18 @@ const createWsClient = () => {
           });
         }
 
-        // Don't reconnect for auth errors (handled by token refresh) or when explicitly disabled
-        // Note: Code 1000 can occur when all subscriptions skip (e.g., user deleted last home)
-        // In that case we SHOULD reconnect. Logout is handled by disableAutoReconnect() being called first.
-        if (isAuthError || !shouldAutoReconnect) {
+        // Auth errors (4500 or 401) - don't reconnect, token refresh will handle it
+        // Note: 401 rejection means token is invalid, let proactiveTokenRefresh or
+        // errorLink handle the refresh, then subscriptions will auto-restart
+        if (isAuthError || is401Rejection) {
+          if (is401Rejection) {
+            logger.info('🔌 WebSocket rejected with 401 - awaiting token refresh');
+          }
+          return;
+        }
+
+        // Don't reconnect when explicitly disabled (e.g., during logout)
+        if (!shouldAutoReconnect) {
           return;
         }
 

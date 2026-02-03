@@ -11,6 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { ListTemplate } from '#components/templates/ListTemplate';
 import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { SwipeHintOverlay } from '#components/organisms/SwipeHintOverlay';
@@ -92,9 +93,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     const { navigate, navigateTo } = useAppNavigation();
     const { setScannerProps } = useTabBarActions();
-    const {
-      theme: { colors },
-    } = useUnistyles();
+    const { theme } = useUnistyles();
 
     // Get profile data for header
     const { profile } = useProfileData();
@@ -217,27 +216,24 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       );
     }, [currentListDetails, user?.id]);
 
-    // Search bar actions
-    const searchBarActions = useMemo(
-      () => ({
-        showSearchIcon: true,
-        innerRightIcon:
-          searchQuery.trim().length === 0 ? (
-            <Pressable
-              onPress={handleOpenSelector}
-              hitSlop={8}
-              testID="shopping-list-selector"
-            >
-              <Icon
-                name="list"
-                size={18}
-                color={colors.textTertiary}
-                library="Ionicons"
-              />
-            </Pressable>
-          ) : undefined,
-      }),
-      [handleOpenSelector, searchQuery, colors],
+    // Search bar inner right icon (list selector button)
+    const searchBarInnerRightIcon = useMemo(
+      () =>
+        searchQuery.trim().length === 0 ? (
+          <Pressable
+            onPress={handleOpenSelector}
+            hitSlop={8}
+            testID="shopping-list-selector"
+          >
+            <Icon
+              name="list"
+              size={18}
+              color={theme.colors.textTertiary}
+              library="Ionicons"
+            />
+          </Pressable>
+        ) : undefined,
+      [handleOpenSelector, searchQuery, theme.colors.textTertiary],
     );
 
     // Memoized customListProps
@@ -396,10 +392,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           />
           <ListTemplate
             items={[]}
-            showUserHeader={false}
-            showSearchBar={false}
             emptyState={noListsEmptyState}
-            hasNoData={true}
           />
         </View>
       );
@@ -423,11 +416,18 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}
         />
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search shopping list..."
+            showSearchIcon
+            innerRightIcon={searchBarInnerRightIcon}
+          />
+        </View>
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           onItemPress={id =>
             navigate('ItemDetail', { listId: currentListId, itemId: id })
           }
@@ -436,12 +436,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           }
           onItemDelete={handleDeleteItem}
           onRefresh={handleRefresh}
-          searchPlaceholder="Search shopping list..."
-          listName={currentList?.name || 'Shopping List'}
-          completedCount={sortableItems.filter(item => item.isPurchased).length}
-          showUserHeader={false}
-          showSearchBar={true}
-          searchBarActions={searchBarActions}
           testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}

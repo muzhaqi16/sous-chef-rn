@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { RefreshControl, FlatList } from 'react-native';
+import { RefreshControl } from 'react-native';
+import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
@@ -7,10 +8,6 @@ import { IconName } from '#/utils/iconUtils';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
-
-// ItemCard height constant for getItemLayout optimization
-// Measured from actual ItemCard component (height + marginBottom)
-const ITEM_HEIGHT = 72;
 interface Item {
   id: string;
   title: string;
@@ -85,33 +82,9 @@ export const ItemList: React.FC<ItemListProps> = ({
     }
   };
 
-  const handleScroll = (event: any) => {
-    if (!onEndReached) return;
-
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = contentSize.height * onEndReachedThreshold;
-    const isCloseToBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-    if (isCloseToBottom) {
-      onEndReached();
-    }
-  };
-
-  // Performance optimization: getItemLayout for known item heights
-  // Avoids expensive layout measurement for better scroll performance
-  const getItemLayout = useCallback(
-    (_data: ArrayLike<Item> | null | undefined, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    [],
-  );
-
   // Performance optimization: memoize renderItem
   const renderItem = useCallback(
-    ({ item, index }: { item: Item; index: number }) => (
+    ({ item, index }: ListRenderItemInfo<Item>) => (
       <ItemCard
         id={item.id}
         title={item.title}
@@ -147,7 +120,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   }
 
   return (
-    <FlatList
+    <FlashList
       data={items}
       keyExtractor={(item) => item.id}
       contentContainerStyle={contentStyle}
@@ -156,16 +129,12 @@ export const ItemList: React.FC<ItemListProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
       }
-      onScroll={handleScroll}
-      scrollEventThrottle={400}
       renderItem={renderItem}
-      // Performance optimizations for large lists
-      getItemLayout={getItemLayout}
-      initialNumToRender={10}
-      maxToRenderPerBatch={10}
-      updateCellsBatchingPeriod={50}
-      windowSize={5}
-      removeClippedSubviews={true}
+      // FlashList v2: Pre-render items 200px outside viewport for smoother scrolling
+      drawDistance={200}
+      // Native onEndReached support
+      onEndReached={onEndReached}
+      onEndReachedThreshold={onEndReachedThreshold}
       ListHeaderComponent={
         ListHeaderComponent &&
         (typeof ListHeaderComponent === 'function' ? (

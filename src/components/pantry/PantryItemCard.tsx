@@ -1,11 +1,14 @@
-import React from 'react';
-import { Text } from 'react-native';
+import React, { useCallback } from 'react';
+import { Text, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '../molecules/BaseItemCard/CardLeftSlot';
 import { CardContent } from '../molecules/BaseItemCard/CardContent';
 import { CardRightSlot } from '../molecules/BaseItemCard/CardRightSlot';
 import type { CardVariant } from '../molecules/BaseItemCard/types';
+import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
+import { SLIDE_PRESETS } from '#/constants/animations';
 
 export type ItemVariant = 'normal' | 'warning' | 'expired';
 
@@ -72,6 +75,7 @@ const ExpirationText: React.FC<{
 /**
  * Pantry item card using BaseItemCard composition
  * Displays item with emoji/image, name, expiration status, quantity, and location
+ * Includes slide animation for delete/consume/waste actions
  */
 const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   id,
@@ -92,6 +96,38 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   onRestock,
   onSwipeableWillOpen,
 }) => {
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Slide animation for delete/consume/waste actions
+  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
+    itemId: id,
+    slideDistance: screenWidth,
+    duration: SLIDE_PRESETS.exitWithFade.duration,
+    withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
+  });
+
+  // Wrap delete action with slide animation
+  const handleDelete = useCallback(() => {
+    if (onDelete) {
+      triggerSlide(1, onDelete);
+    }
+  }, [onDelete, triggerSlide]);
+
+  // Wrap consume action with slide animation
+  const handleConsume = useCallback(() => {
+    if (onConsume) {
+      triggerSlide(1, onConsume);
+    }
+  }, [onConsume, triggerSlide]);
+
+  // Wrap waste action with slide animation
+  const handleWaste = useCallback(() => {
+    if (onWaste) {
+      triggerSlide(1, onWaste);
+    }
+  }, [onWaste, triggerSlide]);
+
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
@@ -111,34 +147,36 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   };
 
   return (
-    <BaseItemCard
-      variant={cardVariant}
-      onPress={onPress}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onConsume={onConsume}
-      onWaste={onWaste}
-      onRestock={onRestock}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      leftThreshold={80}
-      rightThreshold={80}
-      testID={`pantry-item-${id}`}
-      leftElement={renderLeftElement()}
-      rightElement={
-        <CardRightSlot type="meta" primary={quantity} secondary={location} />
-      }
-    >
-      <CardContent
-        title={name}
-        subtitle={
-          isOutOfStock ? (
-            <Text style={styles.outOfStock}>Out of stock</Text>
-          ) : expirationText ? (
-            <ExpirationText text={expirationText} variant={expirationVariant || 'normal'} />
-          ) : undefined
+    <Animated.View style={animatedSlideStyle}>
+      <BaseItemCard
+        variant={cardVariant}
+        onPress={onPress}
+        onEdit={onEdit}
+        onDelete={onDelete ? handleDelete : undefined}
+        onConsume={onConsume ? handleConsume : undefined}
+        onWaste={onWaste ? handleWaste : undefined}
+        onRestock={onRestock}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        leftThreshold={80}
+        rightThreshold={80}
+        testID={`pantry-item-${id}`}
+        leftElement={renderLeftElement()}
+        rightElement={
+          <CardRightSlot type="meta" primary={quantity} secondary={location} />
         }
-      />
-    </BaseItemCard>
+      >
+        <CardContent
+          title={name}
+          subtitle={
+            isOutOfStock ? (
+              <Text style={styles.outOfStock}>Out of stock</Text>
+            ) : expirationText ? (
+              <ExpirationText text={expirationText} variant={expirationVariant || 'normal'} />
+            ) : undefined
+          }
+        />
+      </BaseItemCard>
+    </Animated.View>
   );
 };
 

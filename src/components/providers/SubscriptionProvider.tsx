@@ -1,10 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { enableAutoReconnect, disableAutoReconnect, reconnectWebSocket } from '#/apollo/links/wsLink';
+import { enableAutoReconnect, disableAutoReconnect } from '#/apollo/links/wsLink';
+import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 import { ListAnimationProvider } from '#/context/ListAnimationContext';
+import { useStore } from '#store';
+import { logger } from '#/utils/environment';
+
+/**
+ * Check if token is expired or expiring soon (within 30 seconds)
+ */
+const isTokenExpiredOrExpiringSoon = (token: string | null): boolean => {
+  if (!token) return true;
+  try {
+    const decoded = jwtDecode<{ exp: number }>(token);
+    const expiresAt = decoded.exp * 1000;
+    // Consider expired if less than 30 seconds remaining
+    return expiresAt - Date.now() < 30 * 1000;
+  } catch {
+    return true;
+  }
+};
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -46,30 +65,54 @@ interface SubscriptionProviderProps {
  */
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  // Block subscriptions until token is validated/refreshed to prevent 401 race condition
+  const [isTokenReady, setIsTokenReady] = useState(false);
 
   // Enable/disable auto-reconnect and cleanup subscriptions based on auth state
   useEffect(() => {
-    if (isAuthenticated) {
-      // Enable WebSocket auto-reconnection when authenticated
-      enableAutoReconnect();
-      // Ensure WebSocket client is properly initialized after login
-      // This creates a fresh client if the previous one was disposed during logout
-      reconnectWebSocket();
-    } else {
-      // Disable auto-reconnection and cleanup on logout
-      disableAutoReconnect();
-      subscriptionService.cleanup();
-    }
+    const initializeWebSocket = async () => {
+      if (isAuthenticated) {
+        const accessToken = useStore.getState().accessToken;
+
+        // Validate token before enabling WebSocket
+        if (isTokenExpiredOrExpiringSoon(accessToken)) {
+          logger.info('[SubscriptionProvider] Token expired/expiring, refreshing before WebSocket init');
+          try {
+            await proactiveTokenRefresh();
+          } catch {
+            logger.warn('[SubscriptionProvider] Token refresh failed, WebSocket may fail initially');
+          }
+        }
+
+        // Enable WebSocket auto-reconnection when authenticated
+        enableAutoReconnect();
+        // Don't call reconnectWebSocket() here - the lazy WebSocket client
+        // will connect automatically when subscriptions start.
+        // reconnectWebSocket() is only needed for token refresh scenarios.
+
+        // NOW subscriptions can start - token is validated/refreshed
+        setIsTokenReady(true);
+      } else {
+        // Disable auto-reconnection and cleanup on logout
+        disableAutoReconnect();
+        subscriptionService.cleanup();
+        // Reset for next login
+        setIsTokenReady(false);
+      }
+    };
+
+    initializeWebSocket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   return (
     <ListAnimationProvider>
-      {/* Only initialize data and subscriptions when user is authenticated
-          This prevents WebSocket connection attempts without a valid JWT token,
-          eliminating "JWT token is required for WebSocket connections" errors on startup */}
+      {/* Only initialize data and subscriptions when user is authenticated AND token is ready
+          This prevents WebSocket connection attempts with expired tokens on app restart,
+          eliminating "Socket closed" 401 errors by ensuring token is validated first */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
-      {isAuthenticated && user?.id && (
+      {isAuthenticated && user?.id && isTokenReady && (
         <>
           <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
           <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />

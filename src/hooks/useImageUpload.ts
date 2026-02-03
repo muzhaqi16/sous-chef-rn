@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
 import {
@@ -35,6 +35,19 @@ export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Track active XHR to cancel on unmount (prevents memory leaks)
+  const activeXhrRef = useRef<XMLHttpRequest | null>(null);
+
+  // Cleanup: abort any pending upload when component unmounts
+  useEffect(() => {
+    return () => {
+      if (activeXhrRef.current) {
+        activeXhrRef.current.abort();
+        activeXhrRef.current = null;
+      }
+    };
+  }, []);
+
   const [createUploadUrl] = useCreateImageUploadUrlMutation();
   const [confirmProfileUpload] = useConfirmProfileImageUploadMutation();
   const [confirmItemUpload] = useConfirmItemImageUploadMutation();
@@ -53,7 +66,11 @@ export const useImageUpload = () => {
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
+        // Store reference for cleanup on unmount
+        activeXhrRef.current = xhr;
+
         xhr.onload = () => {
+          activeXhrRef.current = null;
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
@@ -66,11 +83,18 @@ export const useImageUpload = () => {
         };
 
         xhr.onerror = () => {
+          activeXhrRef.current = null;
           reject(new Error('Network request failed during upload'));
         };
 
         xhr.ontimeout = () => {
+          activeXhrRef.current = null;
           reject(new Error('Upload request timed out'));
+        };
+
+        xhr.onabort = () => {
+          activeXhrRef.current = null;
+          reject(new Error('Upload was cancelled'));
         };
 
         if (onProgress && xhr.upload) {

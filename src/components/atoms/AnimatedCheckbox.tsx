@@ -12,21 +12,21 @@ import { HapticService } from '#services/haptic/HapticService';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
+  itemId?: string; // Used to detect FlashList view recycling
   onPress?: () => void;
-  onToggleComplete?: () => void; // Called after animation finishes
   size?: number;
   disabled?: boolean;
-  animationDuration?: number; // How long to wait before calling onToggleComplete
+  animationDuration?: number; // Duration for checkbox visual animation
   testID?: string;
 };
 
 export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   checked,
+  itemId,
   onPress,
-  onToggleComplete,
   size = 24,
   disabled = false,
-  animationDuration = 400,
+  animationDuration: _animationDuration = 400,
   testID,
 }) => {
   const { theme } = useUnistyles();
@@ -34,6 +34,16 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
 
   // Local state for pending visual state (shows immediately on press)
   const [pendingChecked, setPendingChecked] = useState<boolean | null>(null);
+
+  // Reset animation state when view is recycled (itemId changes)
+  // This is required for FlashList compatibility per:
+  // https://shopify.github.io/flash-list/docs/guides/reanimated
+  useEffect(() => {
+    if (itemId) {
+      isPressed.value = false;
+      setPendingChecked(null);
+    }
+  }, [itemId, isPressed]);
 
   // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;
@@ -93,7 +103,8 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
     }
   }, [disabled, isPressed]);
 
-  // Handle press: show animation immediately, then call completion after delay
+  // Handle press: show animation immediately, then call onPress
+  // The caller is responsible for timing any state changes (e.g., via slide animation callback)
   const handlePress = useCallback(() => {
     if (disabled) return;
 
@@ -101,16 +112,9 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
     const newState = !checked;
     setPendingChecked(newState);
 
-    // Fire immediate onPress for any non-animation work (haptic already fired in handlePressIn)
+    // Fire onPress - caller handles timing of actual state change
     onPress?.();
-
-    // After animation duration, call completion callback
-    if (onToggleComplete) {
-      setTimeout(() => {
-        onToggleComplete();
-      }, animationDuration);
-    }
-  }, [checked, disabled, onPress, onToggleComplete, animationDuration]);
+  }, [checked, disabled, onPress]);
 
   return (
     <Pressable

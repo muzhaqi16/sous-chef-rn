@@ -2,8 +2,8 @@ import React, { useCallback, useMemo } from 'react';
 import { View, Image, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
-import type { SearchBarAction } from '#components/molecules/SearchBar';
-import type { HeaderAction } from '#components/molecules/Header';
+import { SearchBar, type SearchBarAction } from '#components/molecules/SearchBar';
+import { Header } from '#components/molecules/Header';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { ItemList } from '#components/organisms/ItemList';
 import { RecipeCardSkeleton } from '#components/base/Skeleton/RecipeCardSkeleton';
@@ -128,22 +128,13 @@ export const RecipeSearch: React.FC = () => {
     }));
   }, [items]);
 
-  const headerActions = useMemo(
-    () => ({
-      left: [{ icon: 'arrow-back', onPress: () => navigate('RecipeMain') }] as HeaderAction[],
-      right: [] as HeaderAction[],
-    }),
-    [navigate],
-  );
-
-  const searchBarActions = useMemo(
-    () => ({
-      left: [] as SearchBarAction[],
-      right: [
+  // Search bar right actions
+  const searchBarRightActions = useMemo(
+    () =>
+      [
         {
           icon: 'restaurant',
           onPress: openIngredientSelector,
-          // White background by default, primary when ingredients are selected
           color: selectedIngredients.size > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: selectedIngredients.size > 0 ? theme.colors.primary : theme.colors.surface,
           badge: selectedIngredients.size > 0 ? String(selectedIngredients.size) : undefined,
@@ -151,7 +142,6 @@ export const RecipeSearch: React.FC = () => {
         {
           icon: 'options',
           onPress: openFilterSheet,
-          // White background by default, primary when filters are active
           color: activeFilterCount > 0 ? theme.colors.white : theme.colors.primary,
           backgroundColor: activeFilterCount > 0 ? theme.colors.primary : theme.colors.surface,
           badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined,
@@ -163,7 +153,6 @@ export const RecipeSearch: React.FC = () => {
           backgroundColor: theme.colors.surface,
         },
       ] as SearchBarAction[],
-    }),
     [handleTextSearch, openIngredientSelector, openFilterSheet, selectedIngredients.size, activeFilterCount, theme],
   );
 
@@ -187,24 +176,26 @@ export const RecipeSearch: React.FC = () => {
         message="Recipe search requires internet"
         description="Connect to the internet to search for recipes from our database."
       >
+        <Header
+          title="Search Recipes"
+          onBack={() => navigate('RecipeMain')}
+        />
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search recipes..."
+            rightActions={searchBarRightActions}
+          />
+        </View>
         <ListTemplate
-        title="Search Recipes"
-        subtitle="Find recipes"
-        items={displayItems}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onItemPress={handleItemPress}
-        loading={loading}
-        hasNoData={false}
-        showHeader={true}
-        showSearchBar={true}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        emptyState={emptyStateConfig}
-        customListComponent={RecipeSearchContent}
-        customListProps={{ loading, searchPerformed }}
-        showUserHeader={false}
-      />
+          items={displayItems}
+          onItemPress={handleItemPress}
+          loading={loading}
+          emptyState={emptyStateConfig}
+          customListComponent={RecipeSearchContent}
+          customListProps={{ loading, searchPerformed }}
+        />
 
       {/* Ingredient Selector Bottom Sheet */}
       <BottomSheetAction

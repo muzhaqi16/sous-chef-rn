@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import type { AnimatedRenderItemInfo } from '@souscheflabs/reanimated-flashlist';
+import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
@@ -12,6 +11,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
 import { createPropsComparator } from '#utils/memoUtils';
 import { HIT_SLOP } from '#/constants/touch';
+import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
@@ -33,20 +33,25 @@ interface ItemData {
 }
 
 /**
- * Props for SimpleDraggableItem - extends AnimatedRenderItemInfo from the package
- * Receives animation props from AnimatedFlashList's renderItem callback
+ * Props for SwipeableListItem - extends ListRenderItemInfo from FlashList
  */
-type SimpleDraggableItemProps = AnimatedRenderItemInfo<ItemData>;
+type SwipeableListItemProps = ListRenderItemInfo<ItemData>;
 
-const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
+const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item,
-  animatedStyle,
-  dragHandleProps,
-  isDragEnabled,
-  triggerExitAnimation,
 }) => {
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
   const themeColors = useSortableListTheme();
+
+  // Get screen width for full-width slide animation
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Slide animation for purchase toggle
+  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
+    itemId: item.id,
+    slideDistance: screenWidth,
+    duration: 250,
+  });
 
   // Get actions and permissions from context (stable references)
   const { actions, permissionsRef } = useSortableListActions();
@@ -59,7 +64,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     onQuantityPress,
     onSwipeableWillOpen,
     onSwipeableClose,
-    prepareForLayoutAnimation,
   } = actions;
 
   // Read permissions from ref to always get latest values
@@ -147,55 +151,27 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   // Create checkbox element for marking items as purchased
   // Uses AnimatedCheckbox with pendingChecked state for immediate visual feedback
+  // Slide animation triggers state change via callback AFTER animation completes
   const checkboxElement = useMemo(() => {
     if (!onTogglePurchase || !canMarkPurchased) return null;
     return (
       <AnimatedCheckbox
         checked={!!item.isPurchased}
+        itemId={item.id}
         onPress={() => {
-          // Trigger exit animation immediately when checkbox is pressed
           // Direction: 1 = right (marking as purchased), -1 = left (unmarking)
           const direction = item.isPurchased ? -1 : 1;
-          triggerExitAnimation(
-            direction,
-            () => {
-              prepareForLayoutAnimation?.();
-              onTogglePurchase?.(item.id);
-            },
-            'fast',
-          );
+          // Trigger slide animation with callback for state change AFTER animation
+          triggerSlide(direction, () => {
+            onTogglePurchase(item.id);
+          });
         }}
-        animationDuration={200} // Match exit animation duration
+        animationDuration={200}
         size={28}
         testID={`shopping-item-checkbox-${item.id}`}
       />
     );
-  }, [
-    item.id,
-    item.isPurchased,
-    onTogglePurchase,
-    canMarkPurchased,
-    triggerExitAnimation,
-    prepareForLayoutAnimation,
-  ]);
-
-  // Create drag handle element for reordering
-  // Uses dragHandleProps from AnimatedFlashList
-  const dragHandleElement = useMemo(() => {
-    if (!isDragEnabled || !dragHandleProps) return null;
-    return (
-      <GestureDetector gesture={dragHandleProps.gesture}>
-        <Animated.View style={styles.dragHandle}>
-          <Icon
-            name="drag-indicator"
-            size={20}
-            color={themeColors?.textSecondary}
-            library="MaterialIcons"
-          />
-        </Animated.View>
-      </GestureDetector>
-    );
-  }, [isDragEnabled, dragHandleProps, themeColors]);
+  }, [item.id, item.isPurchased, onTogglePurchase, canMarkPurchased, triggerSlide]);
 
   // Safety guard: skip rendering if item is invalid
   if (!item?.id || !item?.title) {
@@ -205,15 +181,15 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     return null;
   }
 
-  // Render the item with animation style from AnimatedFlashList
+  // Render the item
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <Animated.View
+      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+    >
       <LazySwipeableItem
-        isPreActivated={isDragEnabled}
+        isPreActivated={false}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
-        onLongPress={
-          !isDragEnabled && onItemPress ? () => onItemPress(item.id) : undefined
-        }
+        onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onEdit={
           canEditItems && onItemEdit ? () => onItemEdit(item.id) : undefined
         }
@@ -235,7 +211,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightElement={rightElement}
           leftElement={leftElement}
           checkboxElement={checkboxElement}
-          dragHandleElement={dragHandleElement}
+          dragHandleElement={null}
           rightIcon={undefined}
           isPurchased={item.isPurchased}
           themeColors={themeColors}
@@ -247,7 +223,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    ...commonStyles.shadow,
     opacity: 1,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xs,
@@ -262,18 +237,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.xs,
   },
-  dragHandle: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
-const arePropsEqual = createPropsComparator<SimpleDraggableItemProps>({
-  referenceKeys: ['index', 'totalItems', 'isDragEnabled', 'isDragging'],
+const arePropsEqual = createPropsComparator<SwipeableListItemProps>({
+  referenceKeys: ['index'],
   nestedComparisons: {
     item: ['id', 'title', 'subtitle', 'isPurchased', 'leftElementConfig'],
     'item.rightElementConfig': [
@@ -285,7 +253,7 @@ const arePropsEqual = createPropsComparator<SimpleDraggableItemProps>({
   },
 });
 
-export const SimpleDraggableItem = React.memo(
-  SimpleDraggableItemComponent,
+export const SwipeableListItem = React.memo(
+  SwipeableListItemComponent,
   arePropsEqual,
 );
