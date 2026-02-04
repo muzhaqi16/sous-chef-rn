@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SwipeableItem } from './index';
-import { SwipeableItemProps } from './types';
+import { SwipeableItem } from './SwipeableItem';
+import type { SwipeableItemProps } from './types';
 
 interface LazySwipeableItemProps extends SwipeableItemProps {
   /**

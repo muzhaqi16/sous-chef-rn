@@ -40,7 +40,6 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
 const styles = StyleSheet.create(() => ({
   itemContainer: {
     flex: 1,
-    overflow: 'hidden',
   },
   touchable: {
     // flex: 1 removed to prevent blocking swipe action buttons

@@ -116,10 +116,10 @@ export interface MemoryWarning {
  */
 export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
   enabled: __DEV__, // Only enabled in dev by default
-  trackRenders: true,
-  trackMemory: true,
-  trackScreens: true,
-  sampleRate: __DEV__ ? 1.0 : 0.1, // 100% in dev, 10% in production
+  trackRenders: __DEV__, // Disable render tracking in production
+  trackMemory: false, // Disable - RN APIs are unreliable
+  trackScreens: __DEV__, // Disable screen tracking in production
+  sampleRate: __DEV__ ? 1.0 : 0.05, // 100% in dev, 5% in production
   slowRenderThreshold: 16, // 60fps = 16.67ms per frame
   memoryWarningThreshold: 80, // Warn at 80% memory usage
   maxMemorySnapshots: 100, // Keep last 100 snapshots

@@ -12,11 +12,11 @@ import {
   GetHomesDocument,
   MembershipRole,
 } from '#generated';
-import { MESSAGES } from '#constants';
-import { formatRole } from '#utils/formatters';
+import { MESSAGES } from '#/constants/messages';
+import { formatRole } from '#utils/formatters/roleFormatters';
 import { normalizeHome } from '#/utils/connectionUtils';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
-import { useCrudOperations } from '#/hooks/utils';
+import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   handleVersionConflict,
   getVersionConflictMessage,

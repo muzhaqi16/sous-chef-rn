@@ -8,9 +8,9 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import type { SortableShoppingListItem } from '../organisms/SortableShoppingList';
-import { SortableShoppingList } from '../organisms/SortableShoppingList';
+import { Icon } from '#utils/iconUtils';
+import type { SortableShoppingListItem } from '../organisms/SortableShoppingList/types';
+import { SortableShoppingList } from '../organisms/SortableShoppingList/SortableList';
 
 interface CollapsiblePurchasedSectionProps {
   purchasedItems: SortableShoppingListItem[];

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, TextInput, Pressable } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { parseFractionalInput } from '#/utils';
-import { Label } from '#components/atoms';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { Label } from '#components/atoms/Label';
 
 interface EditableCounterProps {
   label?: string;
@@ -14,6 +14,7 @@ interface EditableCounterProps {
   step?: number;
   disabled?: boolean;
   required?: boolean;
+  testID?: string;
 }
 
 /**
@@ -39,6 +40,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   step = 1,
   disabled = false,
   required = false,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
@@ -108,7 +110,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="remove"
             size={theme.fonts.size.md}
-            color={disabled ? '#b0b0b0' : theme.colors.white}
+            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />
         </Pressable>
 
@@ -128,6 +130,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessible
           accessibilityLabel={label ? `${label} value` : 'Quantity value'}
           accessibilityHint="Tap to edit manually or use buttons to adjust"
+          testID={testID}
         />
 
         {/* Increment Button */}
@@ -147,7 +150,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <Icon
             name="add"
             size={theme.fonts.size.md}
-            color={disabled ? '#b0b0b0' : theme.colors.white}
+            color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />
         </Pressable>
       </View>
@@ -165,7 +168,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     height: 48,
     borderWidth: 1,
-    borderColor: '#ececec',
+    borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
     paddingHorizontal: 4,
@@ -175,7 +178,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 2,
   },
   containerDisabled: {
-    borderColor: '#d0d0d0',
+    borderColor: theme.colors.border,
   },
   button: {
     zIndex: 9,
@@ -198,6 +201,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   inputDisabled: {
-    color: '#b0b0b0',
+    color: theme.colors.iconDisabled,
   },
 }));

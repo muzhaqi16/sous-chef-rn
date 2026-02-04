@@ -8,10 +8,15 @@ import {
   selectSetHasInitializedHomeData,
   selectIsHomeSelectionReady,
   selectSetIsHomeSelectionReady,
+  selectIsLoggingOut,
 } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
-import { usePreservedArrayData } from '#/hooks/apollo';
-import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import {
+  normalizeHome,
+  normalizeHomes,
+  extractNodes,
+} from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
   const {
@@ -26,6 +31,21 @@ export const useDefaultHome = () => {
   const hasInitializedRef = useRef(false);
   // Track if we've already triggered auto-select for first home
   const hasAutoSelectedRef = useRef(false);
+
+  // Track logout state to reset refs when user logs out
+  const isLoggingOut = useAppStore(selectIsLoggingOut);
+  const wasLoggingOutRef = useRef(false);
+
+  // Reset refs when logout starts
+  useEffect(() => {
+    if (isLoggingOut && !wasLoggingOutRef.current) {
+      // Logout just started - reset refs so next login gets fresh data
+      hasInitializedRef.current = false;
+      hasAutoSelectedRef.current = false;
+      console.log('🔄 Reset useDefaultHome refs on logout');
+    }
+    wasLoggingOutRef.current = isLoggingOut;
+  }, [isLoggingOut]);
 
   // PERFORMANCE: Use Zustand to track if data has been fetched
   // This survives component remounts (unlike refs) and prevents duplicate queries
@@ -59,14 +79,21 @@ export const useDefaultHome = () => {
   useEffect(() => {
     if (canAttemptQueries && !hasInitializedHomeData) {
       setHasInitializedHomeData(true);
-      getHomes();
+      // Pass network-only override to bypass cache on login
+      // This ensures we get fresh data for the new user, not cached data from previous user
+      // Type assertion needed because generated types are overly strict for queries with no variables
+      // Apollo docs confirm fetchPolicy is valid: https://www.apollographql.com/docs/react/api/react/hooks#uselazyquery
+      (getHomes as (options?: { fetchPolicy?: string }) => void)({
+        fetchPolicy: 'network-only',
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAttemptQueries, hasInitializedHomeData]);
+  }, [canAttemptQueries, hasInitializedHomeData, setHasInitializedHomeData, getHomes]);
 
   // Preserve homes data even when query fails - prevents cascade failures
   // Extract nodes from connection type (homes returns HomeConnection)
-  const homesList = normalizeHomes(usePreservedArrayData(extractNodes(homes?.homes)));
+  const homesList = normalizeHomes(
+    usePreservedArrayData(extractNodes(homes?.homes)),
+  );
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = useMemo(

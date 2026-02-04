@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch, SettingSection } from '#components/settings';
-import { ProfileScreenWrapper } from '#components/templates';
+import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSection } from '#components/settings/SettingSection';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';
+import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 
 export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
@@ -22,6 +24,12 @@ export const AppSettingsScreen: React.FC = () => {
   // PERFORMANCE: Use selective selectors instead of inline functions
   const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
   const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
+  const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
+  const setShowNavigationLabels = useAppStore(state => state.setShowNavigationLabels);
+
+  // Telemetry consent
+  const userConsent = useAppStore(state => state.userConsent);
+  const setUserConsent = useAppStore(state => state.setUserConsent);
 
   const handleSettingChange = async (key: string, value: any) => {
     setUpdating(key);
@@ -38,7 +46,7 @@ export const AppSettingsScreen: React.FC = () => {
   const handleResetToDefaults = () => {
     Alert.alert(
       'Reset to Defaults',
-      'Are you sure you want to reset all app settings to their default values?',
+      'Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -48,8 +56,10 @@ export const AppSettingsScreen: React.FC = () => {
             setUpdating('reset');
             try {
               const success = await resetToDefaults();
+              // Also reset feature hints/tutorials
+              resetAllFeatureHints();
               if (success) {
-                Alert.alert('Success', 'Settings have been reset to defaults.');
+                Alert.alert('Success', 'Settings and tutorials have been reset to defaults.');
               } else {
                 Alert.alert(
                   'Error',
@@ -101,34 +111,10 @@ export const AppSettingsScreen: React.FC = () => {
         />
         <SettingSwitch
           title="Offline Mode"
-          description="Enable offline mode to work without internet"
+          description="Use cached data only. Disables search and sharing."
           value={settings.offlineMode}
           onValueChange={value => handleSettingChange('offlineMode', value)}
           loading={updating === 'offlineMode'}
-        />
-      </SettingSection>
-
-      <SettingSection title="Privacy & Data">
-        <SettingSwitch
-          title="Share Usage Data"
-          description="Help improve the app by sharing anonymous usage data"
-          value={settings.shareUsageData}
-          onValueChange={value => handleSettingChange('shareUsageData', value)}
-          loading={updating === 'shareUsageData'}
-        />
-        <SettingSwitch
-          title="Share with Partners"
-          description="Allow sharing data with trusted partners"
-          value={settings.shareWithPartners}
-          onValueChange={value => handleSettingChange('shareWithPartners', value)}
-          loading={updating === 'shareWithPartners'}
-        />
-        <SettingSwitch
-          title="Personalized Ads"
-          description="Show ads tailored to your interests"
-          value={settings.personalizedAds}
-          onValueChange={value => handleSettingChange('personalizedAds', value)}
-          loading={updating === 'personalizedAds'}
         />
       </SettingSection>
 
@@ -162,6 +148,20 @@ export const AppSettingsScreen: React.FC = () => {
           description="Vibration feedback for interactions and alerts"
           value={hapticFeedbackEnabled}
           onValueChange={setHapticFeedbackEnabled}
+        />
+        <SettingSwitch
+          testID="settings-navigation-labels-switch"
+          title="Navigation Labels"
+          description="Show text labels below navigation icons"
+          value={showNavigationLabels}
+          onValueChange={setShowNavigationLabels}
+        />
+        <SettingSwitch
+          testID="settings-share-usage-data-switch"
+          title="Share Usage Data"
+          description="Help improve Sous Chef by sharing anonymous usage statistics"
+          value={userConsent ?? true}
+          onValueChange={setUserConsent}
         />
       </SettingSection>
 

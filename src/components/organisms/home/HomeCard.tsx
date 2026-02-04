@@ -7,7 +7,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { HomeInviteFragment } from '#generated';
@@ -177,7 +177,7 @@ const styles = StyleSheet.create(theme => ({
         offsetY: 4,
         blurRadius: 15,
         spreadDistance: 1,
-        color: '#0000001A',
+        color: theme.colors.black + '1A',
       },
     ],
   },

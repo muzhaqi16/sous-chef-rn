@@ -13,10 +13,11 @@ import { Input } from '#components/base/Input';
 import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
 import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocompleteInput';
-import { EditableCounter, FieldRow } from '#components/molecules';
-import { useAppNavigation } from '#hooks';
+import { EditableCounter } from '#components/molecules/EditableCounter';
+import { FieldRow } from '#components/molecules/FieldRow';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
   handleVersionConflict,
@@ -283,6 +284,7 @@ export const AddEditItem: React.FC<{
           placeholder="e.g., Milk, Bread"
           required
           autoFocus
+          testID="edit-item-name-input"
         />
       ) : (
         <ItemAutocompleteInput
@@ -305,6 +307,7 @@ export const AddEditItem: React.FC<{
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
           placeholder="1"
+          testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
         />
         <UnitsAutocompleteInput
           label="Unit"
@@ -312,6 +315,7 @@ export const AddEditItem: React.FC<{
           onChangeText={text => updateField('unit', text)}
           onUnitSelected={handleUnitSelect}
           placeholder="pcs, kg, etc."
+          testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
         />
       </FieldRow>
 

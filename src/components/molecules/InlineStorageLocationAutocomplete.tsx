@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { Label } from '#components/atoms';
+import { Label } from '#components/atoms/Label';
 
 interface StorageLocation {
   id: string;

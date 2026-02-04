@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { IconButton } from '#components/atoms/IconButton';
 import {
   useDeleteAccountMutation,
   useCanDeleteAccountQuery,
 } from '#generated';
-import { useAuth, useAppNavigation } from '#hooks';
+import { useAuth } from '#hooks/auth/useAuth';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();

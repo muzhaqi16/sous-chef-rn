@@ -2,7 +2,7 @@ import { useMemo, RefObject } from 'react';
 import type {
   SelectorConfig,
   ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector';
+} from '#components/organisms/AnimatedItemSelector/types';
 import { IconLibrary } from '#/utils/iconUtils';
 
 interface UsePantrySelectorConfigOptions {

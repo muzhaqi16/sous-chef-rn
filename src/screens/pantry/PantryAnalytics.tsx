@@ -1,13 +1,17 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { commonStyles } from '#styles';
-import { useAppNavigation } from '#hooks';
-import { usePantryAnalytics } from '#hooks/pantry';
-import { TabView, TabRoute } from '#components/molecules/TabView';
-import { DateRangeFilter, AnalyticsSummaryCard, ChartSection } from '#components/analytics';
-import { TrendLineChart, BreakdownPieChart, TopItemsBarChart } from '#components/charts';
+import { Icon } from '#utils/iconUtils';
+import { commonStyles } from '#/styles/commonStyles';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { usePantryAnalytics } from '#hooks/pantry/usePantryAnalytics';
+import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
+import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
+import { AnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
+import { ChartSection } from '#components/analytics/ChartSection';
+import { TrendLineChart } from '#components/charts/TrendLineChart';
+import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
+import { TopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#generated';
 import type { RouteProp } from '@react-navigation/native';
 import type { PantryStackParamList } from '#navigation/stacks/PantryStack';
@@ -630,7 +634,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   return (
     <View style={commonStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[commonStyles.rowSpaceBetween, styles.header]}>
         <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
@@ -649,7 +653,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
 const styles = StyleSheet.create(theme => ({
   header: {
-    ...commonStyles.rowSpaceBetween,
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,

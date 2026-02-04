@@ -3,18 +3,19 @@ import { View, Text, TouchableOpacity, Alert, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { Header } from '#components/molecules/Header';
 import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
-import { Icon } from '#utils';
-import { parseFractionalInput } from '#/utils';
+import { Icon } from '#utils/iconUtils';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StorageState,
   ShoppingListItemDisplayFragment,
@@ -171,11 +172,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
           pressBehavior="close"
+          onClose={() => bottomSheetRef.current?.dismiss()}
         />
       )}
     >

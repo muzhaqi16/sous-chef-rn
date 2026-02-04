@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Label } from '#components/atoms';
+import { Label } from '#components/atoms/Label';
 
 interface SegmentedControlProps<T extends string> {
   label?: string;

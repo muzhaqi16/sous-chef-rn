@@ -1,13 +1,10 @@
-import {
-  colors,
-  spacing,
-  typography,
-  fonts,
-  radii,
-  shadows,
-  sizes,
-  zIndex,
-} from './foundations';
+import { colors } from './foundations/colors';
+import { spacing } from './foundations/spacing';
+import { typography, fonts } from './foundations/typography';
+import { radii } from './foundations/radii';
+import { shadows } from './foundations/shadows';
+import { sizes } from './foundations/sizes';
+import { zIndex } from './foundations/zIndex';
 
 const commonTheme = {
   spacing,
@@ -104,6 +101,18 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+
+    // Action colors for swipe actions
+    consumeAction: '#9C27B0',
+    wasteAction: '#FF9800',
+    restockAction: '#4CAF50',
+    purchaseAction: '#4CAF50',
+    unpurchaseAction: '#FF9800',
+
+    // Semantic action colors
+    favorite: '#E91E63',
+    rating: '#FFB800',
+
     gap: (v: number) => v * 8,
   },
 };
@@ -184,8 +193,16 @@ export const darkTheme = {
     // Validation colors - for forms
     validation: colors.validation,
 
-    // Pantry redesign colors
-    expiration: colors.expiration,
+    // Pantry redesign colors - dark mode specific expiration colors
+    expiration: {
+      expiredBg: 'rgba(220, 38, 38, 0.15)',      // Subtle red tint
+      expiredBorder: 'rgba(220, 38, 38, 0.3)',   // Slightly visible red border
+      expiredText: '#FCA5A5',                     // Lighter red for readability
+      expiredIconBg: 'rgba(220, 38, 38, 0.2)',   // Subtle red for icon bg
+      warningText: '#FDBA74',                     // Lighter orange for readability
+      warningBg: 'rgba(234, 88, 12, 0.15)',      // Subtle orange tint
+      warningBorder: 'rgba(234, 88, 12, 0.3)',   // Slightly visible orange border
+    },
     filterTab: colors.filterTab,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
@@ -193,6 +210,18 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+
+    // Action colors for swipe actions (slightly adjusted for dark mode visibility)
+    consumeAction: '#BA68C8',
+    wasteAction: '#FFB74D',
+    restockAction: '#81C784',
+    purchaseAction: '#81C784',
+    unpurchaseAction: '#FFB74D',
+
+    // Semantic action colors
+    favorite: '#F48FB1',
+    rating: '#FFD54F',
+
     gap: (v: number) => v * 8,
   },
 };

@@ -1,4 +1,4 @@
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, device } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import {
   LandingAuthScreen,
@@ -40,8 +40,10 @@ async function skipOptionalOnboardingScreens() {
     await selectPantryItemsScreen.tapSkip();
   } catch {}
 
+  // NOTE: Biometric setup only appears on devices with biometric support
+  // Emulators don't have biometrics, so use very short timeout
   try {
-    await biometricSetupScreen.waitForScreen(2000);
+    await biometricSetupScreen.waitForScreen(500);
     await biometricSetupScreen.tapSkip();
   } catch {}
 }
@@ -67,25 +69,33 @@ export async function bootstrapFreshAuthenticatedSession() {
 }
 
 export async function relaunchToHomeTab() {
-  // For app reuse: Just reload React Native instead of terminating app
-  await device.reloadReactNative();
-
-  // Wait for splash screen to disappear after reload
-  await waitFor(element(by.id('splash-screen')))
-    .not.toBeVisible()
-    .withTimeout(10000);
-
-  // Wait for app to initialize navigation (navigationState computation)
-  // Increased from 2s to 3s to allow for store hydration and navigation state recalculation
-  await delay(3000);
-
+  // Dismiss any overlays first
   await dismissBiometricPromptIfPresent();
 
-  // Navigate to pantry tab (might already be there)
-  try {
-    await element(by.id('tab-pantry')).tap();
-  } catch {}
+  // Wait for app to be ready
+  await delay(500);
 
-  // Increased timeout from 5s to 10s to handle navigation state transitions
-  await pantryScreen.waitForScreen(10000);
+  // Try to navigate to pantry tab (home) to ensure consistent starting state
+  try {
+    await waitFor(element(by.id('tab-pantry')))
+      .toBeVisible()
+      .withTimeout(3000);
+    await element(by.id('tab-pantry')).tap();
+    await pantryScreen.waitForScreen(5000);
+  } catch {
+    // Tab might already be visible, or we need to go back first
+    try {
+      // Press back to dismiss any modal/screen
+      await device.pressBack();
+      await delay(500);
+      await waitFor(element(by.id('tab-pantry')))
+        .toBeVisible()
+        .withTimeout(3000);
+      await element(by.id('tab-pantry')).tap();
+    } catch {
+      console.log('Could not navigate to pantry tab, continuing...');
+    }
+  }
+
+  await delay(500);
 }

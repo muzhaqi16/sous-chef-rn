@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Telemetry } from '#/services/telemetry';
-import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance';
+import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
 
 /**

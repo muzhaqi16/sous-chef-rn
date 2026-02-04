@@ -5,7 +5,7 @@ import {
   ShoppingListItemDisplayFragment,
 } from '#generated';
 import { Telemetry } from '#/services/telemetry';
-import { useStableRef } from '#/hooks/utils';
+import { useStableRef } from '#/hooks/utils/useStableRef';
 
 /**
  * Transformed item for QuantityEditSheet

@@ -1,20 +1,18 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
-import {
-  FractionInput,
-  FormInput,
-  FormattedItemSubtitle,
-  BottomSheetHeader,
-  BottomSheetKeyboardAwareScrollView,
-} from '#components';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-} from '@gorhom/bottom-sheet';
+import { FractionInput } from '#components/molecules/FractionInput';
+import { FormInput } from '#components/molecules/FormInput';
+import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { DatePickerField } from '#components/molecules/DatePickerField';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { parseFractionalInput } from '#/utils';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 
@@ -29,6 +27,7 @@ interface RestockPantryItemModalProps {
     unitId?: string,
     costPerUnit?: number,
     totalCost?: number,
+    expiresAt?: Date | null,
   ) => void;
 }
 
@@ -47,6 +46,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [notes, setNotes] = useState('');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -57,6 +57,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       setNotes('');
       setCostPerUnitInput('');
       setTotalCostInput('');
+      setExpiresAt(null);
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -96,6 +97,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       unitId,
       isNaN(costPerUnit!) ? undefined : costPerUnit,
       isNaN(totalCost!) ? undefined : totalCost,
+      expiresAt,
     );
     onClose();
   }, [
@@ -104,11 +106,17 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     notes,
     costPerUnitInput,
     totalCostInput,
+    expiresAt,
     onConfirm,
     onClose,
   ]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
+
+  const formatQuantity = (qty: number): string => {
+    if (Number.isInteger(qty)) return qty.toString();
+    return qty.toFixed(2).replace(/\.?0+$/, '');
+  };
 
   return (
     <BottomSheetModal
@@ -125,11 +133,12 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
           pressBehavior="close"
+          onClose={() => bottomSheetRef.current?.dismiss()}
         />
       )}
     >
@@ -170,26 +179,24 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
             {/* Quantity Input */}
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={`Quantity to Add (${
-                  pantryItem.unit?.symbol || 'item'
-                }) *`}
+                label="Quantity to Add"
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
                 keyboardType="numeric"
                 useBottomSheetInput
+                required
               />
               {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
-                  New quantity: {newQuantity.toFixed(2)}{' '}
+                  New quantity: {formatQuantity(newQuantity)}{' '}
                   {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
             </View>
 
-            {/* Cost Tracking (Optional) */}
+            {/* Cost Tracking */}
             <View style={commonStyles.bottomSheetSection}>
-              <Text style={styles.sectionLabel}>Cost (Optional)</Text>
               <View style={styles.costRow}>
                 <View style={styles.costField}>
                   <FormInput
@@ -214,16 +221,27 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               </View>
             </View>
 
-            {/* Notes (Optional) */}
+            {/* Notes */}
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Notes (Optional)"
+                label="Notes"
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Add any notes about this restock..."
                 multiline
                 numberOfLines={3}
                 useBottomSheetInput
+              />
+            </View>
+
+            {/* Expiration Date */}
+            <View style={commonStyles.bottomSheetSection}>
+              <DatePickerField
+                label="Expiration Date"
+                value={expiresAt}
+                onChange={setExpiresAt}
+                placeholder="Set new expiration"
+                minimumDate={new Date()}
               />
             </View>
           </>
@@ -234,12 +252,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  sectionLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
   costRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,

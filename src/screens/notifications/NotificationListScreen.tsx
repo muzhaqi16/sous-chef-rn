@@ -1,16 +1,14 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, SectionList, RefreshControl } from 'react-native';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  NotificationItem,
-  EmptyNotifications,
-  NotificationHeader,
-  NotificationGroupHeader,
-  NotificationFilters,
-  UrgentNotificationsBanner,
-} from '#components/notifications';
-import { useNotifications } from '#hooks';
+import { NotificationItem } from '#components/notifications/NotificationItem';
+import { EmptyNotifications } from '#components/notifications/EmptyNotifications';
+import { NotificationHeader } from '#components/notifications/NotificationHeader';
+import { NotificationGroupHeader } from '#components/notifications/NotificationGroupHeader';
+import { NotificationFilters } from '#components/notifications/NotificationFilters';
+import { UrgentNotificationsBanner } from '#components/notifications/UrgentNotificationsBanner';
+import { useNotifications } from '#hooks/notifications/useNotifications';
 import {
   NotificationItem as NotificationType,
   NotificationCategory,
@@ -41,11 +39,21 @@ export const NotificationListScreen: React.FC<{
 
   // Initialize real-time notifications (already handled by consolidated useNotifications)
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     // Add server sync logic here if needed
-    setTimeout(() => setIsRefreshing(false), 1000);
+    refreshTimeoutRef.current = setTimeout(() => setIsRefreshing(false), 1000);
   }, []);
 
   // Filter notifications based on selected category

@@ -1,0 +1,361 @@
+import React, { useCallback, useEffect, useRef } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useAppStore } from '#store/useAppStore';
+import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
+import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
+import {
+  BottomSheetSearchBar,
+  type BottomSheetSearchBarRef,
+} from '#components/molecules/BottomSheetSearchBar';
+import { ActionCard } from '#components/molecules/ActionCard';
+import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
+import type {
+  AddItemSheetProps,
+  BaseSuggestionItem,
+  SuggestionGroupConfig,
+} from './types';
+import { useAddItemSheetState } from './useAddItemSheetState';
+
+/**
+ * Generic AddItemSheet component.
+ *
+ * A reusable bottom sheet for adding items with:
+ * - Search with autocomplete
+ * - Suggestion sections (configurable)
+ * - Quick add functionality
+ * - Barcode scanning
+ * - Add manually option
+ *
+ * Used by both AddToPantrySheet and AddToShoppingListSheet.
+ */
+export function AddItemSheet({
+  visible,
+  contextId,
+  onClose,
+  config,
+  suggestions,
+  onQuickAddSearchSuggestion,
+  onQuickAddSuggestion,
+  isMutating,
+  onAddManually,
+  onScanPress,
+  exitingItems: externalExitingItems,
+  onExitComplete,
+  initialSearchQuery = '',
+  children,
+}: AddItemSheetProps) {
+  const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
+  const animationConfigs = useSharedBottomSheetConfigs();
+  useBottomSheetBackHandler(bottomSheetRef, visible);
+
+  // Online status for autocomplete
+  const isOnline = useAppStore(state => state.isOnline);
+
+  // Shared state management
+  const state = useAddItemSheetState({
+    visible,
+    contextId,
+    deferFetch: config.deferFetch,
+  });
+
+  // Use external exiting items if provided, otherwise use internal state
+  const exitingItems = externalExitingItems ?? state.exitingItems;
+
+  // Autocomplete query for search
+  const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
+    useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
+
+  const searchSuggestions =
+    autocompleteData?.autocompleteItems?.suggestions ?? [];
+
+  // Search handler - called after BottomSheetSearchBar debounce
+  const handleSearchChange = useCallback(
+    (text: string) => {
+      state.setSearchQuery(text);
+
+      // Only search when online and query is long enough
+      if (text.length >= 2 && isOnline) {
+        fetchItems({ variables: { input: { query: text, limit: 10 } } });
+      }
+    },
+    [isOnline, fetchItems, state],
+  );
+
+  // Control bottom sheet visibility
+  useEffect(() => {
+    if (visible && contextId) {
+      bottomSheetRef.current?.present();
+      // Clear search bar
+      searchBarRef.current?.clear();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible, contextId]);
+
+  // Wrap onAddManually to provide search value
+  const handleAddManually = useCallback(() => {
+    onAddManually();
+  }, [onAddManually]);
+
+  // Handle selecting a search suggestion
+  const handleSelectSearchSuggestion = useCallback(
+    (item: ItemSuggestion) => {
+      onQuickAddSearchSuggestion(item);
+      // Clear search after adding
+      searchBarRef.current?.clear();
+      state.setSearchQuery('');
+    },
+    [onQuickAddSearchSuggestion, state],
+  );
+
+  // Render a suggestion item with exit animation support
+  const renderSuggestionItem = useCallback(
+    (item: BaseSuggestionItem) => {
+      const itemId = item.itemId;
+      const isExiting = exitingItems.has(itemId);
+
+      return (
+        <SuggestionListItem
+          key={item.id}
+          imageUrl={item.imageUrl}
+          title={item.name}
+          subtitle={item.category}
+          placeholderIcon={config.placeholderIcon}
+          onQuickAdd={() => onQuickAddSuggestion(item)}
+          quickAddDisabled={isMutating || isExiting}
+          isExiting={isExiting}
+          onExitComplete={onExitComplete ? () => onExitComplete(itemId) : undefined}
+        />
+      );
+    },
+    [
+      config.placeholderIcon,
+      exitingItems,
+      isMutating,
+      onExitComplete,
+      onQuickAddSuggestion,
+    ],
+  );
+
+  // Render a section of suggestions
+  const renderSuggestionSection = useCallback(
+    (groupConfig: SuggestionGroupConfig) => {
+      const items = groupConfig.accessor(
+        suggestions.grouped as Record<string, any[]>,
+      );
+      if (items.length === 0) return null;
+
+      return (
+        <View key={groupConfig.key} style={styles.suggestionSection}>
+          <Text style={styles.sectionTitle}>{groupConfig.title}</Text>
+          <View style={styles.suggestionList}>
+            {items.map(renderSuggestionItem)}
+          </View>
+        </View>
+      );
+    },
+    [suggestions.grouped, renderSuggestionItem],
+  );
+
+  return (
+    <>
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        snapPoints={['70%', '95%']}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+        topInset={insets.top}
+        onDismiss={onClose}
+        animationConfigs={animationConfigs}
+        backgroundStyle={{ backgroundColor: theme.colors.background }}
+        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        backdropComponent={props => (
+          <GlobalBottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+            onClose={() => bottomSheetRef.current?.dismiss()}
+          />
+        )}
+        // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
+        testID={`${config.testIDPrefix}-modal`}
+      >
+        <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
+          <BottomSheetScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { paddingBottom: insets.bottom + 16 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <Text style={styles.title}>{config.title}</Text>
+
+            {/* Search Input */}
+            <BottomSheetSearchBar
+              ref={searchBarRef}
+              placeholder={config.searchPlaceholder}
+              onChangeText={handleSearchChange}
+              onClear={() => state.setSearchQuery('')}
+              initialValue={initialSearchQuery}
+              rightActions={[
+                {
+                  icon: 'qr-code-scanner',
+                  onPress: onScanPress,
+                },
+              ]}
+            />
+
+            {/* Search Results */}
+            {state.showSearchResults && (
+              <ItemSuggestionsList
+                searchQuery={state.searchQuery}
+                suggestions={searchSuggestions}
+                loading={searchLoading}
+                addManuallyPosition={config.addManuallyPosition}
+                onAddManually={handleAddManually}
+                onSelectSuggestion={handleSelectSearchSuggestion}
+                quickAddDisabled={isMutating}
+                placeholderIcon={config.placeholderIcon}
+                showBrands={false}
+              />
+            )}
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <ActionCard
+                icon="qr-code-scanner"
+                label="Scan Barcode"
+                onPress={onScanPress}
+              />
+              <ActionCard
+                icon="add"
+                label="Add Manually"
+                onPress={handleAddManually}
+                testID={`${config.testIDPrefix}-add-manually-button`}
+              />
+            </View>
+
+            {/* Suggestions Sections - shown when search is empty */}
+            {state.showSuggestions && (
+              <>
+                {suggestions.loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator
+                      size="small"
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                ) : !suggestions.hasSuggestions ? (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      {config.emptyStateMessage}
+                    </Text>
+                    <Text style={styles.emptySubtext}>
+                      {config.emptyStateSubtext}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Render suggestion sections in priority order */}
+                    {config.suggestionGroups
+                      .sort((a, b) => a.priority - b.priority)
+                      .map(renderSuggestionSection)}
+                  </>
+                )}
+              </>
+            )}
+          </BottomSheetScrollView>
+        </View>
+      </BottomSheetModal>
+
+      {/* Nested sheets (e.g., AddDetailsSheet for Pantry) */}
+      {children}
+    </>
+  );
+}
+
+// Export ref getter function for wrapper components
+export function useAddItemSheetRefs() {
+  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
+
+  const getSearchValue = useCallback(() => {
+    return searchBarRef.current?.getValue() || '';
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    searchBarRef.current?.clear();
+  }, []);
+
+  return { searchBarRef, getSearchValue, clearSearch };
+}
+
+const styles = StyleSheet.create(theme => ({
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: theme.spacing.md,
+  },
+  title: {
+    fontSize: theme.fonts.size.xl,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: theme.spacing.md,
+  },
+  loadingContainer: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  emptySubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textTertiary,
+    textAlign: 'center',
+  },
+  suggestionSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  suggestionList: {
+    gap: theme.spacing.xs,
+  },
+}));

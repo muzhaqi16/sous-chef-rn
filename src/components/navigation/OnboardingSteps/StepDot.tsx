@@ -5,8 +5,8 @@ import Animated, {
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#/utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -19,6 +19,8 @@ export const StepDot: React.FC<StepDotProps> = ({
   onPress,
   allowNavigation = false,
 }) => {
+  const { theme } = useUnistyles();
+
   // Animated style for color transitions, scale, and opacity
   // Static layout properties are in StyleSheet to avoid 'as const' casts
   const animatedStyle = useAnimatedStyle(() => {
@@ -26,17 +28,17 @@ export const StepDot: React.FC<StepDotProps> = ({
     const isCompleted = activeIndex.value > index;
     const isPending = activeIndex.value < index;
 
-    // Color transitions
+    // Color transitions - using theme colors
     const backgroundColor = interpolateColor(
       activeIndex.value,
       [index - 1, index, index + 1],
-      ['#E5E7EB', '#3B82F6', '#E5E7EB'] // gray, blue, gray
+      [theme.colors.border, theme.colors.primary, theme.colors.border]
     );
 
     const borderColor = interpolateColor(
       activeIndex.value,
       [index - 1, index, index + 1],
-      ['#E5E7EB', '#3B82F6', '#E5E7EB']
+      [theme.colors.border, theme.colors.primary, theme.colors.border]
     );
 
     // Scale animation for active step
@@ -52,17 +54,17 @@ export const StepDot: React.FC<StepDotProps> = ({
       borderRadius: stepSize / 2,
       // Animated properties
       backgroundColor: withTiming(
-        isCompleted ? '#10B981' : backgroundColor, // green for completed
+        isCompleted ? theme.colors.success : backgroundColor,
         { duration: 300 }
       ),
       borderColor: withTiming(
-        isCompleted ? '#10B981' : borderColor,
+        isCompleted ? theme.colors.success : borderColor,
         { duration: 300 }
       ),
       transform: [{ scale }],
       opacity,
     };
-  }, [index, stepSize]);
+  }, [index, stepSize, theme]);
 
   const iconAnimatedStyle = useAnimatedStyle(() => {
     const isCompleted = activeIndex.value > index;
@@ -90,13 +92,13 @@ export const StepDot: React.FC<StepDotProps> = ({
       activeOpacity={allowNavigation ? 0.7 : 1}
     >
       <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
-        <Icon name="check" size={stepSize * 0.5} color="white" />
+        <Icon name="check" size={stepSize * 0.5} color={theme.colors.white} />
       </Animated.View>
     </AnimatedTouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(_theme => ({
   stepDot: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -109,4 +111,4 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-});
+}));

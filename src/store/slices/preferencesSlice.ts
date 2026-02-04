@@ -34,6 +34,10 @@ export interface PreferencesState {
   hapticFeedbackEnabled: boolean;
   setHapticFeedbackEnabled: (enabled: boolean) => void;
 
+  // Navigation Labels
+  showNavigationLabels: boolean;
+  setShowNavigationLabels: (enabled: boolean) => void;
+
   // Pantry Sort Preferences
   pantrySortOption: PantrySortOption;
   pantrySortDirection: PantrySortDirection;
@@ -51,6 +55,7 @@ const initialPreferencesState = {
   pushNotifications: false,
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
+  showNavigationLabels: true, // Enabled by default
   pantrySortOption: 'recent' as PantrySortOption,
   pantrySortDirection: 'desc' as PantrySortDirection, // Newest first
 };
@@ -69,6 +74,7 @@ export const createPreferencesSlice: StateCreator<
   setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
   setRememberMe: remember => set({ rememberMe: remember }),
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
+  setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 

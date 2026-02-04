@@ -1,8 +1,9 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {useProfileData, useAppNavigation} from '#/hooks';
-import {Icon} from '#utils';
+import {useProfileData} from '#hooks/profile/useProfileData';
+import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
+import {Icon} from '#utils/iconUtils';
 import {useStore} from '#store';
 
 export const UserHeader: React.FC = () => {

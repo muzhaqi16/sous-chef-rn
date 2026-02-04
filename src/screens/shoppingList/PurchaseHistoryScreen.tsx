@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ListRenderItem } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
-import { Icon } from '#utils';
-import { commonStyles } from '#styles';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { Icon } from '#utils/iconUtils';
+import { commonStyles } from '#/styles/commonStyles';
 
 type RouteParams = {
   itemId: string;

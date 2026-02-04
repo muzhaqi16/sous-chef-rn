@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useTabBarActions } from '#context';
-import { useAppNavigation } from '#hooks';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 interface ScannerContext {
   source: string;

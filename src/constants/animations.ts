@@ -1,13 +1,62 @@
 import { FadeIn, FadeOut, LinearTransition, Easing } from 'react-native-reanimated';
+import type { SlideAnimationConfig } from '#hooks/animations/types';
 
-// Re-export for backward compatibility (moved to drag.ts)
-export { DRAG_ITEM_HEIGHT } from './drag';
+// Note: DRAG_ITEM_HEIGHT and other drag constants are in './drag.ts'
+// Import directly: import { DRAG_ITEM_HEIGHT } from '#/constants/drag';
 
 /**
  * Standard cubic bezier easing function for smooth animations
  * Equivalent to CSS ease-in-out with custom curve
  */
 export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
+
+/**
+ * Reusable slide animation presets for common patterns.
+ *
+ * @example
+ * ```tsx
+ * import { SLIDE_PRESETS } from '#/constants/animations';
+ *
+ * // Full exit (shopping list checkbox toggle)
+ * <AnimatedListItem slideConfig={SLIDE_PRESETS.fullExit} />
+ *
+ * // Subtle feedback slide
+ * <AnimatedListItem slideConfig={SLIDE_PRESETS.subtle} />
+ *
+ * // Exit with fade (for deletions)
+ * <AnimatedListItem slideConfig={SLIDE_PRESETS.exitWithFade} />
+ * ```
+ */
+export const SLIDE_PRESETS = {
+  /**
+   * Full exit slide (shopping list purchase toggle)
+   * Slides completely off screen to the right
+   */
+  fullExit: {
+    slideDistance: 'screenWidth',
+    duration: 250,
+    withOpacity: false,
+  },
+  /**
+   * Subtle feedback slide
+   * Small slide for visual feedback without full exit
+   */
+  subtle: {
+    slideDistance: 50,
+    duration: 200,
+    withOpacity: false,
+  },
+  /**
+   * Exit with fade (for deletions)
+   * Combines slide with opacity fade for smoother deletion effect
+   */
+  exitWithFade: {
+    slideDistance: 200,
+    duration: 300,
+    withOpacity: true,
+    opacityTarget: 0,
+  },
+} as const satisfies Record<string, SlideAnimationConfig>;
 
 /**
  * Animation preset for form show/hide transitions

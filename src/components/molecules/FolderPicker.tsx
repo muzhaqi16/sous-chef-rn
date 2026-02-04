@@ -14,16 +14,16 @@ import {
 } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 
 /** Protected folders that cannot be renamed or deleted */
 const PROTECTED_FOLDERS = ['Favorites'];
@@ -271,11 +271,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         backdropComponent={props => (
-          <BottomSheetBackdrop
+          <GlobalBottomSheetBackdrop
             {...props}
             disappearsOnIndex={-1}
             appearsOnIndex={0}
             pressBehavior="close"
+            onClose={() => folderPickerRef.current?.dismiss()}
           />
         )}
       >
@@ -465,11 +466,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         backdropComponent={props => (
-          <BottomSheetBackdrop
+          <GlobalBottomSheetBackdrop
             {...props}
             disappearsOnIndex={-1}
             appearsOnIndex={0}
             pressBehavior="close"
+            onClose={() => manageSheetRef.current?.dismiss()}
           />
         )}
       >

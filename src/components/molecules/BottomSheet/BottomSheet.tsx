@@ -8,9 +8,9 @@ import {View} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import BottomSheet, {
   BottomSheetProps,
-  BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 
 // Define the methods that you want to expose from the bottom sheet.
 export interface BottomSheetRef {
@@ -37,13 +37,13 @@ const ReusableBottomSheet = forwardRef<
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={0}
         appearsOnIndex={1}
         opacity={0.5}
-        enableTouchThrough={true}
-        pressBehavior={'collapse'}
+        pressBehavior="collapse"
+        onClose={() => bottomSheetRef.current?.collapse()}
       />
     ),
     [],
@@ -64,11 +64,11 @@ const ReusableBottomSheet = forwardRef<
   );
 });
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    padding: 16,
+    padding: theme.spacing.md,
   },
-});
+}));
 
 export default ReusableBottomSheet;

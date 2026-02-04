@@ -7,7 +7,8 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import {FormTextArea} from '#components/molecules/FormTextArea';
-import {SegmentedControl, DatePickerField} from '#components/molecules';
+import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import { DatePickerField } from '#components/molecules/DatePickerField';
 import {StorageState} from '#generated';
 
 const STORAGE_STATES = Object.values(StorageState);

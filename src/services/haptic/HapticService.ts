@@ -1,5 +1,5 @@
 import { Vibration, Platform } from 'react-native';
-import { useStore } from '#/store';
+import { useStore } from '#store/index';
 
 /**
  * Haptic Feedback Types
@@ -84,7 +84,7 @@ class HapticFeedbackService {
    */
   isEnabled(): boolean {
     const hapticEnabled = useStore.getState().hapticFeedbackEnabled;
-    return hapticEnabled && this.supported;
+    return (hapticEnabled ?? true) && this.supported;
   }
 
   /**

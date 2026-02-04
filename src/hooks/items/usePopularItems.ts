@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useGetPopularItemsQuery } from '#generated';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 export interface PopularItem {
   id: string;
@@ -24,9 +25,12 @@ export interface PopularItem {
  * Shows popular items when user hasn't typed anything or when search results are few
  */
 export function usePopularItems(limit = 10) {
+  const isOffline = useIsEffectivelyOffline();
+
   const { data, loading, error } = useGetPopularItemsQuery({
     variables: { first: limit },
     fetchPolicy: 'cache-first',
+    skip: isOffline,
   });
 
   const popularItems = useMemo<PopularItem[]>(() => {
@@ -61,9 +65,10 @@ export function usePopularItems(limit = 10) {
   }, [data?.items?.edges]);
 
   return {
-    popularItems,
+    popularItems: isOffline ? [] : popularItems,
     loading,
     error,
-    totalCount: data?.items?.totalCount ?? 0,
+    totalCount: isOffline ? 0 : (data?.items?.totalCount ?? 0),
+    isOffline,
   };
 }

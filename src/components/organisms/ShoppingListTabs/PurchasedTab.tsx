@@ -1,14 +1,12 @@
-import React, { useCallback, useMemo } from 'react';
-import { Text, TouchableOpacity, Alert } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SortableShoppingList } from '../SortableShoppingList';
-import type { SortableShoppingListItem } from '../SortableShoppingList';
-import { Icon } from '#utils';
-import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
+import React from 'react';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { SortableShoppingList } from '../SortableShoppingList/SortableList';
+import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/base/EmptyState';
-import { useDeferredRender } from '#hooks/performance';
-import { listItemLayoutAnimation } from '#/constants/animations';
+import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -18,7 +16,6 @@ interface PurchasedTabProps {
   onTogglePurchase?: (id: string) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onClearAll?: () => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -43,7 +40,6 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onClearAll,
   onRefresh,
   refreshing,
   loading: _loading,
@@ -55,39 +51,9 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
 }) => {
-  const { theme } = useUnistyles();
-
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
-
-  // PERFORMANCE: Memoize inline styles to avoid object recreation on every render
-  const clearButtonStyle = useMemo(
-    () => [styles.clearButton, { backgroundColor: theme.colors.warning }],
-    [theme.colors.warning],
-  );
-
-  const handleClearAll = useCallback(() => {
-    if (items.length === 0) return;
-
-    Alert.alert(
-      'Clear All Purchased Items',
-      `Are you sure you want to remove all ${items.length} purchased items from this list?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            await onClearAll?.();
-          },
-        },
-      ],
-    );
-  }, [items.length, onClearAll]);
 
   // Show skeletons until deferred render is ready
   if (!isReady) {
@@ -107,47 +73,27 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   }
 
   return (
-    <SortableShoppingList
-      items={items}
-      onItemPress={onItemPress}
-      onItemEdit={onItemEdit}
-      onItemDelete={onItemDelete}
-      onTogglePurchase={onTogglePurchase}
-      onMoveToPantry={onMoveToPantry}
-      onQuantityPress={onQuantityPress}
-      disabled={disabled}
-      showsVerticalScrollIndicator={true}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      onSwipeableClose={onSwipeableClose}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      onEndReached={onEndReached}
-      canRemoveItems={canRemoveItems}
-      canEditItems={canEditItems}
-      canMarkPurchased={canMarkPurchased}
-      ListFooterComponent={
-        onClearAll && canRemoveItems ? (
-          <Animated.View layout={listItemLayoutAnimation} style={styles.footer}>
-            <TouchableOpacity style={clearButtonStyle} onPress={handleClearAll}>
-              <Icon
-                name="delete-outline"
-                size={20}
-                color={theme.colors.surface}
-                library="MaterialIcons"
-              />
-              <Text
-                style={[
-                  styles.clearButtonText,
-                  { color: theme.colors.surface },
-                ]}
-              >
-                Clear All Purchased
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ) : null
-      }
-    />
+    <View style={styles.container}>
+      <SortableShoppingList
+        items={items}
+        onItemPress={onItemPress}
+        onItemEdit={onItemEdit}
+        onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
+        onMoveToPantry={onMoveToPantry}
+        onQuantityPress={onQuantityPress}
+        disabled={disabled}
+        showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        onEndReached={onEndReached}
+        canRemoveItems={canRemoveItems}
+        canEditItems={canEditItems}
+        canMarkPurchased={canMarkPurchased}
+      />
+    </View>
   );
 };
 
@@ -160,22 +106,8 @@ MemoizedPurchasedTab.displayName = 'PurchasedTab';
 // Also export non-memoized for backwards compatibility
 export const PurchasedTab = PurchasedTabComponent;
 
-const styles = StyleSheet.create(theme => ({
-  footer: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl * 2,
-    alignItems: 'center',
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
   },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radii.sm,
-  },
-  clearButtonText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
-  },
-}));
+});

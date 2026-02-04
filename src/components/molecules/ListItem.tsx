@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextStyle } from 'react-native';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
@@ -134,7 +134,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
-    minHeight: 87, // Specific design requirement for list item height
+    height: 87, // Fixed height for drag-to-reorder calculations
     gap: theme.spacing.sm, // Better spacing between elements
   },
   checkboxContainer: {

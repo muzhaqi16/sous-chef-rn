@@ -6,7 +6,7 @@ import { createTelemetryLink } from './telemetryLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
-import { createQueueLink } from '../offlineQueue';
+import { createQueueLink } from '../offlineQueue/queueLink';
 
 // Simplified HTTP transport (let Apollo handle retries naturally)
 const httpTransport = httpLink;

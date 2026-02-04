@@ -4,8 +4,8 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { Label } from '#components/atoms';
+import { Icon } from '#utils/iconUtils';
+import { Label } from '#components/atoms/Label';
 
 interface DatePickerFieldProps {
   label?: string;

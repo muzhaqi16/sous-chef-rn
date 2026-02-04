@@ -2,41 +2,39 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
-  useRef,
   useState,
 } from 'react';
 import { View, Pressable } from 'react-native';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
-import { PaginationFooter } from '#/components/organisms/PaginationFooter';
-import { AnimatedItemSelector, ListTemplate } from '#components';
-import { Icon } from '#utils';
-import { ShoppingListHeader } from '#/components/molecules/ShoppingListHeader';
-import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { ListTemplate } from '#components/templates/ListTemplate';
+import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { SwipeHintOverlay } from '#components/organisms/SwipeHintOverlay';
+import { Icon } from '#utils/iconUtils';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 
 // Hooks & Context
-import { useAppNavigation, useProfileData, useTabBarAddButton } from '#hooks';
-import {
-  useTabBarActions,
-  ShoppingListModalsProvider,
-  useShoppingListModals,
-} from '#context';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useFeatureHint } from '#hooks/useFeatureHint';
+import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
+import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
+import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
+import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useStableRef } from '#/hooks/utils';
+import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import { useFeatureHint } from '#/hooks/useFeatureHint';
-import { useScreenTransition } from '#hooks/performance';
-
-// Screen-specific hooks
-import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
-import { useShoppingListActions } from '#/hooks/shoppingList/useShoppingListActions';
-import { useShoppingListSelectorModal } from '#/hooks/shoppingList/useShoppingListSelectorModal';
-import { useItemReordering } from '#/hooks/shoppingList/useItemReordering';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -95,9 +93,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     const { navigate, navigateTo } = useAppNavigation();
     const { setScannerProps } = useTabBarActions();
-    const {
-      theme: { colors },
-    } = useUnistyles();
+    const { theme } = useUnistyles();
 
     // Get profile data for header
     const { profile } = useProfileData();
@@ -110,16 +106,20 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     useScreenTransition('ShoppingListMain');
 
     // --- Actions Hook ---
-    const { handleTogglePurchase, handleDeleteItem, handleClearAllPurchased } =
-      useShoppingListActions({
-        currentListId,
-        items,
-        addItem,
-        toggleItem,
-        removeItem,
-        refetchItems,
-        setSearchQuery,
-      });
+    const {
+      handleTogglePurchase,
+      handleDeleteItem,
+      handleClearAllPurchased,
+      handleClearAllShopping,
+    } = useShoppingListActions({
+      currentListId,
+      items,
+      addItem,
+      toggleItem,
+      removeItem,
+      refetchItems,
+      setSearchQuery,
+    });
 
     // --- Reordering Hook ---
     const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -161,9 +161,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Stable ref to store addItemSheet.open to avoid dependency instability in useEffect
     const addItemSheetOpenRef = useStableRef(addItemSheet.open);
 
-    // Track currently open swipeable across both unpurchased and purchased lists
-    const openSwipeableRef =
-      useRef<React.RefObject<SwipeableMethods | null> | null>(null);
+    // Coordinate swipeable items so only one is open at a time
+    const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
     // Show swipe hint after items load
     useEffect(() => {
@@ -191,21 +190,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       }
     }, [refetchItems]);
 
-    // Handle swipeable coordination
-    const handleSwipeableWillOpen = useCallback(
-      (ref: React.RefObject<SwipeableMethods | null>) => {
-        if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-          openSwipeableRef.current.current?.close();
-        }
-        openSwipeableRef.current = ref;
-      },
-      [],
-    );
-
-    const handleSwipeableClose = useCallback(() => {
-      openSwipeableRef.current = null;
-    }, []);
-
     // Calculate permissions for the current list
     const permissions = useMemo(() => {
       if (!currentListDetails) {
@@ -232,27 +216,24 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       );
     }, [currentListDetails, user?.id]);
 
-    // Search bar actions
-    const searchBarActions = useMemo(
-      () => ({
-        showSearchIcon: true,
-        innerRightIcon:
-          searchQuery.trim().length === 0 ? (
-            <Pressable
-              onPress={handleOpenSelector}
-              hitSlop={8}
-              testID="shopping-list-selector"
-            >
-              <Icon
-                name="list"
-                size={18}
-                color={colors.textTertiary}
-                library="Ionicons"
-              />
-            </Pressable>
-          ) : undefined,
-      }),
-      [handleOpenSelector, searchQuery, colors],
+    // Search bar inner right icon (list selector button)
+    const searchBarInnerRightIcon = useMemo(
+      () =>
+        searchQuery.trim().length === 0 ? (
+          <Pressable
+            onPress={handleOpenSelector}
+            hitSlop={8}
+            testID="shopping-list-selector"
+          >
+            <Icon
+              name="list"
+              size={18}
+              color={theme.colors.textTertiary}
+              library="Ionicons"
+            />
+          </Pressable>
+        ) : undefined,
+      [handleOpenSelector, searchQuery, theme.colors.textTertiary],
     );
 
     // Memoized customListProps
@@ -267,6 +248,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         refreshing,
         disabled: !!searchQuery.trim(),
         onClearAllPurchased: handleClearAllPurchased,
+        onClearAllShopping: handleClearAllShopping,
         onSwipeableWillOpen: handleSwipeableWillOpen,
         onSwipeableClose: handleSwipeableClose,
         unpurchasedItems,
@@ -284,6 +266,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         canEditItems: permissions.canEditItems,
         canMarkPurchased: permissions.canMarkPurchased,
         canReorderItems: permissions.canEditItems,
+        onAddItem: addItemSheet.open,
       }),
       [
         isLoadingInitial,
@@ -295,6 +278,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         handleRefresh,
         refreshing,
         handleClearAllPurchased,
+        handleClearAllShopping,
         handleSwipeableWillOpen,
         handleSwipeableClose,
         unpurchasedItems,
@@ -308,6 +292,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         hasMorePurchased,
         isLoadingMorePurchased,
         permissions,
+        addItemSheet.open,
       ],
     );
 
@@ -398,7 +383,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       };
 
       return (
-        <View style={styles.container}>
+        <View style={styles.container} testID="shopping-list-screen">
           <ShoppingListHeader
             listName="Shopping List"
             avatarUrl={profile?.avatar}
@@ -407,10 +392,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           />
           <ListTemplate
             items={[]}
-            showUserHeader={false}
-            showSearchBar={false}
             emptyState={noListsEmptyState}
-            hasNoData={true}
           />
         </View>
       );
@@ -434,11 +416,18 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}
         />
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search shopping list..."
+            showSearchIcon
+            innerRightIcon={searchBarInnerRightIcon}
+          />
+        </View>
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           onItemPress={id =>
             navigate('ItemDetail', { listId: currentListId, itemId: id })
           }
@@ -447,12 +436,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           }
           onItemDelete={handleDeleteItem}
           onRefresh={handleRefresh}
-          searchPlaceholder="Search shopping list..."
-          listName={currentList?.name || 'Shopping List'}
-          completedCount={sortableItems.filter(item => item.isPurchased).length}
-          showUserHeader={false}
-          showSearchBar={true}
-          searchBarActions={searchBarActions}
           testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}
@@ -463,7 +446,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         <AnimatedItemSelector
           ref={selectorRef}
           config={listConfig}
-          maxHeight={600}
           onOpen={handleOverlayOpen}
           onClose={handleOverlayClose}
         />

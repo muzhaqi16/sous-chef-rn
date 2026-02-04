@@ -1,4 +1,4 @@
-import { useCallback, useRef, useLayoutEffect } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -11,9 +11,10 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { useHaptic } from '#hooks/haptic';
+import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
-import { useClearPurchasedItems } from './mutations/useClearPurchasedItems';
+import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
+import { useStableRef } from '#hooks/utils/useStableRef';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -55,14 +56,8 @@ export function useShoppingListActions({
   });
 
   // Refs for stable callbacks (avoid recreating callbacks on items change)
-  const updateQuantityRef = useRef(updateQuantity);
-  const refetchItemsRef = useRef(refetchItems);
-
-  // Keep refs updated
-  useLayoutEffect(() => {
-    updateQuantityRef.current = updateQuantity;
-    refetchItemsRef.current = refetchItems;
-  }, [updateQuantity, refetchItems]);
+  const updateQuantityRef = useStableRef(updateQuantity);
+  const refetchItemsRef = useStableRef(refetchItems);
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
@@ -148,7 +143,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client],
+    [client, refetchItemsRef, updateQuantityRef],
   );
 
   // Quantity decrement handler - uses cache.modify for instant UI without warnings
@@ -235,7 +230,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client],
+    [client, refetchItemsRef, updateQuantityRef],
   );
 
   // Toggle purchase handler
@@ -279,8 +274,8 @@ export function useShoppingListActions({
     [removeItem, haptic],
   );
 
-  // Clear all purchased handler - uses optimistic cache clearing for instant UI
-  const { clearPurchased } = useClearPurchasedItems({
+  // Clear items handler - uses optimistic cache clearing for instant UI
+  const { clearItems } = useClearShoppingListItems({
     listId: currentListId,
     items,
     refetch: refetchItems,
@@ -295,12 +290,29 @@ export function useShoppingListActions({
 
     try {
       haptic.warning();
-      await clearPurchased();
+      await clearItems(true);
     } catch {
       haptic.error();
       toastService.error('Failed to clear purchased items');
     }
-  }, [items, clearPurchased, haptic]);
+  }, [items, clearItems, haptic]);
+
+  // Clear all shopping (unpurchased) items handler
+  const handleClearAllShopping = useCallback(async () => {
+    const unpurchasedItems = items.filter(
+      (item: any) => !item.purchaseInfo?.isPurchased,
+    );
+
+    if (unpurchasedItems.length === 0) return;
+
+    try {
+      haptic.warning();
+      await clearItems(false);
+    } catch {
+      haptic.error();
+      toastService.error('Failed to clear shopping items');
+    }
+  }, [items, clearItems, haptic]);
 
   // Add item from search handler
   const handleAddItemFromSearch = useCallback(
@@ -355,6 +367,7 @@ export function useShoppingListActions({
     handleTogglePurchase,
     handleDeleteItem,
     handleClearAllPurchased,
+    handleClearAllShopping,
     handleAddItemFromSearch,
   };
 }

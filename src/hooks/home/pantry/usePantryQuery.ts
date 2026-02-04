@@ -12,9 +12,9 @@ import { useMemo, useCallback } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
-import { usePagination } from '#/hooks/utils';
-import { subscriptionService } from '#/services/subscriptions';
-import { usePreservedArrayData } from '#/hooks/apollo';
+import { usePagination } from '#/hooks/utils/usePagination';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useSearchableList } from '../../useSearchableList';
 import { pantryItemSearch } from '#/utils/searchUtils';
 

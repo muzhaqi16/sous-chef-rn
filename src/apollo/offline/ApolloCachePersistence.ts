@@ -43,9 +43,11 @@ class ApolloCachePersistence {
       // Check cache version
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) {
-        console.log(
-          `📦 Cache: Version mismatch (stored: ${storedVersion}, current: ${CURRENT_CACHE_VERSION}), clearing cache`,
-        );
+        if (__DEV__) {
+          console.log(
+            `📦 Cache: Version mismatch (stored: ${storedVersion}, current: ${CURRENT_CACHE_VERSION}), clearing cache`,
+          );
+        }
         this.clear();
         return null;
       }
@@ -53,14 +55,18 @@ class ApolloCachePersistence {
       // Load cache data
       const cacheString = storage.getString(CACHE_STORAGE_KEY);
       if (!cacheString) {
-        console.log('📦 Cache: No persisted cache found');
+        if (__DEV__) {
+          console.log('📦 Cache: No persisted cache found');
+        }
         return null;
       }
 
       const cache = JSON.parse(cacheString) as NormalizedCacheObject;
       const entityCount = Object.keys(cache).length;
 
-      console.log(`📦 Cache: Loaded ${entityCount} entities from storage`);
+      if (__DEV__) {
+        console.log(`📦 Cache: Loaded ${entityCount} entities from storage`);
+      }
       return cache;
     } catch (error) {
       console.error('📦 Cache: Failed to load persisted cache:', error);
@@ -142,7 +148,9 @@ class ApolloCachePersistence {
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
 
-      console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
+      if (__DEV__) {
+        console.log(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
+      }
     } catch (error) {
       console.error('💾 Cache: Failed to persist cache immediately:', error);
     }
@@ -162,7 +170,9 @@ class ApolloCachePersistence {
 
       storage.remove(CACHE_STORAGE_KEY);
       storage.remove(CACHE_VERSION_KEY);
-      console.log('🧹 Cache: Cleared persisted cache');
+      if (__DEV__) {
+        console.log('🧹 Cache: Cleared persisted cache');
+      }
     } catch (error) {
       console.error('🧹 Cache: Failed to clear persisted cache:', error);
     }

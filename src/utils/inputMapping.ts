@@ -1,12 +1,10 @@
-import {
-  BaseInput,
-  EmailInput,
-  PhoneInput,
-  UrlInput,
-  DateInput,
-  NameInput,
-  BioInput,
-} from '#components';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { EmailInput } from '#components/atoms/EmailInput';
+import { PhoneInput } from '#components/atoms/PhoneInput';
+import { UrlInput } from '#components/atoms/UrlInput';
+import { DateInput } from '#components/atoms/DateInput';
+import { NameInput } from '#components/atoms/NameInput';
+import { BioInput } from '#components/atoms/BioInput';
 
 export const getInputComponentForField = (fieldKey: string) => {
   switch (fieldKey) {

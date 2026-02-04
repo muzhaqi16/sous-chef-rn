@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, type IconLibrary } from '#utils';
+import { Icon, type IconLibrary } from '#utils/iconUtils';
 
 export interface ActionCardProps {
   icon: string;

@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { Pressable, Animated as RNAnimated } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { HapticService } from '#services/haptic';
+import { Icon } from '#utils/iconUtils';
+import { HapticService } from '#services/haptic/HapticService';
 
 interface LazyAnimatedCheckboxProps {
   checked: boolean;

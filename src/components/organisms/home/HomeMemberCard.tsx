@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { formatRole, type Member } from '#utils/formatters';
-import { commonStyles } from '#styles';
+import { Icon } from '#utils/iconUtils';
+import { formatRole } from '#/utils/formatters/roleFormatters';
+import { type Member } from '#/utils/formatters/memberFormatters';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface HomeMemberCardProps {
   member: Member;

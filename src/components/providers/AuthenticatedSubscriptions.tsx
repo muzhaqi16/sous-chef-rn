@@ -1,10 +1,8 @@
 import React from 'react';
-import {
-  useShoppingListSubscriptions,
-  usePantrySubscriptions,
-  useHomeSubscriptions,
-  useNotificationSubscriptions,
-} from '#/hooks/subscriptions';
+import { useShoppingListSubscriptions } from '#/hooks/subscriptions/useShoppingListSubscriptions';
+import { usePantrySubscriptions } from '#/hooks/subscriptions/usePantrySubscriptions';
+import { useHomeSubscriptions } from '#/hooks/subscriptions/useHomeSubscriptions';
+import { useNotificationSubscriptions } from '#/hooks/subscriptions/useNotificationSubscriptions';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
 
 interface AuthenticatedSubscriptionsProps {

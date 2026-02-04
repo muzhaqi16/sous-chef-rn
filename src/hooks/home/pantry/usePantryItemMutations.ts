@@ -23,8 +23,8 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
-import { useCrudOperations } from '#/hooks/utils';
-import { subscriptionService } from '#/services/subscriptions';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
 import type { PantryItemInput, PantryItemUpdate } from './types';
 

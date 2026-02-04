@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStore} from '#store';
 import {
   useGetUserSettingsQuery,
@@ -13,9 +13,6 @@ export interface AppSettings {
   showTutorials: boolean;
   autoSync: boolean;
   offlineMode: boolean;
-  shareUsageData: boolean;
-  shareWithPartners: boolean;
-  personalizedAds: boolean;
   preferredUnitSystem: UnitSystem;
   enabledFeatures: string[];
   betaFeatures: string[];
@@ -37,9 +34,6 @@ export const useAppSettings = () => {
       showTutorials: settings?.showTutorials ?? true,
       autoSync: settings?.autoSync ?? true,
       offlineMode: settings?.offlineMode ?? false,
-      shareUsageData: settings?.shareUsageData ?? true,
-      shareWithPartners: settings?.shareWithPartners ?? false,
-      personalizedAds: settings?.personalizedAds ?? false,
       preferredUnitSystem: settings?.preferredUnitSystem || UnitSystem.Metric,
       enabledFeatures: settings?.enabledFeatures || [],
       betaFeatures: settings?.betaFeatures || [],
@@ -55,14 +49,13 @@ export const useAppSettings = () => {
           },
         });
 
-        await refetch();
         return true;
       } catch (error) {
         console.error('Failed to update app setting:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updateSettings],
   );
 
   const updateMultipleSettings = useCallback(
@@ -74,14 +67,13 @@ export const useAppSettings = () => {
           },
         });
 
-        await refetch();
         return true;
       } catch (error) {
         console.error('Failed to update app settings:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updateSettings],
   );
 
   const resetToDefaults = useCallback(async () => {
@@ -91,17 +83,16 @@ export const useAppSettings = () => {
       showTutorials: true,
       autoSync: true,
       offlineMode: false,
-      shareUsageData: true,
-      shareWithPartners: false,
-      personalizedAds: false,
       preferredUnitSystem: UnitSystem.Metric,
     };
 
     return updateMultipleSettings(defaultSettings);
   }, [updateMultipleSettings]);
 
+  const memoizedSettings = useMemo(() => getAppSettings(), [getAppSettings]);
+
   return {
-    settings: getAppSettings(),
+    settings: memoizedSettings,
     loading,
     updateAppSetting,
     updateMultipleSettings,

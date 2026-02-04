@@ -12,7 +12,7 @@ export class ShoppingListScreen extends BaseScreen {
   protected screenID = 'shopping-list-screen';
 
   // Element IDs
-  private readonly addButton = 'shopping-list-add-button';
+  private readonly addButton = 'tab-bar-add-button';
   private readonly listContainer = 'shopping-list';
   private readonly searchInput = 'shopping-list-search-input';
   private readonly filterButton = 'shopping-list-filter-button';
@@ -61,17 +61,44 @@ export class ShoppingListScreen extends BaseScreen {
    * Note: Tab testID is 'tab-shoppinglist' (no dash) based on route name 'ShoppingList'
    */
   async navigateToTab() {
-    await this.tapByID('tab-shoppinglist');
-    await this.waitForScreen();
+    console.log('📱 Navigating to Shopping List tab...');
+    // Wait for tab bar to be ready (longer timeout after relaunch)
+    await waitFor(element(by.id('tab-shoppinglist')))
+      .toBeVisible()
+      .withTimeout(10000);
+    console.log('✓ Shopping list tab found, tapping...');
+    await element(by.id('tab-shoppinglist')).tap();
+    console.log('✓ Tapped shopping list tab, waiting for screen...');
 
-    // Wait for the add button in search bar to be visible
-    await this.waitForElement(this.addButton, 10000);
+    // Wait for screen with retry on failure
+    try {
+      await this.waitForScreen(5000);
+    } catch {
+      console.log('Screen not visible, retrying tab tap...');
+      await element(by.id('tab-shoppinglist')).tap();
+      await this.waitForScreen(10000);
+    }
+    console.log('✓ Shopping list screen visible');
   }
 
   /**
    * Tap add button to add new item
+   * Also handles dismissing the feature hint overlay if it appears
    */
   async tapAddButton() {
+    // Try to dismiss feature hint overlay if it exists (appears once per session when items exist)
+    try {
+      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+        .toBeVisible()
+        .withTimeout(1000);
+      await element(by.id('feature-hint-overlay-dismiss')).tap();
+      await waitFor(element(by.id('feature-hint-overlay')))
+        .not.toBeVisible()
+        .withTimeout(2000);
+    } catch {
+      // Overlay not present, continue
+    }
+
     await this.tapByID(this.addButton);
   }
 
@@ -80,10 +107,26 @@ export class ShoppingListScreen extends BaseScreen {
    * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
   async addItem(name: string, quantity?: string | number, unit?: string) {
+    // Tap add button and wait for modal - retry once if needed
     await this.tapAddButton();
 
-    // Wait for add item modal/screen
-    await waitFor(element(by.id('add-item-modal'))).toBeVisible().withTimeout(3000);
+    // Wait for "Add Manually" button to appear (indicates sheet is open)
+    try {
+      await waitFor(element(by.id('add-shopping-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    } catch {
+      // Modal didn't open - retry the tap
+      console.log('Modal did not open, retrying add button tap...');
+      await this.tapAddButton();
+      await waitFor(element(by.id('add-shopping-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    }
+    await element(by.id('add-shopping-add-manually-button')).tap();
+
+    // Wait for add item screen to appear
+    await waitFor(element(by.id('add-item-modal'))).toBeVisible().withTimeout(5000);
 
     // Fill in item details - use replaceText to avoid Android stylus popup
     const nameInput = element(by.id('add-item-name-input'));

@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 
 interface DragHandleProps {
   onLongPress: () => void;
@@ -29,6 +29,11 @@ export const DragHandle = React.memo(function DragHandle({
   // PERFORMANCE: Use passed iconColor to avoid re-render when theme unchanged
   const color = iconColor ?? theme.colors.textSecondary;
 
+  // Stabilize callback reference for consistent gesture behavior
+  const handleLongPress = useCallback(() => {
+    onLongPress();
+  }, [onLongPress]);
+
   // RNGH LongPress gesture for better coordination with pan gesture in SortableList
   const longPressGesture = useMemo(
     () =>
@@ -37,10 +42,9 @@ export const DragHandle = React.memo(function DragHandle({
         .minDuration(200)
         .onStart(() => {
           'worklet';
-          // Pass function reference (not arrow function) - must be defined in RN Runtime scope
-          scheduleOnRN(onLongPress);
+          scheduleOnRN(handleLongPress);
         }),
-    [disabled, onLongPress],
+    [disabled, handleLongPress],
   );
 
   if (disabled) {

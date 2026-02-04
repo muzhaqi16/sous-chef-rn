@@ -1,9 +1,13 @@
 import React from 'react';
-import { SortableShoppingList } from '../SortableShoppingList';
-import type { SortableShoppingListItem } from '../SortableShoppingList';
-import { SkeletonList, ShoppingListItemSkeleton } from '#components/base/Skeleton';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { SortableShoppingList } from '../SortableShoppingList/SortableList';
+import type { SortableShoppingListItem } from '../SortableShoppingList/types';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/base/EmptyState';
-import { useDeferredRender } from '#hooks/performance';
+import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
+import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
@@ -32,6 +36,9 @@ interface ShoppingTabProps {
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
+  // Empty state context
+  purchasedCount?: number;
+  onAddItem?: () => void;
 }
 
 const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
@@ -55,6 +62,8 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
   canReorderItems = false,
+  purchasedCount = 0,
+  onAddItem,
 }) => {
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -65,39 +74,55 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
     return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }
 
-  // Empty state for shopping tab
+  // Empty state for shopping tab - context-aware based on purchased count
   if (items.length === 0) {
+    const isShoppingComplete = purchasedCount > 0;
+
     return (
       <EmptyState
-        icon="shopping-cart"
-        iconLibrary="MaterialIcons"
-        title="All caught up!"
-        description="Add items to your list or unmark purchased items to see them here"
+        icon={<ShoppingEmptyIllustration variant={isShoppingComplete ? 'complete' : 'empty'} size="medium" />}
+        title={isShoppingComplete ? 'Shopping complete!' : 'Your list is empty'}
+        description={
+          isShoppingComplete
+            ? "You've checked off everything on your list"
+            : 'Add items to start your shopping list'
+        }
+        action={
+          // Only show button for empty list state - complete state has tab bar + button
+          !isShoppingComplete && onAddItem
+            ? {
+                label: 'Add Item',
+                onPress: onAddItem,
+              }
+            : undefined
+        }
       />
     );
   }
 
   return (
-    <SortableShoppingList
-      items={items}
-      onItemPress={onItemPress}
-      onItemEdit={onItemEdit}
-      onItemDelete={onItemDelete}
-      onTogglePurchase={onTogglePurchase}
-      onQuantityPress={onQuantityPress}
-      onSortOrderUpdate={onSortOrderUpdate}
-      disabled={disabled}
-      showsVerticalScrollIndicator={true}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      onSwipeableClose={onSwipeableClose}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-      onEndReached={onEndReached}
-      canRemoveItems={canRemoveItems}
-      canEditItems={canEditItems}
-      canMarkPurchased={canMarkPurchased}
-      canReorderItems={canReorderItems}
-    />
+    <View style={styles.container}>
+      <SortableShoppingList
+        items={items}
+        onItemPress={onItemPress}
+        onItemEdit={onItemEdit}
+        onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
+        onQuantityPress={onQuantityPress}
+        onSortOrderUpdate={onSortOrderUpdate}
+        disabled={disabled}
+        showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        onEndReached={onEndReached}
+        canRemoveItems={canRemoveItems}
+        canEditItems={canEditItems}
+        canMarkPurchased={canMarkPurchased}
+        canReorderItems={canReorderItems}
+      />
+    </View>
   );
 };
 
@@ -109,3 +134,9 @@ MemoizedShoppingTab.displayName = 'ShoppingTab';
 
 // Also export non-memoized for backwards compatibility
 export const ShoppingTab = ShoppingTabComponent;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

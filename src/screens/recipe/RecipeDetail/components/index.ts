@@ -1,1 +1,0 @@
-export { IngredientCard } from './IngredientCard';

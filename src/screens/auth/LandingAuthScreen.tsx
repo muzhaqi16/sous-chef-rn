@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Image, Text, TouchableOpacity, Linking } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { AuthWrapper, Button } from '#components';
-import { useSafeNavigation } from '#hooks';
+import { AuthWrapper } from '#components/templates/AuthWrapper';
+import { Button } from '#components/base/Button';
+import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { getWebAppUrl } from '#utils/environment';
 
 export function LandingAuthScreen() {

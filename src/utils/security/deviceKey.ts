@@ -1,5 +1,12 @@
 import { Platform } from 'react-native';
-import * as Keychain from 'react-native-keychain';
+import {
+  ACCESS_CONTROL,
+  SECURITY_LEVEL,
+  ACCESSIBLE,
+  getSupportedBiometryType,
+  setGenericPassword,
+  resetGenericPassword,
+} from 'react-native-keychain';
 import { storage } from '#/storage/mmkv';
 
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
@@ -110,17 +117,17 @@ export class DeviceKeyManager {
       // Try to store with biometric protection first
       const biometricOptions = {
         service: DEVICE_KEY_SERVICE,
-        accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+        accessControl: ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
         securityLevel:
           Platform.OS === 'android'
-            ? Keychain.SECURITY_LEVEL.SECURE_HARDWARE
+            ? SECURITY_LEVEL.SECURE_HARDWARE
             : undefined,
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       };
 
       let success: boolean = false;
       try {
-        const result = await Keychain.setGenericPassword(
+        const result = await setGenericPassword(
           'device_key',
           key,
           biometricOptions,
@@ -137,14 +144,14 @@ export class DeviceKeyManager {
       if (!success) {
         const passcodeOptions = {
           service: DEVICE_KEY_SERVICE,
-          accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+          accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
           securityLevel:
             Platform.OS === 'android'
-              ? Keychain.SECURITY_LEVEL.SECURE_SOFTWARE
+              ? SECURITY_LEVEL.SECURE_SOFTWARE
               : undefined,
         };
 
-        const result = await Keychain.setGenericPassword(
+        const result = await setGenericPassword(
           'device_key',
           key,
           passcodeOptions,
@@ -249,7 +256,7 @@ export class DeviceKeyManager {
    */
   static async isBiometricAvailable(): Promise<boolean> {
     try {
-      const biometryType = await Keychain.getSupportedBiometryType();
+      const biometryType = await getSupportedBiometryType();
       return biometryType !== null;
     } catch {
       return false;
@@ -262,7 +269,7 @@ export class DeviceKeyManager {
   static async regenerateKey(): Promise<string> {
     try {
       // Clear old key from keychain
-      await Keychain.resetGenericPassword({ service: DEVICE_KEY_SERVICE });
+      await resetGenericPassword({ service: DEVICE_KEY_SERVICE });
       storage.remove(DEVICE_KEY_STORAGE);
     } catch (error) {
       console.warn('Error clearing old key:', error);

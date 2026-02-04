@@ -27,6 +27,11 @@ android {
         pickFirst '**/libjsi.so'
         pickFirst '**/libreactnativejni.so'
     }
+
+    // Enable Hermes mmap for ~16% faster TTI by keeping the bundle uncompressed
+    androidResources {
+        noCompress += ["bundle"]
+    }
     
     //  Create an APK for each CPU architecture (disabled for debug builds to work with Detox)
     splits {
@@ -42,8 +47,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 36
-        versionName "2.3.1"
+        versionCode 42
+        versionName "2.4.4"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -123,14 +128,16 @@ android {
             // Use release signing config for production builds
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro", "${rootProject.projectDir}/../node_modules/detox/android/detox/proguard-rules-app.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
         }
         staging {
             initWith release
-            manifestPlaceholders = [usesCleartextTraffic: "true"]
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
             signingConfig signingConfigs.staging
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
             matchingFallbacks = ['release', 'debug']

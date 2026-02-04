@@ -7,34 +7,40 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { NetworkStatus } from '@apollo/client';
-import { useAppNavigation, useTabBarAddButton } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
-import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
-import { useScreenTransition } from '#hooks/performance';
-import { useScannerSetup } from '#hooks/scanner';
-import { useSelectorManagement } from '#hooks/ui';
+import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
+import { usePantryItemActions } from '#hooks/pantry/usePantryItemActions';
+import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useFilterTransitionWithDeps } from '#hooks/performance/useFilterTransition';
+import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
+import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useGetHomeBasicQuery, GetStorageLocationsQuery } from '#generated';
-import { useTabBarActions } from '#context';
-import { useFeatureHint } from '#/hooks/useFeatureHint';
+import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { filterByLocation, LocationFilter } from '#/utils/pantryFilters';
+import { pantryItemSearch } from '#/utils/searchUtils';
 
-import { AnimatedItemSelector } from '#components';
-import { PantryContent } from '#components/pantry';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { PantryContent } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
-import { AddToPantrySheet } from '#components/modals/AddToPantrySheet';
-import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet';
-import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import { AddToPantrySheet } from '#components/modals/AddToPantrySheet/AddToPantrySheet';
+import { AddStorageLocationSheet } from '#components/modals/AddStorageLocationSheet/AddStorageLocationSheet';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { useStorageLocationManagement } from '#hooks';
-import type { FilterTabConfig } from '#components/molecules';
+import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
+import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 const PantryMainScreen: React.FC = React.memo(() => {
@@ -92,6 +98,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
       selectorRef,
       setOverlayOpen,
     });
+
+  // Coordinate swipeable items so only one is open at a time
+  const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
   // Centralized pantry selection with fallback chain
   const {
@@ -196,11 +205,30 @@ const PantryMainScreen: React.FC = React.memo(() => {
     navigate,
   });
 
-  // Filter items by location for redesigned tabs (using shared utility)
-  const locationFilteredItems = useMemo(
-    () => filterByLocation(pantryItems, locationFilter),
-    [pantryItems, locationFilter],
+  // PERFORMANCE: Filter items with transition to keep UI responsive during filter changes
+  const locationFilterPredicate = useCallback(
+    (item: (typeof pantryItems)[number]) => {
+      if (locationFilter === 'all') return true;
+      switch (locationFilter) {
+        case 'fridge':
+          return item.storageState === StorageState.Refrigerated;
+        case 'freezer':
+          return item.storageState === StorageState.Frozen;
+        case 'pantry':
+          return item.storageState === StorageState.Ambient || !item.storageState;
+        default:
+          // Custom storage location filter
+          return item.storageLocation?.id === locationFilter;
+      }
+    },
+    [locationFilter],
   );
+
+  const { filteredItems: locationFilteredItems } = useFilterTransitionWithDeps({
+    items: pantryItems,
+    filterFn: locationFilterPredicate,
+    deps: [locationFilter],
+  });
 
   // Handle location filter change
   const handleLocationFilterChange = useCallback((filter: LocationFilter) => {
@@ -313,15 +341,30 @@ const PantryMainScreen: React.FC = React.memo(() => {
     profile?.displayName || profile?.firstName || profile?.lastName || 'there';
   const householdName = currentHome?.name || 'Your Home';
 
-  // Sectioned items for redesigned content - filter based on location (using shared utility)
+  // Sectioned items for redesigned content - apply search filtering first, then location filter
+  const searchFilteredExpiringSoon = useMemo(() => {
+    if (!searchQuery.trim()) return sectionedItems.expiringSoonItems;
+    return sectionedItems.expiringSoonItems.filter(item =>
+      pantryItemSearch(item, searchQuery),
+    );
+  }, [sectionedItems.expiringSoonItems, searchQuery]);
+
+  const searchFilteredNormal = useMemo(() => {
+    if (!searchQuery.trim()) return sectionedItems.normalItems;
+    return sectionedItems.normalItems.filter(item =>
+      pantryItemSearch(item, searchQuery),
+    );
+  }, [sectionedItems.normalItems, searchQuery]);
+
+  // Apply location filter to search-filtered results
   const filteredExpiringSoonItems = useMemo(
-    () => filterByLocation(sectionedItems.expiringSoonItems, locationFilter),
-    [sectionedItems.expiringSoonItems, locationFilter],
+    () => filterByLocation(searchFilteredExpiringSoon, locationFilter),
+    [searchFilteredExpiringSoon, locationFilter],
   );
 
   const filteredNormalItems = useMemo(
-    () => filterByLocation(sectionedItems.normalItems, locationFilter),
-    [sectionedItems.normalItems, locationFilter],
+    () => filterByLocation(searchFilteredNormal, locationFilter),
+    [searchFilteredNormal, locationFilter],
   );
 
   return (
@@ -360,11 +403,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onEndReached={loadMore}
         refreshing={isRefreshing}
         loading={isLoadingInitial}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
+        onSwipeableClose={handleSwipeableClose}
       />
       <AnimatedItemSelector
         ref={selectorRef}
         config={pantryConfig}
-        maxHeight={600}
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />

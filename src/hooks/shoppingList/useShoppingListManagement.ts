@@ -3,11 +3,7 @@ import { useSearchableList } from '../useSearchableList';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
 import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
-import { useShoppingListItemMutations } from './useShoppingListItemMutations';
-import type { ShoppingListItemInput, ShoppingListItemUpdate } from './useShoppingListItemMutations';
-
-// Re-export types for consumers
-export type { ShoppingListItemInput, ShoppingListItemUpdate };
+import { useShoppingListItemMutations } from './mutations/useShoppingListItemMutations';
 
 /**
  * useShoppingListManagement - Composition hook for shopping list data management
@@ -75,6 +71,21 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     filtered: filteredItems,
   } = useSearchableList(items, shoppingListItemSearch);
 
+  // Filter unpurchased/purchased items by search query
+  const filteredUnpurchasedItems = useMemo(() => {
+    if (!searchQuery.trim()) return unpurchasedItems;
+    return unpurchasedItems.filter(item =>
+      shoppingListItemSearch(item, searchQuery),
+    );
+  }, [unpurchasedItems, searchQuery]);
+
+  const filteredPurchasedItems = useMemo(() => {
+    if (!searchQuery.trim()) return purchasedItems;
+    return purchasedItems.filter(item =>
+      shoppingListItemSearch(item, searchQuery),
+    );
+  }, [purchasedItems, searchQuery]);
+
   // Stats calculation
   const stats = useMemo(() => {
     const total = items.length;
@@ -108,8 +119,8 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: items,
-    unpurchasedItems,
-    purchasedItems,
+    unpurchasedItems: filteredUnpurchasedItems,
+    purchasedItems: filteredPurchasedItems,
     shoppingList, // Full shopping list details for permissions, collaborators
     loading,
     error,

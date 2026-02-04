@@ -9,19 +9,21 @@ import { enableScreens } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
-import { Navigation } from '#navigation';
+import { Navigation } from '#navigation/RootNavigator';
 import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
+import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
-import { MemoryMonitor } from '#services/performance';
+import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
-import { queueManager } from '#/apollo/offlineQueue';
+import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
+import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
 import {
   initAppStateTokenRefresh,
   cleanupAppStateTokenRefresh,
@@ -147,20 +149,27 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar
-                  translucent
-                  backgroundColor="transparent"
-                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-                />
-                <SafeAreaView style={styles.container}>
-                  <ToastProvider>
-                    <NotificationProvider>
-                      <BottomSheetModalProvider>
-                        <Navigation />
-                      </BottomSheetModalProvider>
-                    </NotificationProvider>
-                  </ToastProvider>
-                </SafeAreaView>
+                <OverlayBackdropProvider>
+                  <StatusBar
+                    barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+                  />
+                  <BottomSheetModalProvider>
+                    {/* Render order matters for stacking (no zIndex used):
+                        1. StatusBarBackground - at the back
+                        2. SafeAreaView with content
+                        3. GlobalBackdrop - covers everything including status bar
+                        4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
+                    <StatusBarBackground />
+                    <SafeAreaView style={styles.container}>
+                      <ToastProvider>
+                        <NotificationProvider>
+                          <Navigation />
+                        </NotificationProvider>
+                      </ToastProvider>
+                    </SafeAreaView>
+                    <GlobalBackdrop />
+                  </BottomSheetModalProvider>
+                </OverlayBackdropProvider>
               </SafeAreaProvider>
             </SubscriptionProvider>
           </DataProvider>

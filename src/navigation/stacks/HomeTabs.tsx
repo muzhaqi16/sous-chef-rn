@@ -1,11 +1,11 @@
 import React from 'react';
 import {useUnistyles} from 'react-native-unistyles';
 import {getFocusedRouteNameFromRoute} from '@react-navigation/native';
-import {Icon} from '#/utils';
+import {Icon} from '#/utils/iconUtils';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
 import {RecipeStack} from './RecipeStack';
-import {ProfileScreen} from '#screens/profile';
+import {ProfileScreen} from '#screens/profile/ProfileScreen';
 import {createAnimatedTabNavigator} from '#components/navigation/AnimatedTabNavigator';
 
 export type HomeTabParamList = {

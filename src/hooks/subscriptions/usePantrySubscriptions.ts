@@ -20,12 +20,12 @@ import {
   usePantryExpiringItemsAlertSubscription,
   PantryItemDisplayFragmentDoc,
 } from '#generated';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 // Cache updaters for Pantry.itemsConnection (connection pattern)
 const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(

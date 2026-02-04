@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MembershipRole } from '#generated';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 interface InviteUserModalProps {
   visible: boolean;
@@ -80,6 +81,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { theme } = useUnistyles();
+  const isOffline = useIsEffectivelyOffline();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -87,6 +89,11 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   };
 
   const handleSubmit = async () => {
+    if (isOffline) {
+      setError('Cannot send invite while offline');
+      return;
+    }
+
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
@@ -246,10 +253,10 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                   styles.button,
                   styles.submitButton,
                   { backgroundColor: theme.colors.primary },
-                  isSubmitting && styles.disabledButton,
+                  (isSubmitting || isOffline) && styles.disabledButton,
                 ]}
                 onPress={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isOffline}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={theme.colors.white} />

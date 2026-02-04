@@ -5,37 +5,29 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import {
-  View,
-  Image,
-  Alert,
-  Text,
-  TouchableOpacity,
-  Pressable,
-} from 'react-native';
-import { useAppNavigation, useTabBarAddButton } from '#hooks';
+import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import {
-  ListTemplate,
-  HeaderAction,
-  RecipesHeader,
-  FolderPicker,
-  TagPicker,
-} from '#components';
+import { ItemList } from '#components/organisms/ItemList';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { RecipesHeader } from '#components/molecules/RecipesHeader';
+import { FolderPicker } from '#components/molecules/FolderPicker';
+import { TagPicker } from '#components/molecules/TagPicker';
+import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#generated';
-import {
-  useSavedRecipes,
-  useRecipeFolders,
-  useRecipeTags,
-  useFolderActions,
-} from '#/hooks/recipe';
-import { spoonacularService } from '#/services/recipeApi';
+import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
+import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
+import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
+import { useFolderActions } from '#/hooks/recipe/useFolderActions';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
 
@@ -155,11 +147,11 @@ export const RecipeMain: React.FC = React.memo(() => {
       result = result.filter(recipe => recipe.folder === selectedFolder);
     }
 
-    // Filter by tags (recipe must have ALL selected tags)
+    // Filter by tags (recipe must have ANY of the selected tags)
     if (selectedTags.length > 0) {
       result = result.filter(recipe => {
         const recipeTags = recipe.tags || [];
-        return selectedTags.every(tag => recipeTags.includes(tag));
+        return selectedTags.some(tag => recipeTags.includes(tag));
       });
     }
 
@@ -211,8 +203,6 @@ export const RecipeMain: React.FC = React.memo(() => {
     const recipesToShow = showRandomRecipes ? randomRecipes : filteredRecipes;
 
     return recipesToShow.map((recipe: any) => {
-      // Handle both saved (backend) and random (external) recipe formats
-      const isExternalRecipe = !recipe.name && recipe.title; // External recipes use 'title'
       const name = recipe.name || recipe.title;
       const imageUrl = recipe.imageUrl || recipe.image;
       const servings = recipe.servings;
@@ -227,19 +217,17 @@ export const RecipeMain: React.FC = React.memo(() => {
 
       return {
         // For saved recipes, use recipeId for navigation; for external, use id
-        id: showRandomRecipes ? recipe.id : recipe.recipeId,
+        id: String(showRandomRecipes ? recipe.id : recipe.recipeId),
         title: name,
         subtitle: `${servings} servings${
           totalTime ? ` • ${totalTime} min` : ''
         }`,
-        badge: showRandomRecipes ? 'Suggested' : undefined,
+        badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
           <View style={styles.imageContainer}>
             <Image source={{ uri: imageUrl }} style={styles.leftImage} />
           </View>
         ) : undefined,
-        // Store whether this is an external recipe for navigation
-        isExternal: isExternalRecipe || showRandomRecipes,
       };
     });
   }, [filteredRecipes, randomRecipes, showRandomRecipes]);
@@ -270,35 +258,23 @@ export const RecipeMain: React.FC = React.memo(() => {
     [unfavoriteRecipeMutation],
   );
 
-  // Header actions
-  const headerActions = useMemo(
-    () => ({
-      left: [] as HeaderAction[],
-      right: [] as HeaderAction[],
-    }),
-    [],
-  );
-
-  // Search bar actions - use inner icon pattern for consistency with Pantry/Shopping List
-  const searchBarActions = useMemo(
-    () => ({
-      showSearchIcon: true,
-      innerRightIcon: (
-        <Pressable onPress={handleSearchRecipes} hitSlop={8}>
-          <Icon
-            name="search"
-            size={18}
-            color={theme.colors.primary}
-            library="Feather"
-          />
-        </Pressable>
-      ),
-    }),
+  // Search bar inner right icon - navigate to recipe search
+  const searchBarInnerRightIcon = useMemo(
+    () => (
+      <Pressable onPress={handleSearchRecipes} hitSlop={8}>
+        <Icon
+          name="search"
+          size={18}
+          color={theme.colors.primary}
+          library="Feather"
+        />
+      </Pressable>
+    ),
     [handleSearchRecipes, theme.colors.primary],
   );
 
   const emptyStateConfig = {
-    icon: 'book',
+    icon: 'book' as const,
     title: 'No saved recipes',
     description: 'Search for recipes and save your favorites',
     action: {
@@ -363,115 +339,110 @@ export const RecipeMain: React.FC = React.memo(() => {
   // Check if any filters are active
   const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
 
+  // Define filter tabs with modal triggers
+  const filterTabs = useMemo(() => {
+    const tabs: FilterTabConfig<string>[] = [
+      {
+        id: 'all',
+        label: 'All',
+      },
+    ];
+
+    // Add folder pill if folders exist
+    if (folders.length > 0) {
+      tabs.push({
+        id: 'folder',
+        label: selectedFolder || 'Folders',
+        icon: '📁',
+        onPress: () => setShowFolderPicker(true),
+        showDropdownIndicator: true,
+      });
+    }
+
+    // Add tags pill if tags exist
+    if (availableTags.length > 0) {
+      tabs.push({
+        id: 'tags',
+        label:
+          selectedTags.length > 0
+            ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
+            : 'Tags',
+        icon: '🏷️',
+        onPress: () => setShowTagPicker(true),
+        showDropdownIndicator: true,
+      });
+    }
+
+    return tabs;
+  }, [folders.length, availableTags.length, selectedFolder, selectedTags]);
+
+  // Calculate counts for filter tabs
+  const filterCounts = useMemo(
+    () => ({
+      all: recipes.length,
+      folder: folders.length,
+      tags: availableTags.length,
+    }),
+    [recipes.length, folders.length, availableTags.length],
+  );
+
+  // Compute which tabs have active filters (shown with subtle filtered styling)
+  const filteredTabs = useMemo(() => {
+    const filtered: string[] = [];
+    if (selectedFolder) filtered.push('folder');
+    if (selectedTags.length > 0) filtered.push('tags');
+    return filtered;
+  }, [selectedFolder, selectedTags.length]);
+
+  // "All" is only active when no filters are applied; otherwise no tab is active
+  const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
+
   // Filter Header Component - shown when user has saved recipes
   const FilterHeader = useMemo(() => {
-    // Don't show filters when showing random recipes or no folders/tags available
-    if (
-      showRandomRecipes ||
-      (folders.length === 0 && availableTags.length === 0)
-    ) {
+    // Show suggested header when showing random recipes
+    if (showRandomRecipes) {
       return SuggestedHeader;
     }
 
+    // Don't show filter tabs if no folders/tags available
+    if (folders.length === 0 && availableTags.length === 0) {
+      return null;
+    }
+
     return (
-      <View style={styles.filterContainer}>
-        {/* Filter Row with Folder and Tags */}
-        <View style={styles.filterRow}>
-          {/* Folder Filter */}
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFolderPicker(true)}
-          >
-            <Icon
-              library="Feather"
-              name="folder"
-              size={16}
-              color={
-                selectedFolder
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.filterButtonText,
-                selectedFolder && styles.filterButtonTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {selectedFolder || 'All Folders'}
-            </Text>
-            <Icon
-              library="Feather"
-              name="chevron-down"
-              size={16}
-              color={theme.colors.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {/* Tag Filter */}
-          {availableTags.length > 0 && (
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setShowTagPicker(true)}
-            >
-              <Icon
-                library="Feather"
-                name="tag"
-                size={16}
-                color={
-                  selectedTags.length > 0
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedTags.length > 0 && styles.filterButtonTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {selectedTags.length > 0
-                  ? `${selectedTags.length} Tag${
-                      selectedTags.length > 1 ? 's' : ''
-                    }`
-                  : 'All Tags'}
-              </Text>
-              <Icon
-                library="Feather"
-                name="chevron-down"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-
-          {hasActiveFilters && (
-            <TouchableOpacity
-              style={styles.clearButton}
-              onPress={handleClearFilters}
-            >
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <FilterTabs
+        tabs={filterTabs}
+        activeTabId={activeFilterTab}
+        filteredTabIds={filteredTabs}
+        onTabChange={tabId => {
+          if (tabId === 'all') {
+            handleClearFilters();
+          }
+        }}
+        counts={filterCounts}
+        actionButton={{
+          icon: 'x',
+          iconLibrary: 'Feather',
+          onPress: handleClearFilters,
+          testID: 'recipe-clear-filters',
+          disabled: !hasActiveFilters,
+        }}
+        testIDPrefix="recipe-filter-tab"
+      />
     );
   }, [
     showRandomRecipes,
     folders.length,
     availableTags.length,
-    selectedFolder,
-    selectedTags,
+    filterTabs,
+    activeFilterTab,
+    filteredTabs,
+    filterCounts,
     hasActiveFilters,
     handleClearFilters,
-    theme.colors.primary,
-    theme.colors.textSecondary,
     SuggestedHeader,
   ]);
 
-  // Footer component for pagination
   return (
     <View style={styles.container} testID="recipes-screen">
       <RecipesHeader
@@ -479,22 +450,22 @@ export const RecipeMain: React.FC = React.memo(() => {
         notificationCount={unreadCount}
         onAvatarPress={() => navigate('Notifications')}
       />
-      <ListTemplate
+      <View style={{ paddingHorizontal: theme.spacing.md }}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search recipes..."
+          showSearchIcon
+          innerRightIcon={searchBarInnerRightIcon}
+        />
+      </View>
+      <ItemList
         items={items}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         onItemPress={handleItemPress}
         onItemDelete={showRandomRecipes ? undefined : handleRemoveRecipe}
         onRefresh={handleRefresh}
-        loading={loading || loadingRandom}
-        hasNoData={false}
-        showUserHeader={false}
-        showHeader={false}
-        showSearchBar={true}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        emptyState={emptyStateConfig}
         ListHeaderComponent={FilterHeader}
+        emptyState={emptyStateConfig}
       />
 
       {/* Folder Picker Modal - filter only, no folder creation, with rename/delete */}
@@ -530,10 +501,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         visible={showTagPicker}
         tags={availableTags}
         selectedTags={selectedTags}
-        onSelect={tags => {
-          setSelectedTags(tags);
-          setShowTagPicker(false);
-        }}
+        onSelect={setSelectedTags}
         onCancel={() => setShowTagPicker(false)}
       />
     </View>
@@ -586,46 +554,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
-  },
-  filterContainer: {
-    backgroundColor: theme.colors.surface,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.sm,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.full,
-    gap: theme.spacing.xs,
-  },
-  filterButtonText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    maxWidth: 100,
-  },
-  filterButtonTextActive: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  clearButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    marginLeft: 'auto',
-  },
-  clearButtonText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
   },
 }));

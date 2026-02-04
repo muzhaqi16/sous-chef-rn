@@ -4,6 +4,7 @@ import {
   PantrySuggestionSource,
   type GetPantryItemSuggestionsQuery,
 } from '#generated';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 type PantryItemSuggestion =
   GetPantryItemSuggestionsQuery['pantryItemSuggestions'][number];
@@ -27,9 +28,11 @@ export function usePantryItemSuggestions({
   limit = 10,
   skip = false,
 }: UsePantryItemSuggestionsOptions) {
+  const isOffline = useIsEffectivelyOffline();
+
   const { data, loading, error, refetch } = useGetPantryItemSuggestionsQuery({
     variables: { pantryId: pantryId!, limit },
-    skip: skip || !pantryId,
+    skip: skip || !pantryId || isOffline,
     fetchPolicy: 'cache-and-network',
   });
 
@@ -71,15 +74,16 @@ export function usePantryItemSuggestions({
     return result;
   }, [suggestions]);
 
-  const hasSuggestions = suggestions.length > 0;
+  const hasSuggestions = !isOffline && suggestions.length > 0;
 
   return {
-    suggestions,
+    suggestions: isOffline ? [] : suggestions,
     grouped,
     loading,
     error,
     hasSuggestions,
     refetch,
+    isOffline,
   };
 }
 

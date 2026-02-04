@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 
 export interface InfoRowProps {
@@ -85,8 +85,6 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   valueStyle,
   containerStyle,
 }) => {
-  const { theme } = useUnistyles();
-
   const formattedValue = React.useMemo(() => {
     if (value === null || value === undefined) {
       return '—'; // Em dash for empty values
@@ -104,38 +102,37 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   return (
     <View
       style={[
-        styles(theme).container,
-        showBorder && styles(theme).withBorder,
+        styles.container,
+        showBorder && styles.withBorder,
         containerStyle,
       ]}
     >
-      <Text style={[commonStyles.body, styles(theme).label, labelStyle]}>
+      <Text style={[commonStyles.body, styles.label, labelStyle]}>
         {label}:
       </Text>
-      <Text style={[commonStyles.subtitle, styles(theme).value, valueStyle]}>
+      <Text style={[commonStyles.subtitle, styles.value, valueStyle]}>
         {formattedValue}
       </Text>
     </View>
   );
 };
 
-const styles = (theme: any) =>
-  StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: theme.spacing.sm,
-    },
-    withBorder: {
-      borderBottomWidth: 1,
-      borderBottomColor: theme.colors.divider,
-    },
-    label: {
-      flex: 1,
-    },
-    value: {
-      flex: 1,
-      textAlign: 'right',
-    },
-  });
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+  },
+  withBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
+  },
+  label: {
+    flex: 1,
+  },
+  value: {
+    flex: 1,
+    textAlign: 'right',
+  },
+}));

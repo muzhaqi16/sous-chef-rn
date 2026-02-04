@@ -1,6 +1,6 @@
 import {useGetUserProfileQuery} from '#generated';
 import {useStore} from '#store';
-import {useAuth} from '#hooks';
+import {useAuth} from '#hooks/auth/useAuth';
 
 export const useProfileData = () => {
   const {user} = useAuth();

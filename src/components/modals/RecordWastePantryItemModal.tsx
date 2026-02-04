@@ -1,21 +1,19 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import {
-  FormattedItemSubtitle,
-  BottomSheetHeader,
-  BottomSheetKeyboardAwareScrollView,
-} from '#components/atoms';
-import { Icon, parseFractionalInput } from '#/utils';
+import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { Icon } from '#/utils/iconUtils';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 import { WasteReason, PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 
@@ -126,6 +124,11 @@ export const RecordWastePantryItemModal: React.FC<
 
   const remaining = pantryItem ? calculateRemaining() : null;
 
+  const formatQuantity = (qty: number): string => {
+    if (Number.isInteger(qty)) return qty.toString();
+    return qty.toFixed(2).replace(/\.?0+$/, '');
+  };
+
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
@@ -141,11 +144,12 @@ export const RecordWastePantryItemModal: React.FC<
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
           pressBehavior="close"
+          onClose={() => bottomSheetRef.current?.dismiss()}
         />
       )}
     >
@@ -189,7 +193,8 @@ export const RecordWastePantryItemModal: React.FC<
             {/* Waste Amount Input */}
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
-                label={`Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`}
+                label="Waste Amount"
+                required
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
@@ -203,7 +208,7 @@ export const RecordWastePantryItemModal: React.FC<
                     remaining < 0 && commonStyles.bottomSheetHelperTextError,
                   ]}
                 >
-                  Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
+                  Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
                   {pantryItem.unit?.symbol || ''}
                 </Text>
               )}
@@ -271,7 +276,7 @@ export const RecordWastePantryItemModal: React.FC<
             {/* Notes (Optional) */}
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label="Notes (Optional)"
+                label="Notes"
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Add any notes about this waste..."

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { View, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { CollapsibleMultiSelectSection } from '#/components/molecules/CollapsibleMultiSelectSection';
+import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
+import { MultiSelectChipSheet } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
-import { useSelectableItems } from '#/hooks/useSelectableItems';
 
 // Lifestyle dietary choices
 const DIETS: { label: string; value: Diet }[] = [
@@ -70,27 +70,41 @@ type DietaryRestrictionSelectorProps = {
 export const DietaryRestrictionSelector: React.FC<
   DietaryRestrictionSelectorProps
 > = ({ existingRestrictions, onAdd, onRemove }) => {
-  // Expand/collapse state for each section
-  const [isDietsExpanded, setIsDietsExpanded] = useState(false);
-  const [isIntolerancesExpanded, setIsIntolerancesExpanded] = useState(false);
-  const [isGoalsExpanded, setIsGoalsExpanded] = useState(false);
+  // Sheet visibility states
+  const [isDietSheetVisible, setDietSheetVisible] = useState(false);
+  const [isIntoleranceSheetVisible, setIntoleranceSheetVisible] =
+    useState(false);
+  const [isGoalSheetVisible, setGoalSheetVisible] = useState(false);
 
-  // Saving state for each section
+  // Local selection states for each sheet
+  const [selectedDietIds, setSelectedDietIds] = useState<Diet[]>([]);
+  const [selectedIntoleranceIds, setSelectedIntoleranceIds] = useState<
+    Intolerance[]
+  >([]);
+  const [selectedGoalIds, setSelectedGoalIds] = useState<HealthGoal[]>([]);
+
+  // Saving states
   const [isSavingDiets, setIsSavingDiets] = useState(false);
   const [isSavingIntolerances, setIsSavingIntolerances] = useState(false);
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
   // Memoize existing restrictions to prevent infinite loops
   const existingDiets = useMemo(
-    () => existingRestrictions.map((r) => r.diet).filter(Boolean),
+    () => existingRestrictions.map(r => r.diet).filter(Boolean) as Diet[],
     [existingRestrictions],
   );
   const existingIntolerances = useMemo(
-    () => existingRestrictions.map((r) => r.intolerance).filter(Boolean),
+    () =>
+      existingRestrictions
+        .map(r => r.intolerance)
+        .filter(Boolean) as Intolerance[],
     [existingRestrictions],
   );
   const existingHealthGoals = useMemo(
-    () => existingRestrictions.map((r) => r.healthGoal).filter(Boolean),
+    () =>
+      existingRestrictions
+        .map(r => r.healthGoal)
+        .filter(Boolean) as HealthGoal[],
     [existingRestrictions],
   );
 
@@ -98,10 +112,10 @@ export const DietaryRestrictionSelector: React.FC<
   const existingDietItems = useMemo(
     () =>
       existingRestrictions
-        .filter((r) => r.diet)
-        .map((r) => ({
+        .filter(r => r.diet)
+        .map(r => ({
           id: r.id,
-          label: DIETS.find((d) => d.value === r.diet)?.label || r.diet!,
+          label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
         })),
     [existingRestrictions],
   );
@@ -109,11 +123,11 @@ export const DietaryRestrictionSelector: React.FC<
   const existingIntoleranceItems = useMemo(
     () =>
       existingRestrictions
-        .filter((r) => r.intolerance)
-        .map((r) => ({
+        .filter(r => r.intolerance)
+        .map(r => ({
           id: r.id,
           label:
-            INTOLERANCES.find((i) => i.value === r.intolerance)?.label ||
+            INTOLERANCES.find(i => i.value === r.intolerance)?.label ||
             r.intolerance!,
         })),
     [existingRestrictions],
@@ -122,36 +136,32 @@ export const DietaryRestrictionSelector: React.FC<
   const existingGoalItems = useMemo(
     () =>
       existingRestrictions
-        .filter((r) => r.healthGoal)
-        .map((r) => ({
+        .filter(r => r.healthGoal)
+        .map(r => ({
           id: r.id,
           label:
-            HEALTH_GOALS.find((h) => h.value === r.healthGoal)?.label ||
+            HEALTH_GOALS.find(h => h.value === r.healthGoal)?.label ||
             r.healthGoal!,
         })),
     [existingRestrictions],
   );
 
-  // Prepare selectable items
+  // Prepare available items for sheets (exclude already added)
   const availableDiets = useMemo(
     () =>
-      DIETS.filter((d) => !existingDiets.includes(d.value)).map((d) => ({
+      DIETS.filter(d => !existingDiets.includes(d.value)).map(d => ({
         id: d.value,
         label: d.label,
-        value: d.value,
-        selected: false,
       })),
     [existingDiets],
   );
 
   const availableIntolerances = useMemo(
     () =>
-      INTOLERANCES.filter((i) => !existingIntolerances.includes(i.value)).map(
-        (i) => ({
+      INTOLERANCES.filter(i => !existingIntolerances.includes(i.value)).map(
+        i => ({
           id: i.value,
           label: i.label,
-          value: i.value,
-          selected: false,
         }),
       ),
     [existingIntolerances],
@@ -159,57 +169,42 @@ export const DietaryRestrictionSelector: React.FC<
 
   const availableGoals = useMemo(
     () =>
-      HEALTH_GOALS.filter((h) => !existingHealthGoals.includes(h.value)).map(
-        (h) => ({
+      HEALTH_GOALS.filter(h => !existingHealthGoals.includes(h.value)).map(
+        h => ({
           id: h.value,
           label: h.label,
-          value: h.value,
-          selected: false,
         }),
       ),
     [existingHealthGoals],
   );
 
-  // Use selectableItems hook for each section
-  const {
-    items: dietItems,
-    selectedItems: selectedDiets,
-    toggleItem: toggleDiet,
-    isMaxReached: isDietsMaxReached,
-    clearSelection: clearDietsSelection,
-  } = useSelectableItems({
-    initialItems: availableDiets,
-    maxSelection: 50,
-  });
+  // Handle opening sheets
+  const handleOpenDietSheet = () => {
+    setSelectedDietIds([]);
+    setDietSheetVisible(true);
+  };
 
-  const {
-    items: intoleranceItems,
-    selectedItems: selectedIntolerances,
-    toggleItem: toggleIntolerance,
-    isMaxReached: isIntolerancesMaxReached,
-    clearSelection: clearIntolerancesSelection,
-  } = useSelectableItems({
-    initialItems: availableIntolerances,
-    maxSelection: 50,
-  });
+  const handleOpenIntoleranceSheet = () => {
+    setSelectedIntoleranceIds([]);
+    setIntoleranceSheetVisible(true);
+  };
 
-  const {
-    items: goalItems,
-    selectedItems: selectedGoals,
-    toggleItem: toggleGoal,
-    isMaxReached: isGoalsMaxReached,
-    clearSelection: clearGoalsSelection,
-  } = useSelectableItems({
-    initialItems: availableGoals,
-    maxSelection: 50,
-  });
+  const handleOpenGoalSheet = () => {
+    setSelectedGoalIds([]);
+    setGoalSheetVisible(true);
+  };
 
-  // Save handlers for each section
+  // Save handlers
   const handleSaveDiets = async () => {
+    if (selectedDietIds.length === 0) {
+      setDietSheetVisible(false);
+      return;
+    }
+
     setIsSavingDiets(true);
     try {
-      const restrictions: RestrictionType[] = selectedDiets.map((item) => ({
-        diet: item.value as Diet,
+      const restrictions: RestrictionType[] = selectedDietIds.map(diet => ({
+        diet,
       }));
 
       const success = await onAdd(
@@ -218,7 +213,8 @@ export const DietaryRestrictionSelector: React.FC<
       );
 
       if (success) {
-        clearDietsSelection();
+        setSelectedDietIds([]);
+        setDietSheetVisible(false);
       } else {
         Alert.alert('Error', 'Failed to add diets');
       }
@@ -228,11 +224,16 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   const handleSaveIntolerances = async () => {
+    if (selectedIntoleranceIds.length === 0) {
+      setIntoleranceSheetVisible(false);
+      return;
+    }
+
     setIsSavingIntolerances(true);
     try {
-      const restrictions: RestrictionType[] = selectedIntolerances.map(
-        (item) => ({
-          intolerance: item.value as Intolerance,
+      const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
+        intolerance => ({
+          intolerance,
         }),
       );
 
@@ -242,7 +243,8 @@ export const DietaryRestrictionSelector: React.FC<
       );
 
       if (success) {
-        clearIntolerancesSelection();
+        setSelectedIntoleranceIds([]);
+        setIntoleranceSheetVisible(false);
       } else {
         Alert.alert('Error', 'Failed to add intolerances');
       }
@@ -252,16 +254,24 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   const handleSaveGoals = async () => {
+    if (selectedGoalIds.length === 0) {
+      setGoalSheetVisible(false);
+      return;
+    }
+
     setIsSavingGoals(true);
     try {
-      const restrictions: RestrictionType[] = selectedGoals.map((item) => ({
-        healthGoal: item.value as HealthGoal,
-      }));
+      const restrictions: RestrictionType[] = selectedGoalIds.map(
+        healthGoal => ({
+          healthGoal,
+        }),
+      );
 
       const success = await onAdd(restrictions, RestrictionSeverity.Goal);
 
       if (success) {
-        clearGoalsSelection();
+        setSelectedGoalIds([]);
+        setGoalSheetVisible(false);
       } else {
         Alert.alert('Error', 'Failed to add health goals');
       }
@@ -273,53 +283,66 @@ export const DietaryRestrictionSelector: React.FC<
   return (
     <View style={styles.container}>
       {/* Diets Section */}
-      <CollapsibleMultiSelectSection
-        title="Diet"
-        items={dietItems}
-        selectedItems={selectedDiets}
+      <RestrictionSection
+        title="Diets"
         existingItems={existingDietItems}
-        onToggleItem={toggleDiet}
-        isExpanded={isDietsExpanded}
-        onToggleExpand={() => setIsDietsExpanded(!isDietsExpanded)}
-        onSave={handleSaveDiets}
         onRemove={onRemove}
-        isMaxReached={isDietsMaxReached}
-        isSaving={isSavingDiets}
-        emptyMessage="All diets have been added"
+        onAddPress={handleOpenDietSheet}
+        emptyMessage="No diets added yet"
       />
 
       {/* Intolerances Section */}
-      <CollapsibleMultiSelectSection
-        title="Intolerance"
-        items={intoleranceItems}
-        selectedItems={selectedIntolerances}
+      <RestrictionSection
+        title="Allergies & Intolerances"
         existingItems={existingIntoleranceItems}
-        onToggleItem={toggleIntolerance}
-        isExpanded={isIntolerancesExpanded}
-        onToggleExpand={() =>
-          setIsIntolerancesExpanded(!isIntolerancesExpanded)
-        }
-        onSave={handleSaveIntolerances}
         onRemove={onRemove}
-        isMaxReached={isIntolerancesMaxReached}
-        isSaving={isSavingIntolerances}
-        emptyMessage="All intolerances have been added"
+        onAddPress={handleOpenIntoleranceSheet}
+        emptyMessage="No allergies added yet"
       />
 
       {/* Health Goals Section */}
-      <CollapsibleMultiSelectSection
-        title="Health Goal"
-        items={goalItems}
-        selectedItems={selectedGoals}
+      <RestrictionSection
+        title="Health Goals"
         existingItems={existingGoalItems}
-        onToggleItem={toggleGoal}
-        isExpanded={isGoalsExpanded}
-        onToggleExpand={() => setIsGoalsExpanded(!isGoalsExpanded)}
-        onSave={handleSaveGoals}
         onRemove={onRemove}
-        isMaxReached={isGoalsMaxReached}
-        isSaving={isSavingGoals}
-        emptyMessage="All health goals have been added"
+        onAddPress={handleOpenGoalSheet}
+        emptyMessage="No health goals added yet"
+      />
+
+      {/* Diet Selection Sheet */}
+      <MultiSelectChipSheet
+        visible={isDietSheetVisible}
+        title="Select Diets"
+        items={availableDiets}
+        selectedItems={selectedDietIds}
+        onSelect={setSelectedDietIds}
+        onClose={() => setDietSheetVisible(false)}
+        onDone={handleSaveDiets}
+        loading={isSavingDiets}
+      />
+
+      {/* Intolerance Selection Sheet */}
+      <MultiSelectChipSheet
+        visible={isIntoleranceSheetVisible}
+        title="Select Allergies & Intolerances"
+        items={availableIntolerances}
+        selectedItems={selectedIntoleranceIds}
+        onSelect={setSelectedIntoleranceIds}
+        onClose={() => setIntoleranceSheetVisible(false)}
+        onDone={handleSaveIntolerances}
+        loading={isSavingIntolerances}
+      />
+
+      {/* Health Goal Selection Sheet */}
+      <MultiSelectChipSheet
+        visible={isGoalSheetVisible}
+        title="Select Health Goals"
+        items={availableGoals}
+        selectedItems={selectedGoalIds}
+        onSelect={setSelectedGoalIds}
+        onClose={() => setGoalSheetVisible(false)}
+        onDone={handleSaveGoals}
+        loading={isSavingGoals}
       />
     </View>
   );

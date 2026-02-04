@@ -9,10 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { PasswordInput } from '#components/atoms';
-import { useAuth } from '#hooks';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { PasswordInput } from '#components/atoms/PasswordInput';
+import { useAuth } from '#hooks/auth/useAuth';
 
 interface BiometricSetupModalProps {
   visible: boolean;
@@ -29,6 +29,7 @@ export const BiometricSetupModal = ({
   userPassword,
   mode = 'onboarding',
 }: BiometricSetupModalProps) => {
+  const { theme } = useUnistyles();
   const {
     getBiometricInfo,
     storeCredentials,
@@ -236,7 +237,7 @@ export const BiometricSetupModal = ({
             <View style={styles.container}>
               <View style={styles.iconContainer}>
                 <View style={styles.iconBackground}>
-                  <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
+                  <Icon name={getBiometricIcon()} size={48} color={theme.colors.primary} />
                 </View>
               </View>
 

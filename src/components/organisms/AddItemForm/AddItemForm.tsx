@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { AnimatedButton } from '#/components/atoms';
+import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { createItemSchema, CreateItemFormData } from '#utils/validation';
+import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
 import { StorageState, ItemType } from '#generated';
-import {
-  FormInput,
-  FormTextArea,
-  FormNumberInput,
-  FormSelect,
-  FormCheckbox,
-  ImageFile,
-  ProductImagePicker,
-  UnitsAutocompleteInput,
-  BrandAutocompleteInput,
-  DynamicFormFields,
-  FieldDef,
-} from '#/components/molecules';
+import { FormInput } from '#/components/molecules/FormInput';
+import { FormTextArea } from '#/components/molecules/FormTextArea';
+import { FormNumberInput } from '#/components/molecules/FormNumberInput';
+import { FormSelect } from '#/components/molecules/FormSelect';
+import { FormCheckbox } from '#/components/molecules/FormCheckbox';
+import { ProductImagePicker } from '#/components/molecules/ProductImagePicker';
+import type { ImageFile } from '#/components/molecules/ImagePicker';
+import { UnitsAutocompleteInput } from '#/components/molecules/UnitsAutocompleteInput';
+import { BrandAutocompleteInput } from '#/components/molecules/BrandAutocompleteInput';
+import { DynamicFormFields, type FieldDef } from '#/components/molecules/DynamicFormFields';
 
 interface AddItemFormProps {
   barcode?: string;

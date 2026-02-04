@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { ShoppingListItemFragment } from '#generated';
-import { parseFractionalInput } from '#/utils';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 type FormState = {
   itemName: string;

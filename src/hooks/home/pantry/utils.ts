@@ -5,7 +5,7 @@
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater utilities for pantry items
 export const addToPantryItemsCache = createAddToParentConnectionUpdater(

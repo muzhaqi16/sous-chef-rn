@@ -222,5 +222,5 @@ export const useStore = create<RootState>()(
   ),
 );
 
-// Export standalone stores
-export { useRecipeSuggestionsStore } from './useRecipeSuggestionsStore';
+// Standalone stores are exported directly from their own files:
+// import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';

@@ -8,7 +8,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetPantryQuery,
@@ -18,11 +18,11 @@ import {
   useSetDefaultPantryMutation,
 } from '#generated';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { normalizePantry } from '#/utils/connectionUtils';
-import { subscriptionService } from '#/services/subscriptions';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 
 export const PantrySettings: React.FC<{
   route: { params?: PantryStackParamList['PantrySettings'] };

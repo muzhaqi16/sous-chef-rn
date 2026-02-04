@@ -21,14 +21,14 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 
-import { useBarcodeScanner } from '#hooks';
+import { useBarcodeScanner } from '#hooks/useBarcodeScanner';
 import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
-import { HapticService } from '#services/haptic';
+import { HapticService } from '#services/haptic/HapticService';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -134,13 +134,15 @@ export const BarcodeScannerScreen: React.FC<{
     },
   });
 
-  const toggleFlash = () => setFlashEnabled(f => !f);
-  const resetScan = () => {
+  const toggleFlash = useCallback(() => setFlashEnabled(f => !f), []);
+  const resetScan = useCallback(() => {
     setHasScanned(false);
     resetScanner();
     setScanning(true);
     hasNavigatedRef.current = false;
-  };
+  }, [resetScanner, setScanning]);
+
+  const handleGoBack = useCallback(() => goBack(), [goBack]);
 
   // --- RENDER FALLBACKS ---
 
@@ -154,7 +156,7 @@ export const BarcodeScannerScreen: React.FC<{
         <Button onPress={requestPermission} variant="primary" size="medium">
           Grant Permission
         </Button>
-        <Button onPress={() => goBack()} variant="ghost" size="medium">
+        <Button onPress={handleGoBack} variant="ghost" size="medium">
           Cancel
         </Button>
       </View>
@@ -166,7 +168,7 @@ export const BarcodeScannerScreen: React.FC<{
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.messageText}>No camera device found</Text>
-        <Button onPress={() => goBack()} variant="primary" size="medium">
+        <Button onPress={handleGoBack} variant="primary" size="medium">
           Go Back
         </Button>
       </View>
@@ -197,7 +199,7 @@ export const BarcodeScannerScreen: React.FC<{
       <View style={styles.header}>
         <IconButton
           name="close"
-          onPress={() => goBack()}
+          onPress={handleGoBack}
           size="md"
           style={styles.headerButton}
           accessibilityLabel="Close scanner"

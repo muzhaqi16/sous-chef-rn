@@ -1,16 +1,21 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetBackdrop,
   BottomSheetTextInput,
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { Icon } from '#utils/iconUtils';
+
+// Memoized separator component to prevent re-renders
+const AutocompleteSeparator = memo(() => <View style={styles.separator} />);
+AutocompleteSeparator.displayName = 'AutocompleteSeparator';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -177,26 +182,42 @@ export function BottomSheetAutocompleteInput<T>({
 
   const renderBackdrop = useCallback(
     (props: any) => (
-      <BottomSheetBackdrop
+      <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
         opacity={0.5}
-        enableTouchThrough={false}
-        onPress={() => bottomSheetRef.current?.dismiss()}
+        pressBehavior="close"
       />
     ),
     [],
   );
 
-  const defaultEmptyComponent = () => (
-    <BottomSheetView
-      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
-    >
-      <Text style={styles.emptyText}>{emptyText}</Text>
-      {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
-    </BottomSheetView>
-  );
+  const defaultEmptyComponent = () => {
+    // Show offline-specific message when not online
+    if (!isOnline) {
+      return (
+        <BottomSheetView
+          style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+        >
+          <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
+          <Text style={styles.emptyText}>Search unavailable offline</Text>
+          <Text style={styles.emptySubtext}>
+            You can still type a custom value and press done
+          </Text>
+        </BottomSheetView>
+      );
+    }
+
+    return (
+      <BottomSheetView
+        style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+      >
+        <Text style={styles.emptyText}>{emptyText}</Text>
+        {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
+      </BottomSheetView>
+    );
+  };
 
   const defaultLoadingComponent = () => (
     <BottomSheetView
@@ -242,7 +263,7 @@ export function BottomSheetAutocompleteInput<T>({
               onPress: () => handleSelectItem(item),
             });
           }}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={AutocompleteSeparator}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
@@ -317,6 +338,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: theme.spacing.md,
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,

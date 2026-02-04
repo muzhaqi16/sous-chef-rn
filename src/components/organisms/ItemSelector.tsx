@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useMemo, memo} from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,6 +7,12 @@ import {
   View,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+
+// Memoized separator component to prevent re-renders
+const ItemSeparator = memo(() => <View style={separatorStyle} />);
+ItemSeparator.displayName = 'ItemSeparator';
+
+const separatorStyle = {height: 8};
 
 // Generic interface for selectable items
 interface SelectableItem {
@@ -41,14 +47,14 @@ export function ItemSelector<T extends SelectableItem>({
 }: ItemSelectorProps<T>) {
   const {theme} = useUnistyles();
 
-  const defaultKeyExtractor = (item: T) => item.id;
+  const defaultKeyExtractor = useCallback((item: T) => item.id, []);
   const getKey = keyExtractor || defaultKeyExtractor;
 
-  const handleItemSelect = (item: T) => {
+  const handleItemSelect = useCallback((item: T) => {
     onSelect(item.id, item);
-  };
+  }, [onSelect]);
 
-  const renderItem = ({item}: {item: T}) => {
+  const renderItem = useCallback(({item}: {item: T}) => {
     const isSelected = item.id === selectedId;
 
     if (renderCustomItem) {
@@ -70,7 +76,9 @@ export function ItemSelector<T extends SelectableItem>({
         </Text>
       </TouchableOpacity>
     );
-  };
+  }, [selectedId, renderCustomItem, displayProperty, handleItemSelect]);
+
+  const listStyle = useMemo(() => ({flexGrow: 0}), []);
 
   if (loading) {
     return (
@@ -95,9 +103,8 @@ export function ItemSelector<T extends SelectableItem>({
       renderItem={renderItem}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{}}
-      style={{flexGrow: 0}}
-      ItemSeparatorComponent={() => <View style={{height: 8}} />}
+      style={listStyle}
+      ItemSeparatorComponent={ItemSeparator}
       // Performance optimizations
       maxToRenderPerBatch={10}
       windowSize={5}

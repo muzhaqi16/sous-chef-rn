@@ -6,7 +6,7 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native-unistyles';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
-import { FloatingTabBar } from './FloatingTabBar';
+import { FloatingTabBar } from './FloatingTabBar/FloatingTabBar';
 
 interface AnimatedTabNavigatorProps<
   T extends Record<string, object | undefined>,
@@ -32,23 +32,28 @@ export function createAnimatedTabNavigator<
       <TabBarActionsProvider>
         <View style={styles.container}>
           <Tab.Navigator
-          initialRouteName={initialRouteName}
-          detachInactiveScreens={true}
-          screenOptions={typeof screenOptions === 'function'
-            ? (props) => ({
-                headerShown: false,
-                tabBarHideOnKeyboard: true,
-                ...screenOptions(props),
-              })
-            : {
-                headerShown: false,
-                tabBarHideOnKeyboard: true,
-                ...screenOptions,
-              }
-          }
-          tabBar={props => <FloatingTabBar {...props} />}
-        >
-          {children}
+            initialRouteName={initialRouteName}
+            detachInactiveScreens={true}
+            screenOptions={
+              typeof screenOptions === 'function'
+                ? props => ({
+                    headerShown: false,
+                    tabBarHideOnKeyboard: true,
+                    sceneStyle: { backgroundColor: 'transparent' },
+                    tabBarStyle: { backgroundColor: 'transparent' },
+                    ...screenOptions(props),
+                  })
+                : {
+                    headerShown: false,
+                    tabBarHideOnKeyboard: true,
+                    sceneStyle: { backgroundColor: 'transparent' },
+                    tabBarStyle: { backgroundColor: 'transparent' },
+                    ...screenOptions,
+                  }
+            }
+            tabBar={props => <FloatingTabBar {...props} />}
+          >
+            {children}
           </Tab.Navigator>
         </View>
       </TabBarActionsProvider>

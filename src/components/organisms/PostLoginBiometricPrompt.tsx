@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { useAuth } from '#hooks';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
+import { useAuth } from '#hooks/auth/useAuth';
 
 interface PostLoginBiometricPromptProps {
   visible: boolean;
@@ -17,6 +17,7 @@ export const PostLoginBiometricPrompt = ({
   userEmail,
   userPassword,
 }: PostLoginBiometricPromptProps) => {
+  const { theme } = useUnistyles();
   const { getBiometricInfo, storeCredentials } = useAuth();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
@@ -95,7 +96,7 @@ export const PostLoginBiometricPrompt = ({
         <View style={styles.container} testID="post-login-biometric-prompt-container">
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon name={getBiometricIcon()} size={40} color="#007AFF" />
+              <Icon name={getBiometricIcon()} size={40} color={theme.colors.primary} />
             </View>
           </View>
 

@@ -562,8 +562,8 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   }
 }
 
-mutation ClearPurchasedShoppingListItems($shoppingListId: ID!) {
-  clearPurchasedShoppingListItems(shoppingListId: $shoppingListId) {
+mutation ClearShoppingListItems($shoppingListId: ID!, $purchased: Boolean!) {
+  clearShoppingListItems(shoppingListId: $shoppingListId, purchased: $purchased) {
     summary {
       total
       successful

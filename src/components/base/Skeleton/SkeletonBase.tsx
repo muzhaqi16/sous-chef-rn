@@ -69,19 +69,6 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     };
   });
 
-  const styles = StyleSheet.create(theme => ({
-    skeleton: {
-      backgroundColor: theme.colors.surfaceVariant,
-      overflow: 'hidden',
-    },
-    shimmer: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: theme.colors.surface,
-      opacity: 0.3,
-    },
-  }));
-
   return (
     <View
       style={[
@@ -103,3 +90,16 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  skeleton: {
+    backgroundColor: theme.colors.surfaceVariant,
+    overflow: 'hidden',
+  },
+  shimmer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.surface,
+    opacity: 0.3,
+  },
+}));

@@ -1,9 +1,7 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  NotificationListScreen,
-  NotificationDetailScreen,
-  NotificationSettingsScreen,
-} from '#screens/notifications';
+import { NotificationListScreen } from '#screens/notifications/NotificationListScreen';
+import { NotificationDetailScreen } from '#screens/notifications/NotificationDetailScreen';
+import { NotificationSettingsScreen } from '#screens/notifications/NotificationSettingsScreen';
 import type {NotificationItem} from '#store/slices/notificationSlice';
 
 export type NotificationStackParamList = {

@@ -3,11 +3,11 @@ import { Keyboard, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Title } from '../atoms';
+import { Title } from '../atoms/Title';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface BottomSheetActionProps {
@@ -66,11 +66,12 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: 'gray' }}
       backdropComponent={props => (
-        <BottomSheetBackdrop
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
-          pressBehavior="close" // sheet closes when backdrop is pressed
+          pressBehavior="close"
+          onClose={() => bottomSheetModalRef.current?.dismiss()}
         />
       )}
     >

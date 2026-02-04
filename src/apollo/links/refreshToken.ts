@@ -1,4 +1,5 @@
 import { Observable } from '@apollo/client';
+import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
@@ -252,6 +253,20 @@ export const getRefreshState = () => ({ ...refreshState });
 export const clearRefreshState = () => {
   resetRefreshState();
   refreshQueue = [];
+};
+
+/**
+ * Check if a refresh token is still valid (not expired)
+ * Useful for pre-request validation to avoid wasted API calls
+ */
+export const isRefreshTokenValid = (refreshToken: string | null): boolean => {
+  if (!refreshToken) return false;
+  try {
+    const decoded = jwtDecode<{ exp: number }>(refreshToken);
+    return Date.now() < decoded.exp * 1000;
+  } catch {
+    return false;
+  }
 };
 
 /**

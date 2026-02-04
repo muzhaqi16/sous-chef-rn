@@ -4,6 +4,7 @@ import { useAutocompleteCategoriesLazyQuery, CategorySuggestion, CategoryType } 
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
+import { useStore } from '#store';
 
 interface CategoryAutocompleteInputProps {
   label?: string;
@@ -26,6 +27,7 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
   onCategorySelected,
   categoryType = CategoryType.General,
 }) => {
+  const isOnline = useStore(state => state.isOnline);
   const [searchCategories, { data: categoriesData, loading: categoriesLoading }] =
     useAutocompleteCategoriesLazyQuery();
 
@@ -38,6 +40,8 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
     minChars: 2,
     debounceMs: 300,
     onChangeText: useCallback((text: string) => {
+      // Skip API call when offline
+      if (!isOnline) return;
       // This is called after debounce - trigger the GraphQL query
       searchCategories({
         variables: {
@@ -48,7 +52,7 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
           }
         }
       });
-    }, [searchCategories, categoryType]),
+    }, [searchCategories, categoryType, isOnline]),
     getDisplayValue: (item) => item.name,
   });
 

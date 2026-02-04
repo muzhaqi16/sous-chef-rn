@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { HapticService, HapticFeedbackType } from '#services/haptic';
+import { HapticService, HapticFeedbackType } from '#services/haptic/HapticService';
 
 /**
  * Custom hook for haptic feedback

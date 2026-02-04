@@ -9,7 +9,7 @@ import { Telemetry } from '#/services/telemetry';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 export interface MoveToPantryInput {
   pantryId: string;

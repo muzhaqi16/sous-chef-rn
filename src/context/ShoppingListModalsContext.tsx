@@ -1,8 +1,8 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
-import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet';
-import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet';
+import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
+import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet/QuantityEditSheet';
 import { useAddItemSheet, type UseAddItemSheetResult } from '#/hooks/shoppingList/useAddItemSheet';
 import { useQuantityEditModal, type UseQuantityEditModalResult } from '#/hooks/shoppingList/useQuantityEditModal';
 import { useMoveToPantryModal, type UseMoveToPantryModalResult } from '#/hooks/shoppingList/useMoveToPantryModal';

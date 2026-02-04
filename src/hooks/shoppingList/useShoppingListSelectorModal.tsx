@@ -1,17 +1,17 @@
 import React, { useMemo, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
-import { useTabBarActions } from '#context';
-import { Icon } from '#utils';
-import { ShoppingListAvatar } from '#components/atoms';
-import { useSelectorManagement } from '#hooks/ui';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { Icon } from '#utils/iconUtils';
+import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
+import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
 import type {
   SelectorConfig,
   ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector';
+} from '#components/organisms/AnimatedItemSelector/types';
 
 interface UseShoppingListSelectorOptions {
   listDataWithOwnership: any[];
@@ -244,11 +244,12 @@ const styles = StyleSheet.create(theme => ({
   selectorItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 48,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
     borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -259,7 +260,7 @@ const styles = StyleSheet.create(theme => ({
   },
   selectorItemInfo: {
     flex: 1,
-    gap: theme.spacing.xs,
+    gap: 2,
   },
   selectorItemName: {
     fontSize: theme.fonts.size.md,
@@ -267,7 +268,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   selectorItemSubtext: {
-    fontSize: theme.fonts.size.sm,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
   },
   sectionHeader: {

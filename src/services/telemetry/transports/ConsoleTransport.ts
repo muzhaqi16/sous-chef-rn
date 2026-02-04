@@ -13,7 +13,7 @@ export class ConsoleTransport implements TelemetryTransport {
   }
 
   isAvailable(): boolean {
-    return Environment.isDevelopment() || Environment.isStaging();
+    return Environment.isDevelopment();
   }
 
   async sendLogs(logs: LogEntry[]): Promise<void> {

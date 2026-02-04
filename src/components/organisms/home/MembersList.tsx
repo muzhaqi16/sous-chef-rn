@@ -3,13 +3,9 @@ import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStore } from '#store';
 import { HomeInviteFragment } from '#generated';
-import {
-  formatRole,
-  formatInviteStatus,
-  getInviteStatusColor,
-  getMemberDisplayName,
-  getInviteDisplayName,
-} from '#utils/formatters';
+import { formatRole } from '#/utils/formatters/roleFormatters';
+import { formatInviteStatus, getInviteStatusColor, getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
+import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 interface Member {
   id: string;

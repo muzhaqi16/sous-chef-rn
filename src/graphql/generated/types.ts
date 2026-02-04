@@ -585,9 +585,9 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
-/** Response for clearing purchased items from a shopping list */
-export type ClearPurchasedItemsResponse = {
-  __typename?: 'ClearPurchasedItemsResponse';
+/** Response for clearing items from a shopping list */
+export type ClearItemsResponse = {
+  __typename?: 'ClearItemsResponse';
   /** IDs of items that were cleared */
   clearedItemIds: Array<Scalars['ID']['output']>;
   /** Summary of the bulk operation */
@@ -3546,13 +3546,14 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  clearReminder: ShoppingList;
   /**
-   * Clear all purchased items from a shopping list.
-   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Clear items from a shopping list based on purchased status.
+   * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+   * Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
    * Returns summary with count of cleared items.
    */
-  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
-  clearReminder: ShoppingList;
+  clearShoppingListItems: ClearItemsResponse;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
@@ -3985,12 +3986,13 @@ export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
 };
 
-export type MutationClearPurchasedShoppingListItemsArgs = {
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type MutationClearReminderArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationClearShoppingListItemsArgs = {
+  purchased: Scalars['Boolean']['input'];
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationCompleteReviewArgs = {
@@ -7200,6 +7202,7 @@ export type ResetPasswordResponse = {
 /** Input for restocking a pantry item - adds quantity and creates ledger record */
 export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -22369,14 +22372,15 @@ export type MoveShoppingItemToPantryMutation = {
   };
 };
 
-export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+export type ClearShoppingListItemsMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
 }>;
 
-export type ClearPurchasedShoppingListItemsMutation = {
+export type ClearShoppingListItemsMutation = {
   __typename?: 'Mutation';
-  clearPurchasedShoppingListItems: {
-    __typename?: 'ClearPurchasedItemsResponse';
+  clearShoppingListItems: {
+    __typename?: 'ClearItemsResponse';
     clearedItemIds: Array<string>;
     summary: {
       __typename?: 'BulkOperationSummary';

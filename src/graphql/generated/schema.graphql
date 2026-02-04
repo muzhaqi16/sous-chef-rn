@@ -997,9 +997,9 @@ enum ChangeType {
 }
 
 """
-Response for clearing purchased items from a shopping list
+Response for clearing items from a shopping list
 """
-type ClearPurchasedItemsResponse {
+type ClearItemsResponse {
   """
   IDs of items that were cleared
   """
@@ -4109,15 +4109,17 @@ type Mutation {
   Admin operation for maintenance.
   """
   cleanupDevices(input: DeviceCleanupInput!): DeviceCleanupResult!
+  clearReminder(id: ID!): ShoppingList!
   """
-  Clear all purchased items from a shopping list.
-  Soft-deletes all items where isPurchased=true and deletedAt is not set.
+  Clear items from a shopping list based on purchased status.
+  Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+  Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
   Returns summary with count of cleared items.
   """
-  clearPurchasedShoppingListItems(
+  clearShoppingListItems(
+    purchased: Boolean!
     shoppingListId: ID!
-  ): ClearPurchasedItemsResponse!
-  clearReminder(id: ID!): ShoppingList!
+  ): ClearItemsResponse!
   """
   Mark user onboarding as complete and send welcome email
   """
@@ -6566,6 +6568,7 @@ Input for restocking a pantry item - adds quantity and creates ledger record
 """
 input RestockPantryItemInput {
   costPerUnit: Float
+  expiresAt: DateTime
   notes: String
   quantity: Float!
   restockedAt: DateTime

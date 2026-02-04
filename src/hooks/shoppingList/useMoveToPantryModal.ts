@@ -4,7 +4,7 @@ import { ShoppingListItemDisplayFragment } from '#generated';
 import type { BasicPantryFragment } from '#generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
-import { useStableRef } from '#/hooks/utils';
+import { useStableRef } from '#/hooks/utils/useStableRef';
 
 /**
  * Options for useMoveToPantryModal hook

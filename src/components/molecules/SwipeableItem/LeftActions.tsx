@@ -1,7 +1,7 @@
 import React from 'react';
 import Animated from 'react-native-reanimated';
 import { useUnistyles } from 'react-native-unistyles';
-import { HapticService } from '#/services/haptic';
+import { HapticService } from '#/services/haptic/HapticService';
 import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
@@ -79,7 +79,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleConsumePress}
             icon="restaurant"
-            backgroundColor="#9C27B0" // Purple for consume
+            backgroundColor={theme.colors.consumeAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -88,7 +88,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleWastePress}
             icon="warning"
-            backgroundColor="#FF9800" // Orange for waste
+            backgroundColor={theme.colors.wasteAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -97,7 +97,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleRestockPress}
             icon="add-circle-outline"
-            backgroundColor="#4CAF50" // Green for restock
+            backgroundColor={theme.colors.restockAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -127,7 +127,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleConsumePress}
             icon="restaurant"
-            backgroundColor="#9C27B0" // Purple for consume
+            backgroundColor={theme.colors.consumeAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -136,7 +136,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleWastePress}
             icon="warning"
-            backgroundColor="#FF9800" // Orange for waste
+            backgroundColor={theme.colors.wasteAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -163,7 +163,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleConsumePress}
             icon="restaurant"
-            backgroundColor="#9C27B0" // Purple for consume
+            backgroundColor={theme.colors.consumeAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -188,7 +188,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           <AnimatedActionButton
             onPress={handleWastePress}
             icon="warning"
-            backgroundColor="#FF9800" // Orange for waste
+            backgroundColor={theme.colors.wasteAction}
             circular={true}
             library="MaterialIcons"
             progress={progress}
@@ -205,7 +205,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
 
     // Dynamic styling based on actual purchase status from props
     const iconName = isPurchased ? 'close-circle' : 'checkmark-circle';
-    const bgColor = isPurchased ? '#FF9800' : '#4CAF50'; // Orange for unpurchase, Green for purchase
+    const bgColor = isPurchased ? theme.colors.unpurchaseAction : theme.colors.purchaseAction;
 
     const handlePress = () => {
       // Provide haptic feedback for purchase toggle

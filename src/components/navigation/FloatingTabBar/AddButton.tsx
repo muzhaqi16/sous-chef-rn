@@ -1,7 +1,7 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { AddButtonProps } from './types';
 
 export const AddButton: React.FC<AddButtonProps> = ({
@@ -13,6 +13,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   const { theme } = useUnistyles();
   return (
     <TouchableOpacity
+      testID="tab-bar-add-button"
       onPress={onPress}
       style={[styles.addButton, disabled && styles.addButtonDisabled]}
       activeOpacity={disabled ? 1 : 0.8}
@@ -47,7 +48,7 @@ const styles = StyleSheet.create(theme => ({
     },
     shadowOpacity: 0.3,
     shadowRadius: theme.radii.md,
-    elevation: 8,
+    ...(Platform.OS === 'ios' && { elevation: 8 }),
   },
   addButtonDisabled: {
     opacity: 0.4,

@@ -178,6 +178,7 @@ export function usePantryItemActions({
       unitId?: string,
       costPerUnit?: number,
       totalCost?: number,
+      expiresAt?: Date | null,
     ) => {
       if (!selectedItemForRestock) return;
 
@@ -191,6 +192,7 @@ export function usePantryItemActions({
               notes: notes || undefined,
               costPerUnit,
               totalCost,
+              expiresAt: expiresAt ? expiresAt.toISOString() : null,
             },
           },
         });

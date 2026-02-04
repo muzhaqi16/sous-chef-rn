@@ -1,6 +1,6 @@
 import { ApolloClient } from '@apollo/client';
 import { logger } from '#/utils/environment';
-import { createLink } from './links';
+import { createLink } from './links/index';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 

@@ -1,16 +1,13 @@
 import React, { useCallback, useMemo } from 'react';
-import {
-  View,
-  Pressable,
-  FlatList,
-  RefreshControl,
-  ListRenderItemInfo,
-} from 'react-native';
+import { View, Pressable, RefreshControl } from 'react-native';
+import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
-import { SearchBar, FilterTabs, FilterTabConfig } from '../molecules';
+import { SearchBar } from '../molecules/SearchBar';
+import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
 import { PantryItemCard, ItemVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
@@ -110,6 +107,10 @@ interface PantryContentProps {
   // State
   refreshing?: boolean;
   loading?: boolean;
+
+  // Swipeable coordination
+  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 // Default filter tabs for pantry (fallback if none provided)
@@ -151,6 +152,8 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   onEndReached,
   refreshing = false,
   loading: _loading = false,
+  onSwipeableWillOpen,
+  onSwipeableClose: _onSwipeableClose,
 }) => {
   const { theme } = useUnistyles();
 
@@ -240,6 +243,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       const location = getLocationString(item.storageState);
       const imageUrl = getItemImageUrl(item.item);
       const hasExpiry = item.expiresAt != null;
+      const isOutOfStock = item.quantity === 0;
 
       return (
         <PantryItemCard
@@ -253,12 +257,14 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           storageState={item.storageState}
           variant={variant}
           imageUrl={imageUrl}
+          isOutOfStock={isOutOfStock}
           onPress={() => onItemPress(item.id)}
           onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
           onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
           onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
           onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
           onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
+          onSwipeableWillOpen={onSwipeableWillOpen}
         />
       );
     },
@@ -270,6 +276,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       onItemConsume,
       onItemWaste,
       onItemRestock,
+      onSwipeableWillOpen,
     ],
   );
 
@@ -319,29 +326,36 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     ],
   );
 
+  // Build tabs with optional add button at the end
+  const tabsWithAddButton = useMemo((): FilterTabConfig<LocationFilter>[] => {
+    if (!onAddLocation) return tabs;
+    return [
+      ...tabs,
+      {
+        id: '__add__' as LocationFilter,
+        label: '',
+        icon: 'add',
+        iconLibrary: 'MaterialIcons',
+        onPress: onAddLocation,
+        isAction: true,
+      },
+    ];
+  }, [tabs, onAddLocation]);
+
   // Header component with filter tabs
   const ListHeader = useMemo(
     () => (
       <View>
         <FilterTabs<LocationFilter>
-          tabs={tabs}
+          tabs={tabsWithAddButton}
           activeTabId={locationFilter}
           onTabChange={onLocationFilterChange}
           counts={locationCounts}
           testIDPrefix="pantry-location-tab"
-          actionButton={
-            onAddLocation
-              ? {
-                  icon: 'add',
-                  onPress: onAddLocation,
-                  testID: 'pantry-add-location',
-                }
-              : undefined
-          }
         />
       </View>
     ),
-    [tabs, locationFilter, onLocationFilterChange, locationCounts, onAddLocation],
+    [tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts],
   );
 
   return (
@@ -378,7 +392,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
         </View>
 
         {/* Content List */}
-        <FlatList
+        <FlashList
           data={listData}
           renderItem={renderItem}
           keyExtractor={item => item.key}
@@ -392,6 +406,8 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           }
           onEndReached={onEndReached}
           onEndReachedThreshold={0.5}
+          // FlashList optimization: pre-render 250px outside viewport
+          drawDistance={250}
         />
 
         {/* Sort Modal */}

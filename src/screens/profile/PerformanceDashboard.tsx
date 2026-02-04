@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch, SettingSection } from '#components/settings';
-import { ProfileScreenWrapper } from '#components/templates';
+import { SettingSwitch } from '#components/settings/SettingSwitch';
+import { SettingSection } from '#components/settings/SettingSection';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
 

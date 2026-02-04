@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, IconName, IconLibrary } from '#utils';
-import { commonStyles } from '#styles';
+import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface AnalyticsSummaryCardProps {
   title: string;

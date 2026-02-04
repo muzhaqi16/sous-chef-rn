@@ -589,9 +589,9 @@ export enum ChangeType {
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
 
-/** Response for clearing purchased items from a shopping list */
-export type ClearPurchasedItemsResponse = {
-  __typename?: 'ClearPurchasedItemsResponse';
+/** Response for clearing items from a shopping list */
+export type ClearItemsResponse = {
+  __typename?: 'ClearItemsResponse';
   /** IDs of items that were cleared */
   clearedItemIds: Array<Scalars['ID']['output']>;
   /** Summary of the bulk operation */
@@ -3550,13 +3550,14 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  clearReminder: ShoppingList;
   /**
-   * Clear all purchased items from a shopping list.
-   * Soft-deletes all items where isPurchased=true and deletedAt is not set.
+   * Clear items from a shopping list based on purchased status.
+   * Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+   * Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
    * Returns summary with count of cleared items.
    */
-  clearPurchasedShoppingListItems: ClearPurchasedItemsResponse;
-  clearReminder: ShoppingList;
+  clearShoppingListItems: ClearItemsResponse;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
@@ -3989,12 +3990,13 @@ export type MutationCleanupDevicesArgs = {
   input: DeviceCleanupInput;
 };
 
-export type MutationClearPurchasedShoppingListItemsArgs = {
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type MutationClearReminderArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationClearShoppingListItemsArgs = {
+  purchased: Scalars['Boolean']['input'];
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationCompleteReviewArgs = {
@@ -7204,6 +7206,7 @@ export type ResetPasswordResponse = {
 /** Input for restocking a pantry item - adds quantity and creates ledger record */
 export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -15143,14 +15146,15 @@ export type MoveShoppingItemToPantryMutation = {
   moveShoppingItemToPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
-export type ClearPurchasedShoppingListItemsMutationVariables = Exact<{
+export type ClearShoppingListItemsMutationVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
 }>;
 
-export type ClearPurchasedShoppingListItemsMutation = {
+export type ClearShoppingListItemsMutation = {
   __typename?: 'Mutation';
-  clearPurchasedShoppingListItems: {
-    __typename?: 'ClearPurchasedItemsResponse';
+  clearShoppingListItems: {
+    __typename?: 'ClearItemsResponse';
     clearedItemIds: Array<string>;
     summary: {
       __typename?: 'BulkOperationSummary';
@@ -21296,6 +21300,27 @@ export function useGetAuthUserLazyQuery(
     GetAuthUserQueryVariables
   >(GetAuthUserDocument, options);
 }
+// @ts-ignore
+export function useGetAuthUserSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetAuthUserQuery,
+    GetAuthUserQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetAuthUserQuery,
+  GetAuthUserQueryVariables
+>;
+export function useGetAuthUserSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetAuthUserQuery,
+        GetAuthUserQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetAuthUserQuery | undefined,
+  GetAuthUserQueryVariables
+>;
 export function useGetAuthUserSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -21543,6 +21568,27 @@ export function useGetCompleteUserLazyQuery(
     GetCompleteUserQueryVariables
   >(GetCompleteUserDocument, options);
 }
+// @ts-ignore
+export function useGetCompleteUserSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetCompleteUserQuery,
+    GetCompleteUserQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetCompleteUserQuery,
+  GetCompleteUserQueryVariables
+>;
+export function useGetCompleteUserSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetCompleteUserQuery,
+        GetCompleteUserQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetCompleteUserQuery | undefined,
+  GetCompleteUserQueryVariables
+>;
 export function useGetCompleteUserSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -22653,6 +22699,27 @@ export function useGetMyDevicesLazyQuery(
     GetMyDevicesQueryVariables
   >(GetMyDevicesDocument, options);
 }
+// @ts-ignore
+export function useGetMyDevicesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyDevicesQuery,
+  GetMyDevicesQueryVariables
+>;
+export function useGetMyDevicesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetMyDevicesQuery,
+        GetMyDevicesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyDevicesQuery | undefined,
+  GetMyDevicesQueryVariables
+>;
 export function useGetMyDevicesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -22793,6 +22860,27 @@ export function useGetDeviceByDeviceIdLazyQuery(
     GetDeviceByDeviceIdQueryVariables
   >(GetDeviceByDeviceIdDocument, options);
 }
+// @ts-ignore
+export function useGetDeviceByDeviceIdSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDeviceByDeviceIdQuery,
+  GetDeviceByDeviceIdQueryVariables
+>;
+export function useGetDeviceByDeviceIdSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDeviceByDeviceIdQuery,
+        GetDeviceByDeviceIdQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDeviceByDeviceIdQuery | undefined,
+  GetDeviceByDeviceIdQueryVariables
+>;
 export function useGetDeviceByDeviceIdSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -24612,6 +24700,24 @@ export function useGetMeLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetMeSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetMeQuery,
+    GetMeQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<GetMeQuery, GetMeQueryVariables>;
+export function useGetMeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetMeQuery,
+        GetMeQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMeQuery | undefined,
+  GetMeQueryVariables
+>;
 export function useGetMeSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -24757,6 +24863,27 @@ export function useGetUserSettingsLazyQuery(
     GetUserSettingsQueryVariables
   >(GetUserSettingsDocument, options);
 }
+// @ts-ignore
+export function useGetUserSettingsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetUserSettingsQuery,
+    GetUserSettingsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUserSettingsQuery,
+  GetUserSettingsQueryVariables
+>;
+export function useGetUserSettingsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetUserSettingsQuery,
+        GetUserSettingsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUserSettingsQuery | undefined,
+  GetUserSettingsQueryVariables
+>;
 export function useGetUserSettingsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -24876,6 +25003,27 @@ export function useGetUserProfileLazyQuery(
     GetUserProfileQueryVariables
   >(GetUserProfileDocument, options);
 }
+// @ts-ignore
+export function useGetUserProfileSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetUserProfileQuery,
+    GetUserProfileQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUserProfileQuery,
+  GetUserProfileQueryVariables
+>;
+export function useGetUserProfileSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetUserProfileQuery,
+        GetUserProfileQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUserProfileQuery | undefined,
+  GetUserProfileQueryVariables
+>;
 export function useGetUserProfileSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -24998,6 +25146,27 @@ export function useCanDeleteAccountLazyQuery(
     CanDeleteAccountQueryVariables
   >(CanDeleteAccountDocument, options);
 }
+// @ts-ignore
+export function useCanDeleteAccountSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CanDeleteAccountQuery,
+  CanDeleteAccountQueryVariables
+>;
+export function useCanDeleteAccountSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        CanDeleteAccountQuery,
+        CanDeleteAccountQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CanDeleteAccountQuery | undefined,
+  CanDeleteAccountQueryVariables
+>;
 export function useCanDeleteAccountSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -27213,6 +27382,24 @@ export function useGetHomeLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetHomeSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetHomeQuery,
+    GetHomeQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<GetHomeQuery, GetHomeQueryVariables>;
+export function useGetHomeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetHomeQuery,
+        GetHomeQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomeQuery | undefined,
+  GetHomeQueryVariables
+>;
 export function useGetHomeSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -27791,6 +27978,27 @@ export function useGetHomeBasicLazyQuery(
     GetHomeBasicQueryVariables
   >(GetHomeBasicDocument, options);
 }
+// @ts-ignore
+export function useGetHomeBasicSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomeBasicQuery,
+  GetHomeBasicQueryVariables
+>;
+export function useGetHomeBasicSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetHomeBasicQuery,
+        GetHomeBasicQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomeBasicQuery | undefined,
+  GetHomeBasicQueryVariables
+>;
 export function useGetHomeBasicSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -28346,6 +28554,27 @@ export function useGetHomesLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetHomesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetHomesQuery,
+    GetHomesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomesQuery,
+  GetHomesQueryVariables
+>;
+export function useGetHomesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetHomesQuery,
+        GetHomesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomesQuery | undefined,
+  GetHomesQueryVariables
+>;
 export function useGetHomesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -28557,6 +28786,27 @@ export function useGetMyPendingInvitesLazyQuery(
     GetMyPendingInvitesQueryVariables
   >(GetMyPendingInvitesDocument, options);
 }
+// @ts-ignore
+export function useGetMyPendingInvitesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetMyPendingInvitesQuery,
+    GetMyPendingInvitesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyPendingInvitesQuery,
+  GetMyPendingInvitesQueryVariables
+>;
+export function useGetMyPendingInvitesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetMyPendingInvitesQuery,
+        GetMyPendingInvitesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyPendingInvitesQuery | undefined,
+  GetMyPendingInvitesQueryVariables
+>;
 export function useGetMyPendingInvitesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -29713,6 +29963,27 @@ export function useGetHomeByJoinCodeLazyQuery(
     GetHomeByJoinCodeQueryVariables
   >(GetHomeByJoinCodeDocument, options);
 }
+// @ts-ignore
+export function useGetHomeByJoinCodeSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetHomeByJoinCodeQuery,
+    GetHomeByJoinCodeQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomeByJoinCodeQuery,
+  GetHomeByJoinCodeQueryVariables
+>;
+export function useGetHomeByJoinCodeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetHomeByJoinCodeQuery,
+        GetHomeByJoinCodeQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetHomeByJoinCodeQuery | undefined,
+  GetHomeByJoinCodeQueryVariables
+>;
 export function useGetHomeByJoinCodeSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -34858,6 +35129,27 @@ export function useConvertQuantityLazyQuery(
     ConvertQuantityQueryVariables
   >(ConvertQuantityDocument, options);
 }
+// @ts-ignore
+export function useConvertQuantitySuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    ConvertQuantityQuery,
+    ConvertQuantityQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ConvertQuantityQuery,
+  ConvertQuantityQueryVariables
+>;
+export function useConvertQuantitySuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ConvertQuantityQuery,
+        ConvertQuantityQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ConvertQuantityQuery | undefined,
+  ConvertQuantityQueryVariables
+>;
 export function useConvertQuantitySuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35053,6 +35345,27 @@ export function useSuggestDisplayFormatLazyQuery(
     SuggestDisplayFormatQueryVariables
   >(SuggestDisplayFormatDocument, options);
 }
+// @ts-ignore
+export function useSuggestDisplayFormatSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SuggestDisplayFormatQuery,
+    SuggestDisplayFormatQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SuggestDisplayFormatQuery,
+  SuggestDisplayFormatQueryVariables
+>;
+export function useSuggestDisplayFormatSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SuggestDisplayFormatQuery,
+        SuggestDisplayFormatQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SuggestDisplayFormatQuery | undefined,
+  SuggestDisplayFormatQueryVariables
+>;
 export function useSuggestDisplayFormatSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35222,6 +35535,27 @@ export function useParseQuantityInputLazyQuery(
     ParseQuantityInputQueryVariables
   >(ParseQuantityInputDocument, options);
 }
+// @ts-ignore
+export function useParseQuantityInputSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    ParseQuantityInputQuery,
+    ParseQuantityInputQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ParseQuantityInputQuery,
+  ParseQuantityInputQueryVariables
+>;
+export function useParseQuantityInputSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ParseQuantityInputQuery,
+        ParseQuantityInputQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ParseQuantityInputQuery | undefined,
+  ParseQuantityInputQueryVariables
+>;
 export function useParseQuantityInputSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35397,6 +35731,27 @@ export function useCanConvertLazyQuery(
     CanConvertQueryVariables
   >(CanConvertDocument, options);
 }
+// @ts-ignore
+export function useCanConvertSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    CanConvertQuery,
+    CanConvertQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CanConvertQuery,
+  CanConvertQueryVariables
+>;
+export function useCanConvertSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        CanConvertQuery,
+        CanConvertQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CanConvertQuery | undefined,
+  CanConvertQueryVariables
+>;
 export function useCanConvertSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35579,6 +35934,27 @@ export function useGetItemConversionsLazyQuery(
     GetItemConversionsQueryVariables
   >(GetItemConversionsDocument, options);
 }
+// @ts-ignore
+export function useGetItemConversionsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetItemConversionsQuery,
+    GetItemConversionsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetItemConversionsQuery,
+  GetItemConversionsQueryVariables
+>;
+export function useGetItemConversionsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetItemConversionsQuery,
+        GetItemConversionsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetItemConversionsQuery | undefined,
+  GetItemConversionsQueryVariables
+>;
 export function useGetItemConversionsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35759,6 +36135,27 @@ export function useGetBestDisplayUnitLazyQuery(
     GetBestDisplayUnitQueryVariables
   >(GetBestDisplayUnitDocument, options);
 }
+// @ts-ignore
+export function useGetBestDisplayUnitSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetBestDisplayUnitQuery,
+    GetBestDisplayUnitQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetBestDisplayUnitQuery,
+  GetBestDisplayUnitQueryVariables
+>;
+export function useGetBestDisplayUnitSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetBestDisplayUnitQuery,
+        GetBestDisplayUnitQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetBestDisplayUnitQuery | undefined,
+  GetBestDisplayUnitQueryVariables
+>;
 export function useGetBestDisplayUnitSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -35932,6 +36329,27 @@ export function useAggregateQuantitiesLazyQuery(
     AggregateQuantitiesQueryVariables
   >(AggregateQuantitiesDocument, options);
 }
+// @ts-ignore
+export function useAggregateQuantitiesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    AggregateQuantitiesQuery,
+    AggregateQuantitiesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AggregateQuantitiesQuery,
+  AggregateQuantitiesQueryVariables
+>;
+export function useAggregateQuantitiesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        AggregateQuantitiesQuery,
+        AggregateQuantitiesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AggregateQuantitiesQuery | undefined,
+  AggregateQuantitiesQueryVariables
+>;
 export function useAggregateQuantitiesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -36218,6 +36636,27 @@ export function useCalculateRecipePantryDeficitLazyQuery(
     CalculateRecipePantryDeficitQueryVariables
   >(CalculateRecipePantryDeficitDocument, options);
 }
+// @ts-ignore
+export function useCalculateRecipePantryDeficitSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    CalculateRecipePantryDeficitQuery,
+    CalculateRecipePantryDeficitQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CalculateRecipePantryDeficitQuery,
+  CalculateRecipePantryDeficitQueryVariables
+>;
+export function useCalculateRecipePantryDeficitSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        CalculateRecipePantryDeficitQuery,
+        CalculateRecipePantryDeficitQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  CalculateRecipePantryDeficitQuery | undefined,
+  CalculateRecipePantryDeficitQueryVariables
+>;
 export function useCalculateRecipePantryDeficitSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -36768,6 +37207,27 @@ export function useGetItemsLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetItemsQuery,
+    GetItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetItemsQuery,
+  GetItemsQueryVariables
+>;
+export function useGetItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetItemsQuery,
+        GetItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetItemsQuery | undefined,
+  GetItemsQueryVariables
+>;
 export function useGetItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -36954,6 +37414,27 @@ export function useSearchItemsLazyQuery(
     SearchItemsQueryVariables
   >(SearchItemsDocument, options);
 }
+// @ts-ignore
+export function useSearchItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SearchItemsQuery,
+    SearchItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchItemsQuery,
+  SearchItemsQueryVariables
+>;
+export function useSearchItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchItemsQuery,
+        SearchItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchItemsQuery | undefined,
+  SearchItemsQueryVariables
+>;
 export function useSearchItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -37239,6 +37720,27 @@ export function useItemByUpcFilterLazyQuery(
     ItemByUpcFilterQueryVariables
   >(ItemByUpcFilterDocument, options);
 }
+// @ts-ignore
+export function useItemByUpcFilterSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    ItemByUpcFilterQuery,
+    ItemByUpcFilterQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ItemByUpcFilterQuery,
+  ItemByUpcFilterQueryVariables
+>;
+export function useItemByUpcFilterSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ItemByUpcFilterQuery,
+        ItemByUpcFilterQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ItemByUpcFilterQuery | undefined,
+  ItemByUpcFilterQueryVariables
+>;
 export function useItemByUpcFilterSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -37525,6 +38027,27 @@ export function useItemBySkuFilterLazyQuery(
     ItemBySkuFilterQueryVariables
   >(ItemBySkuFilterDocument, options);
 }
+// @ts-ignore
+export function useItemBySkuFilterSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    ItemBySkuFilterQuery,
+    ItemBySkuFilterQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ItemBySkuFilterQuery,
+  ItemBySkuFilterQueryVariables
+>;
+export function useItemBySkuFilterSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ItemBySkuFilterQuery,
+        ItemBySkuFilterQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  ItemBySkuFilterQuery | undefined,
+  ItemBySkuFilterQueryVariables
+>;
 export function useItemBySkuFilterSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -37772,6 +38295,27 @@ export function useGetOnboardingItemsLazyQuery(
     GetOnboardingItemsQueryVariables
   >(GetOnboardingItemsDocument, options);
 }
+// @ts-ignore
+export function useGetOnboardingItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetOnboardingItemsQuery,
+    GetOnboardingItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetOnboardingItemsQuery,
+  GetOnboardingItemsQueryVariables
+>;
+export function useGetOnboardingItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetOnboardingItemsQuery,
+        GetOnboardingItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetOnboardingItemsQuery | undefined,
+  GetOnboardingItemsQueryVariables
+>;
 export function useGetOnboardingItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -38018,6 +38562,27 @@ export function useAutocompleteItemsLazyQuery(
     AutocompleteItemsQueryVariables
   >(AutocompleteItemsDocument, options);
 }
+// @ts-ignore
+export function useAutocompleteItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AutocompleteItemsQuery,
+  AutocompleteItemsQueryVariables
+>;
+export function useAutocompleteItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        AutocompleteItemsQuery,
+        AutocompleteItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AutocompleteItemsQuery | undefined,
+  AutocompleteItemsQueryVariables
+>;
 export function useAutocompleteItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -38167,6 +38732,27 @@ export function useSearchBrandsLazyQuery(
     SearchBrandsQueryVariables
   >(SearchBrandsDocument, options);
 }
+// @ts-ignore
+export function useSearchBrandsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchBrandsQuery,
+  SearchBrandsQueryVariables
+>;
+export function useSearchBrandsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchBrandsQuery,
+        SearchBrandsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchBrandsQuery | undefined,
+  SearchBrandsQueryVariables
+>;
 export function useSearchBrandsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -38311,6 +38897,27 @@ export function useAutocompleteCategoriesLazyQuery(
     AutocompleteCategoriesQueryVariables
   >(AutocompleteCategoriesDocument, options);
 }
+// @ts-ignore
+export function useAutocompleteCategoriesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    AutocompleteCategoriesQuery,
+    AutocompleteCategoriesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AutocompleteCategoriesQuery,
+  AutocompleteCategoriesQueryVariables
+>;
+export function useAutocompleteCategoriesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        AutocompleteCategoriesQuery,
+        AutocompleteCategoriesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  AutocompleteCategoriesQuery | undefined,
+  AutocompleteCategoriesQueryVariables
+>;
 export function useAutocompleteCategoriesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -38586,6 +39193,27 @@ export function useGetPopularItemsLazyQuery(
     GetPopularItemsQueryVariables
   >(GetPopularItemsDocument, options);
 }
+// @ts-ignore
+export function useGetPopularItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPopularItemsQuery,
+    GetPopularItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPopularItemsQuery,
+  GetPopularItemsQueryVariables
+>;
+export function useGetPopularItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPopularItemsQuery,
+        GetPopularItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPopularItemsQuery | undefined,
+  GetPopularItemsQueryVariables
+>;
 export function useGetPopularItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39110,6 +39738,27 @@ export function useGetUnitsLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetUnitsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetUnitsQuery,
+    GetUnitsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUnitsQuery,
+  GetUnitsQueryVariables
+>;
+export function useGetUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetUnitsQuery,
+        GetUnitsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUnitsQuery | undefined,
+  GetUnitsQueryVariables
+>;
 export function useGetUnitsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39236,6 +39885,24 @@ export function useGetUnitLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetUnitSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetUnitQuery,
+    GetUnitQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<GetUnitQuery, GetUnitQueryVariables>;
+export function useGetUnitSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetUnitQuery,
+        GetUnitQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUnitQuery | undefined,
+  GetUnitQueryVariables
+>;
 export function useGetUnitSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39394,6 +40061,27 @@ export function useGetUnitBySymbolLazyQuery(
     GetUnitBySymbolQueryVariables
   >(GetUnitBySymbolDocument, options);
 }
+// @ts-ignore
+export function useGetUnitBySymbolSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetUnitBySymbolQuery,
+    GetUnitBySymbolQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUnitBySymbolQuery,
+  GetUnitBySymbolQueryVariables
+>;
+export function useGetUnitBySymbolSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetUnitBySymbolQuery,
+        GetUnitBySymbolQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetUnitBySymbolQuery | undefined,
+  GetUnitBySymbolQueryVariables
+>;
 export function useGetUnitBySymbolSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39578,6 +40266,27 @@ export function useSearchUnitsLazyQuery(
     SearchUnitsQueryVariables
   >(SearchUnitsDocument, options);
 }
+// @ts-ignore
+export function useSearchUnitsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SearchUnitsQuery,
+    SearchUnitsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchUnitsQuery,
+  SearchUnitsQueryVariables
+>;
+export function useSearchUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchUnitsQuery,
+        SearchUnitsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchUnitsQuery | undefined,
+  SearchUnitsQueryVariables
+>;
 export function useSearchUnitsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39736,6 +40445,27 @@ export function useGetCommonUnitsLazyQuery(
     GetCommonUnitsQueryVariables
   >(GetCommonUnitsDocument, options);
 }
+// @ts-ignore
+export function useGetCommonUnitsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetCommonUnitsQuery,
+  GetCommonUnitsQueryVariables
+>;
+export function useGetCommonUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetCommonUnitsQuery,
+        GetCommonUnitsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetCommonUnitsQuery | undefined,
+  GetCommonUnitsQueryVariables
+>;
 export function useGetCommonUnitsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -39881,6 +40611,27 @@ export function useGetConvertibleUnitsLazyQuery(
     GetConvertibleUnitsQueryVariables
   >(GetConvertibleUnitsDocument, options);
 }
+// @ts-ignore
+export function useGetConvertibleUnitsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetConvertibleUnitsQuery,
+  GetConvertibleUnitsQueryVariables
+>;
+export function useGetConvertibleUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetConvertibleUnitsQuery,
+        GetConvertibleUnitsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetConvertibleUnitsQuery | undefined,
+  GetConvertibleUnitsQueryVariables
+>;
 export function useGetConvertibleUnitsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -40166,6 +40917,27 @@ export function useGetMyNotificationsLazyQuery(
     GetMyNotificationsQueryVariables
   >(GetMyNotificationsDocument, options);
 }
+// @ts-ignore
+export function useGetMyNotificationsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetMyNotificationsQuery,
+    GetMyNotificationsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyNotificationsQuery,
+  GetMyNotificationsQueryVariables
+>;
+export function useGetMyNotificationsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetMyNotificationsQuery,
+        GetMyNotificationsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetMyNotificationsQuery | undefined,
+  GetMyNotificationsQueryVariables
+>;
 export function useGetMyNotificationsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -40726,6 +41498,27 @@ export function useGetPantriesLazyQuery(
     GetPantriesQueryVariables
   >(GetPantriesDocument, options);
 }
+// @ts-ignore
+export function useGetPantriesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantriesQuery,
+    GetPantriesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantriesQuery,
+  GetPantriesQueryVariables
+>;
+export function useGetPantriesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantriesQuery,
+        GetPantriesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantriesQuery | undefined,
+  GetPantriesQueryVariables
+>;
 export function useGetPantriesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -41251,6 +42044,27 @@ export function useGetPantryLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetPantrySuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryQuery,
+    GetPantryQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryQuery,
+  GetPantryQueryVariables
+>;
+export function useGetPantrySuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryQuery,
+        GetPantryQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryQuery | undefined,
+  GetPantryQueryVariables
+>;
 export function useGetPantrySuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -41884,6 +42698,27 @@ export function useGetPantryItemLazyQuery(
     GetPantryItemQueryVariables
   >(GetPantryItemDocument, options);
 }
+// @ts-ignore
+export function useGetPantryItemSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryItemQuery,
+    GetPantryItemQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemQuery,
+  GetPantryItemQueryVariables
+>;
+export function useGetPantryItemSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryItemQuery,
+        GetPantryItemQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemQuery | undefined,
+  GetPantryItemQueryVariables
+>;
 export function useGetPantryItemSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -42014,6 +42849,27 @@ export function useGetDefaultPantryLazyQuery(
     GetDefaultPantryQueryVariables
   >(GetDefaultPantryDocument, options);
 }
+// @ts-ignore
+export function useGetDefaultPantrySuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDefaultPantryQuery,
+  GetDefaultPantryQueryVariables
+>;
+export function useGetDefaultPantrySuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDefaultPantryQuery,
+        GetDefaultPantryQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDefaultPantryQuery | undefined,
+  GetDefaultPantryQueryVariables
+>;
 export function useGetDefaultPantrySuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -42180,6 +43036,27 @@ export function useGetRecentlyDeletedPantryItemsLazyQuery(
     GetRecentlyDeletedPantryItemsQueryVariables
   >(GetRecentlyDeletedPantryItemsDocument, options);
 }
+// @ts-ignore
+export function useGetRecentlyDeletedPantryItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecentlyDeletedPantryItemsQuery,
+  GetRecentlyDeletedPantryItemsQueryVariables
+>;
+export function useGetRecentlyDeletedPantryItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecentlyDeletedPantryItemsQuery,
+        GetRecentlyDeletedPantryItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecentlyDeletedPantryItemsQuery | undefined,
+  GetRecentlyDeletedPantryItemsQueryVariables
+>;
 export function useGetRecentlyDeletedPantryItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -42426,6 +43303,27 @@ export function useGetPantryItemSuggestionsLazyQuery(
     GetPantryItemSuggestionsQueryVariables
   >(GetPantryItemSuggestionsDocument, options);
 }
+// @ts-ignore
+export function useGetPantryItemSuggestionsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryItemSuggestionsQuery,
+    GetPantryItemSuggestionsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemSuggestionsQuery,
+  GetPantryItemSuggestionsQueryVariables
+>;
+export function useGetPantryItemSuggestionsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryItemSuggestionsQuery,
+        GetPantryItemSuggestionsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemSuggestionsQuery | undefined,
+  GetPantryItemSuggestionsQueryVariables
+>;
 export function useGetPantryItemSuggestionsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -42826,6 +43724,27 @@ export function useGetPantryLedgerAnalyticsLazyQuery(
     GetPantryLedgerAnalyticsQueryVariables
   >(GetPantryLedgerAnalyticsDocument, options);
 }
+// @ts-ignore
+export function useGetPantryLedgerAnalyticsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryLedgerAnalyticsQuery,
+    GetPantryLedgerAnalyticsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryLedgerAnalyticsQuery,
+  GetPantryLedgerAnalyticsQueryVariables
+>;
+export function useGetPantryLedgerAnalyticsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryLedgerAnalyticsQuery,
+        GetPantryLedgerAnalyticsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryLedgerAnalyticsQuery | undefined,
+  GetPantryLedgerAnalyticsQueryVariables
+>;
 export function useGetPantryLedgerAnalyticsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -43032,6 +43951,27 @@ export function useGetPantryItemLedgerLazyQuery(
     GetPantryItemLedgerQueryVariables
   >(GetPantryItemLedgerDocument, options);
 }
+// @ts-ignore
+export function useGetPantryItemLedgerSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryItemLedgerQuery,
+    GetPantryItemLedgerQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemLedgerQuery,
+  GetPantryItemLedgerQueryVariables
+>;
+export function useGetPantryItemLedgerSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryItemLedgerQuery,
+        GetPantryItemLedgerQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryItemLedgerQuery | undefined,
+  GetPantryItemLedgerQueryVariables
+>;
 export function useGetPantryItemLedgerSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -43279,6 +44219,27 @@ export function useGetPantryUsageAnalyticsLazyQuery(
     GetPantryUsageAnalyticsQueryVariables
   >(GetPantryUsageAnalyticsDocument, options);
 }
+// @ts-ignore
+export function useGetPantryUsageAnalyticsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryUsageAnalyticsQuery,
+  GetPantryUsageAnalyticsQueryVariables
+>;
+export function useGetPantryUsageAnalyticsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryUsageAnalyticsQuery,
+        GetPantryUsageAnalyticsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryUsageAnalyticsQuery | undefined,
+  GetPantryUsageAnalyticsQueryVariables
+>;
 export function useGetPantryUsageAnalyticsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -43519,6 +44480,27 @@ export function useGetPantryWasteAnalyticsLazyQuery(
     GetPantryWasteAnalyticsQueryVariables
   >(GetPantryWasteAnalyticsDocument, options);
 }
+// @ts-ignore
+export function useGetPantryWasteAnalyticsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryWasteAnalyticsQuery,
+  GetPantryWasteAnalyticsQueryVariables
+>;
+export function useGetPantryWasteAnalyticsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryWasteAnalyticsQuery,
+        GetPantryWasteAnalyticsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetPantryWasteAnalyticsQuery | undefined,
+  GetPantryWasteAnalyticsQueryVariables
+>;
 export function useGetPantryWasteAnalyticsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -49320,6 +50302,27 @@ export function useSearchRecipesLazyQuery(
     SearchRecipesQueryVariables
   >(SearchRecipesDocument, options);
 }
+// @ts-ignore
+export function useSearchRecipesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchRecipesQuery,
+  SearchRecipesQueryVariables
+>;
+export function useSearchRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchRecipesQuery,
+        SearchRecipesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SearchRecipesQuery | undefined,
+  SearchRecipesQueryVariables
+>;
 export function useSearchRecipesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -49518,6 +50521,27 @@ export function useSuggestedRecipesLazyQuery(
     SuggestedRecipesQueryVariables
   >(SuggestedRecipesDocument, options);
 }
+// @ts-ignore
+export function useSuggestedRecipesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SuggestedRecipesQuery,
+  SuggestedRecipesQueryVariables
+>;
+export function useSuggestedRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SuggestedRecipesQuery,
+        SuggestedRecipesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SuggestedRecipesQuery | undefined,
+  SuggestedRecipesQueryVariables
+>;
 export function useSuggestedRecipesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -49807,6 +50831,27 @@ export function useMyRecipesLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useMyRecipesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    MyRecipesQuery,
+    MyRecipesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MyRecipesQuery,
+  MyRecipesQueryVariables
+>;
+export function useMyRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MyRecipesQuery,
+        MyRecipesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MyRecipesQuery | undefined,
+  MyRecipesQueryVariables
+>;
 export function useMyRecipesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -50088,6 +51133,27 @@ export function useGetRecipeLazyQuery(
     options,
   );
 }
+// @ts-ignore
+export function useGetRecipeSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetRecipeQuery,
+    GetRecipeQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecipeQuery,
+  GetRecipeQueryVariables
+>;
+export function useGetRecipeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecipeQuery,
+        GetRecipeQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecipeQuery | undefined,
+  GetRecipeQueryVariables
+>;
 export function useGetRecipeSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -50284,6 +51350,27 @@ export function useMySavedRecipesLazyQuery(
     MySavedRecipesQueryVariables
   >(MySavedRecipesDocument, options);
 }
+// @ts-ignore
+export function useMySavedRecipesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    MySavedRecipesQuery,
+    MySavedRecipesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MySavedRecipesQuery,
+  MySavedRecipesQueryVariables
+>;
+export function useMySavedRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MySavedRecipesQuery,
+        MySavedRecipesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MySavedRecipesQuery | undefined,
+  MySavedRecipesQueryVariables
+>;
 export function useMySavedRecipesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -50378,6 +51465,27 @@ export function useSavedRecipeFoldersLazyQuery(
     SavedRecipeFoldersQueryVariables
   >(SavedRecipeFoldersDocument, options);
 }
+// @ts-ignore
+export function useSavedRecipeFoldersSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    SavedRecipeFoldersQuery,
+    SavedRecipeFoldersQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SavedRecipeFoldersQuery,
+  SavedRecipeFoldersQueryVariables
+>;
+export function useSavedRecipeFoldersSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SavedRecipeFoldersQuery,
+        SavedRecipeFoldersQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  SavedRecipeFoldersQuery | undefined,
+  SavedRecipeFoldersQueryVariables
+>;
 export function useSavedRecipeFoldersSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -52893,6 +54001,27 @@ export function useMyShoppingListInvitesLazyQuery(
     MyShoppingListInvitesQueryVariables
   >(MyShoppingListInvitesDocument, options);
 }
+// @ts-ignore
+export function useMyShoppingListInvitesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    MyShoppingListInvitesQuery,
+    MyShoppingListInvitesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MyShoppingListInvitesQuery,
+  MyShoppingListInvitesQueryVariables
+>;
+export function useMyShoppingListInvitesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MyShoppingListInvitesQuery,
+        MyShoppingListInvitesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  MyShoppingListInvitesQuery | undefined,
+  MyShoppingListInvitesQueryVariables
+>;
 export function useMyShoppingListInvitesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -54464,6 +55593,27 @@ export function useGetShoppingListLazyQuery(
     GetShoppingListQueryVariables
   >(GetShoppingListDocument, options);
 }
+// @ts-ignore
+export function useGetShoppingListSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetShoppingListQuery,
+    GetShoppingListQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListQuery,
+  GetShoppingListQueryVariables
+>;
+export function useGetShoppingListSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListQuery,
+        GetShoppingListQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListQuery | undefined,
+  GetShoppingListQueryVariables
+>;
 export function useGetShoppingListSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -54735,6 +55885,27 @@ export function useGetShoppingListsLiteLazyQuery(
     GetShoppingListsLiteQueryVariables
   >(GetShoppingListsLiteDocument, options);
 }
+// @ts-ignore
+export function useGetShoppingListsLiteSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetShoppingListsLiteQuery,
+    GetShoppingListsLiteQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListsLiteQuery,
+  GetShoppingListsLiteQueryVariables
+>;
+export function useGetShoppingListsLiteSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListsLiteQuery,
+        GetShoppingListsLiteQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListsLiteQuery | undefined,
+  GetShoppingListsLiteQueryVariables
+>;
 export function useGetShoppingListsLiteSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -55174,6 +56345,27 @@ export function useGetDefaultShoppingListLazyQuery(
     GetDefaultShoppingListQueryVariables
   >(GetDefaultShoppingListDocument, options);
 }
+// @ts-ignore
+export function useGetDefaultShoppingListSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetDefaultShoppingListQuery,
+    GetDefaultShoppingListQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDefaultShoppingListQuery,
+  GetDefaultShoppingListQueryVariables
+>;
+export function useGetDefaultShoppingListSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDefaultShoppingListQuery,
+        GetDefaultShoppingListQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDefaultShoppingListQuery | undefined,
+  GetDefaultShoppingListQueryVariables
+>;
 export function useGetDefaultShoppingListSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -55676,6 +56868,27 @@ export function useGetShoppingListItemsPaginatedLazyQuery(
     GetShoppingListItemsPaginatedQueryVariables
   >(GetShoppingListItemsPaginatedDocument, options);
 }
+// @ts-ignore
+export function useGetShoppingListItemsPaginatedSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetShoppingListItemsPaginatedQuery,
+    GetShoppingListItemsPaginatedQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListItemsPaginatedQuery,
+  GetShoppingListItemsPaginatedQueryVariables
+>;
+export function useGetShoppingListItemsPaginatedSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListItemsPaginatedQuery,
+        GetShoppingListItemsPaginatedQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListItemsPaginatedQuery | undefined,
+  GetShoppingListItemsPaginatedQueryVariables
+>;
 export function useGetShoppingListItemsPaginatedSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -56271,6 +57484,27 @@ export function useGetShoppingListItemLazyQuery(
     GetShoppingListItemQueryVariables
   >(GetShoppingListItemDocument, options);
 }
+// @ts-ignore
+export function useGetShoppingListItemSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetShoppingListItemQuery,
+    GetShoppingListItemQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListItemQuery,
+  GetShoppingListItemQueryVariables
+>;
+export function useGetShoppingListItemSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListItemQuery,
+        GetShoppingListItemQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListItemQuery | undefined,
+  GetShoppingListItemQueryVariables
+>;
 export function useGetShoppingListItemSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -56436,6 +57670,27 @@ export function useGetRecentlyDeletedShoppingListItemsLazyQuery(
     GetRecentlyDeletedShoppingListItemsQueryVariables
   >(GetRecentlyDeletedShoppingListItemsDocument, options);
 }
+// @ts-ignore
+export function useGetRecentlyDeletedShoppingListItemsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetRecentlyDeletedShoppingListItemsQuery,
+    GetRecentlyDeletedShoppingListItemsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecentlyDeletedShoppingListItemsQuery,
+  GetRecentlyDeletedShoppingListItemsQueryVariables
+>;
+export function useGetRecentlyDeletedShoppingListItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecentlyDeletedShoppingListItemsQuery,
+        GetRecentlyDeletedShoppingListItemsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetRecentlyDeletedShoppingListItemsQuery | undefined,
+  GetRecentlyDeletedShoppingListItemsQueryVariables
+>;
 export function useGetRecentlyDeletedShoppingListItemsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -56625,6 +57880,27 @@ export function useGetShoppingListSuggestionsLazyQuery(
     GetShoppingListSuggestionsQueryVariables
   >(GetShoppingListSuggestionsDocument, options);
 }
+// @ts-ignore
+export function useGetShoppingListSuggestionsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetShoppingListSuggestionsQuery,
+    GetShoppingListSuggestionsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListSuggestionsQuery,
+  GetShoppingListSuggestionsQueryVariables
+>;
+export function useGetShoppingListSuggestionsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetShoppingListSuggestionsQuery,
+        GetShoppingListSuggestionsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetShoppingListSuggestionsQuery | undefined,
+  GetShoppingListSuggestionsQueryVariables
+>;
 export function useGetShoppingListSuggestionsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -63136,13 +64412,13 @@ export type MoveShoppingItemToPantryMutationOptions =
     MoveShoppingItemToPantryMutation,
     MoveShoppingItemToPantryMutationVariables
   >;
-export const ClearPurchasedShoppingListItemsDocument = {
+export const ClearShoppingListItemsDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'ClearPurchasedShoppingListItems' },
+      name: { kind: 'Name', value: 'ClearShoppingListItems' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -63155,13 +64431,27 @@ export const ClearPurchasedShoppingListItemsDocument = {
             type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'purchased' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'Boolean' },
+            },
+          },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'clearPurchasedShoppingListItems' },
+            name: { kind: 'Name', value: 'clearShoppingListItems' },
             arguments: [
               {
                 kind: 'Argument',
@@ -63169,6 +64459,14 @@ export const ClearPurchasedShoppingListItemsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'purchased' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'purchased' },
                 },
               },
             ],
@@ -63213,50 +64511,51 @@ export const ClearPurchasedShoppingListItemsDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type ClearPurchasedShoppingListItemsMutationFn =
+export type ClearShoppingListItemsMutationFn =
   ApolloReactCommon.MutationFunction<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >;
 
 /**
- * __useClearPurchasedShoppingListItemsMutation__
+ * __useClearShoppingListItemsMutation__
  *
- * To run a mutation, you first call `useClearPurchasedShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useClearPurchasedShoppingListItemsMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useClearShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearShoppingListItemsMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [clearPurchasedShoppingListItemsMutation, { data, loading, error }] = useClearPurchasedShoppingListItemsMutation({
+ * const [clearShoppingListItemsMutation, { data, loading, error }] = useClearShoppingListItemsMutation({
  *   variables: {
  *      shoppingListId: // value for 'shoppingListId'
+ *      purchased: // value for 'purchased'
  *   },
  * });
  */
-export function useClearPurchasedShoppingListItemsMutation(
+export function useClearShoppingListItemsMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
-  >(ClearPurchasedShoppingListItemsDocument, options);
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
+  >(ClearShoppingListItemsDocument, options);
 }
-export type ClearPurchasedShoppingListItemsMutationHookResult = ReturnType<
-  typeof useClearPurchasedShoppingListItemsMutation
+export type ClearShoppingListItemsMutationHookResult = ReturnType<
+  typeof useClearShoppingListItemsMutation
 >;
-export type ClearPurchasedShoppingListItemsMutationResult =
-  ApolloReactCommon.MutationResult<ClearPurchasedShoppingListItemsMutation>;
-export type ClearPurchasedShoppingListItemsMutationOptions =
+export type ClearShoppingListItemsMutationResult =
+  ApolloReactCommon.MutationResult<ClearShoppingListItemsMutation>;
+export type ClearShoppingListItemsMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    ClearPurchasedShoppingListItemsMutation,
-    ClearPurchasedShoppingListItemsMutationVariables
+    ClearShoppingListItemsMutation,
+    ClearShoppingListItemsMutationVariables
   >;
 export const AddItemsToShoppingListDocument = {
   kind: 'Document',
@@ -66793,6 +68092,27 @@ export function useGetStorageLocationsLazyQuery(
     GetStorageLocationsQueryVariables
   >(GetStorageLocationsDocument, options);
 }
+// @ts-ignore
+export function useGetStorageLocationsSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationsQuery,
+  GetStorageLocationsQueryVariables
+>;
+export function useGetStorageLocationsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationsQuery,
+        GetStorageLocationsQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationsQuery | undefined,
+  GetStorageLocationsQueryVariables
+>;
 export function useGetStorageLocationsSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -66978,6 +68298,27 @@ export function useGetStorageLocationTreeLazyQuery(
     GetStorageLocationTreeQueryVariables
   >(GetStorageLocationTreeDocument, options);
 }
+// @ts-ignore
+export function useGetStorageLocationTreeSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationTreeQuery,
+  GetStorageLocationTreeQueryVariables
+>;
+export function useGetStorageLocationTreeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationTreeQuery,
+        GetStorageLocationTreeQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationTreeQuery | undefined,
+  GetStorageLocationTreeQueryVariables
+>;
 export function useGetStorageLocationTreeSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -67141,6 +68482,27 @@ export function useGetStorageLocationLazyQuery(
     GetStorageLocationQueryVariables
   >(GetStorageLocationDocument, options);
 }
+// @ts-ignore
+export function useGetStorageLocationSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationQuery,
+  GetStorageLocationQueryVariables
+>;
+export function useGetStorageLocationSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationQuery,
+        GetStorageLocationQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetStorageLocationQuery | undefined,
+  GetStorageLocationQueryVariables
+>;
 export function useGetStorageLocationSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -67737,6 +69099,27 @@ export function useGetNotificationPreferencesLazyQuery(
     GetNotificationPreferencesQueryVariables
   >(GetNotificationPreferencesDocument, options);
 }
+// @ts-ignore
+export function useGetNotificationPreferencesSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetNotificationPreferencesQuery,
+  GetNotificationPreferencesQueryVariables
+>;
+export function useGetNotificationPreferencesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetNotificationPreferencesQuery,
+        GetNotificationPreferencesQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetNotificationPreferencesQuery | undefined,
+  GetNotificationPreferencesQueryVariables
+>;
 export function useGetNotificationPreferencesSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
@@ -67916,6 +69299,27 @@ export function useGetDietaryProfileLazyQuery(
     GetDietaryProfileQueryVariables
   >(GetDietaryProfileDocument, options);
 }
+// @ts-ignore
+export function useGetDietaryProfileSuspenseQuery(
+  baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDietaryProfileQuery,
+  GetDietaryProfileQueryVariables
+>;
+export function useGetDietaryProfileSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDietaryProfileQuery,
+        GetDietaryProfileQueryVariables
+      >,
+): ApolloReactHooks.UseSuspenseQueryResult<
+  GetDietaryProfileQuery | undefined,
+  GetDietaryProfileQueryVariables
+>;
 export function useGetDietaryProfileSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken

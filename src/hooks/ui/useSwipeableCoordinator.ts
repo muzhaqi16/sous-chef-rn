@@ -7,7 +7,7 @@ import { useRef, useCallback } from 'react';
  * you want to automatically close the previously opened item when a
  * new one is opened.
  *
- * @returns Object with handleSwipeableWillOpen callback
+ * @returns Object with handleSwipeableWillOpen and handleSwipeableClose callbacks
  *
  * @example
  * ```typescript
@@ -41,7 +41,17 @@ export function useSwipeableCoordinator() {
     openSwipeableRef.current = ref;
   }, []);
 
+  /**
+   * Handler to be called when a swipeable item closes
+   *
+   * Clears the reference to the open swipeable.
+   */
+  const handleSwipeableClose = useCallback(() => {
+    openSwipeableRef.current = null;
+  }, []);
+
   return {
     handleSwipeableWillOpen,
+    handleSwipeableClose,
   };
 }

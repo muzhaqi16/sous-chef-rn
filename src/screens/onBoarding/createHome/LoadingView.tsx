@@ -1,6 +1,6 @@
 import React from 'react';
 import {Text, View, ActivityIndicator} from 'react-native';
-import {OnBoardingWrapper} from '#components/templates';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import {StyleSheet} from 'react-native-unistyles';
 
 export const LoadingView = ({onSkip}: {onSkip: () => void}) => (

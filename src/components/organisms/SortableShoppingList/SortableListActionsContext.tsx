@@ -14,12 +14,6 @@ export interface SortableListActions {
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   /**
-   * Prepare FlashList for layout animation before items are removed/added.
-   * Must be called before data changes that affect list layout.
-   * @see https://shopify.github.io/flash-list/docs/guides/layout-animation
-   */
-  prepareForLayoutAnimation?: () => void;
-  /**
    * Callback for reordering items via drag-to-reorder.
    * @param itemId - ID of the item being moved
    * @param afterItemId - ID of the item that should come before the moved item (null if moving to start)
@@ -30,12 +24,6 @@ export interface SortableListActions {
     afterItemId: string | null,
     beforeItemId: string | null,
   ) => void;
-  /**
-   * Callback for reordering items by index (internal use).
-   * Called with the item ID and the index delta to move.
-   * The parent component converts this to neighbor IDs for the API.
-   */
-  onReorderByDelta?: (itemId: string, indexDelta: number) => void;
 }
 
 /**
@@ -107,11 +95,8 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
       onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
       onSwipeableWillOpen: (ref: any) => actionsRef.current.onSwipeableWillOpen?.(ref),
       onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
-      prepareForLayoutAnimation: () => actionsRef.current.prepareForLayoutAnimation?.(),
       onSortOrderUpdate: (itemId: string, afterItemId: string | null, beforeItemId: string | null) =>
         actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-      onReorderByDelta: (itemId: string, indexDelta: number) =>
-        actionsRef.current.onReorderByDelta?.(itemId, indexDelta),
     }),
     [],
   );

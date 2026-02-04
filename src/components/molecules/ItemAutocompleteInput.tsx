@@ -1,10 +1,11 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useDeferredValue } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { useStore } from '#store';
 
 interface ItemAutocompleteInputProps {
   label?: string;
@@ -31,6 +32,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   testID,
   showBrand = false,
 }) => {
+  const isOnline = useStore(state => state.isOnline);
   const [fetchItems, { data, loading }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
@@ -44,15 +46,20 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
     minChars: 2,
     debounceMs: 250,
     onChangeText: useCallback((text: string) => {
+      // Skip API call when offline
+      if (!isOnline) return;
       // This is called after debounce - trigger the GraphQL query
       fetchItems({
         variables: { input: { query: text, limit: 10 } },
       });
-    }, [fetchItems]),
+    }, [fetchItems, isOnline]),
     getDisplayValue: (item) => item.name,
   });
 
+  // PERFORMANCE: Defer items to keep input responsive while results update
   const items = data?.autocompleteItems?.suggestions || [];
+  const deferredItems = useDeferredValue(items);
+  const isStale = items !== deferredItems;
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
@@ -107,8 +114,8 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
       title="Search for an item"
       searchPlaceholder="Type to search items..."
       minSearchLength={2}
-      data={items}
-      loading={loading}
+      data={deferredItems}
+      loading={loading || isStale}
       renderItem={renderItemOption}
       keyExtractor={(item: ItemSuggestion) => item.id}
       onSelectItem={handleSelectItem}

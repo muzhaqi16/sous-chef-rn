@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
   FadeOut,
   LinearTransition,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { ActionTrayContentProps } from './types';
 
 export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
@@ -15,6 +15,8 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   showCloseButton = true,
   onClose,
 }) => {
+  const { theme } = useUnistyles();
+
   return (
     <Animated.View
       layout={LinearTransition}
@@ -28,7 +30,7 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
           <View style={styles.fill} />
           {showCloseButton && onClose && (
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={16} color="#666" />
+              <Icon name="close" size={16} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>

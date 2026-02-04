@@ -1,24 +1,23 @@
 import React, { useRef, useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { View, Dimensions } from 'react-native';
-import { useAppNavigation, useCrossTabNavigation, type CrossTabSource } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useCrossTabNavigation, type CrossTabSource } from '#hooks/navigation/useCrossTabNavigation';
 import BottomSheet, {
-  BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
 
-import {
-  LoadingState,
-  ErrorState,
-  ItemNotFound,
-  SearchResults,
-} from '#components/barcode';
+import { LoadingState } from '#components/barcode/LoadingState';
+import { ErrorState } from '#components/barcode/ErrorState';
+import { ItemNotFound } from '#components/barcode/ItemNotFound';
+import { SearchResults } from '#components/barcode/SearchResults';
 import { Header } from '#components/molecules/Header';
-import AddItemForm from '#components/organisms/AddItemForm';
+import AddItemForm from '#components/organisms/AddItemForm/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
-import { useSearchResults } from '#hooks';
+import { useSearchResults } from '#hooks/useSearchResults';
 import { useShallow } from 'zustand/react/shallow';
 
 export const SearchResultsScreen: React.FC<{
@@ -101,12 +100,13 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const renderBackdrop = (props: any) => (
-    <BottomSheetBackdrop
+    <GlobalBottomSheetBackdrop
       {...props}
       appearsOnIndex={0}
       disappearsOnIndex={-1}
       opacity={0.3}
-      statusBarTranslucent={true}
+      pressBehavior="close"
+      onClose={hideBottomSheet}
     />
   );
 

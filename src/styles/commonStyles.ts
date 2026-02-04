@@ -416,6 +416,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   bottomSheetItemInfo: {
     marginBottom: theme.spacing.sm,
     paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
   },
@@ -438,7 +439,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   bottomSheetSection: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
   },
 
   bottomSheetSectionLabel: {

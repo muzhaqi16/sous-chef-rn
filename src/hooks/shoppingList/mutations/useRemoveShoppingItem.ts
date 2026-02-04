@@ -11,7 +11,7 @@ import { Alert } from 'react-native';
 import { useRemoveItemFromShoppingListMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { useCrudOperations } from '#/hooks/utils';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { removeFromShoppingListItemsCache } from './utils';
 
 interface UseRemoveShoppingItemOptions {

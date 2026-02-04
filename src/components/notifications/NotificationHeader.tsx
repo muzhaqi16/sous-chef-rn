@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {StyleSheet} from 'react-native-unistyles';
 
 interface NotificationHeaderProps {

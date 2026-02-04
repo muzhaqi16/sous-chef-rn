@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
+import { useStore } from '#store';
 
 type BrandItem = {
   id: string;
@@ -45,6 +46,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   onBrandSelected,
   suggestedBrands = [],
 }) => {
+  const isOnline = useStore(state => state.isOnline);
   const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
 
   // Use the shared autocomplete hook for debouncing and state management
@@ -56,6 +58,8 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     minChars: 2,
     debounceMs: 300,
     onChangeText: useCallback((text: string) => {
+      // Skip API call when offline
+      if (!isOnline) return;
       // This is called after debounce - trigger the GraphQL query
       // Only search if no matching suggested brands
       const lowerSearch = text.toLowerCase();
@@ -67,7 +71,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
           variables: { search: text, limit: 20 },
         });
       }
-    }, [searchBrands, suggestedBrands]),
+    }, [searchBrands, suggestedBrands, isOnline]),
     getDisplayValue: (item) => item.name,
   });
 

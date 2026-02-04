@@ -12,7 +12,7 @@ export class PantryScreen extends BaseScreen {
   protected screenID = 'pantry-screen';
 
   // Element IDs
-  private readonly addButton = 'pantry-add-button';
+  private readonly addButton = 'tab-bar-add-button';
   private readonly scanBarcodeButton = 'pantry-scan-barcode-button';
   private readonly listContainer = 'pantry-list';
   private readonly searchInput = 'pantry-search-input';
@@ -69,8 +69,13 @@ export class PantryScreen extends BaseScreen {
    * Navigate to pantry tab
    */
   async navigateToTab() {
-    await this.tapByID('tab-pantry');
-    await this.waitForScreen();
+    // Wait for tab bar to be ready (longer timeout after relaunch)
+    await waitFor(element(by.id('tab-pantry')))
+      .toBeVisible()
+      .withTimeout(10000);
+    await element(by.id('tab-pantry')).tap();
+    // Use longer timeout since screen may take time to load data
+    await this.waitForScreen(10000);
   }
 
   /**
@@ -91,7 +96,11 @@ export class PantryScreen extends BaseScreen {
       // Overlay not present, continue
     }
 
-    await this.tapByID(this.addButton);
+    // Wait for add button to be visible and tap it
+    await waitFor(element(by.id(this.addButton)))
+      .toBeVisible()
+      .withTimeout(3000);
+    await element(by.id(this.addButton)).tap();
   }
 
   /**
@@ -115,12 +124,28 @@ export class PantryScreen extends BaseScreen {
     unit?: string,
     expirationDate?: string,
   ) {
+    // Tap add button and wait for modal - retry once if needed
     await this.tapAddButton();
 
-    // Wait for add item modal/screen
-    await waitFor(element(by.id('add-pantry-item-modal')))
+    // Wait for "Add Manually" button to appear (indicates modal is open)
+    try {
+      await waitFor(element(by.id('add-pantry-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    } catch {
+      // Modal didn't open - retry the tap
+      console.log('Modal did not open, retrying add button tap...');
+      await this.tapAddButton();
+      await waitFor(element(by.id('add-pantry-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    }
+    await element(by.id('add-pantry-add-manually-button')).tap();
+
+    // Wait for details modal to appear
+    await waitFor(element(by.id('add-pantry-item-details-modal')))
       .toBeVisible()
-      .withTimeout(3000);
+      .withTimeout(5000);
 
     // Fill in item details
     // Use replaceText for item name to avoid Android stylus popup
@@ -149,11 +174,21 @@ export class PantryScreen extends BaseScreen {
       const unitInput = element(by.id('add-pantry-item-unit-picker'));
       await unitInput.replaceText(unit);
 
-      // Press enter to confirm the unit
+      // Press enter to confirm the unit and dismiss autocomplete
       await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
 
-      // Wait a moment for autocomplete to process the selection and keyboard to dismiss
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait for autocomplete to process and dismiss
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Tap on the modal background to dismiss any remaining autocomplete dropdown
+      try {
+        await element(by.id('add-pantry-item-details-modal')).tap({ x: 10, y: 10 });
+      } catch {
+        // Modal tap failed, continue anyway
+      }
+
+      // Wait for keyboard and autocomplete to fully dismiss
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     if (expirationDate) {
@@ -185,9 +220,9 @@ export class PantryScreen extends BaseScreen {
       // Otherwise, error modal didn't appear (good!), continue
     }
 
-    // Wait for add item modal to disappear first (navigation started)
+    // Wait for details modal to disappear first (navigation started)
     // Increased timeout to 15s to account for GraphQL mutation + Apollo cache updates
-    await waitFor(element(by.id('add-pantry-item-modal')))
+    await waitFor(element(by.id('add-pantry-item-details-modal')))
       .not.toBeVisible()
       .withTimeout(15000);
 

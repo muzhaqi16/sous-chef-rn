@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
-import { useStorageLocationManagement } from '#hooks';
-import { StorageLocationCard } from '#components/organisms/storageLocation';
-import { StorageLocationSheet } from '#components/modals/StorageLocationSheet';
-import { commonStyles } from '#styles';
-import { Icon } from '#utils';
+import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
+import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
+import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
+import { commonStyles } from '#/styles/commonStyles';
+import { Icon } from '#utils/iconUtils';
 
 type RouteParams = {
   homeId: string;

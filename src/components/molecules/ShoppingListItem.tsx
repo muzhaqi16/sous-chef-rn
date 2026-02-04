@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, TextStyle } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Image, TextStyle, useWindowDimensions } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SwipeableItem } from './SwipeableItem';
+import { SwipeableItem } from './SwipeableItem/SwipeableItem';
+import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
+import { SLIDE_PRESETS } from '#/constants/animations';
 import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
@@ -39,8 +42,25 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   onEdit,
 }) => {
   const { theme } = useUnistyles();
+  const { width: screenWidth } = useWindowDimensions();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(quantity);
+
+  // Slide animation for delete action
+  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
+    itemId: id,
+    slideDistance: screenWidth,
+    duration: SLIDE_PRESETS.exitWithFade.duration,
+    withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
+  });
+
+  // Wrap delete action with slide animation
+  const handleDelete = useCallback(() => {
+    if (onDelete) {
+      triggerSlide(1, () => onDelete(id));
+    }
+  }, [onDelete, triggerSlide, id]);
 
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
@@ -51,8 +71,9 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   };
 
   return (
-    <SwipeableItem onDelete={() => onDelete(id)} onEdit={() => onEdit(id)}>
-      <View style={styles.container}>
+    <Animated.View style={animatedSlideStyle}>
+      <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
+        <View style={styles.container}>
         <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => onToggle(id)}
@@ -60,6 +81,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
           accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
           accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
           accessibilityState={{ checked: isPurchased }}
+          testID={`shopping-item-checkbox-${id}`}
         >
           <View style={styles.checkbox}>
             {isPurchased && <Icon name="check" size={16} color="white" />}
@@ -124,8 +146,9 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
             </TouchableOpacity>
           )}
         </View>
-      </View>
-    </SwipeableItem>
+        </View>
+      </SwipeableItem>
+    </Animated.View>
   );
 };
 

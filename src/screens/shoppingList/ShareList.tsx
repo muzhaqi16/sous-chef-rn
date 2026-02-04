@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -16,12 +16,13 @@ import {
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '#generated';
-import { useShoppingListDetails } from '#/hooks';
+import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useAppStore, selectUser } from '#store/useAppStore';
-import { Button } from '#components/base';
+import { Button } from '#components/base/Button';
+import { OfflineGate } from '#components/atoms/OfflineGate';
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (status: string) => {
@@ -266,66 +267,71 @@ export const ShareList: React.FC = () => {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.inviteSection}>
-        <Text style={styles.sectionTitle}>Invite Members</Text>
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter email address"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleShare}
-            disabled={sharing}
-          >
-            {sharing ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Icon name="send" size={20} color="white" />
-            )}
-          </TouchableOpacity>
+      <OfflineGate
+        message="Sharing not available offline"
+        description="Connect to the internet to invite members or manage list sharing."
+      >
+        <View style={styles.inviteSection}>
+          <Text style={styles.sectionTitle}>Invite Members</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleShare}
+              disabled={sharing}
+            >
+              {sharing ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Icon name="send" size={20} color="white" />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      {/* Only show if there are any members */}
-      {collaborators.length > 0 && (
-        <View style={styles.membersSection}>
-          <Text style={styles.sectionTitle}>Current Members</Text>
-          <FlatList
-            data={collaborators}
-            keyExtractor={member => member.id}
-            renderItem={renderMemberItem}
-            refreshing={isRefetching}
-            onRefresh={refetch}
-          />
-        </View>
-      )}
+        {/* Only show if there are any members */}
+        {collaborators.length > 0 && (
+          <View style={styles.membersSection}>
+            <Text style={styles.sectionTitle}>Current Members</Text>
+            <FlatList
+              data={collaborators}
+              keyExtractor={member => member.id}
+              renderItem={renderMemberItem}
+              refreshing={isRefetching}
+              onRefresh={refetch}
+            />
+          </View>
+        )}
 
-      {/* Leave List section - only show for non-owners who are collaborators */}
-      {currentUserCollaborator && !isOwner && (
-        <View style={styles.leaveSection}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <Text style={styles.leaveDescription}>
-            Leaving this list will remove your access to all shared items.
-          </Text>
-          <Button
-            title="Leave List"
-            onPress={handleLeaveList}
-            variant="danger"
-            loading={leaving}
-            disabled={leaving}
-          />
-        </View>
-      )}
+        {/* Leave List section - only show for non-owners who are collaborators */}
+        {currentUserCollaborator && !isOwner && (
+          <View style={styles.leaveSection}>
+            <Text style={styles.sectionTitle}>Danger Zone</Text>
+            <Text style={styles.leaveDescription}>
+              Leaving this list will remove your access to all shared items.
+            </Text>
+            <Button
+              title="Leave List"
+              onPress={handleLeaveList}
+              variant="danger"
+              loading={leaving}
+              disabled={leaving}
+            />
+          </View>
+        )}
 
-      <CollaboratorPermissionsBottomSheet
-        ref={permissionsBottomSheetRef}
-        shoppingListId={listId}
-        onSuccess={refetch}
-      />
+        <CollaboratorPermissionsBottomSheet
+          ref={permissionsBottomSheetRef}
+          shoppingListId={listId}
+          onSuccess={refetch}
+        />
+      </OfflineGate>
     </View>
   );
 };

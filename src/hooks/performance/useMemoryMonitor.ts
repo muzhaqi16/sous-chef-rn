@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MemoryMonitor } from '#/services/performance';
+import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 
 /**
  * Hook to monitor memory usage for a component
