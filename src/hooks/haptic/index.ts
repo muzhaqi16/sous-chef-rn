@@ -1,1 +1,0 @@
-export { useHaptic } from './useHaptic';

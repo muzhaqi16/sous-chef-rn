@@ -5,16 +5,16 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { ProfileHeader, SettingsSection } from '#components';
-import {
-  useProfileData,
-  useConfigurableSettings,
-  useAppNavigation,
-  useTabBarAddButton,
-} from '#hooks';
-import { ActionTray, ActionTrayRef } from '#/components/templates/ActionTray';
+import { ProfileHeader } from '#components/organisms/ProfileHeader';
+import { SettingsSection } from '#components/organisms/SettingsSection';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useConfigurableSettings } from '#hooks/profile/useConfigurableSettings';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { ActionTray } from '#/components/templates/ActionTray/ActionTray';
+import type { ActionTrayRef } from '#/components/templates/ActionTray/types';
 import { useTabBarActions } from '#/context/TabBarActionsContext';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';

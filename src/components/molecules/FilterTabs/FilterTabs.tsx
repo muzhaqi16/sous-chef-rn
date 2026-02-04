@@ -1,11 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { FilterTabsItem } from './FilterTabsItem';
 import type { FilterTabConfig, FilterTabsProps } from './types';
-
-export type { FilterTabConfig, FilterTabsProps, FilterTabActionButton } from './types';
 
 /**
  * Generic configurable tab filter component

@@ -13,10 +13,11 @@ import { Input } from '#components/base/Input';
 import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
 import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocompleteInput';
-import { EditableCounter, FieldRow } from '#components/molecules';
-import { useAppNavigation } from '#hooks';
+import { EditableCounter } from '#components/molecules/EditableCounter';
+import { FieldRow } from '#components/molecules/FieldRow';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
   handleVersionConflict,

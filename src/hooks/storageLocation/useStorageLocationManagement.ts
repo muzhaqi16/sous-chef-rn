@@ -10,12 +10,12 @@ import {
   CreateStorageLocationInput,
   UpdateStorageLocationInput,
 } from '#generated';
-import { usePreservedArrayData } from '#/hooks/apollo';
-import { useCrudOperations } from '#/hooks/utils';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   createAddToQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references

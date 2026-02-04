@@ -7,7 +7,7 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {getInitials} from '#utils/ownershipHelpers';
 
 interface AvatarProps {

@@ -1,9 +1,9 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useStore} from '#store';
-import {useAppNavigation} from '#/hooks';
+import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 
 interface NotificationBadgeProps {
   size?: number;

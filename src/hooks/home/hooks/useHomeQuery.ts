@@ -9,7 +9,7 @@
 
 import { useMemo, useRef, useCallback } from 'react';
 import { useGetHomesQuery } from '#generated';
-import { usePreservedArrayData } from '#/hooks/apollo';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 
 /**

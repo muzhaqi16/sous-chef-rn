@@ -4,7 +4,7 @@ import {
   ScreenMetrics,
   MemorySnapshot,
   DEFAULT_PERFORMANCE_CONFIG,
-} from '#/services/performance';
+} from '#/services/performance/types';
 
 export interface PerformanceState {
   // Configuration

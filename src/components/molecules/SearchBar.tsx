@@ -1,9 +1,11 @@
 import { type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { BaseInput, ActionButton, AnimatedActionButton } from '#components';
-import { commonStyles } from '#/styles';
-import { Icon } from '#utils';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { ActionButton } from './ActionButton';
+import { AnimatedActionButton } from '../atoms/AnimatedActionButton';
+import { commonStyles } from '#/styles/commonStyles';
+import { Icon } from '#utils/iconUtils';
 
 export interface SearchBarAction {
   icon: string;

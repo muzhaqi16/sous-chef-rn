@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
-import { usePagination } from '#/hooks/utils';
+import { usePagination } from '#/hooks/utils/usePagination';
 
 export interface RecipeFilters {
   category?: RecipeCategory;

@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import type { ItemImage } from '#types';
+import { Icon } from '#utils/iconUtils';
+import type { ItemImage } from '#/types/nutrition';
 import {
   parseImages,
   groupImagesByPerspective,

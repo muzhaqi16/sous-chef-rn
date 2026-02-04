@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { SelectorItemProps, SelectableItem } from './types';
 
 const AnimatedTouchableOpacity =

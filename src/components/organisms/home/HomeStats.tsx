@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface HomeStatsProps {
   totalHomes: number;

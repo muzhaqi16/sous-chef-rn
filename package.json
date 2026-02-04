@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "2.4.1",
+  "version": "2.4.4",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -81,9 +81,8 @@
     "@react-navigation/native": "^7.1.25",
     "@react-navigation/native-stack": "^7.8.6",
     "@react-navigation/stack": "^7.6.12",
-    "@shopify/flash-list": "^2.2.0",
+    "@shopify/flash-list": "^2.2.1",
     "@shopify/react-native-skia": "^2.4.7",
-    "@souscheflabs/reanimated-flashlist": "^0.5.2",
     "date-fns": "^4.1.0",
     "fractional-indexing": "^3.2.0",
     "graphql": "^16.12.0",
@@ -93,7 +92,7 @@
     "react": "19.1.1",
     "react-hook-form": "^7.56.2",
     "react-native": "^0.82.1",
-    "react-native-config": "^1.6.0",
+    "react-native-config": "^1.6.1",
     "react-native-device-info": "^15.0.1",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",
@@ -128,9 +127,7 @@
     "@graphql-codegen/typescript": "^5.0.0",
     "@graphql-codegen/typescript-operations": "^5.0.0",
     "@graphql-codegen/typescript-react-apollo": "^4.3.3",
-    "@react-native-community/cli": "^14.0.1",
-    "@react-native-community/cli-platform-android": "^14.0.1",
-    "@react-native-community/cli-platform-ios": "^14.0.1",
+    "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.82.1",
     "@react-native/eslint-config": "0.82.1",
     "@react-native/metro-config": "0.82.1",
@@ -143,6 +140,7 @@
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
     "babel-plugin-module-resolver": "^5.0.2",
+    "babel-plugin-react-compiler": "^1.0.0",
     "babel-plugin-transform-remove-console": "^6.9.4",
     "detox": "^20.46.0",
     "eslint": "^8.57.1",
@@ -155,8 +153,5 @@
   },
   "engines": {
     "node": ">=20"
-  },
-  "overrides": {
-    "fast-xml-parser": "5.3.3"
   }
 }

@@ -1,14 +1,12 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  CreateHomeScreen,
-  CreateShoppingListScreen,
-  SelectPantryItems,
-  ProfilePictureUploadScreen,
-  InviteMemberScreen,
-  OnboardingCompleteScreen,
-  BiometricSetupScreen,
-} from '#screens/onBoarding';
-import {ImageCropScreen} from '#screens/profile';
+import { CreateHomeScreen } from '#screens/onBoarding/createHome/CreateHomeScreen';
+import { CreateShoppingListScreen } from '#screens/onBoarding/CreateShoppingListScreen';
+import { SelectPantryItems } from '#screens/onBoarding/SelectPantryItems';
+import { ProfilePictureUploadScreen } from '#screens/onBoarding/ProfilePictureUploadScreen';
+import { InviteMemberScreen } from '#screens/onBoarding/InviteMemberScreen';
+import { OnboardingCompleteScreen } from '#screens/onBoarding/OnboardingCompleteScreen';
+import { BiometricSetupScreen } from '#screens/onBoarding/BiometricSetupScreen';
+import { ImageCropScreen } from '#screens/profile/ImageCropScreen';
 import {ImageFile} from '#components/molecules/ImagePicker';
 
 export type OnboardingStackParamList = {

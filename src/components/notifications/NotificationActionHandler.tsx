@@ -5,7 +5,7 @@ import {
   InvitationData,
 } from './InvitationAcceptanceModal';
 import { NotificationItem } from '#store/slices/notificationSlice';
-import { useAppNavigation } from '#/hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
 
 interface NotificationActionHandlerProps {

@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { NavigationState, Route } from 'react-native-tab-view';
-import type { FilterTabActionButton } from '#components/molecules/FilterTabs';
+import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
 import { FilterTabItem } from './FilterTabItem';
 
 interface FilterTabBarRoute extends Route {

@@ -6,7 +6,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { Icon, type IconLibrary } from '#utils';
+import { Icon, type IconLibrary } from '#utils/iconUtils';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;

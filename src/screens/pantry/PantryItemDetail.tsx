@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,16 +18,17 @@ import {
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
-import { NutritionSummary, ImageGalleryTabs } from '#components/molecules';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { NutritionSummary } from '#components/molecules/NutritionSummary';
+import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
-import { Icon } from '#/utils';
-import { spoonacularService } from '#/services/recipeApi';
+import { Icon } from '#/utils/iconUtils';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 
 // Helper function to calculate expiry info
@@ -118,6 +119,18 @@ export const PantryItemDetail: React.FC<{
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
+
+  // Ref to track timeout for cleanup
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (statusTimeoutRef.current) {
+        clearTimeout(statusTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Recipes to try state
   const [suggestedRecipes, setSuggestedRecipes] = useState<RecipeInformation[]>(
@@ -246,11 +259,11 @@ export const PantryItemDetail: React.FC<{
         },
       });
       setAddToListStatus('success');
-      setTimeout(() => setAddToListStatus('idle'), 3000);
+      statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
       console.error('Failed to add to shopping list:', error);
       setAddToListStatus('error');
-      setTimeout(() => setAddToListStatus('idle'), 3000);
+      statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     }
   }, [
     selectedShoppingListId,

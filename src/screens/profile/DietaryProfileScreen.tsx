@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
-import { ProfileScreenWrapper } from '#components/templates';
+import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
 import {
   Diet,
@@ -12,14 +12,14 @@ import {
   RestrictionSeverity,
 } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#/utils';
-import { StringArrayManager } from '#/components/organisms';
-import { NumberInputModal } from '#/components/organisms/modal';
+import { Icon } from '#/utils/iconUtils';
+import { StringArrayManager } from '#/components/organisms/StringArrayManager/StringArrayManager';
+import { NumberInputModal } from '#/components/organisms/modal/NumberInputModal';
 import { InfoRow } from '#/components/molecules/InfoRow';
 import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
-import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet';
-import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet';
+import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
+import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { theme } = useUnistyles();

@@ -8,15 +8,13 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  useSharedBottomSheetConfigs,
-  useAppNavigation,
-  useBottomSheetBackHandler,
-} from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
   type PantryItemSuggestion,
-} from '#hooks/pantry';
+} from '#hooks/pantry/usePantryItemSuggestions';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { useAppStore } from '#store/useAppStore';
@@ -29,14 +27,11 @@ import {
   ItemSuggestion,
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
-import {
-  ItemSuggestionsList,
-  BottomSheetSearchBar,
-  ActionCard,
-  SuggestionListItem,
-  type BottomSheetSearchBarRef,
-} from '#components/molecules';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
+import { BottomSheetSearchBar, type BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
+import { ActionCard } from '#components/molecules/ActionCard';
+import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
 interface AddToPantrySheetProps {

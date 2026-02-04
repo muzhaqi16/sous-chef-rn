@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {Text, TextStyle, StyleProp} from 'react-native';
 import {DisplayFormat} from '#/graphql/generated';
 
@@ -30,6 +30,34 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   style,
   showUnit = true,
 }) => {
+  // Memoize the expensive fraction conversion to avoid O(n²) loop on every render
+  // Must be called before any conditional returns to follow Rules of Hooks
+  const formattedQuantity = useMemo(() => {
+    // If we have the original user input, we'll use it instead (handled below)
+    if (quantityInput) {
+      return null;
+    }
+
+    if (quantity === null || quantity === undefined) {
+      return null;
+    }
+
+    switch (displayFormat) {
+      case DisplayFormat.Fraction:
+        return decimalToFraction(quantity);
+      case DisplayFormat.Mixed:
+        return decimalToMixed(quantity);
+      case DisplayFormat.Decimal:
+        return formatDecimal(quantity);
+      case DisplayFormat.Auto:
+      default:
+        if (displayAsFraction && shouldUseFraction(quantity)) {
+          return decimalToMixed(quantity);
+        }
+        return formatDecimal(quantity);
+    }
+  }, [quantity, quantityInput, displayFormat, displayAsFraction]);
+
   // If we have the original user input, use it (preserves fractions)
   if (quantityInput) {
     return (
@@ -41,32 +69,8 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   }
 
   // No quantity to display
-  if (quantity === null || quantity === undefined) {
+  if (formattedQuantity === null) {
     return <Text style={style}>-</Text>;
-  }
-
-  let formattedQuantity: string;
-
-  // Format based on display format preference
-  switch (displayFormat) {
-    case DisplayFormat.Fraction:
-      formattedQuantity = decimalToFraction(quantity);
-      break;
-    case DisplayFormat.Mixed:
-      formattedQuantity = decimalToMixed(quantity);
-      break;
-    case DisplayFormat.Decimal:
-      formattedQuantity = formatDecimal(quantity);
-      break;
-    case DisplayFormat.Auto:
-    default:
-      // Auto mode: use fractions for common values, decimals otherwise
-      if (displayAsFraction && shouldUseFraction(quantity)) {
-        formattedQuantity = decimalToMixed(quantity);
-      } else {
-        formattedQuantity = formatDecimal(quantity);
-      }
-      break;
   }
 
   return (

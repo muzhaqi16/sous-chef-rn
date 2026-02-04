@@ -1,4 +1,4 @@
-import {Icon} from '#/utils';
+import {Icon} from '#/utils/iconUtils';
 import React, {useState} from 'react';
 import {TouchableOpacity, View, Text, TextInput} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';

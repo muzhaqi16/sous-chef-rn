@@ -1,5 +1,5 @@
 import {NotificationType} from '#generated';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 
 type IconProps = React.ComponentProps<typeof Icon>;
 

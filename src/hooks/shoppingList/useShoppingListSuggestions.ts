@@ -4,7 +4,7 @@ import {
   SuggestionSource,
   GetShoppingListSuggestionsQuery,
 } from '#generated';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 /** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem =

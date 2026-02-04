@@ -3,7 +3,7 @@ import { ScrollView, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 interface ProfileScreenWrapperProps {
   children: React.ReactNode;

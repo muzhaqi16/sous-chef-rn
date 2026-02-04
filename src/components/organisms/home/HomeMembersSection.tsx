@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { getMemberDisplayName, getInviteDisplayName, type Member } from '#utils/formatters';
+import { Icon } from '#utils/iconUtils';
+import { getMemberDisplayName, type Member } from '#/utils/formatters/memberFormatters';
+import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
 import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 

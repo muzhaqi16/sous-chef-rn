@@ -10,12 +10,13 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs, useBottomSheetBackHandler } from '#hooks';
-import { TagInput } from '#components';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { TagInput } from '#components/molecules/TagInput';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;

@@ -7,6 +7,8 @@ const workletsPluginOptions = {
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
+    // React Compiler for automatic memoization (must be first)
+    'babel-plugin-react-compiler',
     [
       'module-resolver',
       {

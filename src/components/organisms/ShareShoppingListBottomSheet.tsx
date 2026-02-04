@@ -1,15 +1,15 @@
 import React, {useState, useRef} from 'react';
 import {Text} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, {BottomSheetRef} from '../molecules/BottomSheet';
+import BottomSheet, {type BottomSheetRef} from '../molecules/BottomSheet/BottomSheet';
 import {Button} from "../base/Button";
-import {EmailInput} from '../atoms';
+import { EmailInput } from '../atoms/EmailInput';
 import {useStore} from '../../store';
 import {
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '../../graphql/generated';
-import { useOfflineDisabled } from '#hooks';
+import { useOfflineDisabled } from '#hooks/useOfflineDisabled';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);

@@ -15,7 +15,7 @@ import {
 import { useErrorHandler } from '#/utils/errorHandling';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
-import { useCrudOperations } from '#/hooks/utils';
+import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToShoppingListItemsCache } from './utils';
 import type { ShoppingListItemInput } from './types';
 

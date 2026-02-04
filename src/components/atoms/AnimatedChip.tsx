@@ -8,7 +8,7 @@ import Animated, {
   LinearTransition,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 
 type AnimatedChipProps = {
   label: string;

@@ -1,17 +1,17 @@
 import React, { useMemo, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
-import { useTabBarActions } from '#context';
-import { Icon } from '#utils';
-import { ShoppingListAvatar } from '#components/atoms';
-import { useSelectorManagement } from '#hooks/ui';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { Icon } from '#utils/iconUtils';
+import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
+import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
 import type {
   SelectorConfig,
   ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector';
+} from '#components/organisms/AnimatedItemSelector/types';
 
 interface UseShoppingListSelectorOptions {
   listDataWithOwnership: any[];

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, TextInput, Pressable } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { parseFractionalInput } from '#/utils';
-import { Label } from '#components/atoms';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { Label } from '#components/atoms/Label';
 
 interface EditableCounterProps {
   label?: string;

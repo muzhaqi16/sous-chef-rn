@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
-import { useAllPendingInvites } from '#/hooks/invitations';
+import { useAllPendingInvites } from '#/hooks/invitations/useAllPendingInvites';
 import { useAuth } from '#/hooks/auth/useAuth';
 
 interface DataProviderProps {

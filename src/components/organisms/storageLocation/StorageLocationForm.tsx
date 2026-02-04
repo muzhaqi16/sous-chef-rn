@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { commonStyles } from '#styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 export interface StorageLocationFormRef {
   submit: () => void;

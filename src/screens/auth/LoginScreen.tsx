@@ -3,14 +3,17 @@ import { View, TouchableOpacity, Text } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 
-import { AuthFormTemplate, AuthWrapper } from '#components/templates';
-import { EmailInput, PasswordInput } from '#components/atoms';
+import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
+import { AuthWrapper } from '#components/templates/AuthWrapper';
+import { EmailInput } from '#components/atoms/EmailInput';
+import { PasswordInput } from '#components/atoms/PasswordInput';
 import { RememberMeModal } from '#components/organisms/RememberMeModal';
-import { getLoginValidationSchema } from '#/utils';
+import { getLoginValidationSchema } from '#/utils/validation/auth';
 import { type LoginInput } from '#generated';
-import { useAuth, useAuthNavigation } from '#hooks';
+import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { Telemetry } from '#/services/telemetry';
 
 export function LoginScreen() {

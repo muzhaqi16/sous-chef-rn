@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { OnBoardingWrapper } from '#components/templates';
-import { Button } from '#components';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
+import { Button } from '#components/base/Button';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   useInviteToHomeMutation,
@@ -10,7 +10,8 @@ import {
   MembershipRole,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { useOnboardingNavigation, useAuth } from '#hooks';
+import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
+import { useAuth } from '#hooks/auth/useAuth';
 
 type InviteEntry = {
   id: string;

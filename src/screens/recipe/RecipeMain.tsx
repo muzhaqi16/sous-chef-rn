@@ -5,39 +5,29 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import {
-  View,
-  Image,
-  Alert,
-  Text,
-  TouchableOpacity,
-  Pressable,
-} from 'react-native';
-import { useAppNavigation, useTabBarAddButton } from '#hooks';
+import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import {
-  ListTemplate,
-  HeaderAction,
-  RecipesHeader,
-  FolderPicker,
-  TagPicker,
-  FilterTabs,
-} from '#components';
-import type { FilterTabConfig } from '#components';
+import { ItemList } from '#components/organisms/ItemList';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { RecipesHeader } from '#components/molecules/RecipesHeader';
+import { FolderPicker } from '#components/molecules/FolderPicker';
+import { TagPicker } from '#components/molecules/TagPicker';
+import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
+import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#generated';
-import {
-  useSavedRecipes,
-  useRecipeFolders,
-  useRecipeTags,
-  useFolderActions,
-} from '#/hooks/recipe';
-import { spoonacularService } from '#/services/recipeApi';
+import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
+import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
+import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
+import { useFolderActions } from '#/hooks/recipe/useFolderActions';
+import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
 
@@ -213,8 +203,6 @@ export const RecipeMain: React.FC = React.memo(() => {
     const recipesToShow = showRandomRecipes ? randomRecipes : filteredRecipes;
 
     return recipesToShow.map((recipe: any) => {
-      // Handle both saved (backend) and random (external) recipe formats
-      const isExternalRecipe = !recipe.name && recipe.title; // External recipes use 'title'
       const name = recipe.name || recipe.title;
       const imageUrl = recipe.imageUrl || recipe.image;
       const servings = recipe.servings;
@@ -229,19 +217,17 @@ export const RecipeMain: React.FC = React.memo(() => {
 
       return {
         // For saved recipes, use recipeId for navigation; for external, use id
-        id: showRandomRecipes ? recipe.id : recipe.recipeId,
+        id: String(showRandomRecipes ? recipe.id : recipe.recipeId),
         title: name,
         subtitle: `${servings} servings${
           totalTime ? ` • ${totalTime} min` : ''
         }`,
-        badge: showRandomRecipes ? 'Suggested' : undefined,
+        badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
           <View style={styles.imageContainer}>
             <Image source={{ uri: imageUrl }} style={styles.leftImage} />
           </View>
         ) : undefined,
-        // Store whether this is an external recipe for navigation
-        isExternal: isExternalRecipe || showRandomRecipes,
       };
     });
   }, [filteredRecipes, randomRecipes, showRandomRecipes]);
@@ -272,35 +258,23 @@ export const RecipeMain: React.FC = React.memo(() => {
     [unfavoriteRecipeMutation],
   );
 
-  // Header actions
-  const headerActions = useMemo(
-    () => ({
-      left: [] as HeaderAction[],
-      right: [] as HeaderAction[],
-    }),
-    [],
-  );
-
-  // Search bar actions - use inner icon pattern for consistency with Pantry/Shopping List
-  const searchBarActions = useMemo(
-    () => ({
-      showSearchIcon: true,
-      innerRightIcon: (
-        <Pressable onPress={handleSearchRecipes} hitSlop={8}>
-          <Icon
-            name="search"
-            size={18}
-            color={theme.colors.primary}
-            library="Feather"
-          />
-        </Pressable>
-      ),
-    }),
+  // Search bar inner right icon - navigate to recipe search
+  const searchBarInnerRightIcon = useMemo(
+    () => (
+      <Pressable onPress={handleSearchRecipes} hitSlop={8}>
+        <Icon
+          name="search"
+          size={18}
+          color={theme.colors.primary}
+          library="Feather"
+        />
+      </Pressable>
+    ),
     [handleSearchRecipes, theme.colors.primary],
   );
 
   const emptyStateConfig = {
-    icon: 'book',
+    icon: 'book' as const,
     title: 'No saved recipes',
     description: 'Search for recipes and save your favorites',
     action: {
@@ -469,7 +443,6 @@ export const RecipeMain: React.FC = React.memo(() => {
     SuggestedHeader,
   ]);
 
-  // Footer component for pagination
   return (
     <View style={styles.container} testID="recipes-screen">
       <RecipesHeader
@@ -477,22 +450,22 @@ export const RecipeMain: React.FC = React.memo(() => {
         notificationCount={unreadCount}
         onAvatarPress={() => navigate('Notifications')}
       />
-      <ListTemplate
+      <View style={{ paddingHorizontal: theme.spacing.md }}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search recipes..."
+          showSearchIcon
+          innerRightIcon={searchBarInnerRightIcon}
+        />
+      </View>
+      <ItemList
         items={items}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         onItemPress={handleItemPress}
         onItemDelete={showRandomRecipes ? undefined : handleRemoveRecipe}
         onRefresh={handleRefresh}
-        loading={loading || loadingRandom}
-        hasNoData={false}
-        showUserHeader={false}
-        showHeader={false}
-        showSearchBar={true}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        emptyState={emptyStateConfig}
         ListHeaderComponent={FilterHeader}
+        emptyState={emptyStateConfig}
       />
 
       {/* Folder Picker Modal - filter only, no folder creation, with rename/delete */}

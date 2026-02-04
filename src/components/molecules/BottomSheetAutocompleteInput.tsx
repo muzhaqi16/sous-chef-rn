@@ -10,7 +10,7 @@ import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBa
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { Icon } from '#utils/iconUtils';
 
 // Memoized separator component to prevent re-renders

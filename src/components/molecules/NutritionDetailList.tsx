@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { NutritionsData, NutrientCategory } from '#types';
+import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
 import {
   parseNutritions,
   getNutrientEntries,

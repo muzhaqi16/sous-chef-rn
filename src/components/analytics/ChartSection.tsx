@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 
 interface ChartSectionProps {
   title: string;

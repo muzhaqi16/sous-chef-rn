@@ -3,11 +3,15 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigation } from '@react-navigation/native';
 
-import { AuthFormTemplate, AuthWrapper } from '#components/templates';
-import { EmailInput, PasswordInput, BaseInput } from '#components/atoms';
-import { getSignUpValidationSchema } from '#/utils';
+import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
+import { AuthWrapper } from '#components/templates/AuthWrapper';
+import { EmailInput } from '#components/atoms/EmailInput';
+import { PasswordInput } from '#components/atoms/PasswordInput';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { getSignUpValidationSchema } from '#/utils/validation/auth';
 import { type RegisterInput } from '#generated';
-import { useAuth, useAuthNavigation } from '#hooks';
+import { useAuth } from '#hooks/auth/useAuth';
+import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 

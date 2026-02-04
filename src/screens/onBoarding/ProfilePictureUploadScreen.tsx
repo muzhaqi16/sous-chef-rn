@@ -8,9 +8,9 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { OnBoardingWrapper } from '#components/templates';
-import { Button } from '#components';
-import { Icon } from '#utils';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
+import { Button } from '#components/base/Button';
+import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   launchCamera,
@@ -25,12 +25,13 @@ import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
-import { useImageUpload, useOnboardingNavigation } from '#hooks';
+import { useImageUpload } from '#hooks/useImageUpload';
+import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAppNavigation } from '#hooks';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,

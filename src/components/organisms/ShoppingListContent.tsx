@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
-import { SortableShoppingList } from '#components/organisms/SortableShoppingList';
+import { SortableShoppingList } from '#components/organisms/SortableShoppingList/SortableList';
 import { CollapsiblePurchasedSection } from '#components/molecules/CollapsiblePurchasedSection';
 import { EmptyState } from '#components/base/EmptyState';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton';
-import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
+import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList/types';
 
 interface ShoppingListContentProps {
   items: SortableShoppingListItem[];

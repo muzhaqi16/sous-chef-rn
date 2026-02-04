@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { Label } from '#components/atoms';
+import { Label } from '#components/atoms/Label';
 
 interface InlineItemAutocompleteProps {
   label?: string;

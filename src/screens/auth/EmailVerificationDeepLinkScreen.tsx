@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';

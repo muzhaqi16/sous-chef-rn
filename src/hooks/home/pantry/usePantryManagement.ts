@@ -1,42 +1,4 @@
 /**
- * Pantry Management Hooks
- *
- * Split into focused, single-responsibility hooks:
- * - usePantryQuery: Fetch pantry data with pagination
- * - usePantryStats: Compute statistics and derived data
- * - usePantryItemMutations: CRUD operations
- *
- * This index provides both:
- * 1. Individual hooks for fine-grained usage
- * 2. Composition hook for backward compatibility
- */
-
-// Individual hooks
-export { usePantryQuery } from './usePantryQuery';
-export { usePantryStats } from './usePantryStats';
-export { usePantryItemMutations } from './usePantryItemMutations';
-
-// Types
-export type {
-  PantryItemInput,
-  PantryItemUpdate,
-  PantryStats,
-  LocationCounts,
-  SectionedItems,
-} from './types';
-
-// Re-export StorageState for convenience
-export { StorageState } from '#generated';
-
-// ============================================================
-// Composition hook - backward compatible with usePantryManagement
-// ============================================================
-
-import { usePantryQuery } from './usePantryQuery';
-import { usePantryStats } from './usePantryStats';
-import { usePantryItemMutations } from './usePantryItemMutations';
-
-/**
  * usePantryManagement - Composition hook for all pantry operations
  *
  * This maintains backward compatibility with the original hook.
@@ -55,6 +17,16 @@ import { usePantryItemMutations } from './usePantryItemMutations';
  * const { stats, locationCounts } = usePantryStats(pantryItems);
  * ```
  */
+
+import { usePantryQuery } from './usePantryQuery';
+import { usePantryStats } from './usePantryStats';
+import { usePantryItemMutations } from './usePantryItemMutations';
+
+// StorageState is available from '#generated' directly
+// import { StorageState } from '#generated';
+// Types are available from './types' directly
+// import type { PantryItemInput, PantryItemUpdate, PantryStats, LocationCounts, SectionedItems } from '#hooks/home/pantry/types';
+
 export function usePantryManagement(pantryId: string | undefined) {
   // Query hook - fetches pantry data
   const {

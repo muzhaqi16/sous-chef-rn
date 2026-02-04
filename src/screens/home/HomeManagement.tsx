@@ -15,27 +15,24 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
-import { useAppNavigation } from '#hooks';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useHomeManagement } from '#/hooks';
+import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
 import { toastService } from '#/services/toastService';
-import {
-  HomeStats,
-  CreateHomeForm,
-  HomeCard,
-  PartialHome,
-} from '#/components/organisms/home';
+import { HomeStats } from '#/components/organisms/home/HomeStats';
+import { CreateHomeForm } from '#/components/organisms/home/CreateHomeForm';
+import { HomeCard, type PartialHome } from '#/components/organisms/home/HomeCard';
 import {
   findUserMembership,
   getInvitableRoles,
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
-import { commonStyles } from '#/styles';
+import { commonStyles } from '#/styles/commonStyles';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();

@@ -5,7 +5,7 @@
 import {
   createAddToQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,
-} from '#/apollo/utils';
+} from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater utilities for homes
 export const addToHomesCache = createAddToQueryFieldUpdater('homes');

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { commonStyles } from '#styles';
+import { Icon } from '#utils/iconUtils';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface StorageLocationCardProps {
   location: any;

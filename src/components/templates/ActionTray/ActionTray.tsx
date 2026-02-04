@@ -102,8 +102,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
 
 ActionTray.displayName = 'ActionTray';
 
-export type { ActionTrayRef, ActionTrayProps } from './types';
-
 const styles = UnistylesStyleSheet.create(theme => ({
   modal: {
     marginHorizontal: '2.5%', // Creates 95% width centered

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BaseInput } from '#components';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 
 export type FormValues = {

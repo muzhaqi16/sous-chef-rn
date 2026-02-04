@@ -9,8 +9,8 @@ import {
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { Icon } from '#utils/iconUtils';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 
 export interface TagPickerProps {
   visible: boolean;

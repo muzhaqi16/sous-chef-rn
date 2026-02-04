@@ -1,6 +1,6 @@
 import React, {useCallback, useMemo} from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {formatDistanceToNow} from 'date-fns';
 import {NotificationItem as NotificationType} from '#store/slices/notificationSlice';

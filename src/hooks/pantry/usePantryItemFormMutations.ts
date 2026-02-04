@@ -15,7 +15,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 // Cache updater for adding items to Pantry.itemsConnection
 const addToPantryItemsCache = createAddToParentConnectionUpdater<any>(

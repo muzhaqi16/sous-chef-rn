@@ -12,7 +12,7 @@ import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
-import { useShowNavigationLabels } from '#hooks/settings';
+import { useShowNavigationLabels } from '#hooks/settings/useSettings';
 
 export const TAB_BAR_HEIGHT = 65;
 

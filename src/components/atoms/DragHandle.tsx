@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 
 interface DragHandleProps {
   onLongPress: () => void;

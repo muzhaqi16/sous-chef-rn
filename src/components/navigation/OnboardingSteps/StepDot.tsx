@@ -6,7 +6,7 @@ import Animated, {
   interpolateColor,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);

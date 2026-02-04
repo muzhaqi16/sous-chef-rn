@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
 import {Text, View, ActivityIndicator} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {OnBoardingWrapper} from '#components/templates';
-import {Button} from '#components';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
+import {Button} from '#components/base/Button';
 import {useAppStore} from '#store/useAppStore';
 import {useCompleteOnboardingMutation} from '#generated';
 

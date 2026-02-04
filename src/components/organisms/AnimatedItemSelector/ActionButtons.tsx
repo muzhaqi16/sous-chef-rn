@@ -6,7 +6,7 @@ import Animated, {
   LinearTransition,
   SlideInDown,
 } from 'react-native-reanimated';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import type { ActionButtonConfig } from './types';
 
 interface ActionButtonsProps {

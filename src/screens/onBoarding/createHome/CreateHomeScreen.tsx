@@ -10,15 +10,15 @@ import {
   FlatList,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { formatRole } from '#utils/formatters';
+import { formatRole } from '#utils/formatters/roleFormatters';
 
 // Components
 import { FormContent, type FormValues } from './FormContent';
 import { LoadingView } from './LoadingView';
-import { OnBoardingWrapper } from '#components/templates';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { SubmitButton } from './SubmitButton';
 import { ErrorMessage } from './ErrorMessage';
-import { Button } from '#components';
+import { Button } from '#components/base/Button';
 
 // GraphQL
 import {
@@ -38,10 +38,10 @@ import {
   selectUser,
   selectSelectedHomeId,
 } from '#store/useAppStore';
-import { useOnboardingNavigation } from '#hooks';
+import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 
 // Validation & Helpers
-import { getCreateHomeSchema } from '#/utils';
+import { getCreateHomeSchema } from '#/utils/validation/onboarding';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';

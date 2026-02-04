@@ -1,33 +1,4 @@
 /**
- * Home Management Hooks
- *
- * Split into focused, single-responsibility hooks:
- * - useHomeQuery: Fetch homes and compute statistics
- * - useHomeSelection: Default home selection logic
- * - useHomeMutations: Create, update, delete operations
- * - useHomeInvitations: Invite and join by code
- *
- * This index provides both:
- * 1. Individual hooks for fine-grained usage
- * 2. Composition hook for backward compatibility
- */
-
-// Individual hooks
-export { useHomeQuery } from './useHomeQuery';
-export { useHomeSelection } from './useHomeSelection';
-export { useHomeMutations } from './useHomeMutations';
-export { useHomeInvitations, MembershipRole } from './useHomeInvitations';
-
-// ============================================================
-// Composition hook - backward compatible with useHomeManagement
-// ============================================================
-
-import { useHomeQuery } from './useHomeQuery';
-import { useHomeSelection } from './useHomeSelection';
-import { useHomeMutations } from './useHomeMutations';
-import { useHomeInvitations } from './useHomeInvitations';
-
-/**
  * useHomeManagement - Composition hook for all home operations
  *
  * This maintains backward compatibility with the original hook.
@@ -47,6 +18,15 @@ import { useHomeInvitations } from './useHomeInvitations';
  * const { setDefaultHome } = useHomeSelection({ homes, remoteDefaultHomeId, loading });
  * ```
  */
+
+import { useHomeQuery } from './useHomeQuery';
+import { useHomeSelection } from './useHomeSelection';
+import { useHomeMutations } from './useHomeMutations';
+import { useHomeInvitations } from './useHomeInvitations';
+
+// MembershipRole is available from '#generated' directly
+// import { MembershipRole } from '#generated';
+
 export function useHomeManagement() {
   // Query hook - fetches homes and computes stats
   const {

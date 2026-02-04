@@ -8,7 +8,7 @@ import React, {
 import { View, TouchableOpacity } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, type IconLibrary } from '#utils';
+import { Icon, type IconLibrary } from '#utils/iconUtils';
 
 export interface BottomSheetSearchBarAction {
   icon: string;

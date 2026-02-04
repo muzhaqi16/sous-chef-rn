@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useGetPopularItemsQuery } from '#generated';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 export interface PopularItem {
   id: string;

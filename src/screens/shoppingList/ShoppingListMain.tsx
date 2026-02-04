@@ -8,39 +8,33 @@ import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 // Components
-import {
-  AnimatedItemSelector,
-  ListTemplate,
-  ShoppingListHeader,
-  ShoppingListTabs,
-  PaginationFooter,
-  SwipeHintOverlay,
-} from '#components';
-import { Icon } from '#utils';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { ListTemplate } from '#components/templates/ListTemplate';
+import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
+import { PaginationFooter } from '#components/organisms/PaginationFooter';
+import { SwipeHintOverlay } from '#components/organisms/SwipeHintOverlay';
+import { Icon } from '#utils/iconUtils';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
 // Hooks & Context
-import {
-  useAppNavigation,
-  useProfileData,
-  useTabBarAddButton,
-  useFeatureHint,
-  useShoppingListScreen,
-  useShoppingListActions,
-  useShoppingListSelectorModal,
-  useItemReordering,
-} from '#hooks';
-import { useSwipeableCoordinator } from '#hooks/ui';
-import {
-  useTabBarActions,
-  ShoppingListModalsProvider,
-  useShoppingListModals,
-} from '#context';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { useFeatureHint } from '#hooks/useFeatureHint';
+import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
+import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
+import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
+import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
+import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useStableRef } from '#/hooks/utils';
+import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import { useScreenTransition } from '#hooks/performance';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -99,9 +93,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     const { navigate, navigateTo } = useAppNavigation();
     const { setScannerProps } = useTabBarActions();
-    const {
-      theme: { colors },
-    } = useUnistyles();
+    const { theme } = useUnistyles();
 
     // Get profile data for header
     const { profile } = useProfileData();
@@ -224,27 +216,24 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       );
     }, [currentListDetails, user?.id]);
 
-    // Search bar actions
-    const searchBarActions = useMemo(
-      () => ({
-        showSearchIcon: true,
-        innerRightIcon:
-          searchQuery.trim().length === 0 ? (
-            <Pressable
-              onPress={handleOpenSelector}
-              hitSlop={8}
-              testID="shopping-list-selector"
-            >
-              <Icon
-                name="list"
-                size={18}
-                color={colors.textTertiary}
-                library="Ionicons"
-              />
-            </Pressable>
-          ) : undefined,
-      }),
-      [handleOpenSelector, searchQuery, colors],
+    // Search bar inner right icon (list selector button)
+    const searchBarInnerRightIcon = useMemo(
+      () =>
+        searchQuery.trim().length === 0 ? (
+          <Pressable
+            onPress={handleOpenSelector}
+            hitSlop={8}
+            testID="shopping-list-selector"
+          >
+            <Icon
+              name="list"
+              size={18}
+              color={theme.colors.textTertiary}
+              library="Ionicons"
+            />
+          </Pressable>
+        ) : undefined,
+      [handleOpenSelector, searchQuery, theme.colors.textTertiary],
     );
 
     // Memoized customListProps
@@ -403,10 +392,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           />
           <ListTemplate
             items={[]}
-            showUserHeader={false}
-            showSearchBar={false}
             emptyState={noListsEmptyState}
-            hasNoData={true}
           />
         </View>
       );
@@ -430,11 +416,18 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}
         />
+        <View style={{ paddingHorizontal: theme.spacing.md }}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search shopping list..."
+            showSearchIcon
+            innerRightIcon={searchBarInnerRightIcon}
+          />
+        </View>
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           onItemPress={id =>
             navigate('ItemDetail', { listId: currentListId, itemId: id })
           }
@@ -443,12 +436,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           }
           onItemDelete={handleDeleteItem}
           onRefresh={handleRefresh}
-          searchPlaceholder="Search shopping list..."
-          listName={currentList?.name || 'Shopping List'}
-          completedCount={sortableItems.filter(item => item.isPurchased).length}
-          showUserHeader={false}
-          showSearchBar={true}
-          searchBarActions={searchBarActions}
           testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}

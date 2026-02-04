@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Text, ActivityIndicator, ScrollView, View } from 'react-native';
-import { OnBoardingWrapper } from '#components/templates';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
-import { useOnboardingNavigation, useSelectableItems } from '#hooks';
+import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
+import { useSelectableItems } from '#hooks/useSelectableItems';
 import {
   useGetOnboardingItemsQuery,
   useCreatePantryItemMutation,
@@ -14,7 +15,9 @@ import {
   ItemType,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { Button, AnimatedChip, AnimatedButton } from '#components';
+import { Button } from '#components/base/Button';
+import { AnimatedChip } from '#components/atoms/AnimatedChip';
+import { AnimatedButton } from '#components/atoms/AnimatedButton';
 
 export const SelectPantryItems = () => {
   const { navigateToNextStep, navigateToPreviousStep } =

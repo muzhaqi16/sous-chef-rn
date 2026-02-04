@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 
 interface ButtonProps {
   onPress: () => void;

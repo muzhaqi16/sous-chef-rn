@@ -21,9 +21,9 @@ import {
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
+import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { useSharedBottomSheetConfigs } from '#hooks';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 
 /** Protected folders that cannot be renamed or deleted */
 const PROTECTED_FOLDERS = ['Favorites'];

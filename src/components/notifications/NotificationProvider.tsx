@@ -1,5 +1,7 @@
 import React from 'react';
-import {useNotifications, useNotificationSettings, useAuth} from '#hooks';
+import { useNotifications } from '#hooks/notifications/useNotifications';
+import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
+import { useAuth } from '#hooks/auth/useAuth';
 
 interface NotificationProviderProps {
   children: React.ReactNode;

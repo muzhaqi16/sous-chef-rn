@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MembershipRole } from '#generated';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 interface InviteUserModalProps {
   visible: boolean;

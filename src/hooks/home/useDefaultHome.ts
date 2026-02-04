@@ -11,7 +11,7 @@ import {
   selectIsLoggingOut,
 } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
-import { usePreservedArrayData } from '#/hooks/apollo';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   normalizeHome,
   normalizeHomes,

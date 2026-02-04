@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
-import { Icon } from '#/utils';
+import { Icon } from '#/utils/iconUtils';
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;

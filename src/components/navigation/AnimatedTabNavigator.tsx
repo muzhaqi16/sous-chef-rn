@@ -6,7 +6,7 @@ import {
 } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native-unistyles';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
-import { FloatingTabBar } from './FloatingTabBar';
+import { FloatingTabBar } from './FloatingTabBar/FloatingTabBar';
 
 interface AnimatedTabNavigatorProps<
   T extends Record<string, object | undefined>,

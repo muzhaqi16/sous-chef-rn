@@ -1,8 +1,10 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import {Icon} from '#utils/iconUtils';
 import {ImagePicker, ImageFile} from './ImagePicker';
+
+// ImageFile type should be imported from ImagePicker.tsx directly
 
 interface ProductImagePickerProps {
   selectedImage: ImageFile | null;

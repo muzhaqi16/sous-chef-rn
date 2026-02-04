@@ -1,12 +1,10 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {
-  ShoppingListMain,
-  ListSettings,
-  ShareList,
-  AddEditItem,
-  ShoppingListItemDetail,
-  PurchaseHistoryScreen,
-} from '#screens/shoppingList';
+import { ShoppingListMain } from '#screens/shoppingList/ShoppingListMain';
+import { ListSettings } from '#screens/shoppingList/ListSettings';
+import { ShareList } from '#screens/shoppingList/ShareList';
+import { AddEditItem } from '#screens/shoppingList/AddEditItem';
+import { ShoppingListItemDetail } from '#screens/shoppingList/ItemDetail';
+import { PurchaseHistoryScreen } from '#screens/shoppingList/PurchaseHistoryScreen';
 
 export type ShoppingListStackParamList = {
   ShoppingListMain: undefined;

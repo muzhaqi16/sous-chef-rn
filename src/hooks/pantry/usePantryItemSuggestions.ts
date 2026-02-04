@@ -4,7 +4,7 @@ import {
   PantrySuggestionSource,
   type GetPantryItemSuggestionsQuery,
 } from '#generated';
-import { useIsEffectivelyOffline } from '#hooks/settings';
+import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 type PantryItemSuggestion =
   GetPantryItemSuggestionsQuery['pantryItemSuggestions'][number];

@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchUnitsQuery } from '#generated';
 import { useStore } from '#store';
-import { Label } from '#components/atoms';
+import { Label } from '#components/atoms/Label';
 
 interface Unit {
   id: string;

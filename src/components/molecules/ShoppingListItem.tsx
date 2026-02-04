@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Image, TextStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SwipeableItem } from './SwipeableItem';
+import { SwipeableItem } from './SwipeableItem/SwipeableItem';
 import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';

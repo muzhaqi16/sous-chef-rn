@@ -1,20 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem';
+import { SwipeableItem } from '#/components/molecules/SwipeableItem/SwipeableItem';
 import type { BaseItemCardProps } from './types';
-
-// Re-export types and slot components
-export type {
-  BaseItemCardProps,
-  CardVariant,
-  CardLeftSlotProps,
-  CardContentProps,
-  CardRightSlotProps,
-} from './types';
-export { CardLeftSlot } from './CardLeftSlot';
-export { CardContent } from './CardContent';
-export { CardRightSlot } from './CardRightSlot';
 
 /**
  * Base item card component with swipeable actions

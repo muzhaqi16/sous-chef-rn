@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { FormInput } from '#components/molecules';
+import { Icon } from '#utils/iconUtils';
+import { FormInput } from './FormInput';
 
 interface EditableFieldProps {
   label: string;

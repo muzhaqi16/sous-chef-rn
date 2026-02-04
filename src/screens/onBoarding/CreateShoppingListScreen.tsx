@@ -4,12 +4,10 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 
-import {
-  OnBoardingWrapper,
-  DynamicFormFields,
-  BaseInput,
-  Button,
-} from '#components';
+import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { Button } from '#components/base/Button';
 import {
   useCreateShoppingListMutation,
   useGetShoppingListsLiteQuery,
@@ -20,8 +18,8 @@ import {
   selectUser,
   selectSelectedHomeId,
 } from '#store/useAppStore';
-import { useOnboardingNavigation } from '#hooks';
-import { createShoppingListSchema } from '#utils';
+import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
+import { createShoppingListSchema } from '#utils/validation/onboarding';
 
 type FormValues = {
   shoppingListName: string;

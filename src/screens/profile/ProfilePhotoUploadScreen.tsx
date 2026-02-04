@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
-import { useSafeNavigation } from '#hooks';
-import { Icon } from '#utils';
+import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
+import { Icon } from '#utils/iconUtils';
 import {
   launchCamera,
   launchImageLibrary,
@@ -25,7 +25,7 @@ import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
-import { useImageUpload } from '#hooks';
+import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
