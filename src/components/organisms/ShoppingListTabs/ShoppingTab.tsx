@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
@@ -8,6 +8,11 @@ import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingList
 import { EmptyState } from '#components/base/EmptyState';
 import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import {
+  StaggeredEntryProvider,
+  useStaggeredEntry,
+} from '#context/StaggeredEntryContext';
+import { staggeredEntryAnimation } from '#constants/animations';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
@@ -36,12 +41,36 @@ interface ShoppingTabProps {
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
-  // Empty state context
-  purchasedCount?: number;
-  onAddItem?: () => void;
+  // Transition state for showing skeletons during list switches
+  isTransitioning?: boolean;
 }
 
-const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
+// Inner component that uses stagger context
+interface StaggeredListContentProps {
+  items: SortableShoppingListItem[];
+  onItemPress: (id: string) => void;
+  onItemEdit?: (id: string) => void;
+  onItemDelete?: (id: string) => void;
+  onTogglePurchase?: (id: string) => void;
+  onQuantityPress?: (id: string) => void;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => void;
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
+  disabled?: boolean;
+  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
+  onEndReached?: () => void;
+  canRemoveItems: boolean;
+  canEditItems: boolean;
+  canMarkPurchased: boolean;
+  canReorderItems: boolean;
+}
+
+const StaggeredListContent: React.FC<StaggeredListContentProps> = ({
   items,
   onItemPress,
   onItemEdit,
@@ -51,54 +80,30 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   onSortOrderUpdate,
   onRefresh,
   refreshing,
-  loading: _loading,
   disabled,
   onSwipeableWillOpen,
   onSwipeableClose,
   onEndReached,
-  hasMore: _hasMore,
-  isLoadingMore: _isLoadingMore,
-  canRemoveItems = true,
-  canEditItems = true,
-  canMarkPurchased = true,
-  canReorderItems = false,
-  purchasedCount = 0,
-  onAddItem,
+  canRemoveItems,
+  canEditItems,
+  canMarkPurchased,
+  canReorderItems,
 }) => {
-  // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
-  // This ensures smooth screen transitions by showing skeletons during navigation animation
-  const isReady = useDeferredRender();
+  const staggerCtx = useStaggeredEntry();
 
-  // Show skeletons until deferred render is ready
-  if (!isReady) {
-    return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
-  }
+  // Mark initial render complete after stagger animation window
+  useEffect(() => {
+    const totalStaggerTime =
+      staggeredEntryAnimation.initialDelay +
+      staggeredEntryAnimation.maxItems * staggeredEntryAnimation.delayPerItem +
+      staggeredEntryAnimation.duration;
 
-  // Empty state for shopping tab - context-aware based on purchased count
-  if (items.length === 0) {
-    const isShoppingComplete = purchasedCount > 0;
+    const timer = setTimeout(() => {
+      staggerCtx?.markInitialRenderComplete();
+    }, totalStaggerTime);
 
-    return (
-      <EmptyState
-        icon={<ShoppingEmptyIllustration variant={isShoppingComplete ? 'complete' : 'empty'} size="medium" />}
-        title={isShoppingComplete ? 'Shopping complete!' : 'Your list is empty'}
-        description={
-          isShoppingComplete
-            ? "You've checked off everything on your list"
-            : 'Add items to start your shopping list'
-        }
-        action={
-          // Only show button for empty list state - complete state has tab bar + button
-          !isShoppingComplete && onAddItem
-            ? {
-                label: 'Add Item',
-                onPress: onAddItem,
-              }
-            : undefined
-        }
-      />
-    );
-  }
+    return () => clearTimeout(timer);
+  }, [staggerCtx]);
 
   return (
     <View style={styles.container}>
@@ -123,6 +128,74 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
         canReorderItems={canReorderItems}
       />
     </View>
+  );
+};
+
+const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
+  items,
+  onItemPress,
+  onItemEdit,
+  onItemDelete,
+  onTogglePurchase,
+  onQuantityPress,
+  onSortOrderUpdate,
+  onRefresh,
+  refreshing,
+  loading: _loading,
+  disabled,
+  onSwipeableWillOpen,
+  onSwipeableClose,
+  onEndReached,
+  hasMore: _hasMore,
+  isLoadingMore: _isLoadingMore,
+  canRemoveItems = true,
+  canEditItems = true,
+  canMarkPurchased = true,
+  canReorderItems = false,
+  isTransitioning = false,
+}) => {
+  // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
+  // This ensures smooth screen transitions by showing skeletons during navigation animation
+  const isReady = useDeferredRender();
+
+  // Show skeletons during initial render OR during list transitions
+  if (!isReady || isTransitioning) {
+    return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
+  }
+
+  // Empty state for shopping tab
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<ShoppingEmptyIllustration size="medium" />}
+        title="Your list is empty"
+        description="Add items to start your shopping list"
+      />
+    );
+  }
+
+  return (
+    <StaggeredEntryProvider>
+      <StaggeredListContent
+        items={items}
+        onItemPress={onItemPress}
+        onItemEdit={onItemEdit}
+        onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
+        onQuantityPress={onQuantityPress}
+        onSortOrderUpdate={onSortOrderUpdate}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+        disabled={disabled}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+        onEndReached={onEndReached}
+        canRemoveItems={canRemoveItems}
+        canEditItems={canEditItems}
+        canMarkPurchased={canMarkPurchased}
+        canReorderItems={canReorderItems}
+      />
+    </StaggeredEntryProvider>
   );
 };
 

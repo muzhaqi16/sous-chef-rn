@@ -122,12 +122,12 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
 const styles = StyleSheet.create(theme => ({
   swipeableWrapper: {
     marginBottom: theme.spacing.sm,
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.spacing['3'],
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    padding: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
     shadowColor: theme.colors.backgroundSecondary,

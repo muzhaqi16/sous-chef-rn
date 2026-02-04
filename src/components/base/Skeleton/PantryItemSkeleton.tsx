@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SkeletonLine } from './SkeletonLine';
 import { SkeletonRectangle } from './SkeletonRectangle';
 
@@ -12,7 +12,7 @@ interface PantryItemSkeletonProps {
 /**
  * Pantry Item Skeleton
  *
- * Specialized skeleton for pantry items with image, title, quantity, and expiry date.
+ * Matches the layout of PantryItemCard with image, title, subtitle, quantity, and location.
  *
  * @example
  * ```typescript
@@ -26,54 +26,71 @@ interface PantryItemSkeletonProps {
 export const PantryItemSkeleton: React.FC<PantryItemSkeletonProps> = ({
   animated = true,
 }) => {
-  const styles = StyleSheet.create(theme => ({
-    container: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.md,
-      backgroundColor: theme.colors.surface,
-      minHeight: 70,
-    },
-    image: {
-      marginRight: theme.spacing.sm,
-    },
-    content: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    title: {
-      marginBottom: theme.spacing.xs,
-    },
-    subtitle: {
-      marginBottom: theme.spacing.xs,
-    },
-    trailing: {
-      alignItems: 'flex-end',
-    },
-    badge: {
-      marginTop: theme.spacing.xs,
-    },
-  }));
+  const { theme } = useUnistyles();
+  const imageSize = theme.sizes.itemCard.compact.image;
 
   return (
-    <View style={styles.container}>
-      {/* Image placeholder */}
-      <View style={styles.image}>
-        <SkeletonRectangle width={60} height={60} borderRadius={8} animated={animated} />
-      </View>
+    <View style={styles.wrapper}>
+      <View style={styles.container}>
+        <View style={styles.image}>
+          <SkeletonRectangle
+            width={imageSize}
+            height={imageSize}
+            borderRadius={theme.radii.md}
+            animated={animated}
+          />
+        </View>
 
-      {/* Content (title, quantity, expiry) */}
-      <View style={styles.content}>
-        <SkeletonLine width="70%" height={16} style={styles.title} animated={animated} />
-        <SkeletonLine width="50%" height={14} style={styles.subtitle} animated={animated} />
-        <SkeletonLine width="40%" height={12} animated={animated} />
-      </View>
+        {/* Content (title + subtitle) - matches CardContent */}
+        <View style={styles.content}>
+          <SkeletonLine width="70%" height={16} style={styles.title} animated={animated} />
+          <SkeletonLine width="50%" height={13} animated={animated} />
+        </View>
 
-      {/* Trailing (quantity badge) */}
-      <View style={styles.trailing}>
-        <SkeletonRectangle width={60} height={24} borderRadius={12} animated={animated} />
+        {/* Right slot (quantity + location) - matches CardRightSlot meta type */}
+        <View style={styles.trailing}>
+          <SkeletonLine width={45} height={16} animated={animated} />
+          <SkeletonLine width={40} height={11} style={styles.location} animated={animated} />
+        </View>
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  wrapper: {
+    marginBottom: theme.spacing.sm,
+    marginHorizontal: theme.spacing['3'],
+  },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    backgroundColor: theme.colors.surface,
+    shadowColor: theme.colors.backgroundSecondary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  image: {
+    marginRight: theme.spacing['3'],
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    marginBottom: theme.spacing.xs,
+  },
+  trailing: {
+    alignItems: 'flex-end',
+    marginLeft: theme.spacing['3'],
+  },
+  location: {
+    marginTop: theme.spacing.xs,
+  },
+}));

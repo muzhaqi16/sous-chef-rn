@@ -27,8 +27,7 @@ import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
 import { useProfileData } from '#hooks/profile/useProfileData';
-import { filterByLocation, LocationFilter } from '#/utils/pantryFilters';
-import { pantryItemSearch } from '#/utils/searchUtils';
+import type { LocationFilter } from '#/utils/pantryFilters';
 
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { PantryContent } from '#components/pantry/PantryContent';
@@ -157,7 +156,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     error: pantryError,
     loadMore,
     locationCounts,
-    sectionedItems,
   } = usePantryManagement(isFocused ? pantry?.id : undefined);
 
   // Extract item actions (modal state + mutations + handlers) to separate hook
@@ -258,23 +256,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     return [...defaultTabs, ...customTabs];
   }, [storageLocations]);
 
-  // Compute extended location counts including custom locations
-  const extendedLocationCounts = useMemo(() => {
-    type StorageLocation = GetStorageLocationsQuery['storageLocations'][number];
-
-    // Start with default counts from the hook
-    const counts: Record<string, number> = { ...locationCounts };
-
-    // Add counts for each custom storage location
-    storageLocations.forEach((location: StorageLocation) => {
-      counts[location.id] = pantryItems.filter(
-        item => item.storageLocation?.id === location.id,
-      ).length;
-    });
-
-    return counts;
-  }, [locationCounts, storageLocations, pantryItems]);
-
   // Handle add storage location
   const handleAddLocationPress = useCallback(() => {
     setAddLocationSheetVisible(true);
@@ -341,46 +322,17 @@ const PantryMainScreen: React.FC = React.memo(() => {
     profile?.displayName || profile?.firstName || profile?.lastName || 'there';
   const householdName = currentHome?.name || 'Your Home';
 
-  // Sectioned items for redesigned content - apply search filtering first, then location filter
-  const searchFilteredExpiringSoon = useMemo(() => {
-    if (!searchQuery.trim()) return sectionedItems.expiringSoonItems;
-    return sectionedItems.expiringSoonItems.filter(item =>
-      pantryItemSearch(item, searchQuery),
-    );
-  }, [sectionedItems.expiringSoonItems, searchQuery]);
-
-  const searchFilteredNormal = useMemo(() => {
-    if (!searchQuery.trim()) return sectionedItems.normalItems;
-    return sectionedItems.normalItems.filter(item =>
-      pantryItemSearch(item, searchQuery),
-    );
-  }, [sectionedItems.normalItems, searchQuery]);
-
-  // Apply location filter to search-filtered results
-  const filteredExpiringSoonItems = useMemo(
-    () => filterByLocation(searchFilteredExpiringSoon, locationFilter),
-    [searchFilteredExpiringSoon, locationFilter],
-  );
-
-  const filteredNormalItems = useMemo(
-    () => filterByLocation(searchFilteredNormal, locationFilter),
-    [searchFilteredNormal, locationFilter],
-  );
-
   return (
     <View style={styles.container} testID="pantry-screen">
-      {isLoadingInitial && <View testID="pantry-loading" />}
       <PantryContent
         userName={userName}
         householdName={householdName}
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
         items={locationFilteredItems}
-        expiringSoonItems={filteredExpiringSoonItems}
-        normalItems={filteredNormalItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
-        locationCounts={extendedLocationCounts}
+        locationCounts={locationCounts}
         tabs={combinedTabs}
         onAddLocation={handleAddLocationPress}
         searchQuery={searchQuery}

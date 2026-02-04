@@ -42,6 +42,7 @@ export function useShoppingListScreen() {
     purchasedItems: rawPurchasedItems,
     shoppingList: currentListDetails,
     loading: itemsLoading,
+    isTransitioning,
   } = shoppingListManagement;
 
   // 4. Transform: Convert raw items to UI format (single consolidated call)
@@ -95,5 +96,6 @@ export function useShoppingListScreen() {
     // Loading states
     loading: listsLoading || itemsLoading,
     isLoadingInitial,
+    isTransitioning,
   };
 }

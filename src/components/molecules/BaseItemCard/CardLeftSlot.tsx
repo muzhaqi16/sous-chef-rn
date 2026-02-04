@@ -47,15 +47,14 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
     return (
       <View
         style={[
-          commonStyles.listItemImageContainer,
+          commonStyles.listItemImageContainerCompact,
           styles.imageContainer,
-          { backgroundColor: theme.colors.surface },
           dimmed && styles.dimmed,
         ]}
       >
         <Image
           source={{ uri: imageUrl }}
-          style={[commonStyles.listItemImage, { resizeMode: 'cover' }]}
+          style={[commonStyles.listItemImageCompact, { resizeMode: 'cover' }]}
         />
       </View>
     );

@@ -1,181 +1,75 @@
 /**
- * usePantryStats - Statistics and computed values for pantry items
+ * usePantryStats - Computed values for pantry items
  *
  * Single responsibility:
- * - Calculate pantry statistics
- * - Compute location counts
- * - Section items by expiration status
- * - Helper functions for filtering
+ * - Compute location counts for filter tabs (including custom storage locations)
+ *
+ * PERFORMANCE: Single-pass algorithm computes all values in O(n)
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { StorageState } from '#generated';
-import type { PantryStats, LocationCounts, SectionedItems } from './types';
+import type { LocationCounts } from './types';
 
 /**
- * Hook for computing pantry statistics and derived data
+ * Hook for computing pantry location counts
  *
  * @example
  * ```tsx
- * const { stats, locationCounts, sectionedItems, getExpiredItems } = usePantryStats(pantryItems);
+ * const { locationCounts } = usePantryStats(pantryItems);
  * ```
  */
 export function usePantryStats(pantryItems: any[]) {
-  // Simple stats calculation
-  const stats = useMemo<PantryStats>(() => {
+  // PERFORMANCE: Single-pass computation for all values
+  return useMemo(() => {
     if (!pantryItems || pantryItems.length === 0) {
       return {
-        total: 0,
-        expired: 0,
-        expiringSoon: 0,
-        lowStock: 0,
+        locationCounts: {
+          all: 0,
+          fridge: 0,
+          freezer: 0,
+          pantry: 0,
+        } as LocationCounts,
       };
     }
 
-    const now = new Date();
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    // Location counts
+    let fridge = 0;
+    let freezer = 0;
+    let pantryCount = 0;
+    const customLocationCounts: Record<string, number> = {};
 
-    const expired = pantryItems.filter(item => {
-      if (!item.expiresAt) return false;
-      return new Date(item.expiresAt) < now;
-    }).length;
+    // Single pass through all items
+    for (const item of pantryItems) {
+      // Count by storage state
+      switch (item.storageState) {
+        case StorageState.Refrigerated:
+          fridge++;
+          break;
+        case StorageState.Frozen:
+          freezer++;
+          break;
+        default:
+          pantryCount++;
+          break;
+      }
 
-    const expiringSoon = pantryItems.filter(item => {
-      if (!item.expiresAt) return false;
-      const expirationDate = new Date(item.expiresAt);
-      return expirationDate >= now && expirationDate <= sevenDaysFromNow;
-    }).length;
-
-    const lowStock = pantryItems.filter(item => {
-      // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
-      return item.quantity <= 1 || item.lowStockAlert;
-    }).length;
-
-    return {
-      total: pantryItems.length,
-      expired,
-      expiringSoon,
-      lowStock,
-    };
-  }, [pantryItems]);
-
-  // Location counts for filter tabs
-  const locationCounts = useMemo<LocationCounts>(() => {
-    if (!pantryItems || pantryItems.length === 0) {
-      return {
-        all: 0,
-        fridge: 0,
-        freezer: 0,
-        pantry: 0,
-      };
+      // Count custom storage locations (same pass)
+      const customLocationId = item.storageLocation?.id;
+      if (customLocationId) {
+        customLocationCounts[customLocationId] =
+          (customLocationCounts[customLocationId] || 0) + 1;
+      }
     }
 
     return {
-      all: pantryItems.length,
-      fridge: pantryItems.filter(
-        item => item.storageState === StorageState.Refrigerated,
-      ).length,
-      freezer: pantryItems.filter(
-        item => item.storageState === StorageState.Frozen,
-      ).length,
-      pantry: pantryItems.filter(
-        item => item.storageState === StorageState.Ambient || !item.storageState,
-      ).length,
+      locationCounts: {
+        all: pantryItems.length,
+        fridge,
+        freezer,
+        pantry: pantryCount,
+        ...customLocationCounts,
+      } as LocationCounts,
     };
   }, [pantryItems]);
-
-  // Sectioned items for redesign
-  const sectionedItems = useMemo<SectionedItems>(() => {
-    if (!pantryItems || pantryItems.length === 0) {
-      return {
-        expiredItems: [],
-        expiringSoonItems: [],
-        normalItems: [],
-      };
-    }
-
-    const now = new Date();
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
-    const expiredItems = pantryItems.filter(item => {
-      if (!item.expiresAt) return false;
-      return new Date(item.expiresAt) < now;
-    });
-
-    const expiringSoonItems = pantryItems.filter(item => {
-      if (!item.expiresAt) return false;
-      const expirationDate = new Date(item.expiresAt);
-      return expirationDate >= now && expirationDate <= threeDaysFromNow;
-    });
-
-    // normalItems includes everything except "expiring soon" items
-    const normalItems = pantryItems.filter(item => {
-      if (!item.expiresAt) return true; // Items without expiry go to normal
-      const expirationDate = new Date(item.expiresAt);
-      const isExpiringSoon = expirationDate >= now && expirationDate <= threeDaysFromNow;
-      return !isExpiringSoon;
-    });
-
-    return {
-      expiredItems,
-      expiringSoonItems,
-      normalItems,
-    };
-  }, [pantryItems]);
-
-  // Helper functions
-  const getItemById = useCallback(
-    (itemId: string) => pantryItems.find(item => item.id === itemId),
-    [pantryItems],
-  );
-
-  const getItemsByStorageState = useCallback(
-    (storageState: StorageState) =>
-      pantryItems.filter(item => item.storageState === storageState),
-    [pantryItems],
-  );
-
-  const getExpiringItems = useCallback(
-    (days: number = 7) => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + days);
-      return pantryItems.filter(item => {
-        if (!item.expiresAt) return false;
-        const expirationDate = new Date(item.expiresAt);
-        return expirationDate <= futureDate;
-      });
-    },
-    [pantryItems],
-  );
-
-  const getLowStockItems = useCallback(
-    () =>
-      pantryItems.filter(item => {
-        return item.quantity <= 1 || item.lowStockAlert;
-      }),
-    [pantryItems],
-  );
-
-  const getExpiredItems = useCallback(() => {
-    const now = new Date();
-    return pantryItems.filter(item => {
-      if (!item.expiresAt) return false;
-      return new Date(item.expiresAt) < now;
-    });
-  }, [pantryItems]);
-
-  return {
-    stats,
-    locationCounts,
-    sectionedItems,
-
-    // Helper functions
-    getItemById,
-    getItemsByStorageState,
-    getExpiringItems,
-    getLowStockItems,
-    getExpiredItems,
-  };
 }

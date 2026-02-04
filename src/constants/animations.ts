@@ -170,3 +170,18 @@ export const listItemEntryAnimation = {
 export const listItemLayoutAnimation = LinearTransition.duration(150).easing(
   standardEasing.factory(),
 );
+
+/**
+ * Staggered list entry animation preset
+ * Used for skeleton-to-content transitions (cascade/waterfall effect)
+ *
+ * After skeleton loading completes, items fade in sequentially.
+ * Stagger is disabled after initial render to prevent animation
+ * during scroll (FlashList recycles views).
+ */
+export const staggeredEntryAnimation = {
+  delayPerItem: 0, // All items fade in together (simultaneous)
+  maxItems: 6, // Cap stagger for long lists (reduced from 8)
+  duration: 200, // Individual item fade duration (reduced from 250ms)
+  initialDelay: 30, // Delay before first item for smoother skeleton→content transition
+} as const;

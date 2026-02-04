@@ -25,6 +25,16 @@ export const sizes = {
     width: 60,
     height: 60,
   },
+  itemCard: {
+    compact: {
+      image: 48, // Slightly larger for better visibility
+      height: 64, // Compact row height (48 + 8px padding each side = 64)
+    },
+    standard: {
+      image: 60, // Current listImage - for optional large variant
+      height: 87, // Standard row height
+    },
+  },
   // Touch target sizes (minimum 44x44 for accessibility)
   touchTarget: {
     min: 44, // Minimum recommended touch target size

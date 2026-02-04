@@ -37,6 +37,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     loading: itemsLoading,
     error: itemsError,
     refetch,
+    isTransitioning,
   } = usePaginatedShoppingItems({
     listId: currentListId,
   });
@@ -125,6 +126,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     loading,
     error,
     stats,
+    isTransitioning,
 
     // Total counts for tab headers (from GraphQL totalCount, not array length)
     totalCountUnpurchased,

@@ -194,16 +194,27 @@ export const darkTheme = {
     validation: colors.validation,
 
     // Pantry redesign colors - dark mode specific expiration colors
+    // Using solid colors to prevent swipeable container background bleed-through
     expiration: {
-      expiredBg: 'rgba(220, 38, 38, 0.15)',      // Subtle red tint
-      expiredBorder: 'rgba(220, 38, 38, 0.3)',   // Slightly visible red border
+      expiredBg: '#3D2A2A',                       // Solid dark red (not transparent)
+      expiredBorder: '#5C3A3A',                   // Solid red border
       expiredText: '#FCA5A5',                     // Lighter red for readability
-      expiredIconBg: 'rgba(220, 38, 38, 0.2)',   // Subtle red for icon bg
+      expiredIconBg: '#4A3030',                   // Solid red for icon bg
       warningText: '#FDBA74',                     // Lighter orange for readability
-      warningBg: 'rgba(234, 88, 12, 0.15)',      // Subtle orange tint
-      warningBorder: 'rgba(234, 88, 12, 0.3)',   // Slightly visible orange border
+      warningBg: '#3D3225',                       // Solid dark orange (not transparent)
+      warningBorder: '#5C4A35',                   // Solid orange border
     },
-    filterTab: colors.filterTab,
+    filterTab: {
+      activeBg: '#F97316',              // Keep orange for active
+      activeText: '#FFFFFF',            // Keep white for active
+      inactiveBg: '#3F4553',            // Dark gray background for inactive
+      inactiveText: '#D1D5DB',          // Light gray text for contrast
+      filteredBg: 'rgba(249, 115, 22, 0.15)', // Subtle orange tint
+      filteredText: '#FB923C',          // Lighter orange for dark mode
+      countBg: '#4B5563',               // Darker badge background
+      countText: '#D1D5DB',             // Light text for badge
+      activeCountBg: 'rgba(255,255,255,0.25)', // Keep semi-transparent white
+    },
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
     alertBanner: colors.alertBanner,

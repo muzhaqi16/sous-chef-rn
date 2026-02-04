@@ -55,7 +55,7 @@ export const EMPTY_STATE_MESSAGES = {
  */
 export const PAGINATION = {
   /** Number of items to fetch per page in shopping list queries */
-  ITEMS_PAGE_SIZE: 25,
+  ITEMS_PAGE_SIZE: 40,
 } as const;
 
 /**

@@ -9,6 +9,7 @@ import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-nat
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
 import { ItemList } from '#components/organisms/ItemList';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { RecipesHeader } from '#components/molecules/RecipesHeader';
@@ -224,8 +225,8 @@ export const RecipeMain: React.FC = React.memo(() => {
         }`,
         badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
-          <View style={styles.imageContainer}>
-            <Image source={{ uri: imageUrl }} style={styles.leftImage} />
+          <View style={commonStyles.listItemImageContainerCompact}>
+            <Image source={{ uri: imageUrl }} style={commonStyles.listItemImageCompact} />
           </View>
         ) : undefined,
       };
@@ -540,19 +541,5 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
-  },
-  imageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  leftImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    resizeMode: 'cover',
-    elevation: 2,
   },
 }));

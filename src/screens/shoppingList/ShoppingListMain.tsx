@@ -79,6 +79,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       hasMorePurchased,
       isLoadingMorePurchased,
       setSelectedShoppingListId,
+      isTransitioning,
     } = screenData;
 
     // Get modal actions from context (provided by ShoppingListModalsProvider)
@@ -266,7 +267,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         canEditItems: permissions.canEditItems,
         canMarkPurchased: permissions.canMarkPurchased,
         canReorderItems: permissions.canEditItems,
-        onAddItem: addItemSheet.open,
+        isTransitioning,
       }),
       [
         isLoadingInitial,
@@ -292,7 +293,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         hasMorePurchased,
         isLoadingMorePurchased,
         permissions,
-        addItemSheet.open,
+        isTransitioning,
       ],
     );
 

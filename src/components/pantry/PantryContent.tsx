@@ -1,5 +1,10 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -20,6 +25,9 @@ import {
   calculateExpiresIn,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
+import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 
 // Sort types (exported for use in other components)
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
@@ -52,7 +60,7 @@ interface PantryItem {
 
 // Section type for SectionList-like rendering
 interface ListSection {
-  type: 'header' | 'expiringSoon' | 'allItemsHeader' | 'item';
+  type: 'header' | 'allItemsHeader' | 'item';
   data?: PantryItem;
   key: string;
 }
@@ -66,8 +74,6 @@ interface PantryContentProps {
 
   // Items
   items: PantryItem[];
-  expiringSoonItems: PantryItem[];
-  normalItems: PantryItem[];
 
   // Location filter
   locationFilter: LocationFilter;
@@ -126,9 +132,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   householdName,
   avatarUrl,
   notificationCount = 0,
-  items: _items,
-  expiringSoonItems,
-  normalItems,
+  items,
   locationFilter,
   onLocationFilterChange,
   locationCounts,
@@ -151,11 +155,40 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   onRefresh,
   onEndReached,
   refreshing = false,
-  loading: _loading = false,
+  loading = false,
   onSwipeableWillOpen,
   onSwipeableClose: _onSwipeableClose,
 }) => {
   const { theme } = useUnistyles();
+
+  // PERFORMANCE: Defer heavy list render until after navigation animation
+  const isReady = useDeferredRender();
+
+  // Show skeletons during initial render OR while data is loading
+  const showSkeletons = !isReady || loading;
+
+  // Crossfade animation - opacity-based transition to avoid gap
+  const skeletonOpacity = useSharedValue(1);
+  const contentOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    const duration = 200;
+    if (showSkeletons) {
+      skeletonOpacity.value = withTiming(1, { duration });
+      contentOpacity.value = withTiming(0, { duration });
+    } else {
+      skeletonOpacity.value = withTiming(0, { duration });
+      contentOpacity.value = withTiming(1, { duration });
+    }
+  }, [showSkeletons, skeletonOpacity, contentOpacity]);
+
+  const skeletonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: skeletonOpacity.value,
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
 
   // Use sorting hook for sort state and logic
   const {
@@ -201,37 +234,18 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   );
 
   // Sorted items
-  const sortedExpiringSoonItems = useMemo(
-    () => sortItems(expiringSoonItems),
-    [expiringSoonItems, sortItems],
-  );
-  const sortedNormalItems = useMemo(
-    () => sortItems(normalItems),
-    [normalItems, sortItems],
-  );
+  const sortedItems = useMemo(() => sortItems(items), [items, sortItems]);
 
   // Build flat list data with section markers
   const listData = useMemo((): ListSection[] => {
-    const data: ListSection[] = [];
-
-    // Expiring soon items with header
-    if (sortedExpiringSoonItems.length > 0) {
-      data.push({ type: 'expiringSoon', key: 'expiring-header' });
-      sortedExpiringSoonItems.forEach(item => {
-        data.push({ type: 'item', data: item, key: `expiring-${item.id}` });
-      });
+    const data: ListSection[] = [
+      { type: 'allItemsHeader', key: 'all-header' },
+    ];
+    for (const item of sortedItems) {
+      data.push({ type: 'item', data: item, key: item.id });
     }
-
-    // All items with header
-    if (sortedNormalItems.length > 0 || sortedExpiringSoonItems.length === 0) {
-      data.push({ type: 'allItemsHeader', key: 'all-header' });
-      sortedNormalItems.forEach(item => {
-        data.push({ type: 'item', data: item, key: `normal-${item.id}` });
-      });
-    }
-
     return data;
-  }, [sortedExpiringSoonItems, sortedNormalItems]);
+  }, [sortedItems]);
 
   // Render a pantry item card
   const renderItemCard = useCallback(
@@ -284,20 +298,11 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<ListSection>) => {
       switch (item.type) {
-        case 'expiringSoon':
-          return (
-            <SectionHeader
-              icon="⏰"
-              title="EXPIRING SOON"
-              count={sortedExpiringSoonItems.length}
-              variant="warning"
-            />
-          );
         case 'allItemsHeader':
           return (
             <SectionHeader
               title="ALL ITEMS"
-              count={sortedNormalItems.length}
+              count={sortedItems.length}
               variant="default"
               actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
               onActionPress={openSortModal}
@@ -317,13 +322,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           return null;
       }
     },
-    [
-      sortedExpiringSoonItems.length,
-      sortedNormalItems.length,
-      sortDirection,
-      openSortModal,
-      renderItemCard,
-    ],
+    [sortedItems.length, sortDirection, openSortModal, renderItemCard],
   );
 
   // Build tabs with optional add button at the end
@@ -391,24 +390,53 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           />
         </View>
 
-        {/* Content List */}
-        <FlashList
-          data={listData}
-          renderItem={renderItem}
-          keyExtractor={item => item.key}
-          ListHeaderComponent={ListHeader}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            ) : undefined
-          }
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          // FlashList optimization: pre-render 250px outside viewport
-          drawDistance={250}
-        />
+        {/* Content List - Crossfade between skeleton and content */}
+        <View style={styles.listContainer}>
+          {/* Content layer (always rendered, starts at opacity 0) */}
+          <Animated.View
+            style={[styles.absoluteFill, contentAnimatedStyle]}
+            pointerEvents={showSkeletons ? 'none' : 'auto'}
+          >
+            <FlashList
+              data={listData}
+              renderItem={renderItem}
+              keyExtractor={item => item.key}
+              ListHeaderComponent={ListHeader}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                ) : undefined
+              }
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.5}
+              drawDistance={250}
+            />
+          </Animated.View>
+
+          {/* Skeleton layer (on top, fades out) */}
+          {showSkeletons && (
+            <Animated.View
+              style={[styles.absoluteFill, skeletonAnimatedStyle]}
+              pointerEvents="none"
+            >
+              {ListHeader}
+              <SectionHeader
+                title="ALL ITEMS"
+                count={items.length}
+                variant="default"
+                actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
+                onActionPress={openSortModal}
+              />
+              <SkeletonList
+                SkeletonComponent={PantryItemSkeleton}
+                count={6}
+                containerStyle={styles.skeletonListContent}
+              />
+            </Animated.View>
+          )}
+        </View>
 
         {/* Sort Modal */}
         <PantrySortModal
@@ -433,8 +461,22 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xs,
   },
+  listContainer: {
+    flex: 1,
+  },
+  absoluteFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   listContent: {
     paddingHorizontal: 0,
     paddingBottom: theme.spacing['3xl'] * 2,
+  },
+  skeletonListContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
 }));
