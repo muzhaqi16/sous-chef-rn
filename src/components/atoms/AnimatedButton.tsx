@@ -40,9 +40,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   const { theme } = useUnistyles();
   const loadingProgress = useSharedValue(0);
   const textOpacity = useSharedValue(1);
-
-  // Select variants based on disabled/loading state
-  styles.useVariants({ disabled: disabled || loading });
+  const isDisabled = disabled || loading;
 
   useEffect(() => {
     if (loading) {
@@ -122,11 +120,11 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
   // only Reanimated/inline styles on AnimatedTouchable
-  // Uses variants for disabled state to avoid "2 unistyles styles" warning
+  // Uses dynamic function for disabled state to ensure updates when prop changes
   return (
     <View
       style={[
-        styles.button,
+        styles.button(isDisabled),
         getButtonStyle(),
         style,
       ]}
@@ -159,7 +157,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  button: {
+  button: (isDisabled: boolean) => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -168,14 +166,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     minHeight: theme.sizes.fab.sm,
     overflow: 'hidden',
-    variants: {
-      disabled: {
-        true: {
-          opacity: 0.5,
-        },
-      },
-    },
-  },
+    opacity: isDisabled ? 0.5 : 1,
+  }),
   text: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: '500',

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native-unistyles';
 
-export default StyleSheet.create((theme, _rt) => ({
+export default StyleSheet.create(theme => ({
   container: {
     gap: theme.spacing.xs,
     marginVertical: {
@@ -22,16 +22,11 @@ export default StyleSheet.create((theme, _rt) => ({
     },
   },
 
-  // Dynamic function for input container with focus and error states
-  inputContainer: (isFocused: boolean, hasError: boolean) => ({
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: hasError
-      ? theme.colors.error
-      : isFocused
-      ? theme.colors.primary
-      : theme.colors.border,
+    borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.inputBackground,
     minHeight: {
@@ -39,7 +34,15 @@ export default StyleSheet.create((theme, _rt) => ({
       sm: 48,
       md: 52,
     },
-  }),
+    variants: {
+      focused: {
+        true: { borderColor: theme.colors.primary },
+      },
+      error: {
+        true: { borderColor: theme.colors.error },
+      },
+    },
+  },
 
   input: {
     flex: 1,
@@ -55,7 +58,6 @@ export default StyleSheet.create((theme, _rt) => ({
       md: theme.spacing.md,
     },
     paddingVertical: 0,
-    // Natural line height for text/cursor
     lineHeight: {
       xs: theme.fonts.size.sm * 1.5,
       md: theme.fonts.size.md * 1.5,
@@ -75,17 +77,20 @@ export default StyleSheet.create((theme, _rt) => ({
     alignItems: 'center',
   },
 
-  // Dynamic function for error text with animation state
-  errorText: (hasError: boolean) => ({
+  errorText: {
     fontSize: {
       xs: theme.fonts.size.xs,
       md: theme.fonts.size.sm,
     },
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
-    // Animate visibility
-    opacity: hasError ? 1 : 0,
-    maxHeight: hasError ? 50 : 0,
     overflow: 'hidden',
-  }),
+    opacity: 0,
+    maxHeight: 0,
+    variants: {
+      visible: {
+        true: { opacity: 1, maxHeight: 50 },
+      },
+    },
+  },
 }));

@@ -35,6 +35,7 @@ export function useDataPreloading() {
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const selectedPantryId = useAppStore(state => state.selectedPantryId);
   const isOnline = useAppStore(state => state.isOnline);
+  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   // PERFORMANCE: Track if units have been cached to prevent infinite loop
   const hasCachedUnitsRef = useRef(false);
@@ -100,12 +101,13 @@ export function useDataPreloading() {
     // Fire all in parallel (non-blocking, results go to Apollo cache)
     fetchShoppingLists();
 
-    if (selectedPantryId) {
+    // Gate pantry preload on isHomeSelectionReady to prevent queries with stale IDs after home deletion
+    if (selectedPantryId && isHomeSelectionReady) {
       fetchPantry({ variables: { id: selectedPantryId } });
     }
 
     fetchSavedRecipes();
-  }, [isOnline, selectedPantryId, fetchShoppingLists, fetchPantry, fetchSavedRecipes]);
+  }, [isOnline, selectedPantryId, isHomeSelectionReady, fetchShoppingLists, fetchPantry, fetchSavedRecipes]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)

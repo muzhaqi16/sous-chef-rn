@@ -17,6 +17,7 @@ import { subscriptionService } from '#/services/subscriptions/SubscriptionServic
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useSearchableList } from '../../useSearchableList';
 import { pantryItemSearch } from '#/utils/searchUtils';
+import { useAppStore, selectIsHomeSelectionReady } from '#store/useAppStore';
 
 /**
  * Hook for fetching and managing pantry query with pagination
@@ -34,9 +35,11 @@ import { pantryItemSearch } from '#/utils/searchUtils';
  */
 export function usePantryQuery(pantryId: string | undefined) {
   const { isLoggedOut } = useAuth();
+  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
 
   // Explicit validation - only execute query when pantryId is genuinely valid
-  const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut;
+  // Gate on isHomeSelectionReady to prevent queries with stale IDs after home deletion
+  const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut && isHomeSelectionReady;
 
   const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
     variables: {

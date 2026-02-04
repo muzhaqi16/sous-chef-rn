@@ -26,7 +26,11 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   const { theme } = useUnistyles();
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']} testID={testID}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+      testID={testID}
+    >
       {showBackButton && (
         <View style={styles.header}>
           <IconButton

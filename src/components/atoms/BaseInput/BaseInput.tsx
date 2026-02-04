@@ -37,10 +37,16 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   ...textInputProps
 }) => {
   const { theme } = useUnistyles();
-  // Subscribe to theme from store to trigger re-renders when theme changes
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && Boolean(value && value.length > 0);
+
+  // Use variants for theme-aware styling
+  styles.useVariants({
+    focused: isFocused,
+    error: hasError,
+    visible: hasError,
+  });
 
   const handleFocus = (e: any) => {
     setIsFocused(true);
@@ -55,7 +61,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label != null && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer(isFocused, hasError)}>
+      <View style={styles.inputContainer}>
         {leftIcon != null && <View style={styles.iconWrapper}>{leftIcon}</View>}
         <TextInput
           style={[styles.input, style]}
@@ -82,9 +88,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </View>
         )}
       </View>
-      {hasError && (
-        <Text style={styles.errorText(hasError)}>{errorMessage}</Text>
-      )}
+      {hasError && <Text style={styles.errorText}>{errorMessage}</Text>}
     </View>
   );
 };

@@ -31,7 +31,9 @@ export const useTheme = () => {
   }, [userThemePreference]);
 
   // Get the current effective theme from Unistyles runtime
-  const effectiveTheme = (UnistylesRuntime.themeName || 'light') as 'light' | 'dark';
+  // Use rt.themeName (reactive) instead of UnistylesRuntime.themeName (static)
+  // This ensures components re-render when theme changes
+  const effectiveTheme = (rt.themeName || 'light') as 'light' | 'dark';
 
   return {
     // Current effective theme ('light' or 'dark')

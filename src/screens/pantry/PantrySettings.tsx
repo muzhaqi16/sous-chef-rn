@@ -336,6 +336,9 @@ export const PantrySettings: React.FC<{
 
             try {
               await deletePantry({ variables: { id: pantryId } });
+              // Clear selected pantry ID to prevent stale queries on next app start
+              // useDefaultHome will auto-select a new pantry from remaining ones
+              setSelectedPantryId(null);
               goBack();
             } finally {
               // Cleanup (timeout in service provides fallback)
