@@ -33,11 +33,14 @@ android {
         noCompress += ["bundle"]
     }
     
-    //  Create an APK for each CPU architecture (disabled for debug builds to work with Detox)
+    //  Create an APK for each CPU architecture (disabled for debug and bundle builds)
     splits {
         abi {
             reset()
-            enable !gradle.startParameter.taskNames.any { it.toLowerCase().contains('debug') }
+            // Disable for debug builds (Detox) and bundle builds (AAB handles splits automatically)
+            enable !gradle.startParameter.taskNames.any {
+                it.toLowerCase().contains('debug') || it.toLowerCase().contains('bundle')
+            }
             universalApk true
             include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
