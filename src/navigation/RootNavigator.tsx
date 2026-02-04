@@ -1,6 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+  Theme,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useUnistyles } from 'react-native-unistyles';
 import { useShallow } from 'zustand/shallow';
 import {
   useAppStore,
@@ -290,9 +296,30 @@ function RootNavigator() {
 }
 
 export function Navigation() {
+  const { theme } = useUnistyles();
+
+  // Create navigation theme based on current Unistyles theme
+  const navigationTheme: Theme = useMemo(
+    () => ({
+      ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
+      colors: {
+        ...(theme.colors.background === '#FFFFFF'
+          ? DefaultTheme.colors
+          : DarkTheme.colors),
+        primary: theme.colors.primary,
+        background: theme.colors.background,
+        card: theme.colors.surface,
+        text: theme.colors.textPrimary,
+        border: theme.colors.border,
+        notification: theme.colors.error,
+      },
+    }),
+    [theme],
+  );
+
   return (
     <NavigationErrorBoundary>
-      <NavigationContainer linking={linkingConfig}>
+      <NavigationContainer theme={navigationTheme} linking={linkingConfig}>
         <RootNavigator />
       </NavigationContainer>
     </NavigationErrorBoundary>

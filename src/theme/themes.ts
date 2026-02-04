@@ -101,6 +101,18 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+
+    // Action colors for swipe actions
+    consumeAction: '#9C27B0',
+    wasteAction: '#FF9800',
+    restockAction: '#4CAF50',
+    purchaseAction: '#4CAF50',
+    unpurchaseAction: '#FF9800',
+
+    // Semantic action colors
+    favorite: '#E91E63',
+    rating: '#FFB800',
+
     gap: (v: number) => v * 8,
   },
 };
@@ -198,6 +210,18 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+
+    // Action colors for swipe actions (slightly adjusted for dark mode visibility)
+    consumeAction: '#BA68C8',
+    wasteAction: '#FFB74D',
+    restockAction: '#81C784',
+    purchaseAction: '#81C784',
+    unpurchaseAction: '#FFB74D',
+
+    // Semantic action colors
+    favorite: '#F48FB1',
+    rating: '#FFD54F',
+
     gap: (v: number) => v * 8,
   },
 };

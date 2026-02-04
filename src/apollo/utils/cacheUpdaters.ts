@@ -252,6 +252,94 @@ export function createRemoveFromQueryFieldUpdater(
 }
 
 /**
+ * Creates a function to add items to a Query root Connection field
+ *
+ * Use this for Query fields that return Connection objects (with edges/pageInfo):
+ * - Query.shoppingLists (ShoppingListConnection)
+ * - Query.recipes (RecipeConnection)
+ *
+ * Unlike createAddToQueryFieldUpdater which expects flat arrays,
+ * this handles the Connection pattern with edges.
+ *
+ * @example
+ * const addToShoppingLists = createAddToQueryConnectionUpdater('shoppingLists', 'ShoppingList');
+ * addToShoppingLists(cache, newList);
+ *
+ * @param fieldName - Query field name (e.g., 'shoppingLists')
+ * @param itemTypename - GraphQL typename for edge creation (e.g., 'ShoppingList')
+ * @returns Function to add items to the Connection field
+ */
+export function createAddToQueryConnectionUpdater<T extends { id: string }>(
+  fieldName: string,
+  itemTypename: string,
+) {
+  return (
+    cache: ApolloCache,
+    newItem: T,
+    options: AddToConnectionOptions = {},
+  ): void => {
+    const {
+      position = 'start',
+      checkDuplicates = true,
+      updateTotalCount = true,
+    } = options;
+
+    try {
+      cache.modify({
+        fields: {
+          [fieldName](
+            existingConnection: any = {},
+            { toReference, readField }: CacheFieldHelpers,
+          ) {
+            const newItemRef = toReference(newItem, true);
+            if (!newItemRef) return existingConnection;
+
+            const existingEdges = existingConnection?.edges || [];
+
+            // Check for duplicates if enabled
+            if (checkDuplicates) {
+              const exists = existingEdges.some(
+                (edge: any) => readField('id', edge?.node) === newItem.id,
+              );
+              if (exists) return existingConnection;
+            }
+
+            // Create new edge
+            const newEdge = {
+              __typename: `${itemTypename}Edge`,
+              node: newItemRef,
+              cursor: '', // Will be populated on next fetch
+            };
+
+            // Add edge at specified position
+            const edges =
+              position === 'start'
+                ? [newEdge, ...existingEdges]
+                : [...existingEdges, newEdge];
+
+            // Update totalCount if enabled
+            const totalCount = updateTotalCount
+              ? (existingConnection?.totalCount || 0) + 1
+              : existingConnection?.totalCount;
+
+            return {
+              ...existingConnection,
+              edges,
+              ...(updateTotalCount && { totalCount }),
+            };
+          },
+        },
+      });
+    } catch (error) {
+      console.warn(
+        `Cache update failed for adding to ${fieldName}:`,
+        error,
+      );
+    }
+  };
+}
+
+/**
  * Creates a function to remove items from a Query root Connection field
  *
  * Use this for Query fields that return Connection objects (with edges/pageInfo):

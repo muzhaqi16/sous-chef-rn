@@ -1,4 +1,4 @@
-import { useCallback, useRef, useLayoutEffect } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -14,6 +14,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
+import { useStableRef } from '#hooks/utils/useStableRef';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -55,14 +56,8 @@ export function useShoppingListActions({
   });
 
   // Refs for stable callbacks (avoid recreating callbacks on items change)
-  const updateQuantityRef = useRef(updateQuantity);
-  const refetchItemsRef = useRef(refetchItems);
-
-  // Keep refs updated
-  useLayoutEffect(() => {
-    updateQuantityRef.current = updateQuantity;
-    refetchItemsRef.current = refetchItems;
-  }, [updateQuantity, refetchItems]);
+  const updateQuantityRef = useStableRef(updateQuantity);
+  const refetchItemsRef = useStableRef(refetchItems);
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
@@ -148,7 +143,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client],
+    [client, refetchItemsRef, updateQuantityRef],
   );
 
   // Quantity decrement handler - uses cache.modify for instant UI without warnings
@@ -235,7 +230,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client],
+    [client, refetchItemsRef, updateQuantityRef],
   );
 
   // Toggle purchase handler

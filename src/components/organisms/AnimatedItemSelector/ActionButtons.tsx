@@ -3,8 +3,8 @@ import { TouchableOpacity, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
+  FadeInUp,
   LinearTransition,
-  SlideInDown,
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { ActionButtonConfig } from './types';
@@ -25,7 +25,7 @@ const ActionButton: React.FC<{
 
   return (
     <AnimatedTouchableOpacity
-      entering={SlideInDown.delay(100 + index * 50)}
+      entering={FadeInUp.delay(index * 15).duration(150)}
       layout={LinearTransition}
       style={[
         styles.actionButton,
@@ -40,7 +40,7 @@ const ActionButton: React.FC<{
         size={20}
         color={
           action.color ||
-          (variant === 'primary' ? '#FFFFFF' : theme.colors.secondary)
+          (variant === 'primary' ? theme.colors.onPrimary : theme.colors.secondary)
         }
         library={action.iconLibrary}
       />
@@ -64,7 +64,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ actions }) => {
 
   return (
     <Animated.View
-      entering={FadeIn.delay(200)}
+      entering={FadeIn.duration(100)}
       layout={LinearTransition}
       style={styles.container}
     >

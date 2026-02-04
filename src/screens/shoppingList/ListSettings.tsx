@@ -19,10 +19,11 @@ import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
-  GetShoppingListsLiteDocument,
-  ShoppingList,
 } from '#generated';
-import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  createRemoveFromQueryFieldUpdater,
+  createAddToQueryConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -98,47 +99,20 @@ export const ListSettings: React.FC<{
       }
     },
   });
+  const addToShoppingListsCache = createAddToQueryConnectionUpdater(
+    'shoppingLists',
+    'ShoppingList',
+  );
+
   const [createList] = useCreateShoppingListMutation({
     errorPolicy: 'all',
-    // TODO: Add optimistic response with all required fields (description, tags, totalItems, etc.)
-    // See ShoppingList fragment for complete type definition
-    // Update the cache when a new list is created
     update(cache, { data }) {
       if (data?.createShoppingList) {
-        try {
-          // Read with empty variables (shopping lists are independent of homes)
-          const existingData = cache.readQuery<{
-            shoppingLists: ShoppingList[];
-          }>({
-            query: GetShoppingListsLiteDocument,
-            variables: {},
-          });
-
-          if (existingData) {
-            // Write with same empty variables to update the cache
-            cache.writeQuery({
-              query: GetShoppingListsLiteDocument,
-              variables: {},
-              data: {
-                ...existingData,
-                shoppingLists: [
-                  ...(existingData.shoppingLists || []),
-                  data.createShoppingList,
-                ],
-              },
-            });
-          }
-        } catch (error) {
-          console.log(
-            'Cache update failed during shopping list create:',
-            error,
-          );
-        }
+        addToShoppingListsCache(cache, data.createShoppingList);
       }
     },
     onCompleted: data => {
       if (data?.createShoppingList) {
-        // Always set the new list as selected
         setSelectedShoppingListId(data.createShoppingList.id);
         goBack();
       }

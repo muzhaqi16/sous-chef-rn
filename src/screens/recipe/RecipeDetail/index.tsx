@@ -160,7 +160,7 @@ const RecipeDetailScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading recipe...</Text>
       </View>
     );
@@ -203,7 +203,7 @@ const RecipeDetailScreen: React.FC = () => {
               sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
             <TouchableOpacity onPress={goBack} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#1d1d1d" />
+              <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
             </TouchableOpacity>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
@@ -229,12 +229,12 @@ const RecipeDetailScreen: React.FC = () => {
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
-                    <ActivityIndicator size="small" color="#E91E63" />
+                    <ActivityIndicator size="small" color={theme.colors.favorite} />
                   ) : (
                     <Ionicons
                       name={isInFavorites ? 'heart' : 'heart-outline'}
                       size={24}
-                      color="#E91E63"
+                      color={theme.colors.favorite}
                     />
                   )}
                 </TouchableOpacity>
@@ -322,7 +322,7 @@ const RecipeDetailScreen: React.FC = () => {
                         size={14}
                         color={
                           star <= savedRating
-                            ? '#FFB800'
+                            ? theme.colors.rating
                             : theme.colors.textSecondary
                         }
                       />
@@ -625,7 +625,7 @@ const RecipeDetailScreen: React.FC = () => {
           disabled={selectedIngredients.size === 0 || addingToList}
         >
           {addingToList ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.onPrimary} />
           ) : (
             <Text style={styles.addSelectedButtonText}>
               Add {selectedIngredients.size} ingredient
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   addSelectedButtonText: {
-    color: '#fff',
+    color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
   },

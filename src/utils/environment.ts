@@ -150,7 +150,7 @@ export class Environment {
       return {
         baseUrl: getConfigValue('DEV_API_URL', 'http://localhost:4000/graphql'),
         wsUrl: getConfigValue('DEV_WS_URL', 'ws://localhost:4000/graphql'),
-        timeout: 30000,
+        timeout: 10000,
         retries: 3,
       };
     }
@@ -159,7 +159,7 @@ export class Environment {
       return {
         baseUrl: getConfigValue('STAGING_API_URL', 'https://staging-api.souschef.dev/graphql'),
         wsUrl: getConfigValue('STAGING_WS_URL', 'wss://staging-api.souschef.dev/graphql'),
-        timeout: 15000,
+        timeout: 10000,
         retries: 2,
       };
     }

@@ -32,7 +32,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         if (index >= 0) {
           isOpenRef.current = true;
           if (enableBackdrop) {
-            showBackdrop({ opacity: 0.2, onPress: () => bottomSheetRef.current?.dismiss() });
+            showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
           }
           onOpen?.();
         } else {
@@ -132,6 +132,8 @@ const styles = UnistylesStyleSheet.create(theme => ({
     display: 'none', // Hide default handle, ActionTrayContent has its own UI
   },
   content: {
-    padding: theme.spacing.lg,
+    paddingTop: 0,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
   },
 }));

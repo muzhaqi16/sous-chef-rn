@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -17,6 +17,7 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { Telemetry } from '#/services/telemetry';
 
 export function LoginScreen() {
+  const { theme } = useUnistyles();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
   const {
     login,
@@ -231,7 +232,7 @@ export function LoginScreen() {
             <Icon
               name={getBiometricIcon()}
               size={24}
-              color={isBiometricLoading ? '#999' : '#007AFF'}
+              color={isBiometricLoading ? theme.colors.textTertiary : theme.colors.primary}
             />
             <Text
               style={[

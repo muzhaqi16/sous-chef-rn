@@ -47,7 +47,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       </Text>
       {isAdded ? (
         <View style={styles.addedBadge}>
-          <Ionicons name="checkmark" size={12} color="#fff" />
+          <Ionicons name="checkmark" size={12} color={theme.colors.onPrimary} />
         </View>
       ) : (
         <View style={styles.addButton}>

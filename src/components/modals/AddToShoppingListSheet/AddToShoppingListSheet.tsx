@@ -1,32 +1,22 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, ActivityIndicator, Alert } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import React, { useCallback, useMemo } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useShoppingListSuggestions,
   ShoppingListSuggestionItem,
 } from '#hooks/shoppingList/useShoppingListSuggestions';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
-import { useAppStore } from '#store/useAppStore';
 import {
   useAddItemToShoppingListMutation,
-  useAutocompleteItemsLazyQuery,
+  GetShoppingListSuggestionsDocument,
+  GetShoppingListSuggestionsQuery,
   ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { useErrorHandler } from '#/utils/errorHandling';
-import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
-import { BottomSheetSearchBar, type BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
-import { ActionCard } from '#components/molecules/ActionCard';
-import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
+import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
+import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
+import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
+import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -45,99 +35,74 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   initialSearchQuery = '',
   onItemAdded,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
   const { navigate, navigateTo } = useAppNavigation();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const client = useApolloClient();
 
-  // Online status for autocomplete
-  const isOnline = useAppStore(state => state.isOnline);
-
-  // Error handler for Apollo mutations
-  const { handleApolloError } = useErrorHandler();
-
-  // Search input state
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Autocomplete query for search
-  const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
-    useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
-
-  const searchSuggestions =
-    autocompleteData?.autocompleteItems?.suggestions ?? [];
-
-  // Fetch combined suggestions (recently deleted, frequently added, popular)
-  const {
-    grouped,
-    loading: loadingSuggestions,
-    hasSuggestions,
-    refetch,
-  } = useShoppingListSuggestions({
-    shoppingListId,
-    limit: 15,
-    skip: !visible,
+  // Shared state management (NOW OPTIMIZED: includes shouldFetch and exit animations)
+  const state = useAddItemSheetState({
+    visible,
+    contextId: shoppingListId,
+    deferFetch: shoppingListSheetConfig.deferFetch,
   });
 
-  // Add shopping list item mutation with error handling
-  const [addItemMutation, { loading: adding }] =
-    useAddItemToShoppingListMutation({
-      errorPolicy: 'all',
+  // Fetch shopping list suggestions (NOW OPTIMIZED: respects shouldFetch)
+  const suggestionsResult = useShoppingListSuggestions({
+    shoppingListId,
+    limit: 15,
+    skip: !visible || !state.shouldFetch,
+  });
 
-      update: (cache, { data }) => {
-        if (!data?.addItemToShoppingList || !shoppingListId) return;
+  // Adapt suggestions to the expected interface
+  const suggestions: SuggestionsHookResult = useMemo(() => ({
+    grouped: suggestionsResult.grouped as unknown as Record<string, BaseSuggestionItem[]>,
+    loading: suggestionsResult.loading,
+    hasSuggestions: suggestionsResult.hasSuggestions,
+    refetch: suggestionsResult.refetch,
+  }), [suggestionsResult]);
 
-        try {
-          const addToShoppingListCache = createAddToParentConnectionUpdater(
-            'ShoppingList',
-            'itemsConnection',
-            'ShoppingListItem',
-          );
-          addToShoppingListCache(
-            cache,
-            shoppingListId,
-            data.addItemToShoppingList,
-          );
-        } catch (error) {
-          console.error('Cache update failed:', error);
-        }
-      },
-
-      onError: error => {
-        console.error('AddItem mutation error:', error);
-        const { message } = handleApolloError(error, {
-          operation: 'Add Shopping List Item',
-        });
-        Alert.alert('Error Adding Item', message);
-      },
-    });
-
-  // Search handler - called after BottomSheetSearchBar debounce
-  const handleSearchChange = useCallback(
-    (text: string) => {
-      setSearchQuery(text);
-
-      // Only search when online and query is long enough
-      if (text.length >= 2 && isOnline) {
-        fetchItems({ variables: { input: { query: text, limit: 10 } } });
-      }
+  // Helper to optimistically remove item from suggestions cache
+  const removeFromSuggestionsCache = useCallback(
+    (itemId: string) => {
+      client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
+        {
+          query: GetShoppingListSuggestionsDocument,
+          variables: { shoppingListId: shoppingListId!, limit: 15 },
+        },
+        data => {
+          if (!data) return data;
+          return {
+            ...data,
+            shoppingListSuggestions: data.shoppingListSuggestions.filter(
+              s => s.itemId !== itemId,
+            ),
+          };
+        },
+      );
     },
-    [isOnline, fetchItems],
+    [client.cache, shoppingListId],
   );
 
-  // Control bottom sheet visibility
-  useEffect(() => {
-    if (visible && shoppingListId) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-      // Clear search when closing
-      searchBarRef.current?.clear();
-      setSearchQuery('');
-    }
-  }, [visible, shoppingListId]);
+  // Add shopping list item mutation (NOW OPTIMIZED: fire-and-forget pattern)
+  const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
+    update: (cache, { data }) => {
+      if (!data?.addItemToShoppingList || !shoppingListId) return;
+
+      try {
+        const addToShoppingListCache = createAddToParentConnectionUpdater(
+          'ShoppingList',
+          'itemsConnection',
+          'ShoppingListItem',
+        );
+        addToShoppingListCache(
+          cache,
+          shoppingListId,
+          data.addItemToShoppingList,
+        );
+      } catch (error) {
+        console.error('Cache update failed:', error);
+      }
+    },
+  });
 
   // Handle scan barcode press
   const handleScanPress = useCallback(() => {
@@ -148,295 +113,112 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     });
   }, [onClose, navigateTo, shoppingListId]);
 
-  // Handle add manually press
+  // Handle add manually press - navigates to AddItem screen
   const handleAddManually = useCallback(() => {
     onClose();
     if (shoppingListId) {
       navigate('AddItem', {
         listId: shoppingListId,
-        initialItemName: searchBarRef.current?.getValue()?.trim() || undefined,
+        initialItemName: undefined,
       });
     }
   }, [onClose, navigate, shoppingListId]);
 
-  // Handle quick add from search autocomplete suggestion
+  // Handle quick add from search autocomplete (NOW OPTIMIZED: fire-and-forget)
   const handleQuickAddSearchSuggestion = useCallback(
-    async (item: ItemSuggestion) => {
+    (item: ItemSuggestion) => {
       if (!shoppingListId || adding) return;
 
-      try {
-        await addItemMutation({
-          variables: {
-            input: {
-              shoppingListId,
-              itemId: item.id,
-              itemName: item.name,
-              quantity: 1,
-              // Use default unit if available
-              unitId: item.defaultUnit?.id,
-            },
-          },
-        });
+      // 1. Show toast immediately (don't wait for mutation)
+      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(item.name, 1));
 
-        toastService.success(`Added ${item.name}`);
-        searchBarRef.current?.clear();
-        setSearchQuery('');
-        onItemAdded?.();
-      } catch {
-        toastService.error('Failed to add item. Please try again.');
-      }
+      // 2. Fire mutation without await
+      addItemMutation({
+        variables: {
+          input: {
+            shoppingListId,
+            itemId: item.id,
+            itemName: item.name,
+            quantity: 1,
+            unitId: item.defaultUnit?.id,
+          },
+        },
+      })
+        .then(() => {
+          onItemAdded?.();
+        })
+        .catch(() => {
+          toastService.error('Failed to add item. Please try again.');
+        });
     },
     [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
-  // Handle quick add from suggestion (unified handler for all sources)
+  // Handle quick add from suggestion (NOW OPTIMIZED: fire-and-forget with exit animations)
   const handleQuickAddSuggestion = useCallback(
-    async (item: ShoppingListSuggestionItem) => {
-      if (!shoppingListId || adding) return;
+    (item: BaseSuggestionItem) => {
+      // Cast to ShoppingListSuggestionItem for full type info
+      const shoppingItem = item as ShoppingListSuggestionItem;
+      if (!shoppingListId || adding || state.exitingItems.has(shoppingItem.itemId)) return;
 
       // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
-      const unitId = item.lastUnitId ?? item.defaultUnitId ?? undefined;
+      const unitId = shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
 
-      try {
-        await addItemMutation({
-          variables: {
-            input: {
-              shoppingListId,
-              itemId: item.itemId,
-              itemName: item.name,
-              quantity: 1,
-              unitId,
-            },
+      // 1. Start exit animation immediately (NOW OPTIMIZED: added animations)
+      state.startExitAnimation(shoppingItem.itemId);
+
+      // 2. Show toast immediately (don't wait for mutation)
+      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name, 1));
+
+      // 3. Fire mutation without await
+      addItemMutation({
+        variables: {
+          input: {
+            shoppingListId,
+            itemId: shoppingItem.itemId,
+            itemName: shoppingItem.name,
+            quantity: 1,
+            unitId,
           },
+        },
+      })
+        .then(() => {
+          onItemAdded?.();
+        })
+        .catch(() => {
+          // On error: remove from exiting, show error toast
+          state.completeExitAnimation(shoppingItem.itemId);
+          toastService.error('Failed to add item. Please try again.');
         });
-
-        toastService.success(`Added ${item.name}`);
-        onItemAdded?.();
-        refetch();
-      } catch {
-        toastService.error('Failed to add item. Please try again.');
-      }
     },
-    [shoppingListId, adding, addItemMutation, onItemAdded, refetch],
+    [shoppingListId, adding, state, addItemMutation, onItemAdded],
   );
 
-  // Determine if we should show search results
-  const showSearchResults = searchQuery.length >= 2;
-
-  // Show suggestions when search is empty
-  const showSuggestions = !showSearchResults;
-
-  // Render a single suggestion item with image
-  const renderSuggestionItem = useCallback(
-    (item: ShoppingListSuggestionItem) => (
-      <SuggestionListItem
-        key={item.id}
-        imageUrl={item.imageUrl}
-        title={item.name}
-        subtitle={item.category}
-        placeholderIcon="shopping-cart"
-        onQuickAdd={() => handleQuickAddSuggestion(item)}
-        quickAddDisabled={adding}
-      />
-    ),
-    [adding, handleQuickAddSuggestion],
+  // Handle exit animation complete
+  const handleExitComplete = useCallback(
+    (itemId: string) => {
+      removeFromSuggestionsCache(itemId);
+      state.completeExitAnimation(itemId);
+    },
+    [removeFromSuggestionsCache, state],
   );
-
-  // Render a suggestion section
-  const renderSection = (
-    title: string,
-    items: ShoppingListSuggestionItem[],
-    emptyMessage?: string,
-  ) => {
-    if (items.length === 0 && !emptyMessage) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {items.length === 0 && emptyMessage ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{emptyMessage}</Text>
-          </View>
-        ) : (
-          <View style={styles.suggestionList}>
-            {items.map(renderSuggestionItem)}
-          </View>
-        )}
-      </View>
-    );
-  };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['70%', '95%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-      // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
-      testID="add-shopping-item-modal"
-    >
-      <View style={{ flex: 1 }} testID="add-shopping-item-modal">
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <Text style={styles.title}>Add to Shopping List</Text>
-
-        {/* Search Input */}
-        <BottomSheetSearchBar
-          ref={searchBarRef}
-          placeholder="Search or scan item..."
-          onChangeText={handleSearchChange}
-          onClear={() => setSearchQuery('')}
-          initialValue={initialSearchQuery}
-          autoCapitalize="none"
-          rightActions={[
-            {
-              icon: 'qr-code-scanner',
-              onPress: handleScanPress,
-            },
-          ]}
-        />
-
-        {/* Search Results */}
-        {showSearchResults && (
-          <ItemSuggestionsList
-            searchQuery={searchQuery}
-            suggestions={searchSuggestions}
-            loading={searchLoading}
-            addManuallyPosition="bottom"
-            onAddManually={handleAddManually}
-            onSelectSuggestion={handleQuickAddSearchSuggestion}
-            quickAddDisabled={adding}
-            placeholderIcon="shopping-cart"
-            showBrands={false}
-          />
-        )}
-
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <ActionCard
-            icon="qr-code-scanner"
-            label="Scan Barcode"
-            onPress={handleScanPress}
-          />
-          <ActionCard
-            icon="add"
-            label="Add Manually"
-            onPress={handleAddManually}
-            testID="add-shopping-add-manually-button"
-          />
-        </View>
-
-        {/* Suggestions Sections - shown when not searching */}
-        {showSuggestions && (
-          <>
-            {loadingSuggestions ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              </View>
-            ) : (
-              <>
-                {/* Add Again - Recently Deleted */}
-                {renderSection('ADD AGAIN', grouped.recentlyDeleted)}
-
-                {/* Your Favorites - Frequently Added */}
-                {renderSection('YOUR FAVORITES', grouped.frequentlyAdded)}
-
-                {/* Popular Items */}
-                {renderSection('POPULAR', grouped.popular)}
-
-                {/* Empty state when no suggestions */}
-                {!hasSuggestions && (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No suggestions yet</Text>
-                    <Text style={styles.emptySubtext}>
-                      Add items to your list and they'll appear here for quick
-                      re-adding
-                    </Text>
-                  </View>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </BottomSheetScrollView>
-      </View>
-    </BottomSheetModal>
+    <AddItemSheet
+      visible={visible}
+      contextId={shoppingListId}
+      onClose={onClose}
+      config={shoppingListSheetConfig}
+      suggestions={suggestions}
+      onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
+      onQuickAddSuggestion={handleQuickAddSuggestion}
+      isMutating={adding}
+      onAddManually={handleAddManually}
+      onScanPress={handleScanPress}
+      exitingItems={state.exitingItems}
+      onExitComplete={handleExitComplete}
+      shouldFetch={state.shouldFetch}
+      initialSearchQuery={initialSearchQuery}
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
-  },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-    letterSpacing: 1,
-    marginBottom: theme.spacing.md,
-  },
-  loadingContainer: {
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  emptySubtext: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textTertiary,
-    textAlign: 'center',
-  },
-  suggestionList: {
-    gap: theme.spacing.sm,
-  },
-}));

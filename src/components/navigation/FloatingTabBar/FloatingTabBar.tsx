@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTabBarActions } from '#context/TabBarActionsContext';
@@ -71,13 +72,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
     useEffect(() => {
       const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
+      // Fast timing for opacity (linear, no spring)
+      opacity.value = withTiming(shouldHide ? 0 : 1, { duration: 150 });
+
+      // Snappy spring with subtle bounce (higher damping = less bounce)
       translateY.value = withSpring(shouldHide ? 150 : 0, {
-        damping: 40,
-        stiffness: 250,
-      });
-      opacity.value = withSpring(shouldHide ? 0 : 1, {
-        damping: 40,
-        stiffness: 250,
+        damping: 25,
+        stiffness: 350,
+        mass: 0.8,
       });
     }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
 

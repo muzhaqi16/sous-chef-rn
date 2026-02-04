@@ -24,12 +24,12 @@ import {
   useGetPantryQuery,
   ItemSuggestion,
 } from '#generated';
-import {
-  usePantryItemFormMutations,
-  parseQuantityInput,
-  emptyUnitSelection,
-  type UnitSelection,
-} from '#hooks/pantry/usePantryItemFormMutations';
+import { useCreatePantryItem } from '#hooks/pantry/mutations/useCreatePantryItem';
+import { useUpdatePantryItem } from '#hooks/pantry/mutations/useUpdatePantryItem';
+import { useUpdatePantryItemQuantity } from '#hooks/pantry/mutations/useUpdatePantryItemQuantity';
+import { useResolveUnit } from '#hooks/pantry/mutations/useResolveUnit';
+import { emptyUnitSelection, type UnitSelection } from '#hooks/pantry/mutations/types';
+import { parseFractionalInput as parseQuantityInput } from '#/utils/fractionUtils';
 import { normalizePantry } from '#/utils/connectionUtils';
 import {
   DynamicFormFields,
@@ -165,13 +165,23 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     : null;
   const storageLocations = normalizedPantry?.storageLocations || [];
 
-  // Mutation hook with proper Apollo patterns
-  const { createPantryItem, updatePantryItem, resolveUnitId } =
-    usePantryItemFormMutations({
-      pantryId: currentPantryId,
-      onSuccess,
-      refetch: refetchItem,
-    });
+  // Mutation hooks - modular pattern for maintainability
+  const { createPantryItem } = useCreatePantryItem({
+    pantryId: currentPantryId,
+    onSuccess,
+  });
+
+  const { updatePantryItemFields } = useUpdatePantryItem({
+    onSuccess,
+    refetch: refetchItem,
+  });
+
+  const { updateQuantity } = useUpdatePantryItemQuantity({
+    onSuccess,
+    refetch: refetchItem,
+  });
+
+  const { resolveUnitId } = useResolveUnit();
 
   // Get initial values based on mode
   const getInitialValues = useCallback((): PantryItemFormData => {
@@ -360,14 +370,29 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           return;
         }
 
-        await updatePantryItem({
+        const dirtyFieldsRecord = dirtyFields as Record<string, boolean>;
+        const quantityOrUnitChanged =
+          dirtyFieldsRecord.quantityInput || dirtyFieldsRecord.unit;
+
+        // Handle quantity/unit changes with dedicated mutation
+        if (quantityOrUnitChanged) {
+          updateQuantity({
+            itemId,
+            quantityInput: data.quantityInput || quantityValue.toString(),
+            quantityValue,
+            unitId,
+            unitSymbol: data.unit,
+            trackingUnit,
+            currentItem,
+          });
+        }
+
+        // Handle non-quantity field updates
+        updatePantryItemFields({
           itemId,
           input: data,
           currentItem,
-          dirtyFields: dirtyFields as Record<string, boolean>,
-          quantityValue,
-          unitId,
-          trackingUnit,
+          dirtyFields: dirtyFieldsRecord,
           selectedLocationId,
           selectedBrandId,
         });

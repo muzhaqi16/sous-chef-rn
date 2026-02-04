@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { TextInputModalProps } from './types';
 
@@ -21,14 +21,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   placeholder = 'Enter text',
   submitText = 'Submit',
   cancelText = 'Cancel',
-  primaryColor = '#007AFF',
-  errorColor = '#FF3B30',
+  primaryColor,
+  errorColor,
   loading = false,
   initialValue = '',
   validationRules = [],
   textInputProps = {},
   multiline = false,
 }) => {
+  const { theme } = useUnistyles();
+  const resolvedPrimaryColor = primaryColor ?? theme.colors.primary;
+  const resolvedErrorColor = errorColor ?? theme.colors.error;
   const [text, setText] = useState(initialValue);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,7 +109,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             style={[
               styles.input,
               multiline && styles.multilineInput,
-              error ? { borderColor: errorColor } : {},
+              error ? { borderColor: resolvedErrorColor } : {},
             ]}
             placeholder={placeholder}
             placeholderTextColor={styles.inputPlaceholder.color}
@@ -123,7 +126,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           />
 
           {error ? (
-            <Text style={[styles.errorText, { color: errorColor }]}>
+            <Text style={[styles.errorText, { color: resolvedErrorColor }]}>
               {error}
             </Text>
           ) : null}
@@ -141,7 +144,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               style={[
                 styles.button,
                 styles.submitButton,
-                { backgroundColor: primaryColor },
+                { backgroundColor: resolvedPrimaryColor },
                 isSubmitting && styles.disabledButton,
               ]}
               onPress={handleSubmit}

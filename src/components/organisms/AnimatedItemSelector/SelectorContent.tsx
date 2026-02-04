@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlatList, Text, ActivityIndicator } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SelectorItem } from './SelectorItem';
 import { ActionButtons } from './ActionButtons';
@@ -10,12 +10,15 @@ interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
 }
 
-const LoadingState = () => (
-  <Animated.View entering={FadeIn} style={styles.loadingContainer}>
-    <ActivityIndicator size="large" color="#007AFF" />
-    <Text style={styles.loadingText}>Loading...</Text>
-  </Animated.View>
-);
+const LoadingState = () => {
+  const { theme } = useUnistyles();
+  return (
+    <Animated.View entering={FadeIn} style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Loading...</Text>
+    </Animated.View>
+  );
+};
 
 const EmptyState: React.FC<{ message: string }> = ({ message }) => (
   <Animated.View entering={FadeIn} style={styles.emptyContainer}>

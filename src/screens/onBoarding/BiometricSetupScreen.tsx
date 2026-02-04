@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Icon } from '#utils/iconUtils';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -9,6 +9,7 @@ import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { useAppStore, selectUser } from '#store/useAppStore';
 
 export const BiometricSetupScreen = () => {
+  const { theme } = useUnistyles();
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useAppStore(selectUser);
   const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
@@ -174,7 +175,7 @@ export const BiometricSetupScreen = () => {
       <View style={styles.container} testID="biometric-setup-container">
         <View style={styles.iconContainer}>
           <View style={styles.iconBackground}>
-            <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
+            <Icon name={getBiometricIcon()} size={48} color={theme.colors.primary} />
           </View>
         </View>
 
@@ -182,15 +183,15 @@ export const BiometricSetupScreen = () => {
 
         <View style={styles.benefits}>
           <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color="#34D399" />
+            <Icon name="check-circle" size={20} color={theme.colors.success} />
             <Text style={styles.benefitText}>Quick and secure access</Text>
           </View>
           <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color="#34D399" />
+            <Icon name="check-circle" size={20} color={theme.colors.success} />
             <Text style={styles.benefitText}>No password required</Text>
           </View>
           <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color="#34D399" />
+            <Icon name="check-circle" size={20} color={theme.colors.success} />
             <Text style={styles.benefitText}>Enhanced security</Text>
           </View>
         </View>

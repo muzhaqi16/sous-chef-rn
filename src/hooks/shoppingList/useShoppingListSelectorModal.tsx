@@ -244,6 +244,7 @@ const styles = StyleSheet.create(theme => ({
   selectorItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 48,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
@@ -259,7 +260,7 @@ const styles = StyleSheet.create(theme => ({
   },
   selectorItemInfo: {
     flex: 1,
-    gap: theme.spacing.xs,
+    gap: 2,
   },
   selectorItemName: {
     fontSize: theme.fonts.size.md,
@@ -267,7 +268,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   selectorItemSubtext: {
-    fontSize: theme.fonts.size.sm,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
   },
   sectionHeader: {
