@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Image, TouchableOpacity, useWindowDimensions } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { View, Image, TouchableOpacity } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
@@ -12,6 +12,11 @@ import { Icon } from '#utils/iconUtils';
 import { createPropsComparator } from '#utils/memoUtils';
 import { HIT_SLOP } from '#/constants/touch';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
+import {
+  standardEasing,
+  staggeredEntryAnimation,
+} from '#constants/animations';
+import { useStaggeredEntry } from '#context/StaggeredEntryContext';
 import type { QuantityElementConfig, ImageElementConfig } from './types';
 import { useSortableListActions } from './SortableListActionsContext';
 import { useSortableListTheme } from './SortableListThemeContext';
@@ -39,12 +44,23 @@ type SwipeableListItemProps = ListRenderItemInfo<ItemData>;
 
 const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   item,
+  index,
 }) => {
   // PERFORMANCE: Get theme colors from context (single useUnistyles at list level)
   const themeColors = useSortableListTheme();
 
-  // Get screen width for full-width slide animation
-  const { width: screenWidth } = useWindowDimensions();
+  // Staggered entry animation (only during initial render, disabled after)
+  const staggerCtx = useStaggeredEntry();
+  const entryDelay = staggerCtx?.getEntryDelay(index) ?? 0;
+  const entering = useMemo(() => {
+    if (entryDelay <= 0) return undefined;
+    return FadeIn.delay(entryDelay)
+      .duration(staggeredEntryAnimation.duration)
+      .easing(standardEasing.factory());
+  }, [entryDelay]);
+
+  // PERFORMANCE: Get screen width from context (single subscription at list level, not per-item)
+  const screenWidth = themeColors?.screenWidth ?? 375;
 
   // Slide animation for purchase toggle
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
@@ -133,13 +149,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       return (
         <View
           style={[
-            commonStyles.listItemImageContainer,
+            commonStyles.listItemImageContainerCompact,
             config.isPurchased && { opacity: 0.5 },
           ]}
         >
           <Image
             source={imageSource}
-            style={commonStyles.listItemImage}
+            style={commonStyles.listItemImageCompact}
             resizeMode="cover"
             fadeDuration={0}
           />
@@ -182,11 +198,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   }
 
   // Render the item
+  // PERF: Nested Animated.Views separate entry animation from slide animation
+  // This prevents Reanimated warning about conflicting opacity/transform properties
   return (
-    <Animated.View
-      style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
-    >
-      <LazySwipeableItem
+    <Animated.View entering={entering}>
+      <Animated.View
+        style={[styles.container, commonStyles.shadow, animatedSlideStyle]}
+      >
+        <LazySwipeableItem
         isPreActivated={false}
         onPress={onItemPress ? () => onItemPress(item.id) : undefined}
         onLongPress={onItemPress ? () => onItemPress(item.id) : undefined}
@@ -216,7 +235,8 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           isPurchased={item.isPurchased}
           themeColors={themeColors}
         />
-      </LazySwipeableItem>
+        </LazySwipeableItem>
+      </Animated.View>
     </Animated.View>
   );
 };

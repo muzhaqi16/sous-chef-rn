@@ -11,6 +11,7 @@ export interface SortableListThemeColors {
   surfaceVariant: string;
   surface: string;
   border: string;
+  screenWidth: number;
 }
 
 export const SortableListThemeContext = createContext<SortableListThemeColors | null>(null);

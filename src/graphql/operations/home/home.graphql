@@ -14,13 +14,19 @@ query GetHomeBasic($homeId: ID!) {
   }
 }
 
-query GetHomes {
-  homes {
+query GetHomes($pagination: PaginationInput) {
+  homes(pagination: $pagination) {
     edges {
+      cursor
       node {
         ...HomeDisplay
       }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 

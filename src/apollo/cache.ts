@@ -1,4 +1,5 @@
 import { InMemoryCache } from '@apollo/client';
+import { relayStylePagination } from '@apollo/client/utilities';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 
@@ -385,17 +386,7 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
-          homes: {
-            // No parameters - simple merge with existing data preservation
-            merge(existing = [], incoming) {
-              // If refetching and incoming is empty/null, preserve existing data
-              // This prevents flickering when navigating back to the screen
-              if (!incoming || incoming.length === 0) {
-                return existing;
-              }
-              return incoming;
-            },
-          },
+          homes: relayStylePagination(),
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],

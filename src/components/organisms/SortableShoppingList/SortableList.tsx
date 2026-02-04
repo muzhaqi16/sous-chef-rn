@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -76,6 +76,8 @@ const SortableShoppingListComponent = forwardRef<
 
     // PERFORMANCE: Single useUnistyles call for entire list
     const { theme } = useUnistyles();
+    // PERFORMANCE: Single useWindowDimensions call - shared via context to avoid N subscriptions in items
+    const { width: screenWidth } = useWindowDimensions();
     const themeColors = useMemo<SortableListThemeColors>(
       () => ({
         primary: theme.colors.primary,
@@ -84,6 +86,7 @@ const SortableShoppingListComponent = forwardRef<
         surfaceVariant: theme.colors.surfaceVariant,
         surface: theme.colors.surface,
         border: theme.colors.border,
+        screenWidth,
       }),
       [
         theme.colors.primary,
@@ -92,6 +95,7 @@ const SortableShoppingListComponent = forwardRef<
         theme.colors.surfaceVariant,
         theme.colors.surface,
         theme.colors.border,
+        screenWidth,
       ],
     );
 
@@ -178,6 +182,16 @@ const SortableShoppingListComponent = forwardRef<
       [items],
     );
 
+    // PERFORMANCE: Memoize contentContainerStyle to prevent FlashList v2 re-renders
+    // FlashList v2 is aggressive about prop changes - new object refs trigger internal updates
+    const contentContainerStyle = useMemo(
+      () => ({
+        paddingTop: 8,
+        paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
+      }),
+      [insets.bottom],
+    );
+
     // Render item function - passes FlashList info to SwipeableListItem
     // Note: Invalid items are already filtered in validItems, no null check needed
     const renderItem = useCallback(
@@ -218,13 +232,11 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
+              drawDistance={500}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }
-              contentContainerStyle={{
-                paddingTop: 8,
-                paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
-              }}
+              contentContainerStyle={contentContainerStyle}
               ListFooterComponent={ListFooterComponent ?? undefined}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}

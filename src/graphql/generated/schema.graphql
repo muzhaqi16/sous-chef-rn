@@ -525,6 +525,27 @@ type AdditionCostAnalytics {
   totalSpent: Float!
 }
 
+"""
+Input for batch deleting images from S3/MinIO storage.
+Used by admin panel after duplicate detection.
+"""
+input AdminDeleteImagesInput {
+  """
+  Image URLs to delete from S3/MinIO storage
+  """
+  imageUrls: [String!]!
+  """
+  Optional Item IDs to update after deletion.
+  If not provided, all items will be checked for affected images.
+  """
+  itemIds: [ID!]
+  """
+  Force background job processing regardless of batch size.
+  By default, batches >50 images are automatically queued.
+  """
+  useQueue: Boolean
+}
+
 input AdminDeleteUserInput {
   """
   If true, permanently deletes the user (SuperAdmin only)
@@ -2698,6 +2719,83 @@ type IPStat {
 
 scalar IPv4
 
+"""
+Error details for a failed image deletion
+"""
+type ImageDeletionError {
+  """
+  Error message describing the failure
+  """
+  error: String!
+  """
+  The S3/MinIO key (path) of the image (may be null if extraction failed)
+  """
+  key: String
+  """
+  The full URL of the image that failed to delete
+  """
+  url: String!
+}
+
+"""
+Status of a background image deletion job.
+Use this to track progress of large batch deletions.
+"""
+type ImageDeletionJobStatus {
+  """
+  When the job was created
+  """
+  createdAt: DateTime!
+  """
+  When the job finished (null if still running)
+  """
+  finishedAt: DateTime
+  """
+  Unique job identifier
+  """
+  jobId: String!
+  """
+  Progress percentage (0-100)
+  """
+  progress: Int
+  """
+  Deletion result (only available when status is 'completed')
+  """
+  result: ImageDeletionResult
+  """
+  Current job status: waiting, active, completed, failed, delayed
+  """
+  status: String!
+}
+
+"""
+Result of an image deletion operation.
+Contains counts of successfully deleted and failed images.
+"""
+type ImageDeletionResult {
+  """
+  Number of database Item records updated
+  """
+  databaseUpdated: Int!
+  """
+  Number of images successfully deleted from S3/MinIO storage
+  """
+  deletedFromStorage: Int!
+  """
+  List of storage deletion failures with error details
+  """
+  failedStorage: [ImageDeletionError!]!
+  """
+  Job ID if the operation was queued for background processing.
+  Use adminGetImageDeletionJobStatus to check progress.
+  """
+  jobId: String
+  """
+  Total number of images requested for deletion
+  """
+  totalRequested: Int!
+}
+
 input ImageInput {
   format: String
   height: Int
@@ -2891,6 +2989,7 @@ type Item {
   externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
   id: ID!
+  imageCount: Int!
   imageUrl: String
   images: JSON
   ingredients: JSON
@@ -3098,6 +3197,7 @@ type ItemPriceHistory {
 
 enum ItemSortField {
   CREATED_AT
+  IMAGE_COUNT
   NAME
   POPULARITY
   PRICE
@@ -4064,6 +4164,16 @@ type Mutation {
   addTemplateItem(input: AddTemplateItemInput!): MealTemplateItem!
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
+  """
+  Delete images from S3/MinIO storage and update related Item records.
+
+  For batches >50 images (or when useQueue=true), the operation runs
+  in the background. Use adminGetImageDeletionJobStatus to check progress.
+
+  This endpoint is designed for admin panel use after duplicate detection.
+  It removes the specified images from storage and cleans up Item.images arrays.
+  """
+  adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
   adminDeleteUser(id: ID!, input: AdminDeleteUserInput): Boolean!
   """
   Approve a user-created item for public visibility
@@ -5738,6 +5848,13 @@ type Query {
   _empty: String
   activeModerations: [UserModeration!]!
   adminCanDeleteUser(userId: ID!): CanDeleteAccountResult!
+  """
+  Get the status of a background image deletion job.
+
+  Use this to track progress of large batch deletions that were queued
+  instead of processed synchronously.
+  """
+  adminGetImageDeletionJobStatus(jobId: String!): ImageDeletionJobStatus
   """
   Aggregate multiple quantities of the same item
   Useful for calculating total needed across multiple recipes

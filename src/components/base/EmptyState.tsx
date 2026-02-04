@@ -133,7 +133,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: theme.spacing['2xl'],
-    paddingTop: theme.spacing['3xl'],
   },
 
   emoji: {

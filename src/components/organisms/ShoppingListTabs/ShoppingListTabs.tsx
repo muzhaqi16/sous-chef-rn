@@ -58,8 +58,8 @@ interface ShoppingListTabsProps {
   canEditItems?: boolean;
   canMarkPurchased?: boolean;
   canReorderItems?: boolean;
-  // Empty state action
-  onAddItem?: () => void;
+  // Transition state for showing skeletons during list switches
+  isTransitioning?: boolean;
 }
 
 const ROUTES: TabRoute[] = [
@@ -101,8 +101,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
   canReorderItems = false,
-  // Empty state action
-  onAddItem,
+  // Transition state
+  isTransitioning = false,
 }) => {
   const layout = useWindowDimensions();
 
@@ -248,8 +248,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canEditItems={canEditItems}
               canMarkPurchased={canMarkPurchased}
               canReorderItems={canReorderItems}
-              purchasedCount={purchasedCount}
-              onAddItem={onAddItem}
+              isTransitioning={isTransitioning}
             />
           );
         case 'purchased':
@@ -274,6 +273,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canRemoveItems={canRemoveItems}
               canEditItems={canEditItems}
               canMarkPurchased={canMarkPurchased}
+              isTransitioning={isTransitioning}
             />
           );
         default:
@@ -306,8 +306,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       canEditItems,
       canMarkPurchased,
       canReorderItems,
-      purchasedCount,
-      onAddItem,
+      isTransitioning,
     ],
   );
 

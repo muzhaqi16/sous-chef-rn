@@ -32,6 +32,7 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 export function useHomeSubscriptions(userId?: string) {
   // Get selected home from global store
   const selectedHomeId = useStore(state => state.selectedHomeId) || undefined;
+  const isHomeSelectionReady = useStore(state => state.isHomeSelectionReady);
 
   //
   // Membership Updated Subscription
@@ -50,7 +51,7 @@ export function useHomeSubscriptions(userId?: string) {
 
   useMembershipUpdatedSubscription({
     variables: { homeId: selectedHomeId },
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || !isHomeSelectionReady,
     ...membershipHandlers,
   });
 
@@ -71,7 +72,7 @@ export function useHomeSubscriptions(userId?: string) {
 
   useMemberJoinedSubscription({
     variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || !isHomeSelectionReady,
     ...memberJoinedHandlers,
   });
 
@@ -92,7 +93,7 @@ export function useHomeSubscriptions(userId?: string) {
 
   useMemberLeftSubscription({
     variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || !isHomeSelectionReady,
     ...memberLeftHandlers,
   });
 

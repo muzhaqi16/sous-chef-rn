@@ -70,6 +70,9 @@ export function AddItemSheet({
     deferFetch: config.deferFetch,
   });
 
+  // Destructure for stable references in callbacks
+  const { setSearchQuery } = state;
+
   // Use external exiting items if provided, otherwise use internal state
   const exitingItems = externalExitingItems ?? state.exitingItems;
 
@@ -80,17 +83,25 @@ export function AddItemSheet({
   const searchSuggestions =
     autocompleteData?.autocompleteItems?.suggestions ?? [];
 
+  // Determine when to show search results vs suggestions
+  // Only show search results when we have results OR search finished with no results
+  // This prevents flickering by keeping suggestions visible until results arrive
+  const hasSearchQuery = state.searchQuery.length >= 2;
+  const hasSearchData = searchSuggestions.length > 0 || (hasSearchQuery && !searchLoading);
+  const showSearchResults = hasSearchQuery && hasSearchData;
+  const showSuggestions = !showSearchResults;
+
   // Search handler - called after BottomSheetSearchBar debounce
   const handleSearchChange = useCallback(
     (text: string) => {
-      state.setSearchQuery(text);
+      setSearchQuery(text);
 
       // Only search when online and query is long enough
       if (text.length >= 2 && isOnline) {
         fetchItems({ variables: { input: { query: text, limit: 10 } } });
       }
     },
-    [isOnline, fetchItems, state],
+    [isOnline, fetchItems, setSearchQuery],
   );
 
   // Control bottom sheet visibility
@@ -115,9 +126,9 @@ export function AddItemSheet({
       onQuickAddSearchSuggestion(item);
       // Clear search after adding
       searchBarRef.current?.clear();
-      state.setSearchQuery('');
+      setSearchQuery('');
     },
-    [onQuickAddSearchSuggestion, state],
+    [onQuickAddSearchSuggestion, setSearchQuery],
   );
 
   // Render a suggestion item with exit animation support
@@ -214,8 +225,9 @@ export function AddItemSheet({
               ref={searchBarRef}
               placeholder={config.searchPlaceholder}
               onChangeText={handleSearchChange}
-              onClear={() => state.setSearchQuery('')}
+              onClear={() => setSearchQuery('')}
               initialValue={initialSearchQuery}
+              isLoading={searchLoading && hasSearchQuery}
               rightActions={[
                 {
                   icon: 'qr-code-scanner',
@@ -225,7 +237,7 @@ export function AddItemSheet({
             />
 
             {/* Search Results */}
-            {state.showSearchResults && (
+            {showSearchResults && (
               <ItemSuggestionsList
                 searchQuery={state.searchQuery}
                 suggestions={searchSuggestions}
@@ -239,25 +251,27 @@ export function AddItemSheet({
               />
             )}
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <ActionCard
-                icon="qr-code-scanner"
-                label="Scan Barcode"
-                onPress={onScanPress}
-              />
-              <ActionCard
-                icon="add"
-                label="Add Manually"
-                onPress={handleAddManually}
-                testID={`${config.testIDPrefix}-add-manually-button`}
-              />
-            </View>
+            {/* Action Buttons - hidden when showing search results */}
+            {!showSearchResults && (
+              <View style={styles.actionButtons}>
+                <ActionCard
+                  icon="qr-code-scanner"
+                  label="Scan Barcode"
+                  onPress={onScanPress}
+                />
+                <ActionCard
+                  icon="add"
+                  label="Add Manually"
+                  onPress={handleAddManually}
+                  testID={`${config.testIDPrefix}-add-manually-button`}
+                />
+              </View>
+            )}
 
             {/* Suggestions Sections - shown when search is empty */}
-            {state.showSuggestions && (
+            {showSuggestions && (
               <>
-                {suggestions.loading ? (
+                {suggestions.loading && !suggestions.hasSuggestions ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator
                       size="small"

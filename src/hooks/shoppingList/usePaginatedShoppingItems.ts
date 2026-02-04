@@ -25,6 +25,7 @@ interface UsePaginatedShoppingItemsResult {
   loading: boolean;
   error: Error | undefined;
   refetch: () => Promise<void>;
+  isTransitioning: boolean;
 }
 
 /**
@@ -75,7 +76,9 @@ export function usePaginatedShoppingItems({
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
-      notifyOnNetworkStatusChange: true,
+      // NOTE: notifyOnNetworkStatusChange removed to prevent unnecessary re-renders during fetchMore
+      // With this option enabled, Apollo would trigger component re-renders when network status changes
+      // (e.g., loading -> ready) during pagination, causing FlashList flickering/gaps during fast scroll
     });
 
   // Helper to extract and sort items from edges
@@ -319,5 +322,6 @@ export function usePaginatedShoppingItems({
     loading: loading && unpurchasedItems.length === 0 && purchasedItems.length === 0,
     error: error as Error | undefined,
     refetch: handleRefetch,
+    isTransitioning: listIdChanged && loading,
   };
 }

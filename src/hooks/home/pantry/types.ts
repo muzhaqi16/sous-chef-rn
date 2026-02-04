@@ -36,10 +36,6 @@ export interface LocationCounts {
   fridge: number;
   freezer: number;
   pantry: number;
-}
-
-export interface SectionedItems {
-  expiredItems: any[];
-  expiringSoonItems: any[];
-  normalItems: any[];
+  // Custom storage location counts are added dynamically
+  [key: string]: number;
 }

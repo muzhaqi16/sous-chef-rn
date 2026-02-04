@@ -331,6 +331,26 @@ export const commonStyles = StyleSheet.create(theme => ({
     resizeMode: 'cover',
   },
 
+  listItemImageContainerCompact: {
+    width: theme.sizes.itemCard.compact.image,
+    height: theme.sizes.itemCard.compact.image,
+    marginRight: theme.spacing['3'],
+    borderRadius: theme.radii.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    ...shadowStyle,
+  },
+
+  listItemImageCompact: {
+    width: theme.sizes.itemCard.compact.image,
+    height: theme.sizes.itemCard.compact.image,
+    borderRadius: theme.radii.md,
+    resizeMode: 'cover',
+  },
+
   // ============= EMPTY STATES =============
 
   emptyState: {

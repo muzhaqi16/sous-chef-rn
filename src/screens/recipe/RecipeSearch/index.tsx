@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Image, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
 import { SearchBar, type SearchBarAction } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
@@ -121,8 +122,8 @@ export const RecipeSearch: React.FC = () => {
     return items.map(item => ({
       ...item,
       leftElement: item.imageUrl ? (
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: item.imageUrl }} style={styles.leftImage} />
+        <View style={commonStyles.listItemImageContainerCompact}>
+          <Image source={{ uri: item.imageUrl }} style={commonStyles.listItemImageCompact} />
         </View>
       ) : undefined,
     }));
@@ -383,20 +384,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  imageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  leftImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    resizeMode: 'cover',
-    elevation: 2,
   },
   ingredientList: {
     flex: 1,

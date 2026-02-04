@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { ItemSuggestion } from '#generated';
@@ -9,8 +9,8 @@ interface ItemSuggestionsListProps {
   searchQuery: string;
   /** Autocomplete suggestions from the API */
   suggestions: ItemSuggestion[];
-  /** Whether suggestions are currently loading */
-  loading: boolean;
+  /** Whether suggestions are currently loading (kept for potential future use) */
+  loading?: boolean;
   /** Position of the "Add manually" option */
   addManuallyPosition: 'top' | 'bottom';
   /** Callback when "Add manually" is pressed */
@@ -28,7 +28,6 @@ interface ItemSuggestionsListProps {
 export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
   searchQuery,
   suggestions,
-  loading,
   addManuallyPosition,
   onAddManually,
   onSelectSuggestion,
@@ -39,18 +38,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
   const { theme } = useUnistyles();
 
   const hasResults = suggestions.length > 0;
-
-  // Render loading state
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Searching...</Text>
-        </View>
-      </View>
-    );
-  }
 
   // Render "Add manually" option
   const renderAddManually = (isLast: boolean) => (
@@ -146,17 +133,6 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  loadingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
   itemBorder: {
     borderBottomWidth: 1,

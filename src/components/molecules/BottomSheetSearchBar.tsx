@@ -5,7 +5,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
@@ -30,6 +30,8 @@ export interface BottomSheetSearchBarProps {
   testID?: string;
   /** Initial value to pre-populate the search input */
   initialValue?: string;
+  /** Show loading indicator in search bar */
+  isLoading?: boolean;
 }
 
 export interface BottomSheetSearchBarRef {
@@ -67,6 +69,7 @@ export const BottomSheetSearchBar = forwardRef<
       returnKeyType = 'search',
       testID,
       initialValue,
+      isLoading = false,
     },
     ref,
   ) => {
@@ -179,6 +182,13 @@ export const BottomSheetSearchBar = forwardRef<
           autoCorrect={autoCorrect}
           testID={testID}
         />
+        {isLoading && (
+          <ActivityIndicator
+            size="small"
+            color={theme.colors.primary}
+            style={styles.loadingIndicator}
+          />
+        )}
         {hasText && (
           <TouchableOpacity
             style={styles.clearButton}
@@ -234,6 +244,9 @@ const styles = StyleSheet.create(theme => ({
   },
   clearButton: {
     padding: theme.spacing.xs,
+  },
+  loadingIndicator: {
+    marginRight: theme.spacing.xs,
   },
   actionButton: {
     padding: theme.spacing.xs,

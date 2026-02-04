@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
+import { useApolloClient } from '@apollo/client/react';
 import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
 import {
   useAppStore,
@@ -19,6 +20,7 @@ import {
 } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
+  const client = useApolloClient();
   const {
     selectedHomeId,
     setSelectedHomeId,
@@ -26,6 +28,9 @@ export const useDefaultHome = () => {
     setSelectedPantryId,
   } = useAppStore(useShallow(selectPantryState));
   const { canAttemptQueries } = useAuth();
+
+  // Track if we're currently clearing stale IDs to prevent race condition
+  const [isClearingStaleIds, setIsClearingStaleIds] = useState(false);
 
   // Track if we've already initialized defaults to prevent cascading re-renders
   const hasInitializedRef = useRef(false);
@@ -131,18 +136,51 @@ export const useDefaultHome = () => {
       console.warn(
         '[HomeSelector] Selected home no longer exists, clearing selection',
       );
+      setIsClearingStaleIds(true);
+
+      // Evict stale Home and Pantry entities from Apollo cache
+      // This prevents cache-only queries from returning deleted entities
+      const homeIdentifier = client.cache.identify({
+        __typename: 'Home',
+        id: selectedHomeId,
+      });
+      if (homeIdentifier) {
+        client.cache.evict({ id: homeIdentifier });
+      }
+      if (selectedPantryId) {
+        const pantryIdentifier = client.cache.identify({
+          __typename: 'Pantry',
+          id: selectedPantryId,
+        });
+        if (pantryIdentifier) {
+          client.cache.evict({ id: pantryIdentifier });
+        }
+      }
+      client.cache.gc();
+
       setSelectedHomeId(null);
+      setSelectedPantryId(null);
       setIsHomeSelectionReady(false);
       hasInitializedRef.current = false;
       hasAutoSelectedRef.current = false;
     }
   }, [
     selectedHomeId,
+    selectedPantryId,
     homesList,
     isSelectedHomeValid,
     setSelectedHomeId,
+    setSelectedPantryId,
     setIsHomeSelectionReady,
+    client,
   ]);
+
+  // Reset clearing flag after state updates propagate
+  useEffect(() => {
+    if (isClearingStaleIds && !selectedHomeId) {
+      setIsClearingStaleIds(false);
+    }
+  }, [isClearingStaleIds, selectedHomeId]);
 
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
@@ -276,6 +314,9 @@ export const useDefaultHome = () => {
     // Don't update while loading
     if (loading) return;
 
+    // Don't update while clearing stale IDs (wait for state to propagate)
+    if (isClearingStaleIds) return;
+
     // Case 1: No homes exist - ready with no selection
     if (!homesList || homesList.length === 0) {
       if (!isHomeSelectionReady) {
@@ -302,6 +343,7 @@ export const useDefaultHome = () => {
     homesList,
     selectedHomeId,
     isHomeSelectionReady,
+    isClearingStaleIds,
     setIsHomeSelectionReady,
   ]);
 

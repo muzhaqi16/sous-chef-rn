@@ -92,7 +92,11 @@ export const ProfileScreen = () => {
     return null; // or loading component
   }
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']} testID="profile-screen">
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+      testID="profile-screen"
+    >
       <ProfileHeader
         avatarUrl={profile?.avatar}
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}

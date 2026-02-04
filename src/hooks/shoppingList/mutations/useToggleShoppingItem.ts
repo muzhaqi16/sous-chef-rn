@@ -7,7 +7,7 @@
  * - Persist optimistic state for offline support
  */
 
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useToggleShoppingListItemPurchasedMutation,
@@ -26,7 +26,7 @@ import { isNetworkError } from './utils';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
-  items: ShoppingListItemDisplayFragment[];
+  itemsRef: React.RefObject<ShoppingListItemDisplayFragment[]>;
   refetch: () => Promise<any>;
 }
 
@@ -45,14 +45,14 @@ interface UseToggleShoppingItemOptions {
  * await toggleItem('item-123');
  * ```
  */
-export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShoppingItemOptions) {
+export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleShoppingItemOptions) {
   const { handleApolloError } = useErrorHandler();
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
     // Optimistic response ensures update() runs immediately (not after network response)
     optimisticResponse: variables => {
-      const item = items.find(i => i.id === variables.id);
+      const item = itemsRef.current?.find(i => i.id === variables.id);
       return {
         __typename: 'Mutation',
         toggleShoppingListItemPurchased: {
@@ -193,9 +193,9 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
       // This query uses aliases: unpurchasedItems/purchasedItems instead of itemsConnection
       // Apollo caches aliased fields separately, so we must update them explicitly
 
-      // Get the full item data from the items array (closure) - this is more reliable than
+      // Get the full item data from the items ref (avoids stale closure) - this is more reliable than
       // cache.readFragment which can return null during optimistic updates
-      const itemFromArray = items.find(i => i.id === itemId);
+      const itemFromArray = itemsRef.current?.find(i => i.id === itemId);
 
       // Fallback to cache read if not found in array (edge case)
       const fullItem = itemFromArray || cache.readFragment<ShoppingListItemDisplayFragment>({
@@ -255,13 +255,13 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
     },
   });
 
-  // Simplified toggleItem - uses items array instead of cache read
+  // Simplified toggleItem - uses items ref instead of cache read
   const toggleItem = useCallback(
     async (itemId: string) => {
       if (!listId) return false;
 
       try {
-        const item = items.find(i => i.id === itemId);
+        const item = itemsRef.current?.find(i => i.id === itemId);
         if (!item) return false;
 
         const newStatus = !item.purchaseInfo?.isPurchased;
@@ -276,7 +276,7 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
         return false;
       }
     },
-    [listId, items, togglePurchasedMutation],
+    [listId, itemsRef, togglePurchasedMutation],
   );
 
   return { toggleItem };

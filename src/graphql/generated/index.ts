@@ -155,6 +155,25 @@ export type AdditionCostAnalytics = {
   totalSpent: Scalars['Float']['output'];
 };
 
+/**
+ * Input for batch deleting images from S3/MinIO storage.
+ * Used by admin panel after duplicate detection.
+ */
+export type AdminDeleteImagesInput = {
+  /** Image URLs to delete from S3/MinIO storage */
+  imageUrls: Array<Scalars['String']['input']>;
+  /**
+   * Optional Item IDs to update after deletion.
+   * If not provided, all items will be checked for affected images.
+   */
+  itemIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  /**
+   * Force background job processing regardless of batch size.
+   * By default, batches >50 images are automatically queued.
+   */
+  useQueue?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type AdminDeleteUserInput = {
   /** If true, permanently deletes the user (SuperAdmin only) */
   hard?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2209,6 +2228,58 @@ export type IpStat = {
   ipAddress: Scalars['String']['output'];
 };
 
+/** Error details for a failed image deletion */
+export type ImageDeletionError = {
+  __typename?: 'ImageDeletionError';
+  /** Error message describing the failure */
+  error: Scalars['String']['output'];
+  /** The S3/MinIO key (path) of the image (may be null if extraction failed) */
+  key: Maybe<Scalars['String']['output']>;
+  /** The full URL of the image that failed to delete */
+  url: Scalars['String']['output'];
+};
+
+/**
+ * Status of a background image deletion job.
+ * Use this to track progress of large batch deletions.
+ */
+export type ImageDeletionJobStatus = {
+  __typename?: 'ImageDeletionJobStatus';
+  /** When the job was created */
+  createdAt: Scalars['DateTime']['output'];
+  /** When the job finished (null if still running) */
+  finishedAt: Maybe<Scalars['DateTime']['output']>;
+  /** Unique job identifier */
+  jobId: Scalars['String']['output'];
+  /** Progress percentage (0-100) */
+  progress: Maybe<Scalars['Int']['output']>;
+  /** Deletion result (only available when status is 'completed') */
+  result: Maybe<ImageDeletionResult>;
+  /** Current job status: waiting, active, completed, failed, delayed */
+  status: Scalars['String']['output'];
+};
+
+/**
+ * Result of an image deletion operation.
+ * Contains counts of successfully deleted and failed images.
+ */
+export type ImageDeletionResult = {
+  __typename?: 'ImageDeletionResult';
+  /** Number of database Item records updated */
+  databaseUpdated: Scalars['Int']['output'];
+  /** Number of images successfully deleted from S3/MinIO storage */
+  deletedFromStorage: Scalars['Int']['output'];
+  /** List of storage deletion failures with error details */
+  failedStorage: Array<ImageDeletionError>;
+  /**
+   * Job ID if the operation was queued for background processing.
+   * Use adminGetImageDeletionJobStatus to check progress.
+   */
+  jobId: Maybe<Scalars['String']['output']>;
+  /** Total number of images requested for deletion */
+  totalRequested: Scalars['Int']['output'];
+};
+
 export type ImageInput = {
   format?: InputMaybe<Scalars['String']['input']>;
   height?: InputMaybe<Scalars['Int']['input']>;
@@ -2405,6 +2476,7 @@ export type Item = {
   externalSources: Array<ExternalSourceMapping>;
   healthBenefits: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
+  imageCount: Scalars['Int']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
   images: Maybe<Scalars['JSON']['output']>;
   ingredients: Maybe<Scalars['JSON']['output']>;
@@ -2593,6 +2665,7 @@ export type ItemPriceHistory = {
 
 export enum ItemSortField {
   CreatedAt = 'CREATED_AT',
+  ImageCount = 'IMAGE_COUNT',
   Name = 'NAME',
   Popularity = 'POPULARITY',
   Price = 'PRICE',
@@ -3524,6 +3597,16 @@ export type Mutation = {
   addTemplateItem: MealTemplateItem;
   addUserAddress: UserAddress;
   addWarning: UserModeration;
+  /**
+   * Delete images from S3/MinIO storage and update related Item records.
+   *
+   * For batches >50 images (or when useQueue=true), the operation runs
+   * in the background. Use adminGetImageDeletionJobStatus to check progress.
+   *
+   * This endpoint is designed for admin panel use after duplicate detection.
+   * It removes the specified images from storage and cleans up Item.images arrays.
+   */
+  adminDeleteImages: ImageDeletionResult;
   adminDeleteUser: Scalars['Boolean']['output'];
   /** Approve a user-created item for public visibility */
   approveItem: Item;
@@ -3930,6 +4013,10 @@ export type MutationAddUserAddressArgs = {
 
 export type MutationAddWarningArgs = {
   input: AddWarningInput;
+};
+
+export type MutationAdminDeleteImagesArgs = {
+  input: AdminDeleteImagesInput;
 };
 
 export type MutationAdminDeleteUserArgs = {
@@ -5932,6 +6019,13 @@ export type Query = {
   activeModerations: Array<UserModeration>;
   adminCanDeleteUser: CanDeleteAccountResult;
   /**
+   * Get the status of a background image deletion job.
+   *
+   * Use this to track progress of large batch deletions that were queued
+   * instead of processed synchronously.
+   */
+  adminGetImageDeletionJobStatus: Maybe<ImageDeletionJobStatus>;
+  /**
    * Aggregate multiple quantities of the same item
    * Useful for calculating total needed across multiple recipes
    */
@@ -6238,6 +6332,10 @@ export type Query = {
 
 export type QueryAdminCanDeleteUserArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QueryAdminGetImageDeletionJobStatusArgs = {
+  jobId: Scalars['String']['input'];
 };
 
 export type QueryAggregateQuantitiesArgs = {
@@ -11643,16 +11741,25 @@ export type GetHomeBasicQuery = {
   home: ({ __typename?: 'Home' } & HomeWithPantriesFragment) | null | undefined;
 };
 
-export type GetHomesQueryVariables = Exact<{ [key: string]: never }>;
+export type GetHomesQueryVariables = Exact<{
+  pagination?: InputMaybe<PaginationInput>;
+}>;
 
 export type GetHomesQuery = {
   __typename?: 'Query';
   homes: {
     __typename?: 'HomeConnection';
+    totalCount: number;
     edges: Array<{
       __typename?: 'HomeEdge';
+      cursor: string;
       node: { __typename?: 'Home' } & HomeDisplayFragment;
     }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null | undefined;
+    };
   };
 };
 
@@ -28041,12 +28148,35 @@ export const GetHomesDocument = {
       kind: 'OperationDefinition',
       operation: 'query',
       name: { kind: 'Name', value: 'GetHomes' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pagination' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'PaginationInput' },
+          },
+        },
+      ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'homes' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pagination' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pagination' },
+                },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -28056,6 +28186,10 @@ export const GetHomesDocument = {
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'node' },
@@ -28072,6 +28206,24 @@ export const GetHomesDocument = {
                     ],
                   },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -28527,6 +28679,7 @@ export const GetHomesDocument = {
  * @example
  * const { data, loading, error } = useGetHomesQuery({
  *   variables: {
+ *      pagination: // value for 'pagination'
  *   },
  * });
  */

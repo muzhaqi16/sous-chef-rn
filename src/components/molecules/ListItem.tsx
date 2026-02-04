@@ -133,8 +133,8 @@ const styles = StyleSheet.create(theme => ({
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
-    height: 87, // Fixed height for drag-to-reorder calculations
+    padding: theme.spacing.sm,
+    height: theme.sizes.itemCard.compact.height, // Compact height for drag-to-reorder calculations
     gap: theme.spacing.sm, // Better spacing between elements
   },
   checkboxContainer: {

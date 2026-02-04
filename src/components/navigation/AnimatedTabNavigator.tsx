@@ -4,7 +4,7 @@ import {
   createBottomTabNavigator,
   BottomTabNavigationOptions,
 } from '@react-navigation/bottom-tabs';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
 import { FloatingTabBar } from './FloatingTabBar/FloatingTabBar';
 
@@ -28,9 +28,11 @@ export function createAnimatedTabNavigator<
     screenOptions,
     initialRouteName,
   }) => {
+    const { theme } = useUnistyles();
+
     return (
       <TabBarActionsProvider>
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
           <Tab.Navigator
             initialRouteName={initialRouteName}
             detachInactiveScreens={true}

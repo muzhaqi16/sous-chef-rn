@@ -115,37 +115,39 @@ export function usePantrySorting<T extends SortableItem>(
     [sortOption, sortDirection, onSortChange],
   );
 
-  // Sort function
+  // Sort function - optimized with pre-computed timestamps
   const sortItems = useCallback(
     (items: T[]): T[] => {
-      const sorted = [...items].sort((a, b) => {
+      // Pre-compute timestamps once (O(n)) instead of inside comparator (O(n log n))
+      const itemsWithTs = items.map(item => ({
+        item,
+        expiryTs: item.expiresAt ? new Date(item.expiresAt).getTime() : Infinity,
+        createdTs: item.createdAt ? new Date(item.createdAt).getTime() : 0,
+      }));
+
+      // Sort using pre-computed values (no Date creation in comparator)
+      itemsWithTs.sort((a, b) => {
         let comparison = 0;
         switch (sortOption) {
           case 'name':
-            comparison = (a.item?.name || '').localeCompare(b.item?.name || '');
+            comparison = (a.item.item?.name || '').localeCompare(
+              b.item.item?.name || '',
+            );
             break;
           case 'expiry':
-            const aExpiry = a.expiresAt
-              ? new Date(a.expiresAt).getTime()
-              : Infinity;
-            const bExpiry = b.expiresAt
-              ? new Date(b.expiresAt).getTime()
-              : Infinity;
-            comparison = aExpiry - bExpiry;
+            comparison = a.expiryTs - b.expiryTs;
             break;
           case 'quantity':
-            comparison = a.quantity - b.quantity;
+            comparison = a.item.quantity - b.item.quantity;
             break;
           case 'recent':
-            // Use createdAt if available
-            comparison = a.createdAt && b.createdAt
-              ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-              : 0;
+            comparison = b.createdTs - a.createdTs;
             break;
         }
         return sortDirection === 'asc' ? comparison : -comparison;
       });
-      return sorted;
+
+      return itemsWithTs.map(({ item }) => item);
     },
     [sortOption, sortDirection],
   );

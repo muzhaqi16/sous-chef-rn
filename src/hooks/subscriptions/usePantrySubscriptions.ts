@@ -53,6 +53,7 @@ export function usePantrySubscriptions(userId?: string) {
   // Get selected pantry from global store
   const selectedPantryId =
     useStore(state => state.selectedPantryId) || undefined;
+  const isHomeSelectionReady = useStore(state => state.isHomeSelectionReady);
 
   //
   // Pantry Items Changed Subscription
@@ -129,7 +130,7 @@ export function usePantrySubscriptions(userId?: string) {
 
   usePantryItemsChangedSubscription({
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId,
+    skip: !selectedPantryId || !isHomeSelectionReady,
     ...itemsHandlers,
   });
 
@@ -149,7 +150,7 @@ export function usePantrySubscriptions(userId?: string) {
 
   usePantryUpdatedSubscription({
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId,
+    skip: !selectedPantryId || !isHomeSelectionReady,
     ...metadataHandlers,
   });
 
@@ -169,7 +170,7 @@ export function usePantrySubscriptions(userId?: string) {
 
   usePantryLowStockAlertSubscription({
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId,
+    skip: !selectedPantryId || !isHomeSelectionReady,
     ...lowStockHandlers,
   });
 
@@ -189,7 +190,7 @@ export function usePantrySubscriptions(userId?: string) {
 
   usePantryExpiringItemsAlertSubscription({
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId,
+    skip: !selectedPantryId || !isHomeSelectionReady,
     ...expiringHandlers,
   });
 
