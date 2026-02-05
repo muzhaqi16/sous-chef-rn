@@ -118,10 +118,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               itemDisplayUnitId: item.displayUnit?.id,
               itemNetWeight: item.netWeight,
               itemBrand: item.brandName,
+              // NEW: netWeight fields for PantryItem
+              netWeight: item.netWeight,
+              netWeightUnitId: item.displayUnit?.id,
             },
           },
         });
         setIsAdded(true);
+        onScanAnother();
       } else if (source === 'shoppingList' && shoppingListId) {
         await addToShoppingList({
           variables: {
@@ -132,10 +136,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               itemName: item.name,
               unitId: item.displayUnit?.id ?? item.unitId,
               unitName: item.displayUnit?.name,
+              // NEW: brand and netWeight fields for ShoppingListItem
+              brandId: item.brandId,
+              brandName: item.brandName,
+              netWeight: item.netWeight,
+              netWeightUnitId: item.displayUnit?.id,
             },
           },
         });
         setIsAdded(true);
+        onScanAnother();
       } else {
         Alert.alert('Error', 'Missing required information');
       }

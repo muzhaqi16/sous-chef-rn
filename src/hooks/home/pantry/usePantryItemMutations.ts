@@ -154,24 +154,29 @@ export function usePantryItemMutations({
   });
 
   // REMOVE MUTATION
-  const [removeItemMutation, { client }] = useDeletePantryItemMutation({
+  const [removeItemMutation] = useDeletePantryItemMutation({
     errorPolicy: 'all',
+    optimisticResponse: variables => ({
+      __typename: 'Mutation',
+      deletePantryItem: {
+        __typename: 'PantryItem',
+        id: variables.id,
+      },
+    }),
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
       });
       Alert.alert('Error', message);
+      refetch(); // Restore state on error
     },
     update: (cache: any, { data }: any, { variables }: any) => {
-      if (!data?.deletePantryItem || !pantryId || !variables) return;
-
-      try {
-        const itemId = variables.id;
-        removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for removeItem, will refetch:', error);
-        refetch();
+      if (!data?.deletePantryItem || !pantryId || !variables) {
+        return;
       }
+
+      const itemId = variables.id;
+      removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
     },
   });
 
@@ -209,8 +214,10 @@ export function usePantryItemMutations({
     return operation(updates);
   };
 
-  const removeItem = async (itemId: string) => {
-    if (!pantryId) return;
+  const removeItem = async (itemId: string): Promise<void> => {
+    if (!pantryId) {
+      return;
+    }
 
     // Register pending delete to handle subscription race condition
     subscriptionService.registerPendingDelete(
@@ -221,21 +228,11 @@ export function usePantryItemMutations({
       'itemsConnection',
     );
 
-    // Optimistically remove from cache IMMEDIATELY
-    removeFromPantryItemsCache(client.cache, pantryId, itemId, { evictItem: true });
-
     try {
-      const result = await removeItemMutation({
+      // Await the mutation to ensure cache update completes and UI reflects changes immediately
+      await removeItemMutation({
         variables: { id: itemId },
       });
-
-      if (result.error) {
-        console.warn('Delete mutation had errors, refetching to restore state');
-        refetch();
-      }
-    } catch (error) {
-      console.warn('Delete mutation failed, refetching to restore state:', error);
-      refetch();
     } finally {
       subscriptionService.unregisterPendingDelete(itemId);
     }

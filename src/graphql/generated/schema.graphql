@@ -672,6 +672,14 @@ Input for a single item in batch add operation (without shoppingListId)
 input BatchAddShoppingListItemInput {
   addedContext: String
   aisle: String
+  """
+  Brand ID for this shopping list item
+  """
+  brandId: String
+  """
+  Brand name for find-or-create (alternative to brandId)
+  """
+  brandName: String
   budgetPrice: Float
   category: String
   """
@@ -681,6 +689,14 @@ input BatchAddShoppingListItemInput {
   estimatedPrice: Float
   itemId: String
   itemName: String
+  """
+  User-specified net weight (for package size tracking)
+  """
+  netWeight: Float
+  """
+  Unit ID for the net weight
+  """
+  netWeightUnitId: String
   notes: String
   preferredStoreId: String
   priority: Int
@@ -1556,6 +1572,8 @@ input CreatePantryItemInput {
   itemUpc: String
   lastUsedAt: DateTime
   minQuantity: Float
+  netWeight: Float
+  netWeightUnitId: String
   pantryId: ID!
   purchaseId: String
   quantity: Float
@@ -1635,11 +1653,27 @@ input CreateShoppingListInput {
 input CreateShoppingListItemInput {
   addedContext: String
   aisle: String
+  """
+  Brand ID for this shopping list item
+  """
+  brandId: String
+  """
+  Brand name for find-or-create (alternative to brandId)
+  """
+  brandName: String
   budgetPrice: Float
   category: String
   estimatedPrice: Float
   itemId: String
   itemName: String
+  """
+  User-specified net weight (for package size tracking)
+  """
+  netWeight: Float
+  """
+  Unit ID for the net weight
+  """
+  netWeightUnitId: String
   notes: String
   preferredStoreId: String
   priority: Int
@@ -3018,6 +3052,7 @@ type Item {
   unitConversions: [ItemUnitConversion!]!
   units: [ItemUnit!]!
   updatedAt: DateTime!
+  variationBrand: Brand
   version: Int!
   visibility: Visibility!
 }
@@ -5253,6 +5288,9 @@ type PantryItem {
   lastUsedAt: DateTime
   lowStockAlert: Boolean!
   minQuantity: Float
+  netWeight: Float
+  netWeightUnit: Unit
+  netWeightUnitId: String
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
@@ -5456,10 +5494,15 @@ type PantryItemUsage {
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
+  itemId: ID!
+  itemName: String!
   mealPlanItem: MealPlanItem
   mealPlanItemId: String
   notes: String
-  pantryItem: PantryItem!
+  pantry: Pantry!
+  pantryId: ID!
+  pantryItem: PantryItem
+  pantryItemId: String
   purpose: UsagePurpose!
   quantityUsed: Float!
   recipe: Recipe
@@ -5467,6 +5510,7 @@ type PantryItemUsage {
   store: Store
   storeId: String
   totalCost: Float
+  unitName: String
   usageSource: UsageSource!
   usageUnit: Unit
   usageUnitId: String
@@ -7022,6 +7066,8 @@ Shopping list item with focused sub-types for better organization
 type ShoppingListItem {
   addedBy: User
   addedById: String
+  brand: Brand
+  brandId: String
   category: String
   createdAt: DateTime!
   deletedAt: DateTime
@@ -7032,6 +7078,9 @@ type ShoppingListItem {
   itemName: String
   lastEditedBy: User
   lastEditedById: String
+  netWeight: Float
+  netWeightUnit: Unit
+  netWeightUnitId: String
   normalizedQuantity: Float
   normalizedUnit: Unit
   normalizedUnitId: String
@@ -7825,6 +7874,8 @@ input SyncPantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
+  netWeight: Float
+  netWeightUnitId: String
   pantryId: ID!
   purchaseId: String
   quantity: Float
@@ -7854,6 +7905,14 @@ type SyncPantryItemResult {
 input SyncShoppingListItemInput {
   addedContext: String
   aisle: String
+  """
+  Brand ID for this shopping list item
+  """
+  brandId: String
+  """
+  Brand name for find-or-create (alternative to brandId)
+  """
+  brandName: String
   budgetPrice: Float
   category: String
   """
@@ -7872,6 +7931,14 @@ input SyncShoppingListItemInput {
   Item details (for items not in catalog)
   """
   itemName: String
+  """
+  User-specified net weight (for package size tracking)
+  """
+  netWeight: Float
+  """
+  Unit ID for the net weight
+  """
+  netWeightUnitId: String
   """
   User-provided information
   """

@@ -107,21 +107,21 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
     opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
   });
 
-  // Wrap delete action with slide animation
+  // Wrap delete action with slide animation (callback after animation completes)
   const handleDelete = useCallback(() => {
     if (onDelete) {
       triggerSlide(1, onDelete);
     }
   }, [onDelete, triggerSlide]);
 
-  // Wrap consume action with slide animation
+  // Wrap consume action with slide animation (callback after animation completes)
   const handleConsume = useCallback(() => {
     if (onConsume) {
       triggerSlide(1, onConsume);
     }
   }, [onConsume, triggerSlide]);
 
-  // Wrap waste action with slide animation
+  // Wrap waste action with slide animation (callback after animation completes)
   const handleWaste = useCallback(() => {
     if (onWaste) {
       triggerSlide(1, onWaste);

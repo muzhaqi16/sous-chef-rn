@@ -52,7 +52,7 @@ export const SLIDE_PRESETS = {
    */
   exitWithFade: {
     slideDistance: 200,
-    duration: 300,
+    duration: 250,
     withOpacity: true,
     opacityTarget: 0,
   },

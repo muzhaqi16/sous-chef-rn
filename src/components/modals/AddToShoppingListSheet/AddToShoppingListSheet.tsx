@@ -114,12 +114,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   }, [onClose, navigateTo, shoppingListId]);
 
   // Handle add manually press - navigates to AddItem screen
-  const handleAddManually = useCallback(() => {
+  const handleAddManually = useCallback((searchValue: string) => {
     onClose();
     if (shoppingListId) {
       navigate('AddItem', {
         listId: shoppingListId,
-        initialItemName: undefined,
+        initialItemName: searchValue || undefined,
       });
     }
   }, [onClose, navigate, shoppingListId]);

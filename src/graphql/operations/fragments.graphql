@@ -48,6 +48,19 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
     name
     symbol
   }
+  # NEW: Brand and netWeight fields for custom shopping list items
+  brand {
+    id
+    name
+  }
+  brandId
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  netWeightUnitId
   item {
     id
     imageUrl
@@ -79,6 +92,19 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
 # Spreads Core and adds all extended fields
 fragment ShoppingListItemFragment on ShoppingListItem {
   ...ShoppingListItemCore
+  # NEW: Brand and netWeight fields for custom shopping list items
+  brand {
+    id
+    name
+  }
+  brandId
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  netWeightUnitId
   # Extended fields not in Core
   shoppingList {
     id
@@ -553,6 +579,9 @@ fragment PantryItemCore on PantryItem {
   lowStockAlert
   minQuantity
   lastUsedAt
+  # NEW: netWeight fields for pantry item tracking
+  netWeight
+  netWeightUnitId
   __typename
 }
 
@@ -574,6 +603,13 @@ fragment PantryItemDisplay on PantryItem {
     __typename
   }
   unit {
+    id
+    name
+    symbol
+    __typename
+  }
+  # NEW: netWeightUnit for pantry item tracking
+  netWeightUnit {
     id
     name
     symbol

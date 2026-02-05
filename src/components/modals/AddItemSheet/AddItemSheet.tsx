@@ -117,7 +117,8 @@ export function AddItemSheet({
 
   // Wrap onAddManually to provide search value
   const handleAddManually = useCallback(() => {
-    onAddManually();
+    const searchValue = searchBarRef.current?.getValue() || '';
+    onAddManually(searchValue);
   }, [onAddManually]);
 
   // Handle selecting a search suggestion

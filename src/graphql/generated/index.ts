@@ -284,6 +284,10 @@ export type BanUserInput = {
 export type BatchAddShoppingListItemInput = {
   addedContext?: InputMaybe<Scalars['String']['input']>;
   aisle?: InputMaybe<Scalars['String']['input']>;
+  /** Brand ID for this shopping list item */
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  /** Brand name for find-or-create (alternative to brandId) */
+  brandName?: InputMaybe<Scalars['String']['input']>;
   budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   /** Client-provided ID for matching results (optional) */
@@ -291,6 +295,10 @@ export type BatchAddShoppingListItemInput = {
   estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
+  /** User-specified net weight (for package size tracking) */
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  /** Unit ID for the net weight */
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
@@ -1111,6 +1119,8 @@ export type CreatePantryItemInput = {
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   minQuantity?: InputMaybe<Scalars['Float']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
@@ -1190,11 +1200,19 @@ export type CreateShoppingListInput = {
 export type CreateShoppingListItemInput = {
   addedContext?: InputMaybe<Scalars['String']['input']>;
   aisle?: InputMaybe<Scalars['String']['input']>;
+  /** Brand ID for this shopping list item */
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  /** Brand name for find-or-create (alternative to brandId) */
+  brandName?: InputMaybe<Scalars['String']['input']>;
   budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
+  /** User-specified net weight (for package size tracking) */
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  /** Unit ID for the net weight */
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
@@ -2505,6 +2523,7 @@ export type Item = {
   unitConversions: Array<ItemUnitConversion>;
   units: Array<ItemUnit>;
   updatedAt: Scalars['DateTime']['output'];
+  variationBrand: Maybe<Brand>;
   version: Scalars['Int']['output'];
   visibility: Visibility;
 };
@@ -5501,6 +5520,9 @@ export type PantryItem = {
   lastUsedAt: Maybe<Scalars['DateTime']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
   minQuantity: Maybe<Scalars['Float']['output']>;
+  netWeight: Maybe<Scalars['Float']['output']>;
+  netWeightUnit: Maybe<Unit>;
+  netWeightUnitId: Maybe<Scalars['String']['output']>;
   pantry: Pantry;
   pantryId: Scalars['String']['output'];
   photos: Array<PantryItemPhoto>;
@@ -5665,10 +5687,15 @@ export type PantryItemUsage = {
   id: Scalars['ID']['output'];
   isComposted: Maybe<Scalars['Boolean']['output']>;
   isRecycled: Maybe<Scalars['Boolean']['output']>;
+  itemId: Scalars['ID']['output'];
+  itemName: Scalars['String']['output'];
   mealPlanItem: Maybe<MealPlanItem>;
   mealPlanItemId: Maybe<Scalars['String']['output']>;
   notes: Maybe<Scalars['String']['output']>;
-  pantryItem: PantryItem;
+  pantry: Pantry;
+  pantryId: Scalars['ID']['output'];
+  pantryItem: Maybe<PantryItem>;
+  pantryItemId: Maybe<Scalars['String']['output']>;
   purpose: UsagePurpose;
   quantityUsed: Scalars['Float']['output'];
   recipe: Maybe<Recipe>;
@@ -5676,6 +5703,7 @@ export type PantryItemUsage = {
   store: Maybe<Store>;
   storeId: Maybe<Scalars['String']['output']>;
   totalCost: Maybe<Scalars['Float']['output']>;
+  unitName: Maybe<Scalars['String']['output']>;
   usageSource: UsageSource;
   usageUnit: Maybe<Unit>;
   usageUnitId: Maybe<Scalars['String']['output']>;
@@ -7662,6 +7690,8 @@ export type ShoppingListItem = {
   __typename?: 'ShoppingListItem';
   addedBy: Maybe<User>;
   addedById: Maybe<Scalars['String']['output']>;
+  brand: Maybe<Brand>;
+  brandId: Maybe<Scalars['String']['output']>;
   category: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deletedAt: Maybe<Scalars['DateTime']['output']>;
@@ -7672,6 +7702,9 @@ export type ShoppingListItem = {
   itemName: Maybe<Scalars['String']['output']>;
   lastEditedBy: Maybe<User>;
   lastEditedById: Maybe<Scalars['String']['output']>;
+  netWeight: Maybe<Scalars['Float']['output']>;
+  netWeightUnit: Maybe<Unit>;
+  netWeightUnitId: Maybe<Scalars['String']['output']>;
   normalizedQuantity: Maybe<Scalars['Float']['output']>;
   normalizedUnit: Maybe<Unit>;
   normalizedUnitId: Maybe<Scalars['String']['output']>;
@@ -8418,6 +8451,8 @@ export type SyncPantryItemInput = {
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
   minQuantity?: InputMaybe<Scalars['Float']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
@@ -8448,6 +8483,10 @@ export type SyncPantryItemResult = {
 export type SyncShoppingListItemInput = {
   addedContext?: InputMaybe<Scalars['String']['input']>;
   aisle?: InputMaybe<Scalars['String']['input']>;
+  /** Brand ID for this shopping list item */
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  /** Brand name for find-or-create (alternative to brandId) */
+  brandName?: InputMaybe<Scalars['String']['input']>;
   budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
   /** Price information */
@@ -8458,6 +8497,10 @@ export type SyncShoppingListItemInput = {
   itemId?: InputMaybe<Scalars['String']['input']>;
   /** Item details (for items not in catalog) */
   itemName?: InputMaybe<Scalars['String']['input']>;
+  /** User-specified net weight (for package size tracking) */
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  /** Unit ID for the net weight */
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   /** User-provided information */
   notes?: InputMaybe<Scalars['String']['input']>;
   /** Store preferences */
@@ -10652,11 +10695,19 @@ export type ShoppingListItemDisplayFragment = {
   unitName: string | null | undefined;
   category: string | null | undefined;
   version: number;
+  brandId: string | null | undefined;
+  netWeight: number | null | undefined;
+  netWeightUnitId: string | null | undefined;
   purchaseInfo: {
     __typename?: 'ShoppingListItemPurchaseInfo';
     isPurchased: boolean;
   };
   unit:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
+  brand: { __typename?: 'Brand'; id: string; name: string } | null | undefined;
+  netWeightUnit:
     | { __typename?: 'Unit'; id: string; name: string; symbol: string }
     | null
     | undefined;
@@ -10693,10 +10744,18 @@ export type ShoppingListItemDisplayFragment = {
 
 export type ShoppingListItemFragment = {
   __typename?: 'ShoppingListItem';
+  brandId: string | null | undefined;
+  netWeight: number | null | undefined;
+  netWeightUnitId: string | null | undefined;
   priority: number;
   sortOrder: string;
   createdAt: string;
   deletedAt: string | null | undefined;
+  brand: { __typename?: 'Brand'; id: string; name: string } | null | undefined;
+  netWeightUnit:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
   shoppingList: {
     __typename?: 'ShoppingList';
     id: string;
@@ -11181,6 +11240,8 @@ export type PantryItemCoreFragment = {
   lowStockAlert: boolean;
   minQuantity: number | null | undefined;
   lastUsedAt: string | null | undefined;
+  netWeight: number | null | undefined;
+  netWeightUnitId: string | null | undefined;
 };
 
 export type PantryItemDisplayFragment = {
@@ -11198,6 +11259,10 @@ export type PantryItemDisplayFragment = {
       | undefined;
   };
   unit: { __typename: 'Unit'; id: string; name: string; symbol: string };
+  netWeightUnit:
+    | { __typename: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
   storageLocation:
     | {
         __typename: 'StorageLocation';
@@ -11253,7 +11318,7 @@ export type PantryItemFragment = {
     wasteReason: WasteReason | null | undefined;
     isComposted: boolean | null | undefined;
     isRecycled: boolean | null | undefined;
-    pantryItem: { __typename?: 'PantryItem'; id: string };
+    pantryItem: { __typename?: 'PantryItem'; id: string } | null | undefined;
     usedBy: { __typename?: 'User'; id: string } | null | undefined;
     cookingLog: { __typename?: 'CookingLog'; id: string } | null | undefined;
     mealPlanItem:
@@ -12577,6 +12642,28 @@ export type ItemByUpcFilterQuery = {
           isDefault: boolean;
           unitId: string;
         }>;
+        variationBrand:
+          | { __typename?: 'Brand'; id: string; name: string }
+          | null
+          | undefined;
+        matchedVariation:
+          | {
+              __typename?: 'ProductVariation';
+              netWeight: number | null | undefined;
+              netWeightUnit: string | null | undefined;
+              packageSize: string | null | undefined;
+              confidence: number | null | undefined;
+              brandInfo:
+                | {
+                    __typename?: 'VariationBrandInfo';
+                    id: string | null | undefined;
+                    name: string;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
       };
     }>;
     pageInfo: {
@@ -13589,7 +13676,7 @@ export type DeletePantryItemMutationVariables = Exact<{
 
 export type DeletePantryItemMutation = {
   __typename?: 'Mutation';
-  deletePantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
+  deletePantryItem: { __typename?: 'PantryItem'; id: string };
 };
 
 export type CreatePantryItemUsageMutationVariables = Exact<{
@@ -13613,11 +13700,14 @@ export type CreatePantryItemUsageMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    pantryItem: {
-      __typename?: 'PantryItem';
-      id: string;
-      quantity: number;
-    } & PantryItemFragment;
+    pantryItem:
+      | ({
+          __typename?: 'PantryItem';
+          id: string;
+          quantity: number;
+        } & PantryItemFragment)
+      | null
+      | undefined;
     usedBy:
       | { __typename?: 'User'; id: string; email: string }
       | null
@@ -13639,7 +13729,10 @@ export type RestockPantryItemMutation = {
     purpose: UsagePurpose;
     costPerUnit: number | null | undefined;
     totalCost: number | null | undefined;
-    pantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
+    pantryItem:
+      | ({ __typename?: 'PantryItem' } & PantryItemFragment)
+      | null
+      | undefined;
   };
 };
 
@@ -13843,7 +13936,7 @@ export type PantryItemUsageChangedSubscription = {
       usedAt: string;
       purpose: UsagePurpose;
       notes: string | null | undefined;
-      pantryItem: { __typename?: 'PantryItem'; id: string };
+      pantryItem: { __typename?: 'PantryItem'; id: string } | null | undefined;
       usedBy: { __typename?: 'User'; id: string } | null | undefined;
     };
   };
@@ -14251,12 +14344,15 @@ export type RecordPantryUsageMutation = {
     usedAt: string;
     purpose: UsagePurpose;
     notes: string | null | undefined;
-    pantryItem: {
-      __typename?: 'PantryItem';
-      id: string;
-      itemName: string;
-      quantity: number;
-    };
+    pantryItem:
+      | {
+          __typename?: 'PantryItem';
+          id: string;
+          itemName: string;
+          quantity: number;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -16031,6 +16127,32 @@ export const ShoppingListItemDisplayFragmentDoc = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -16288,6 +16410,32 @@ export const ShoppingListItemFragmentDoc = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -18365,6 +18513,8 @@ export const PantryItemCoreFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -18435,6 +18585,19 @@ export const PantryItemDisplayFragmentDoc = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'storageLocation' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -18487,6 +18650,8 @@ export const PantryItemDisplayFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -19298,6 +19463,8 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -19351,6 +19518,19 @@ export const PantryItemFragmentDoc = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -19736,6 +19916,8 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -19789,6 +19971,19 @@ export const PantryFragmentDoc = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -20535,6 +20730,8 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -20588,6 +20785,19 @@ export const HomeFragmentDoc = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -26746,6 +26956,8 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -26799,6 +27011,19 @@ export const GetHomeDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -29370,6 +29595,8 @@ export const GetHomeByJoinCodeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -29423,6 +29650,19 @@ export const GetHomeByJoinCodeDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -30547,6 +30787,8 @@ export const CreateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -30600,6 +30842,19 @@ export const CreateHomeDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -31682,6 +31937,8 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -31735,6 +31992,19 @@ export const UpdateHomeDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -37795,6 +38065,71 @@ export const ItemByUpcFilterDocument = {
                                 ],
                               },
                             },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'variationBrand' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'id' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'name' },
+                                  },
+                                ],
+                              },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'matchedVariation' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'netWeight' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: {
+                                      kind: 'Name',
+                                      value: 'netWeightUnit',
+                                    },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: {
+                                      kind: 'Name',
+                                      value: 'packageSize',
+                                    },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'confidence' },
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: { kind: 'Name', value: 'brandInfo' },
+                                    selectionSet: {
+                                      kind: 'SelectionSet',
+                                      selections: [
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'id' },
+                                        },
+                                        {
+                                          kind: 'Field',
+                                          name: { kind: 'Name', value: 'name' },
+                                        },
+                                      ],
+                                    },
+                                  },
+                                ],
+                              },
+                            },
                           ],
                         },
                       },
@@ -42053,6 +42388,8 @@ export const GetPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -42106,6 +42443,19 @@ export const GetPantryDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -42547,6 +42897,8 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -42600,6 +42952,19 @@ export const GetPantryItemDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -45176,6 +45541,8 @@ export const CreatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -45229,6 +45596,19 @@ export const CreatePantryItemDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -45635,6 +46015,8 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -45688,6 +46070,19 @@ export const UpdatePantryItemDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -45975,519 +46370,7 @@ export const DeletePantryItemDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PantryItemFragment' },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'UnitFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'ItemUnit' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'itemId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPreferred' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'packageSize' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'packageDescription' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'retailUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usageContext' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'recommendedFor' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'maxQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityStep' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'averagePricePerUnit' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastPriceUpdate' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'priceSource' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usageCount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'popularityScore' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'confidence' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'verifiedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'displayNameSingular' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'displayNamePlural' } },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'BrandFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'ItemBrand' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'brand' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'ItemDisplay' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'Item' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
-          { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'displayUnit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'categories' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isPrimary' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'category' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'color' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: '__typename' },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'ItemFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'Item' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'FragmentSpread',
-            name: { kind: 'Name', value: 'ItemDisplay' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'showInOnboarding' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'shelfLifeDays' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'popularity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'healthBenefits' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'allergens' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'nutritions' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'images' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'ingredients' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'density' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'preferredTrackingUnitId' },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'preferredTrackingUnit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'displayUnit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'units' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'UnitFragment' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'brands' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'BrandFragment' },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'PantryItemCore' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'PantryItem' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'pantryId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'itemId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'unitName' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'PantryItemDisplay' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'PantryItem' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'FragmentSpread',
-            name: { kind: 'Name', value: 'PantryItemCore' },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'item' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'displayUnit' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'symbol' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: '__typename' },
-                      },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'unit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'storageLocation' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'brand' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-          { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'PantryItemFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'PantryItem' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'FragmentSpread',
-            name: { kind: 'Name', value: 'PantryItemDisplay' },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'item' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'ItemFragment' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'unit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isMetric' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'baseUnitId' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'conversionFactor' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'displayAsFraction' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'minPrecision' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'autoConvertThreshold' },
-                },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'store' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'condition' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'acquisitionMethod' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'costPerUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'totalCost' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'purchase' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'purchaseDate' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'unitPrice' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'totalPrice' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'usageRecords' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'quantityUsed' },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'usedAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'purpose' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'wasteReason' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isComposted' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isRecycled' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'pantryItem' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'usedBy' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'cookingLog' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'mealPlanItem' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'recipe' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                    ],
-                  },
-                },
               ],
             },
           },
@@ -46896,6 +46779,8 @@ export const CreatePantryItemUsageDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -46949,6 +46834,19 @@ export const CreatePantryItemUsageDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -47537,6 +47435,8 @@ export const RestockPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -47590,6 +47490,19 @@ export const RestockPantryItemDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -48196,6 +48109,8 @@ export const UpdatePantryItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -48249,6 +48164,19 @@ export const UpdatePantryItemQuantityDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -48877,6 +48805,8 @@ export const SyncPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -48930,6 +48860,19 @@ export const SyncPantryItemDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -49828,6 +49771,8 @@ export const PantryItemsChangedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -49881,6 +49826,19 @@ export const PantryItemsChangedDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -55488,6 +55446,32 @@ export const GetShoppingListDocument = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -56878,6 +56862,32 @@ export const GetShoppingListItemsPaginatedDocument = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -57195,6 +57205,32 @@ export const GetShoppingListItemDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -59581,6 +59617,32 @@ export const AddItemToShoppingListDocument = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -60160,6 +60222,32 @@ export const UpdateShoppingListItemDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -60834,6 +60922,32 @@ export const MarkItemPurchasedDocument = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -61397,6 +61511,32 @@ export const MoveShoppingListItemDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -62198,6 +62338,32 @@ export const UpdateShoppingListItemQuantityDocument = {
           },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -62790,6 +62956,32 @@ export const UpdateShoppingListItemNotesDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -63386,6 +63578,32 @@ export const UpdateShoppingListItemPriorityDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -64261,6 +64479,8 @@ export const MoveShoppingItemToPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
           { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
         ],
       },
@@ -64314,6 +64534,19 @@ export const MoveShoppingItemToPantryDocument = {
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: '__typename' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -64905,6 +65138,32 @@ export const AddItemsToShoppingListDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -65548,6 +65807,32 @@ export const SyncShoppingListItemDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -66364,6 +66649,32 @@ export const SyncMoveShoppingListItemDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },
@@ -67297,6 +67608,32 @@ export const ShoppingListItemsChangedDocument = {
             kind: 'FragmentSpread',
             name: { kind: 'Name', value: 'ShoppingListItemCore' },
           },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'brand' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'brandId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'netWeightUnit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'netWeightUnitId' } },
           {
             kind: 'Field',
             name: { kind: 'Name', value: 'shoppingList' },

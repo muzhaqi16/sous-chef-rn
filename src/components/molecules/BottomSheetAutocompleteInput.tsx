@@ -1,4 +1,11 @@
-import React, { useState, useRef, useCallback, useEffect, memo } from 'react';
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  memo,
+} from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import {
   BottomSheetModal,
@@ -7,7 +14,7 @@ import {
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -89,9 +96,11 @@ export function BottomSheetAutocompleteInput<T>({
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
   const { height } = useWindowDimensions();
+  const { theme } = useUnistyles();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
+  const lastDataRef = useRef<T[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
   const animationConfigs = useSharedBottomSheetConfigs();
@@ -131,6 +140,25 @@ export function BottomSheetAutocompleteInput<T>({
     showAutocomplete,
     onModalOpen,
   ]);
+
+  // Update lastDataRef when we get new data
+  useEffect(() => {
+    if (data.length > 0) {
+      lastDataRef.current = data;
+    }
+  }, [data]);
+
+  // Compute display data - show previous results while loading to prevent flickering
+  const displayData = useMemo(() => {
+    if (data.length > 0) {
+      return data;
+    }
+    // Keep showing last results while loading to prevent flickering
+    if (loading && lastDataRef.current.length > 0) {
+      return lastDataRef.current;
+    }
+    return data;
+  }, [data, loading]);
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -252,9 +280,11 @@ export function BottomSheetAutocompleteInput<T>({
         enablePanDownToClose={true}
         enableContentPanningGesture={false}
         animationConfigs={animationConfigs}
+        handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
+        backgroundStyle={{ backgroundColor: theme.colors.surface }}
       >
         <BottomSheetFlatList
-          data={loading ? [] : data}
+          data={displayData}
           keyExtractor={keyExtractor}
           renderItem={({ item }: { item: T }) => {
             const element = renderItem(item);
@@ -309,6 +339,7 @@ const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingBottom: theme.spacing.lg,
     flexGrow: 1,
+    backgroundColor: theme.colors.surface,
   },
   autocompleteTitle: {
     fontSize: theme.typography.fontSize.base,
@@ -339,6 +370,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
-import { Label } from '#components/atoms/Label';
+import { InlineAutocomplete } from './InlineAutocomplete';
 
 interface SuggestedBrand {
   id: string;
@@ -39,7 +38,6 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
   testID,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const isOnline = useAppStore(state => state.isOnline);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -101,11 +99,6 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
     return searchedBrands.map(b => ({ id: b.id, name: b.name }));
   }, [filteredSuggestedBrands, brandsData?.brands]);
 
-  // Show suggestions when there are results
-  useEffect(() => {
-    setShowSuggestions(brands.length > 0 && searchTerm.length >= 1);
-  }, [brands.length, searchTerm.length]);
-
   const handleTextChange = useCallback((text: string) => {
     onChangeText(text);
     setSearchTerm(text);
@@ -116,133 +109,46 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
   const handleSelectBrand = useCallback((brand: SuggestedBrand) => {
     onChangeText(brand.name);
     onBrandSelected?.(brand.id, brand.name);
-    setShowSuggestions(false);
     setSearchTerm('');
   }, [onChangeText, onBrandSelected]);
 
-  const handleBlur = useCallback(() => {
-    // Delay hiding to allow tap on suggestion
-    setTimeout(() => setShowSuggestions(false), 200);
-  }, []);
-
-  const renderBrandOption = useCallback(({ item }: { item: SuggestedBrand }) => {
+  const renderBrandItem = useCallback((item: SuggestedBrand) => {
     const isSuggested = suggestedBrands.some(b => b.id === item.id);
 
     return (
-      <TouchableOpacity
-        onPress={() => handleSelectBrand(item)}
-        style={[styles.brandOption, isSuggested && styles.suggestedOption]}
-        activeOpacity={0.7}
-      >
+      <View style={[styles.brandOption, isSuggested && styles.suggestedOption]}>
         <Text style={styles.brandName}>{item.name}</Text>
         {isSuggested && (
           <Text style={styles.suggestedBadge}>Suggested</Text>
         )}
-      </TouchableOpacity>
+      </View>
     );
-  }, [handleSelectBrand, suggestedBrands]);
+  }, [suggestedBrands]);
+
+  const keyExtractor = useCallback((item: SuggestedBrand) => item.id, []);
 
   return (
-    <View style={styles.container}>
-      {label && <Label required={required}>{label}</Label>}
-      <BottomSheetTextInput
-        style={[styles.input, error && styles.inputError]}
-        value={value}
-        onChangeText={handleTextChange}
-        placeholder={placeholder}
-        onBlur={handleBlur}
-        autoCapitalize="words"
-        testID={testID}
-      />
-      {error && <Text style={styles.errorText}>{error}</Text>}
-
-      {showSuggestions && (
-        <View style={styles.suggestionsContainer}>
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Searching...</Text>
-            </View>
-          ) : (
-            <ScrollView
-              style={{ flex: 1 }}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              showsVerticalScrollIndicator={true}
-            >
-              {brands.slice(0, 6).map((item, index, arr) => (
-                <React.Fragment key={item.id}>
-                  {renderBrandOption({ item })}
-                  {index < arr.length - 1 && <View style={styles.separator} />}
-                </React.Fragment>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      )}
-    </View>
+    <InlineAutocomplete<SuggestedBrand>
+      label={label}
+      value={value}
+      onChangeText={handleTextChange}
+      placeholder={placeholder}
+      required={required}
+      error={error}
+      testID={testID}
+      items={brands}
+      loading={loading}
+      minSearchLength={1}
+      maxResults={6}
+      renderItem={renderBrandItem}
+      keyExtractor={keyExtractor}
+      onSelect={handleSelectBrand}
+      autoCapitalize="words"
+    />
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    position: 'relative',
-    zIndex: 10,
-    overflow: 'visible',
-  },
-  label: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  required: {
-    color: theme.colors.error,
-  },
-  input: {
-    height: 48,
-    borderRadius: theme.radii.md,
-    fontSize: theme.fonts.size.md,
-    paddingHorizontal: theme.spacing.sm,
-    backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.inputText,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
-  },
-  errorText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
-  suggestionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginTop: theme.spacing.xs,
-    maxHeight: 200,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    zIndex: 1000,
-  },
-  loadingContainer: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
   brandOption: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
@@ -266,9 +172,5 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
     overflow: 'hidden',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: theme.colors.borderLight,
   },
 }));

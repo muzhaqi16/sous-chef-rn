@@ -1,9 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import PagerView from 'react-native-pager-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -386,7 +384,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           onPageSelected={e => setCurrentPage(e.nativeEvent.position)}
         >
           {/* Page 1: Main */}
-          <BottomSheetScrollView
+          <BottomSheetKeyboardAwareScrollView
             key="main"
             style={styles.page}
             contentContainerStyle={[
@@ -395,6 +393,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bottomOffset={16}
           >
             {/* Item Name */}
             <View style={styles.section}>
@@ -449,9 +448,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               value={storageState}
               onChange={setStorageState}
             />
-          </BottomSheetScrollView>
+          </BottomSheetKeyboardAwareScrollView>
           {/* Page 2: Details */}
-          <BottomSheetScrollView
+          <BottomSheetKeyboardAwareScrollView
             key="details"
             style={styles.page}
             contentContainerStyle={[
@@ -460,6 +459,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bottomOffset={16}
           >
             {/* Expiration Date */}
             <DatePickerField
@@ -469,10 +469,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               placeholder="Select date"
               minimumDate={new Date()}
             />
-          </BottomSheetScrollView>
+          </BottomSheetKeyboardAwareScrollView>
 
           {/* Page 3: Storage */}
-          <BottomSheetScrollView
+          <BottomSheetKeyboardAwareScrollView
             key="storage"
             style={styles.page}
             contentContainerStyle={[
@@ -481,6 +481,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bottomOffset={16}
           >
             {/* Storage Location */}
             <View style={[styles.section, { zIndex: 10 }]}>
@@ -517,10 +518,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 useBottomSheetInput
               />
             </View>
-          </BottomSheetScrollView>
+          </BottomSheetKeyboardAwareScrollView>
 
           {/* Page 4: Stock Settings */}
-          <BottomSheetScrollView
+          <BottomSheetKeyboardAwareScrollView
             key="stock"
             style={styles.page}
             contentContainerStyle={[
@@ -529,6 +530,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            bottomOffset={16}
           >
             <Text style={styles.sectionTitle}>Low Stock Settings</Text>
             <Text style={styles.sectionDescription}>
@@ -560,7 +562,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             <Text style={styles.helpText}>
               Leave empty to disable low stock alerts for this item.
             </Text>
-          </BottomSheetScrollView>
+          </BottomSheetKeyboardAwareScrollView>
         </PagerView>
       </View>
     </BottomSheetModal>

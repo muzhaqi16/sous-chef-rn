@@ -208,7 +208,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   brandItem: {
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     flexDirection: 'row',

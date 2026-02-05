@@ -60,6 +60,18 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
       }
     }, [isPreActivated]);
 
+    // Track timeout for cleanup on unmount
+    const activationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Clean up timeout on unmount to prevent memory leaks
+    useEffect(() => {
+      return () => {
+        if (activationTimeoutRef.current) {
+          clearTimeout(activationTimeoutRef.current);
+        }
+      };
+    }, []);
+
     // Activate the full swipeable on first touch
     // Defer state update to next tick so onPress can fire first (for taps)
     // Swipes won't trigger onPress, so they just activate the swipeable
@@ -67,7 +79,7 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
       if (!isActivatedRef.current) {
         isActivatedRef.current = true;
         // Defer to allow onPress to fire before re-render
-        setTimeout(() => setIsActivated(true), 0);
+        activationTimeoutRef.current = setTimeout(() => setIsActivated(true), 0);
       }
     }, []);
 

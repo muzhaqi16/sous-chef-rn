@@ -232,7 +232,11 @@ export function LoginScreen() {
             <Icon
               name={getBiometricIcon()}
               size={24}
-              color={isBiometricLoading ? theme.colors.textTertiary : theme.colors.primary}
+              color={
+                isBiometricLoading
+                  ? theme.colors.textTertiary
+                  : theme.colors.primary
+              }
             />
             <Text
               style={[
@@ -260,7 +264,7 @@ export function LoginScreen() {
 
 const styles = StyleSheet.create(theme => ({
   biometricContainer: {
-    marginTop: theme.spacing.lg,
+    marginVertical: theme.spacing.lg,
     alignItems: 'center',
   },
   biometricButton: {

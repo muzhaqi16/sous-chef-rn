@@ -16,7 +16,7 @@ export interface CrossTabSource {
  * Hook for handling cross-tab navigation with proper stack cleanup.
  *
  * For tab-to-tab navigation (e.g., Recipe tab → Pantry tab), uses standard goBack().
- * For modal-to-tab navigation (e.g., Barcode modal → Pantry tab), uses reset to dismiss modal.
+ * For modal-to-tab navigation (e.g., Barcode modal → Pantry tab), uses navigate to dismiss modal.
  *
  * Note: Tab stack reset on tab press is handled by FloatingTabBar.
  *
@@ -28,7 +28,7 @@ export function useCrossTabNavigation(_currentMainScreen: string) {
   /**
    * Navigate back to the source tab.
    * - For intra-Home navigation (tab to tab): uses standard goBack()
-   * - For modal dismissal (fromModalStack: true): uses reset to fully dismiss modal
+   * - For modal dismissal (fromModalStack: true): uses navigate to dismiss modal and preserve state
    */
   const goBackToSource = useCallback((source?: CrossTabSource) => {
     if (!source?.sourceTab) {
@@ -44,38 +44,22 @@ export function useCrossTabNavigation(_currentMainScreen: string) {
       return;
     }
 
-    // Modal dismissal scenario - use reset to fully dismiss the modal stack
-    const mainScreenName = source.sourceScreen || `${source.sourceTab}Main`;
+    // Modal dismissal scenario - navigate instead of reset to preserve state
     const rootNavigator = navigation.getParent();
 
     if (rootNavigator) {
+      // Navigate to Home with the specific tab
+      // This dismisses the modal and activates the correct tab without resetting
       rootNavigator.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'Home',
-              state: {
-                routes: [
-                  {
-                    name: source.sourceTab,
-                    state: {
-                      routes: [
-                        {
-                          name: mainScreenName,
-                          params: source.sourceParams,
-                        },
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          ],
+        CommonActions.navigate({
+          name: 'Home',
+          params: {
+            screen: source.sourceTab,
+            // Don't specify nested screen params - preserve the tab's current state
+          },
         })
       );
     } else {
-      // Fallback: if no parent navigator, try normal goBack
       goBack();
     }
   }, [goBack, navigation]);

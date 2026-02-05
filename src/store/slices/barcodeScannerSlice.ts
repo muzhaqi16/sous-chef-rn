@@ -16,6 +16,7 @@ export interface ScannedItem {
     symbol: string;
   };
   brandName?: string;
+  brandId?: string;
 }
 
 export interface BarcodeScannerState {
