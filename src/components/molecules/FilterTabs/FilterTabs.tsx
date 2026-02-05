@@ -59,7 +59,9 @@ function FilterTabsComponent<T extends string = string>({
             key={tab.id}
             tab={tab}
             isActive={activeTabId === tab.id}
-            isFiltered={!!(activeTabId !== tab.id && filteredTabIds?.includes(tab.id))}
+            isFiltered={
+              !!(activeTabId !== tab.id && filteredTabIds?.includes(tab.id))
+            }
             count={counts?.[tab.id]}
             showCounts={showCounts}
             isCompact={isCompact}
@@ -105,14 +107,16 @@ function FilterTabsComponent<T extends string = string>({
   );
 }
 
-export const FilterTabs = React.memo(FilterTabsComponent) as typeof FilterTabsComponent;
+export const FilterTabs = React.memo(
+  FilterTabsComponent,
+) as typeof FilterTabsComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   scrollView: {
     flexShrink: 1,

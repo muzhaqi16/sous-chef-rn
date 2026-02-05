@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useRef,
+  useEffect,
   ReactNode,
 } from 'react';
 import type {
@@ -66,6 +67,39 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
   const pendingEntryAnimationsRef = useRef<Map<string, PendingEntryAnimation>>(
     new Map(),
   );
+
+  // Track entry animation expiry timeouts for cleanup
+  const entryAnimationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+
+  // Cleanup all pending timeouts on unmount to prevent memory leaks
+  useEffect(() => {
+    // Capture refs inside effect per react-hooks/exhaustive-deps
+    const pendingAnimations = pendingAnimationsRef.current;
+    const entryAnimationTimeouts = entryAnimationTimeoutsRef.current;
+    const pendingEntryAnimations = pendingEntryAnimationsRef.current;
+    const animationTriggers = animationTriggersRef.current;
+
+    return () => {
+      // Clear pending animation timeouts
+      for (const pending of pendingAnimations.values()) {
+        if (pending.timeoutId) {
+          clearTimeout(pending.timeoutId);
+        }
+      }
+      pendingAnimations.clear();
+
+      // Clear entry animation expiry timeouts
+      for (const timeoutId of entryAnimationTimeouts.values()) {
+        clearTimeout(timeoutId);
+      }
+      entryAnimationTimeouts.clear();
+
+      pendingEntryAnimations.clear();
+      animationTriggers.clear();
+    };
+  }, []);
 
   /**
    * Register an item's animation trigger function.
@@ -154,13 +188,22 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
    */
   const scheduleEntryAnimation = useCallback(
     (itemId: string, direction: AnimationDirection) => {
+      // Clear any existing timeout for this item
+      const existingTimeout = entryAnimationTimeoutsRef.current.get(itemId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+
       // Store the pending entry animation
       pendingEntryAnimationsRef.current.set(itemId, { itemId, direction });
 
       // Auto-expire entry animations after timeout (item should mount quickly)
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         pendingEntryAnimationsRef.current.delete(itemId);
+        entryAnimationTimeoutsRef.current.delete(itemId);
       }, ENTRY_ANIMATION_EXPIRY_MS);
+
+      entryAnimationTimeoutsRef.current.set(itemId, timeoutId);
     },
     [],
   );
@@ -173,6 +216,12 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
     const pending = pendingEntryAnimationsRef.current.get(itemId);
     if (pending) {
       pendingEntryAnimationsRef.current.delete(itemId);
+      // Clear the expiry timeout since animation was claimed
+      const timeoutId = entryAnimationTimeoutsRef.current.get(itemId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        entryAnimationTimeoutsRef.current.delete(itemId);
+      }
       return pending;
     }
     return undefined;

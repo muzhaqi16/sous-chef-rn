@@ -26,7 +26,7 @@ interface ShoppingListItemProps {
   onEdit: (id: string) => void;
 }
 
-export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
+export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
   id,
   name,
   quantity,
@@ -150,7 +150,9 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
       </SwipeableItem>
     </Animated.View>
   );
-};
+});
+
+ShoppingListItem.displayName = 'ShoppingListItem';
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/shallow';
 import {
   useItemByUpcFilterQuery,
@@ -59,25 +59,69 @@ const convertToScannedItem = (
       unitId: string;
       isDefault?: boolean | null;
     }>;
+    variationBrand?: {
+      id: string;
+      name: string;
+    } | null;
+    matchedVariation?: {
+      netWeight?: number | null;
+      netWeightUnit?: string | null;
+      packageSize?: string | null;
+      confidence?: number | null;
+      brandInfo?: {
+        id?: string | null;
+        name: string;
+      } | null;
+    } | null;
   },
   fallbackBarcode: string,
-): ScannedItem => ({
-  id: item.id,
-  name: item.name,
-  description: item.description || undefined,
-  imageUrl: item.imageUrl || undefined,
-  upc: item.primaryUpc || fallbackBarcode,
-  unitId: item.units?.find((u) => u.isDefault)?.unitId || undefined,
-  netWeight: item.netWeight ?? undefined,
-  displayUnit: item.displayUnit
+  brandNameOverride?: string,
+): ScannedItem => {
+  // Prefer matched variation data over item defaults
+  const effectiveNetWeight =
+    item.matchedVariation?.netWeight ?? item.netWeight ?? undefined;
+
+  // Build display unit: prefer variation's netWeightUnit, then fall back to item's displayUnit
+  const effectiveDisplayUnit = item.matchedVariation?.netWeightUnit
+    ? {
+        id: item.displayUnit?.id ?? '',
+        name: item.matchedVariation.netWeightUnit,
+        symbol: item.matchedVariation.netWeightUnit,
+      }
+    : item.displayUnit
     ? {
         id: item.displayUnit.id,
         name: item.displayUnit.name,
         symbol: item.displayUnit.symbol,
       }
-    : undefined,
-  brandName: item.brands?.[0]?.brand?.name ?? undefined,
-});
+    : undefined;
+
+  // Brand priority: override > matchedVariation.brandInfo > brands[0] > variationBrand
+  const effectiveBrandName =
+    brandNameOverride ??
+    item.matchedVariation?.brandInfo?.name ??
+    item.brands?.[0]?.brand?.name ??
+    item.variationBrand?.name ??
+    undefined;
+
+  // For brand ID, only use matchedVariation.brandInfo.id if it's a non-null string
+  const effectiveBrandId =
+    (item.matchedVariation?.brandInfo?.id ?? null) ||
+    (item.brands?.[0]?.brand?.id ?? item.variationBrand?.id ?? undefined);
+
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description || undefined,
+    imageUrl: item.imageUrl || undefined,
+    upc: item.primaryUpc || fallbackBarcode,
+    unitId: item.units?.find(u => u.isDefault)?.unitId || undefined,
+    netWeight: effectiveNetWeight,
+    displayUnit: effectiveDisplayUnit,
+    brandName: effectiveBrandName,
+    brandId: effectiveBrandId,
+  };
+};
 
 export const useSearchResults = (barcode: string, format?: string) => {
   const upcFormat = mapVisionCameraFormatToUpcFormat(format);
@@ -94,6 +138,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
   );
 
   const { uploadItemImage } = useImageUpload();
+
+  // Ref to store brand name from form for use in mutation callback
+  const pendingBrandNameRef = useRef<string | undefined>(undefined);
 
   // Clear previous search results when barcode changes to prevent showing stale data
   useEffect(() => {
@@ -130,15 +177,21 @@ export const useSearchResults = (barcode: string, format?: string) => {
           storage.remove('temp_pending_item_image');
         }
 
-        const newItem = convertToScannedItem(finalItem, barcode);
+        const newItem = convertToScannedItem(
+          finalItem,
+          barcode,
+          pendingBrandNameRef.current,
+        );
+        pendingBrandNameRef.current = undefined; // Clear after use
         setSearchResults([newItem]);
         addToRecentlyScanned(newItem);
         hideBottomSheet();
       }
     },
     onError: error => {
-      // Clean up pending image upload on error
+      // Clean up pending data on error
       storage.remove('temp_pending_item_image');
+      pendingBrandNameRef.current = undefined;
 
       Alert.alert('Error', `Failed to add item: ${error.message}`);
     },
@@ -162,7 +215,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
     error: skuError,
   } = useItemBySkuFilterQuery({
     variables: { sku: barcode, skuStoreId: undefined },
-    skip: !!upcItem, // Skip SKU search if UPC search found a result
+    // Skip SKU search while UPC is loading OR if UPC found a result
+    // Must include upcLoading to prevent using stale upcItem from previous scan
+    skip: upcLoading || !!upcItem,
     fetchPolicy: 'network-only', // Always fetch fresh - prevents stale data from previous scans
   });
 
@@ -191,6 +246,12 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   // Handle SKU query completion - trust API's SKU matching
   useEffect(() => {
+    // Skip if UPC already found a result (handles race condition where SKU query
+    // was started before skip took effect and completes after UPC)
+    if (upcItem) {
+      return;
+    }
+
     const skuItem = skuData?.items?.edges?.[0]?.node;
 
     // Only process after loading completes to avoid acting on stale data
@@ -221,6 +282,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     skuData,
     skuLoading,
     barcode,
+    upcItem,
     setSearching,
     setSearchResults,
     addToRecentlyScanned,
@@ -228,19 +290,25 @@ export const useSearchResults = (barcode: string, format?: string) => {
     showBottomSheet,
   ]);
 
-  // Handle errors from both queries (including network errors for offline scenarios)
+  // Handle errors from both queries (including network errors and timeouts)
   useEffect(() => {
     if (upcError || skuError) {
       const error = (upcError || skuError) as any;
       const isNetworkError = error?.networkError;
+      const errorMessage = error?.message || error?.networkError?.message || '';
+      const isTimeoutError = errorMessage.toLowerCase().includes('timeout');
 
       setSearching(false);
 
-      if (isNetworkError) {
-        setSearchError('Unable to search. Please check your connection and try again.');
-      } else if (upcError && skuError) {
-        // Both queries failed with non-network errors
-        setSearchError(`Search failed: ${upcError.message}`);
+      if (isTimeoutError) {
+        setSearchError('Search timed out. Please try again.');
+      } else if (isNetworkError) {
+        setSearchError(
+          'Unable to search. Please check your connection and try again.',
+        );
+      } else {
+        // Show error message for any query failure
+        setSearchError(`Search failed: ${errorMessage || 'Unknown error'}`);
       }
 
       // Only show bottom sheet if we have an error and no results
@@ -248,7 +316,15 @@ export const useSearchResults = (barcode: string, format?: string) => {
         showBottomSheet(1);
       }
     }
-  }, [upcError, skuError, upcData, skuData, setSearching, setSearchError, showBottomSheet]);
+  }, [
+    upcError,
+    skuError,
+    upcData,
+    skuData,
+    setSearching,
+    setSearchError,
+    showBottomSheet,
+  ]);
 
   // Handle loading state from both queries
   useEffect(() => {
@@ -263,6 +339,9 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const handleAddItem = async (formData: any) => {
     try {
+      // Store brand name for use in mutation callback
+      pendingBrandNameRef.current = formData.brandName;
+
       // Store the selected image in MMKV for post-creation upload
       if (formData.selectedImage) {
         storage.set(

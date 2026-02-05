@@ -1,11 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { useApolloClient } from '@apollo/client/react';
-import { View, Dimensions } from 'react-native';
+import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useCrossTabNavigation, type CrossTabSource } from '#hooks/navigation/useCrossTabNavigation';
-import BottomSheet, {
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -25,16 +22,14 @@ export const SearchResultsScreen: React.FC<{
 }> = ({ route }) => {
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
-  const { navigate, navigateTo } = useAppNavigation();
-  const { goBackToSource } = useCrossTabNavigation('BarcodeScanner');
+  const { goBack, navigation } = useAppNavigation();
 
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
 
   // PERFORMANCE: Group bottom sheet state with useShallow (Zustand v5 API)
   const {
     bottomSheetVisible,
     searchError,
-    bottomSheetIndex,
     isSearching,
     hideBottomSheet,
     showBottomSheet,
@@ -49,50 +44,37 @@ export const SearchResultsScreen: React.FC<{
     clearSearch,
   } = useSearchResults(barcode, format);
 
-  const apolloClient = useApolloClient();
-
-  // Cleanup barcode search cache on unmount to prevent stale results
+  // Hide bottom sheet when search results are found or barcode changes
+  // This prevents the AddItemForm from showing when there's already a match
   useEffect(() => {
-    return () => {
-      // Evict barcode-related queries from cache to prevent stale results on next scan
-      apolloClient.cache.evict({ fieldName: 'items' });
-      apolloClient.cache.gc();
-    };
-  }, [apolloClient]);
+    if (searchResults.length > 0 && bottomSheetVisible) {
+      hideBottomSheet();
+    }
+  }, [searchResults.length, bottomSheetVisible, hideBottomSheet]);
 
   // Handle bottom sheet changes
   useEffect(() => {
-    if (bottomSheetVisible && bottomSheetRef.current) {
-      bottomSheetRef.current.expand();
-    } else if (bottomSheetRef.current) {
-      bottomSheetRef.current.close();
+    if (bottomSheetVisible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
     }
-  }, [bottomSheetVisible, bottomSheetIndex]);
+  }, [bottomSheetVisible]);
 
   const handleScanAnother = () => {
     clearSearch();
-    navigate('BarcodeScanner', {
-      source,
-      pantryId,
-      shoppingListId,
-    });
+    goBack(); // Pop SearchResults and return to existing BarcodeScanner
   };
 
   const handleBackPress = () => {
-    if (!source) {
-      // Fallback to barcode scanner if no source
-      navigateTo.barcodeScanner();
-      return;
+    // Simply pop the Barcode stack to reveal Home
+    // This preserves Home's state without triggering remounts
+    const rootNavigator = navigation.getParent()?.getParent();
+    if (rootNavigator?.canGoBack()) {
+      rootNavigator.goBack();
+    } else {
+      goBack();
     }
-
-    // Use cross-tab navigation hook for proper stack cleanup
-    // Barcode is a modal stack - needs fromModalStack to fully dismiss
-    const sourceData: CrossTabSource = {
-      sourceTab: source === 'pantry' ? 'Pantry' : 'ShoppingList',
-      fromModalStack: true,
-    };
-
-    goBackToSource(sourceData);
   };
 
   const handleShowAddItemForm = () => {
@@ -104,9 +86,9 @@ export const SearchResultsScreen: React.FC<{
       {...props}
       appearsOnIndex={0}
       disappearsOnIndex={-1}
-      opacity={0.3}
+      opacity={0.5}
       pressBehavior="close"
-      onClose={hideBottomSheet}
+      onClose={() => bottomSheetRef.current?.dismiss()}
     />
   );
 
@@ -155,29 +137,33 @@ export const SearchResultsScreen: React.FC<{
       />
       {renderContent()}
 
-      {bottomSheetVisible && (
-        <BottomSheet
-          ref={bottomSheetRef}
-          snapPoints={['50%', '65%', '85%']}
-          maxDynamicContentSize={Dimensions.get('window').height * 0.85}
-          enablePanDownToClose
-          animateOnMount={true}
-          onClose={hideBottomSheet}
-          backgroundStyle={styles.bottomSheetBackground}
-          handleIndicatorStyle={styles.bottomSheetHandle}
-          backdropComponent={renderBackdrop}
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        snapPoints={['50%', '65%', '85%']}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+        onDismiss={hideBottomSheet}
+        backgroundStyle={styles.bottomSheetBackground}
+        handleIndicatorStyle={styles.bottomSheetHandle}
+        backdropComponent={renderBackdrop}
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+      >
+        <BottomSheetKeyboardAwareScrollView
+          style={styles.bottomSheetContent}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={16}
         >
-          <BottomSheetScrollView style={styles.bottomSheetContent}>
-            <AddItemForm
-              barcode={barcode}
-              format={format}
-              onSubmit={handleAddItem}
-              onClose={hideBottomSheet}
-              loading={addingItem}
-            />
-          </BottomSheetScrollView>
-        </BottomSheet>
-      )}
+          <AddItemForm
+            barcode={barcode}
+            format={format}
+            onSubmit={handleAddItem}
+            onClose={hideBottomSheet}
+            loading={addingItem}
+          />
+        </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetModal>
     </View>
   );
 };

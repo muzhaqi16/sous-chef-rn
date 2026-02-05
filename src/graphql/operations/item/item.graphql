@@ -99,6 +99,20 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
           isDefault
           unitId
         }
+        variationBrand {
+          id
+          name
+        }
+        matchedVariation {
+          netWeight
+          netWeightUnit
+          packageSize
+          confidence
+          brandInfo {
+            id
+            name
+          }
+        }
       }
     }
     pageInfo {

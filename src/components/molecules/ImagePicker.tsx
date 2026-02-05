@@ -15,6 +15,8 @@ import {
   validateImageFile,
   ImageValidationError,
 } from '#utils/imageValidation';
+import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
+import { ImagePickerSheet } from './ImagePickerSheet';
 
 export interface ImageFile {
   uri: string;
@@ -47,6 +49,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   children,
 }) => {
   const { theme } = useUnistyles();
+  const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
 
   const handleImageResponse = useCallback(
     (response: ImagePickerResponse) => {
@@ -108,59 +111,57 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
     [handleImageResponse],
   );
 
+  const handleCameraPress = useCallback(() => {
+    requestPermissionAndLaunch(
+      PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
+      launchCamera,
+      'Camera',
+      false,
+    );
+  }, [requestPermissionAndLaunch]);
+
+  const handleLibraryPress = useCallback(() => {
+    // Android Photo Picker doesn't require permissions
+    // iOS also allows launching without explicit permission on modern versions
+    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+  }, [handleImageResponse]);
+
   const showImagePicker = useCallback(() => {
     if (disabled) return;
+    openSheet();
+  }, [disabled, openSheet]);
 
-    Alert.alert(
-      'Select Image',
-      'Choose how you want to add an image',
-      [
-        {
-          text: 'Camera',
-          onPress: () =>
-            requestPermissionAndLaunch(
-              PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
-              launchCamera,
-              'Camera',
-              false,
-            ),
-          style: 'default',
-        },
-        {
-          text: 'Photo Library',
-          onPress: () => {
-            // Android Photo Picker doesn't require permissions
-            // iOS also allows launching without explicit permission on modern versions
-            launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-          },
-          style: 'default',
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ],
-      { cancelable: true },
-    );
-  }, [disabled, requestPermissionAndLaunch, handleImageResponse]);
+  const renderSheet = () => (
+    <ImagePickerSheet
+      ref={sheetRef}
+      onCamera={handleCameraPress}
+      onLibrary={handleLibraryPress}
+    />
+  );
 
   if (children) {
     return (
-      <TouchableOpacity onPress={showImagePicker} disabled={disabled}>
-        {children}
-      </TouchableOpacity>
+      <>
+        <TouchableOpacity onPress={showImagePicker} disabled={disabled}>
+          {children}
+        </TouchableOpacity>
+        {renderSheet()}
+      </>
     );
   }
 
   return (
-    <TouchableOpacity
-      style={[styles.pickerButton, disabled && styles.pickerButtonDisabled]}
-      onPress={showImagePicker}
-      disabled={disabled}
-    >
-      <Icon name="add-a-photo" size={24} color={theme.colors.primary} />
-      <Text style={styles.pickerButtonText}>Add Photo</Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity
+        style={[styles.pickerButton, disabled && styles.pickerButtonDisabled]}
+        onPress={showImagePicker}
+        disabled={disabled}
+      >
+        <Icon name="add-a-photo" size={24} color={theme.colors.primary} />
+        <Text style={styles.pickerButtonText}>Add Photo</Text>
+      </TouchableOpacity>
+      {renderSheet()}
+    </>
   );
 };
 

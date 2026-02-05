@@ -5,9 +5,13 @@ import {StyleSheet} from 'react-native-unistyles';
 interface Item {
   id: string;
   name: string;
-  description?: string;
+  brandName?: string;
+  netWeight?: number;
+  displayUnit?: {
+    name?: string;
+  };
   price?: number;
-  barcode: string;
+  upc: string;
   imageUrl?: string;
 }
 
@@ -33,13 +37,19 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
 
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
-        {item.description && (
-          <Text style={styles.itemDescription}>{item.description}</Text>
+        {item.brandName && (
+          <Text style={styles.itemBrand}>{item.brandName}</Text>
+        )}
+        {item.netWeight != null && (
+          <Text style={styles.itemWeight}>
+            {item.netWeight}
+            {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
+          </Text>
         )}
         {item?.price && (
           <Text style={styles.itemPrice}>${item?.price.toFixed(2)}</Text>
         )}
-        <Text style={styles.itemBarcode}>Barcode: {item.barcode}</Text>
+        <Text style={styles.itemBarcode}>Barcode: {item.upc}</Text>
         {format && <Text style={styles.itemFormat}>Format: {format}</Text>}
       </View>
     </View>
@@ -78,10 +88,13 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
   },
-  itemDescription: {
+  itemBrand: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.normal,
+  },
+  itemWeight: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textSecondary,
   },
   itemPrice: {
     fontSize: theme.fonts.size.xl,

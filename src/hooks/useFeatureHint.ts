@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 
@@ -101,14 +101,17 @@ export const useFeatureHint = ({
     setIsVisible(false);
   }, [storageKey]);
 
-  return {
-    isVisible,
-    show,
-    dismiss,
-    hide,
-    hasBeenShown,
-    reset,
-  };
+  return useMemo(
+    () => ({
+      isVisible,
+      show,
+      dismiss,
+      hide,
+      hasBeenShown,
+      reset,
+    }),
+    [isVisible, show, dismiss, hide, hasBeenShown, reset],
+  );
 };
 
 /**

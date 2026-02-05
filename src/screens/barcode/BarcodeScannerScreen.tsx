@@ -35,7 +35,7 @@ const { height: screenHeight } = Dimensions.get('window');
 export const BarcodeScannerScreen: React.FC<{
   route: { params?: BarcodeStackParamList['BarcodeScanner'] };
 }> = ({ route }) => {
-  const { navigate, goBack } = useAppNavigation();
+  const { navigate, goBack, navigation } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();
   const device = useMemo(
@@ -142,7 +142,16 @@ export const BarcodeScannerScreen: React.FC<{
     hasNavigatedRef.current = false;
   }, [resetScanner, setScanning]);
 
-  const handleGoBack = useCallback(() => goBack(), [goBack]);
+  const handleGoBack = useCallback(() => {
+    // Simply pop the Barcode stack to reveal Home
+    // This preserves Home's state without triggering remounts
+    const rootNavigator = navigation.getParent();
+    if (rootNavigator?.canGoBack()) {
+      rootNavigator.goBack();
+    } else {
+      goBack();
+    }
+  }, [navigation, goBack]);
 
   // --- RENDER FALLBACKS ---
 

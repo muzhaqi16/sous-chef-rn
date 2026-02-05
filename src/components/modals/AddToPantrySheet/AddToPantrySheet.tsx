@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useApolloClient } from '@apollo/client/react';
-import { BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   usePantryItemSuggestions,
@@ -35,7 +34,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 }) => {
   const { navigateTo } = useAppNavigation();
   const client = useApolloClient();
-  const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
   // Add details sheet state
   const [showAddDetails, setShowAddDetails] = useState(false);
@@ -125,9 +123,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   }, [onClose, navigateTo, pantryId]);
 
   // Handle add manually press
-  const handleAddManually = useCallback(() => {
-    // Use ref value for immediate access
-    setPrefilledItemName(searchBarRef.current?.getValue() || '');
+  const handleAddManually = useCallback((searchValue: string) => {
+    setPrefilledItemName(searchValue);
     setShowAddDetails(true);
   }, []);
 

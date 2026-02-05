@@ -115,7 +115,7 @@ export interface AddItemSheetProps {
   /** Whether a mutation is currently in progress */
   isMutating: boolean;
   /** Handler for "Add manually" button */
-  onAddManually: () => void;
+  onAddManually: (searchValue: string) => void;
   /** Handler for barcode scan button */
   onScanPress: () => void;
   /** Optional: Items currently animating out (for exit animations) */

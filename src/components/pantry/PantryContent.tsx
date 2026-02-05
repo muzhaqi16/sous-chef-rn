@@ -17,7 +17,10 @@ import { SectionHeader } from '../molecules/SectionHeader';
 import { PantryItemCard, ItemVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
-import { PantryActionsProvider, type PantryItemActions } from './PantryActionsContext';
+import {
+  PantryActionsProvider,
+  type PantryItemActions,
+} from './PantryActionsContext';
 import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
@@ -56,13 +59,6 @@ interface PantryItem {
       url?: string;
     } | null;
   } | null;
-}
-
-// Section type for SectionList-like rendering
-interface ListSection {
-  type: 'header' | 'allItemsHeader' | 'item';
-  data?: PantryItem;
-  key: string;
 }
 
 interface PantryContentProps {
@@ -215,7 +211,14 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       onItemWaste,
       onItemRestock,
     }),
-    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onItemRestock],
+    [
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onItemConsume,
+      onItemWaste,
+      onItemRestock,
+    ],
   );
 
   // Get location string from storage state
@@ -235,17 +238,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
 
   // Sorted items
   const sortedItems = useMemo(() => sortItems(items), [items, sortItems]);
-
-  // Build flat list data with section markers
-  const listData = useMemo((): ListSection[] => {
-    const data: ListSection[] = [
-      { type: 'allItemsHeader', key: 'all-header' },
-    ];
-    for (const item of sortedItems) {
-      data.push({ type: 'item', data: item, key: item.id });
-    }
-    return data;
-  }, [sortedItems]);
 
   // Render a pantry item card
   const renderItemCard = useCallback(
@@ -294,35 +286,22 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     ],
   );
 
-  // Render list item
+  // Render list item - homogeneous list (items only)
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<ListSection>) => {
-      switch (item.type) {
-        case 'allItemsHeader':
-          return (
-            <SectionHeader
-              title="ALL ITEMS"
-              count={sortedItems.length}
-              variant="default"
-              actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
-              onActionPress={openSortModal}
-            />
-          );
-        case 'item':
-          if (!item.data) return null;
-          const expiresIn = calculateExpiresIn(item.data.expiresAt);
-          const isExpired = expiresIn !== null && expiresIn < 0;
-          const isExpiringSoon =
-            expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-          return renderItemCard(
-            item.data,
-            isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal',
-          );
-        default:
-          return null;
-      }
+    ({ item }: ListRenderItemInfo<PantryItem>) => {
+      // Guard against undefined items during concurrent rendering
+      if (!item) return null;
+
+      const expiresIn = calculateExpiresIn(item.expiresAt);
+      const isExpired = expiresIn !== null && expiresIn < 0;
+      const isExpiringSoon =
+        expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+      return renderItemCard(
+        item,
+        isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal',
+      );
     },
-    [sortedItems.length, sortDirection, openSortModal, renderItemCard],
+    [renderItemCard],
   );
 
   // Build tabs with optional add button at the end
@@ -341,10 +320,10 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     ];
   }, [tabs, onAddLocation]);
 
-  // Header component with filter tabs
+  // Header component with filter tabs and section header
   const ListHeader = useMemo(
     () => (
-      <View>
+      <>
         <FilterTabs<LocationFilter>
           tabs={tabsWithAddButton}
           activeTabId={locationFilter}
@@ -352,9 +331,16 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           counts={locationCounts}
           testIDPrefix="pantry-location-tab"
         />
-      </View>
+        <SectionHeader
+          title="ALL ITEMS"
+          count={sortedItems.length}
+          variant="default"
+          actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
+          onActionPress={openSortModal}
+        />
+      </>
     ),
-    [tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts],
+    [tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts, sortedItems.length, sortDirection, openSortModal],
   );
 
   return (
@@ -397,16 +383,19 @@ export const PantryContent: React.FC<PantryContentProps> = ({
             style={[styles.absoluteFill, contentAnimatedStyle]}
             pointerEvents={showSkeletons ? 'none' : 'auto'}
           >
-            <FlashList
-              data={listData}
+            <FlashList<PantryItem>
+              data={showSkeletons ? [] : sortedItems}
               renderItem={renderItem}
-              keyExtractor={item => item.key}
+              keyExtractor={item => item.id}
               ListHeaderComponent={ListHeader}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 onRefresh ? (
-                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                  />
                 ) : undefined
               }
               onEndReached={onEndReached}
@@ -422,13 +411,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
               pointerEvents="none"
             >
               {ListHeader}
-              <SectionHeader
-                title="ALL ITEMS"
-                count={items.length}
-                variant="default"
-                actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
-                onActionPress={openSortModal}
-              />
               <SkeletonList
                 SkeletonComponent={PantryItemSkeleton}
                 count={6}

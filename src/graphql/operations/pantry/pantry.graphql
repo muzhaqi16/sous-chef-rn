@@ -391,7 +391,7 @@ mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
 
 mutation DeletePantryItem($id: ID!) {
   deletePantryItem(id: $id) {
-    ...PantryItemFragment
+    id
   }
 }
 
