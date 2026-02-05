@@ -33,9 +33,9 @@ import {
   SubscriptionEntry,
   SubscriptionStats,
   CacheStrategy,
-  MutationType,
   LogLevel,
 } from './types';
+import { MutationType } from '#/graphql/generated/types';
 import { serializeError, isCircularStructureError, isTimerCircularStructureError } from '#/utils/errorSerialization';
 
 export class SubscriptionService {
@@ -180,7 +180,7 @@ export class SubscriptionService {
     const finalConfig = {
       subscriptionName: config.subscriptionName,
       entityType: config.entityType,
-      mutation: config.mutation || MutationType.UPDATE,
+      mutation: config.mutation || MutationType.Updated,
       enableDeduplication: config.enableDeduplication ?? true,
       userId: config.userId,
       cacheUpdateStrategy: config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
@@ -275,15 +275,13 @@ export class SubscriptionService {
           const shouldUpdateCache =
             config.cacheUpdateStrategy === CacheStrategy.MANUAL ||
             // CREATE operations - add to arrays
-            mutation === MutationType.CREATE ||
-            mutation === 'CREATED' ||
-            mutation === 'ITEM_ADDED' ||
-            mutation === 'COLLABORATOR_ADDED' ||
+            mutation === MutationType.Created ||
+            mutation === MutationType.ItemAdded ||
+            mutation === MutationType.CollaboratorAdded ||
             // DELETE operations - remove from arrays
-            mutation === MutationType.DELETE ||
-            mutation === 'DELETED' ||
-            mutation === 'ITEM_REMOVED' ||
-            mutation === 'COLLABORATOR_REMOVED';
+            mutation === MutationType.Deleted ||
+            mutation === MutationType.ItemRemoved ||
+            mutation === MutationType.CollaboratorRemoved;
 
           if (shouldUpdateCache) {
             this.updateCache(client.cache, config, payload);
@@ -376,7 +374,7 @@ export class SubscriptionService {
    */
   private isSortOrderOnlyUpdate(payload: SubscriptionPayload<any>): boolean {
     // Only filter ITEM_UPDATED mutations
-    if (payload.mutation !== 'ITEM_UPDATED') {
+    if (payload.mutation !== MutationType.ItemUpdated) {
       return false;
     }
 
@@ -486,10 +484,9 @@ export class SubscriptionService {
 
     try {
       switch (mutation) {
-        case MutationType.CREATE:
-        case 'CREATED':
-        case 'ITEM_ADDED':
-        case 'COLLABORATOR_ADDED':
+        case MutationType.Created:
+        case MutationType.ItemAdded:
+        case MutationType.CollaboratorAdded:
           // Add item to array field
           cache.modify({
             fields: {
@@ -515,21 +512,19 @@ export class SubscriptionService {
           this.log(config, LogLevel.DEBUG, 'Added item to cache', itemId);
           break;
 
-        case MutationType.UPDATE:
-        case 'UPDATED':
-        case 'ITEM_UPDATED':
-        case 'STATUS_CHANGED':
-        case 'ITEM_COMPLETED':
-        case 'COMPLETED':
+        case MutationType.Updated:
+        case MutationType.ItemUpdated:
+        case MutationType.StatusChanged:
+        case MutationType.ItemCompleted:
+        case MutationType.Completed:
           // Apollo automatic normalization handles this
           // The item data in the subscription will be merged into the cache automatically
           this.log(config, LogLevel.DEBUG, 'Update handled by Apollo normalization', itemId);
           break;
 
-        case MutationType.DELETE:
-        case 'DELETED':
-        case 'ITEM_REMOVED':
-        case 'COLLABORATOR_REMOVED': {
+        case MutationType.Deleted:
+        case MutationType.ItemRemoved:
+        case MutationType.CollaboratorRemoved: {
           // Build cache ID for this item
           const cacheId = cache.identify({
             __typename: config.entityType,

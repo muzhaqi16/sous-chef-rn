@@ -6,35 +6,7 @@
  * all domains (shopping lists, pantry, home, notifications).
  */
 
-/**
- * Mutation types that can occur in subscriptions
- * Supports all backend mutation types including:
- * - Basic CRUD operations (CREATED, UPDATED, DELETED, COMPLETED)
- * - Item operations (ITEM_ADDED, ITEM_UPDATED, ITEM_REMOVED, ITEM_COMPLETED, ITEM_UNCOMPLETED)
- * - Collaboration operations (COLLABORATOR_ADDED, COLLABORATOR_REMOVED)
- * - Status operations (STATUS_CHANGED)
- */
-export enum MutationType {
-  // Basic CRUD
-  CREATE = 'CREATED',
-  UPDATE = 'UPDATED',
-  DELETE = 'DELETED',
-  COMPLETED = 'COMPLETED',
-
-  // Item operations
-  ITEM_ADDED = 'ITEM_ADDED',
-  ITEM_UPDATED = 'ITEM_UPDATED',
-  ITEM_REMOVED = 'ITEM_REMOVED',
-  ITEM_COMPLETED = 'ITEM_COMPLETED',
-  ITEM_UNCOMPLETED = 'ITEM_UNCOMPLETED',
-
-  // Collaboration operations
-  COLLABORATOR_ADDED = 'COLLABORATOR_ADDED',
-  COLLABORATOR_REMOVED = 'COLLABORATOR_REMOVED',
-
-  // Status operations
-  STATUS_CHANGED = 'STATUS_CHANGED',
-}
+import { type MutationType } from '#/graphql/generated/types';
 
 /**
  * Cache update strategies for handling subscription data

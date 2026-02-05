@@ -516,9 +516,6 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
           },
         },
       });
-
-      // Force Apollo to notify all watching queries immediately
-      (cache as any).broadcastWatches?.();
     } catch (error) {
       console.warn(
         `Cache update failed for adding to ${parentTypename}.${connectionField}:`,
@@ -686,9 +683,6 @@ export function createRemoveFromParentConnectionUpdater(
         });
         cache.gc();
       }
-
-      // Force Apollo to notify all watching queries immediately
-      (cache as any).broadcastWatches?.();
     } catch (error) {
       console.warn(
         `Cache update failed for removing from ${parentTypename}.${connectionField}:`,

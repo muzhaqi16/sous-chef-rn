@@ -32,6 +32,13 @@ import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 
+// Stable empty array reference to avoid FlashList re-renders when showing skeletons
+const EMPTY_ARRAY: PantryItem[] = [];
+
+// Module-level flag: once pantry content has been shown, skip skeletons on remount.
+// Persists across component unmount/remount (stack navigation), resets on app restart.
+let hasEverShownContent = false;
+
 // Sort types (exported for use in other components)
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type SortDirection = 'asc' | 'desc';
@@ -160,8 +167,14 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   // PERFORMANCE: Defer heavy list render until after navigation animation
   const isReady = useDeferredRender();
 
-  // Show skeletons during initial render OR while data is loading
-  const showSkeletons = !isReady || loading;
+  // Once content has been shown, latch the module-level flag so skeletons
+  // never reappear on remounts or stack navigation (only resets on app restart).
+  if (!loading && isReady && items.length > 0) {
+    hasEverShownContent = true;
+  }
+
+  // Show skeletons only on the very first data load
+  const showSkeletons = !hasEverShownContent && (!isReady || loading);
 
   // Crossfade animation - opacity-based transition to avoid gap
   const skeletonOpacity = useSharedValue(1);
@@ -236,8 +249,11 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     [],
   );
 
-  // Sorted items
-  const sortedItems = useMemo(() => sortItems(items), [items, sortItems]);
+  // Sorted items - filter out any null/undefined items to prevent FlashList layout crashes
+  const sortedItems = useMemo(() => {
+    const sorted = sortItems(items);
+    return sorted.filter(item => item?.id);
+  }, [items, sortItems]);
 
   // Render a pantry item card
   const renderItemCard = useCallback(
@@ -320,29 +336,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
     ];
   }, [tabs, onAddLocation]);
 
-  // Header component with filter tabs and section header
-  const ListHeader = useMemo(
-    () => (
-      <>
-        <FilterTabs<LocationFilter>
-          tabs={tabsWithAddButton}
-          activeTabId={locationFilter}
-          onTabChange={onLocationFilterChange}
-          counts={locationCounts}
-          testIDPrefix="pantry-location-tab"
-        />
-        <SectionHeader
-          title="ALL ITEMS"
-          count={sortedItems.length}
-          variant="default"
-          actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
-          onActionPress={openSortModal}
-        />
-      </>
-    ),
-    [tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts, sortedItems.length, sortDirection, openSortModal],
-  );
-
   return (
     <PantryActionsProvider actions={itemActions}>
       <View style={styles.container}>
@@ -376,35 +369,49 @@ export const PantryContent: React.FC<PantryContentProps> = ({
           />
         </View>
 
+        {/* Always visible — not part of crossfade */}
+        <FilterTabs<LocationFilter>
+          tabs={tabsWithAddButton}
+          activeTabId={locationFilter}
+          onTabChange={onLocationFilterChange}
+          counts={locationCounts}
+          testIDPrefix="pantry-location-tab"
+        />
+        <SectionHeader
+          title="ALL ITEMS"
+          count={sortedItems.length}
+          variant="default"
+          actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
+          onActionPress={openSortModal}
+        />
+
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
-          {/* Content layer - only render FlashList when ready to avoid layout race condition */}
-          {!showSkeletons && (
-            <Animated.View
-              style={[styles.absoluteFill, contentAnimatedStyle]}
-              pointerEvents="auto"
-            >
-              <FlashList<PantryItem>
-                data={sortedItems}
-                renderItem={renderItem}
-                keyExtractor={item => item?.id ?? ''}
-                ListHeaderComponent={ListHeader}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                  onRefresh ? (
-                    <RefreshControl
-                      refreshing={refreshing}
-                      onRefresh={onRefresh}
-                    />
-                  ) : undefined
-                }
-                onEndReached={onEndReached}
-                onEndReachedThreshold={0.5}
-                drawDistance={250}
-              />
-            </Animated.View>
-          )}
+          {/* Content layer - always mounted to preserve FlashList layout state */}
+          <Animated.View
+            style={[styles.absoluteFill, contentAnimatedStyle]}
+            pointerEvents={showSkeletons ? 'none' : 'auto'}
+          >
+            <FlashList<PantryItem>
+              data={showSkeletons ? EMPTY_ARRAY : sortedItems}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => item?.id ?? `fallback-${index}`}
+              extraData={sortOption}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                  />
+                ) : undefined
+              }
+              onEndReached={onEndReached}
+              onEndReachedThreshold={0.5}
+              drawDistance={250}
+            />
+          </Animated.View>
 
           {/* Skeleton layer (on top, fades out) */}
           {showSkeletons && (
@@ -412,7 +419,6 @@ export const PantryContent: React.FC<PantryContentProps> = ({
               style={[styles.absoluteFill, skeletonAnimatedStyle]}
               pointerEvents="none"
             >
-              {ListHeader}
               <SkeletonList
                 SkeletonComponent={PantryItemSkeleton}
                 count={6}

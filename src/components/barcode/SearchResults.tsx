@@ -9,6 +9,13 @@ import {
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
+// Cache updater for Pantry.itemsConnection
+const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
+
 // Cache updater for ShoppingList.itemsConnection
 const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
   'ShoppingList',
@@ -38,53 +45,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToPantry] = useCreatePantryItemMutation({
     update: (cache, { data }: any) => {
       if (data?.createPantryItem && pantryId) {
-        try {
-          // Modify the Pantry.itemsConnection field in the cache
-          const pantryCacheId = cache.identify({
-            __typename: 'Pantry',
-            id: pantryId,
-          });
-
-          if (!pantryCacheId) return;
-
-          cache.modify({
-            id: pantryCacheId,
-            fields: {
-              itemsConnection(
-                existingConnection: any = {},
-                { readField, toReference }: any,
-              ) {
-                const newItemRef = toReference(data.createPantryItem);
-                const existingEdges = existingConnection?.edges || [];
-
-                // Check if item already exists (avoid duplicates)
-                const exists = existingEdges.some(
-                  (edge: any) =>
-                    readField('id', edge?.node) === data.createPantryItem.id,
-                );
-
-                if (exists) {
-                  return existingConnection;
-                }
-
-                // Add new item at the beginning of the list
-                const newEdge = {
-                  __typename: 'PantryItemEdge',
-                  node: newItemRef,
-                  cursor: '', // Will be populated on next fetch
-                };
-
-                return {
-                  ...existingConnection,
-                  edges: [newEdge, ...existingEdges],
-                  totalCount: (existingConnection?.totalCount || 0) + 1,
-                };
-              },
-            },
-          });
-        } catch (error) {
-          console.warn('Cache update failed:', error);
-        }
+        addToPantryItemsConnection(cache, pantryId, data.createPantryItem);
       }
     },
   });

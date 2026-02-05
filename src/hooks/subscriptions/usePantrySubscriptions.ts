@@ -21,7 +21,8 @@ import {
   PantryItemDisplayFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
+import { CacheStrategy } from '#/services/subscriptions/types';
+import { MutationType } from '#/graphql/generated/types';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -78,17 +79,14 @@ export function usePantrySubscriptions(userId?: string) {
 
       if (!item) return;
 
-      if (
-        mutation === MutationType.CREATE ||
-        mutation === 'CREATED' ||
-        mutation === 'ITEM_ADDED'
-      ) {
+      if (mutation === MutationType.ItemAdded) {
         // Add new item to Pantry.itemsConnection
+        // Note: Server fires both CREATED and ITEM_ADDED for the same entity.
+        // We only process ITEM_ADDED as it's the semantic subscription event.
         addToPantryItemsConnection(client.cache, selectedPantryId, item);
       } else if (
-        mutation === MutationType.DELETE ||
-        mutation === 'DELETED' ||
-        mutation === 'ITEM_REMOVED'
+        mutation === MutationType.Deleted ||
+        mutation === MutationType.ItemRemoved
       ) {
         // Remove item from Pantry.itemsConnection
         removeFromPantryItemsConnection(
@@ -100,9 +98,8 @@ export function usePantrySubscriptions(userId?: string) {
           },
         );
       } else if (
-        mutation === MutationType.UPDATE ||
-        mutation === 'UPDATED' ||
-        mutation === 'ITEM_UPDATED'
+        mutation === MutationType.Updated ||
+        mutation === MutationType.ItemUpdated
       ) {
         // Write updated item to cache
         // Note: When using onData callback, Apollo doesn't auto-normalize
