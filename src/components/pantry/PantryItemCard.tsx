@@ -98,7 +98,7 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 }) => {
   const { width: screenWidth } = useWindowDimensions();
 
-  // Slide animation for delete/consume/waste actions
+  // Slide animation for delete action
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: id,
     slideDistance: screenWidth,
@@ -114,19 +114,6 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
     }
   }, [onDelete, triggerSlide]);
 
-  // Wrap consume action with slide animation (callback after animation completes)
-  const handleConsume = useCallback(() => {
-    if (onConsume) {
-      triggerSlide(1, onConsume);
-    }
-  }, [onConsume, triggerSlide]);
-
-  // Wrap waste action with slide animation (callback after animation completes)
-  const handleWaste = useCallback(() => {
-    if (onWaste) {
-      triggerSlide(1, onWaste);
-    }
-  }, [onWaste, triggerSlide]);
 
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
@@ -153,8 +140,8 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
         onPress={onPress}
         onEdit={onEdit}
         onDelete={onDelete ? handleDelete : undefined}
-        onConsume={onConsume ? handleConsume : undefined}
-        onWaste={onWaste ? handleWaste : undefined}
+        onConsume={onConsume}
+        onWaste={onWaste}
         onRestock={onRestock}
         onSwipeableWillOpen={onSwipeableWillOpen}
         leftThreshold={80}
