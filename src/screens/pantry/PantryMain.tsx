@@ -15,7 +15,6 @@ import { usePantrySelectorConfig } from '#hooks/pantry/usePantrySelectorConfig';
 import { usePantryItemActions } from '#hooks/pantry/usePantryItemActions';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useFilterTransitionWithDeps } from '#hooks/performance/useFilterTransition';
 import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
@@ -143,6 +142,18 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Register add button action - open add to pantry sheet
   useTabBarAddButton(() => setAddSheetVisible(true));
 
+  // PERFORMANCE: Debounce focus transition to let subscription events coalesce
+  // before FlashList reads the data, preventing layout corruption from rapid updates
+  const [queryEnabled, setQueryEnabled] = useState(isFocused);
+  useEffect(() => {
+    if (isFocused) {
+      const id = requestAnimationFrame(() => setQueryEnabled(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setQueryEnabled(false);
+    }
+  }, [isFocused]);
+
   // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
     items: pantryItems,
@@ -156,7 +167,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     error: pantryError,
     loadMore,
     locationCounts,
-  } = usePantryManagement(isFocused ? pantry?.id : undefined);
+  } = usePantryManagement(queryEnabled ? pantry?.id : undefined);
 
   // Extract item actions (modal state + mutations + handlers) to separate hook
   const {
@@ -203,30 +214,26 @@ const PantryMainScreen: React.FC = React.memo(() => {
     navigate,
   });
 
-  // PERFORMANCE: Filter items with transition to keep UI responsive during filter changes
-  const locationFilterPredicate = useCallback(
-    (item: (typeof pantryItems)[number]) => {
-      if (locationFilter === 'all') return true;
-      switch (locationFilter) {
-        case 'fridge':
-          return item.storageState === StorageState.Refrigerated;
-        case 'freezer':
-          return item.storageState === StorageState.Frozen;
-        case 'pantry':
-          return item.storageState === StorageState.Ambient || !item.storageState;
-        default:
-          // Custom storage location filter
-          return item.storageLocation?.id === locationFilter;
-      }
-    },
-    [locationFilter],
+  // PERFORMANCE: Synchronous filter to ensure FlashList always receives stable data
+  // (startTransition created stale-data windows that caused FlashList layout crashes)
+  const locationFilteredItems = useMemo(
+    () =>
+      pantryItems.filter(item => {
+        if (locationFilter === 'all') return true;
+        switch (locationFilter) {
+          case 'fridge':
+            return item.storageState === StorageState.Refrigerated;
+          case 'freezer':
+            return item.storageState === StorageState.Frozen;
+          case 'pantry':
+            return item.storageState === StorageState.Ambient || !item.storageState;
+          default:
+            // Custom storage location filter
+            return item.storageLocation?.id === locationFilter;
+        }
+      }),
+    [pantryItems, locationFilter],
   );
-
-  const { filteredItems: locationFilteredItems } = useFilterTransitionWithDeps({
-    items: pantryItems,
-    filterFn: locationFilterPredicate,
-    deps: [locationFilter],
-  });
 
   // Handle location filter change
   const handleLocationFilterChange = useCallback((filter: LocationFilter) => {

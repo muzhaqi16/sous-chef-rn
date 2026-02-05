@@ -23,7 +23,8 @@ import {
   GetShoppingListQuery,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
+import { CacheStrategy } from '#/services/subscriptions/types';
+import { MutationType } from '#/graphql/generated/types';
 import {
   addToShoppingListItemsConnection,
   removeFromShoppingListItemsConnection,
@@ -102,10 +103,10 @@ export function useShoppingListSubscriptions(
         return;
       }
 
-      if (mutation === MutationType.CREATE || mutation === MutationType.ITEM_ADDED) {
+      if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
         // Add new item to ShoppingList.itemsConnection
         addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
-      } else if (mutation === MutationType.DELETE || mutation === MutationType.ITEM_REMOVED) {
+      } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
         // Remove item from ShoppingList.itemsConnection
         // If animation scheduler is available, play exit animation first
         if (scheduleAnimation) {
@@ -119,7 +120,7 @@ export function useShoppingListSubscriptions(
             evictItem: true,
           });
         }
-      } else if (mutation === 'ITEM_UPDATED' || mutation === MutationType.ITEM_COMPLETED || mutation === MutationType.ITEM_UNCOMPLETED) {
+      } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
         // Read old item to detect sortOrder changes (needed for re-sorting)
         // Use ShoppingListItemDisplayFragment because that's what GetShoppingListItemsPaginated uses
         const oldItem = client.cache.readFragment({
@@ -142,8 +143,8 @@ export function useShoppingListSubscriptions(
         // Use mutation type to determine cache operations (aligns with usePantrySubscriptions.ts pattern)
         // Apollo auto-normalizes subscription data BEFORE onData runs, so comparing old vs new
         // values doesn't work - both will show the same value. Use mutation type instead.
-        const isCompletedMutation = mutation === MutationType.ITEM_COMPLETED;
-        const isUncompletedMutation = mutation === MutationType.ITEM_UNCOMPLETED;
+        const isCompletedMutation = mutation === MutationType.ItemCompleted;
+        const isUncompletedMutation = mutation === MutationType.ItemUncompleted;
 
         // Debug logging for subscription cache updates (only in development)
         if (__DEV__) {
