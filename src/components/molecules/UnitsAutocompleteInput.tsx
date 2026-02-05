@@ -141,7 +141,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   unitItem: {
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
   },

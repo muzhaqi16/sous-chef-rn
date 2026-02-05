@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, forwardRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop, BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#/components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -58,17 +59,12 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
       [handleDismiss, onCamera, onLibrary],
     );
 
-    // Use standard BottomSheetBackdrop instead of GlobalBottomSheetBackdrop
-    // This ensures the backdrop renders in the correct stacking context when
-    // this sheet is opened from within another bottom sheet modal
     const renderBackdrop = useCallback(
-      (props: BottomSheetBackdropProps) => (
-        <BottomSheetBackdrop
+      (props: any) => (
+        <GlobalBottomSheetBackdrop
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
-          opacity={0.5}
-          pressBehavior="close"
         />
       ),
       [],

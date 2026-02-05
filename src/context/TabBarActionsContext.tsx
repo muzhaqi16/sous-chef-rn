@@ -161,6 +161,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   }, []);
 
   const handleSetActiveTab = useCallback((tabName: string) => {
+    activeTabRef.current = tabName; // Sync update before state change to prevent race condition
     setActiveTab(tabName);
   }, []);
 

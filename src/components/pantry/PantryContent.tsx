@@ -378,31 +378,33 @@ export const PantryContent: React.FC<PantryContentProps> = ({
 
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
-          {/* Content layer (always rendered, starts at opacity 0) */}
-          <Animated.View
-            style={[styles.absoluteFill, contentAnimatedStyle]}
-            pointerEvents={showSkeletons ? 'none' : 'auto'}
-          >
-            <FlashList<PantryItem>
-              data={showSkeletons ? [] : sortedItems}
-              renderItem={renderItem}
-              keyExtractor={item => item.id}
-              ListHeaderComponent={ListHeader}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                onRefresh ? (
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                  />
-                ) : undefined
-              }
-              onEndReached={onEndReached}
-              onEndReachedThreshold={0.5}
-              drawDistance={250}
-            />
-          </Animated.View>
+          {/* Content layer - only render FlashList when ready to avoid layout race condition */}
+          {!showSkeletons && (
+            <Animated.View
+              style={[styles.absoluteFill, contentAnimatedStyle]}
+              pointerEvents="auto"
+            >
+              <FlashList<PantryItem>
+                data={sortedItems}
+                renderItem={renderItem}
+                keyExtractor={item => item?.id ?? ''}
+                ListHeaderComponent={ListHeader}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  onRefresh ? (
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                    />
+                  ) : undefined
+                }
+                onEndReached={onEndReached}
+                onEndReachedThreshold={0.5}
+                drawDistance={250}
+              />
+            </Animated.View>
+          )}
 
           {/* Skeleton layer (on top, fades out) */}
           {showSkeletons && (
