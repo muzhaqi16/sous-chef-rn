@@ -341,6 +341,22 @@ export function makeCache(): InMemoryCache {
               return incoming;
             },
           },
+          nutritions: {
+            merge(existing, incoming) {
+              if (incoming === null && existing) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          images: {
+            merge(existing, incoming) {
+              if (incoming === null && existing) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
         },
       },
       Recipe: {

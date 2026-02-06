@@ -102,7 +102,7 @@ export function useRecipeSearch() {
     if (!searchQuery.trim()) {
       if (pantryItems?.length) {
         const ingredientNames = pantryItems
-          .map(item => item.item?.name || item.itemName)
+          .map(item => item.itemName)
           .filter(Boolean)
           .slice(0, 20)
           .join(',');
@@ -211,7 +211,7 @@ export function useRecipeSearch() {
     } else if (pantryItems?.length) {
       // Auto-search with pantry ingredients
       const ingredientNames = pantryItems
-        .map(item => item.item?.name || item.itemName)
+        .map(item => item.itemName)
         .filter(Boolean)
         .slice(0, 20) // Limit to 20 ingredients for API
         .join(',');

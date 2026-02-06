@@ -46,6 +46,7 @@ export type SortDirection = 'asc' | 'desc';
 // Item type from pantry management
 interface PantryItem {
   id: string;
+  itemName?: string | null;
   expiresAt?: string | null;
   quantity: number;
   storageState?: string | null;
@@ -271,7 +272,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
         <PantryItemCard
           key={item.id}
           id={item.id}
-          name={item.item?.name || 'Unknown Item'}
+          name={item.itemName || 'Unknown Item'}
           expirationText={hasExpiry ? expStatus.text : null}
           expirationVariant={hasExpiry ? expStatus.type : undefined}
           quantity={quantityDisplay}

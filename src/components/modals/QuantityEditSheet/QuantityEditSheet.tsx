@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Keyboard } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { commonStyles } from '#/styles/commonStyles';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
@@ -105,6 +104,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(bottomSheetRef, visible);
+
+  // Snap back to initial position when keyboard dismisses
+  // keyboardBlurBehavior="restore" is unreliable with "extend", so handle manually
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidHide', () => {
+      if (visible) {
+        bottomSheetRef.current?.snapToIndex(0);
+      }
+    });
+    return () => sub.remove();
+  }, [visible]);
 
   // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
@@ -261,46 +271,32 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      enableDynamicSizing
+      snapPoints={['55%', '95%']}
       enablePanDownToClose
       backdropComponent={renderBackdrop}
       onDismiss={onClose}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      enableDynamicSizing={false}
+      android_keyboardInputMode="adjustResize"
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
     >
       <BottomSheetKeyboardAwareScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
         {/* Item Header */}
         {item && (
           <View style={styles.header}>
-            {item.imageUrl ? (
+            {item.imageUrl && (
               <Image
                 source={{ uri: item.imageUrl }}
                 style={styles.itemImage}
                 resizeMode="cover"
               />
-            ) : (
-              <View
-                style={[
-                  styles.imagePlaceholder,
-                  { backgroundColor: theme.colors.surfaceVariant },
-                ]}
-              >
-                <Icon
-                  name="shopping-cart"
-                  size={24}
-                  color={theme.colors.textSecondary}
-                  library="MaterialIcons"
-                />
-              </View>
             )}
             <View style={styles.headerText}>
               <Text
@@ -321,6 +317,19 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 </Text>
               )}
             </View>
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={!hasChanges || loading}
+              style={[
+                styles.saveLink,
+                (!hasChanges || loading) && styles.saveLinkDisabled,
+              ]}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.saveLinkText, { color: theme.colors.primary }]}>
+                {loading ? 'Saving...' : 'Save'}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -465,21 +474,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           />
         </View>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: theme.colors.primary },
-            (!hasChanges || loading) && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={!hasChanges || loading}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.saveButtonText, { color: theme.colors.white }]}>
-            {loading ? 'Saving...' : 'Save Changes'}
-          </Text>
-        </TouchableOpacity>
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
@@ -499,13 +493,6 @@ const styles = StyleSheet.create(theme => ({
     width: 56,
     height: 56,
     borderRadius: theme.radii.md,
-  },
-  imagePlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerText: {
     flex: 1,
@@ -576,18 +563,15 @@ const styles = StyleSheet.create(theme => ({
     minWidth: 80,
     padding: 0,
   },
-  saveButton: {
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing.sm,
+  saveLink: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.xs,
   },
-  saveButtonDisabled: {
-    opacity: 0.5,
+  saveLinkDisabled: {
+    opacity: 0.4,
   },
-  saveButtonText: {
-    fontSize: theme.typography.fontSize.base,
+  saveLinkText: {
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
 }));

@@ -54,6 +54,10 @@ export function buildDirtyUpdateInput(
 ): Record<string, any> {
   const input: Record<string, any> = {};
 
+  if (dirtyFields.itemName) {
+    input.itemName = data.itemName;
+  }
+
   if (dirtyFields.storageState) {
     input.storageState = data.storageState;
   }

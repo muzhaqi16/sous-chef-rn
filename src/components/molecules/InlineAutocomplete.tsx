@@ -5,13 +5,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
@@ -75,7 +70,7 @@ export function InlineAutocomplete<T>({
   const { theme } = useUnistyles();
 
   // Track internal search term for visibility logic
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Ref-backed value tracking to prevent cursor jumping
@@ -121,8 +116,12 @@ export function InlineAutocomplete<T>({
     };
   }, []);
 
-  // Sync input value ref when value prop changes externally
+  // Sync local state when value prop changes externally (e.g., after selection)
   useEffect(() => {
+    // If no debounce is pending, this is an external change — sync local state
+    if (!debounceTimerRef.current) {
+      setSearchTerm(value);
+    }
     inputValueRef.current = value;
   }, [value]);
 
@@ -141,6 +140,7 @@ export function InlineAutocomplete<T>({
       // Notify parent after debounce
       debounceTimerRef.current = setTimeout(() => {
         onChangeText(text);
+        debounceTimerRef.current = null;
       }, debounceMs);
     },
     [onChangeText, debounceMs],
@@ -174,7 +174,7 @@ export function InlineAutocomplete<T>({
       <View style={styles.inputContainer}>
         <BottomSheetTextInput
           style={[styles.input, error && styles.inputError]}
-          value={value}
+          value={searchTerm}
           onChangeText={handleTextChange}
           placeholder={placeholder}
           onBlur={handleBlur}
@@ -202,12 +202,12 @@ export function InlineAutocomplete<T>({
           >
             {displayItems.map((item, index) => (
               <React.Fragment key={keyExtractor(item)}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
                   {renderItem(item, index)}
-                </TouchableOpacity>
+                </Pressable>
                 {index < displayItems.length - 1 && (
                   <View style={styles.separator} />
                 )}
@@ -266,6 +266,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     maxHeight: 220,
     zIndex: theme.zIndex.dropdown,
+    overflow: 'hidden',
     ...theme.shadows.lg,
   },
   scrollView: {

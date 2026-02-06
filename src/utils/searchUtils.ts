@@ -187,7 +187,6 @@ export const shoppingListItemSearch = <
 export const pantryItemSearch = <
   T extends {
     itemName?: string | null;
-    item?: { name?: string | null } | null;
   },
 >(
   item: T,
@@ -197,10 +196,7 @@ export const pantryItemSearch = <
   const trimmedQuery = query.trim();
   if (!trimmedQuery) return true;
 
-  return (
-    createItemNameSearch(item, trimmedQuery) ||
-    createNestedItemNameSearch(item, trimmedQuery)
-  );
+  return createItemNameSearch(item, trimmedQuery);
 };
 
 /**

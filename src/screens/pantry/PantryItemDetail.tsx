@@ -170,7 +170,7 @@ export const PantryItemDetail: React.FC<{
 
   // Fetch suggested recipes based on pantry item - use cache when available
   useEffect(() => {
-    const itemName = item?.item?.name;
+    const itemName = item?.itemName;
     if (!itemName) return;
 
     // Check cache first
@@ -202,7 +202,7 @@ export const PantryItemDetail: React.FC<{
     };
 
     fetchRecipes();
-  }, [item?.item?.name, getCachedSuggestions, setCachedSuggestions]);
+  }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
@@ -254,7 +254,7 @@ export const PantryItemDetail: React.FC<{
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.quantity || 1,
             unitId: data?.pantryItem?.unit.id ?? '',
-            itemName: data?.pantryItem?.item?.name || '',
+            itemName: data?.pantryItem?.itemName || '',
           },
         },
       });
@@ -362,7 +362,7 @@ export const PantryItemDetail: React.FC<{
         {/* Title Row - Name */}
         <View style={styles.titleRow}>
           <Text style={styles.itemTitle} numberOfLines={2}>
-            {item.item?.name || item.itemName}
+            {item.itemName}
           </Text>
         </View>
 
@@ -427,7 +427,7 @@ export const PantryItemDetail: React.FC<{
               onPress={() =>
                 navigateTo.nutritionScreen({
                   itemId: item.id,
-                  itemName: item.item?.name || item.itemName,
+                  itemName: item.itemName,
                   nutritions: item.item?.nutritions,
                 })
               }

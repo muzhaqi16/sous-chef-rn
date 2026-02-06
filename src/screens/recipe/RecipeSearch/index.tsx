@@ -103,7 +103,7 @@ export const RecipeSearch: React.FC = () => {
 
   const renderIngredientItem = useCallback(
     ({ item }: { item: any }) => {
-      const itemName = item.item?.name || item.itemName || '';
+      const itemName = item.itemName || '';
       return (
         <IngredientItem
           name={itemName}

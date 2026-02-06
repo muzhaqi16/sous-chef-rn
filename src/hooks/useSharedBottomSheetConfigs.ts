@@ -1,13 +1,13 @@
-import { useBottomSheetTimingConfigs } from '@gorhom/bottom-sheet';
-import { Easing } from 'react-native-reanimated';
+import { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
 
 /**
  * Shared animation configuration for all bottom sheet modals.
- * Provides consistent 300ms ease-out animation across the app.
+ * Uses a spring animation for snappy, natural-feeling sheet transitions.
  */
 export const useSharedBottomSheetConfigs = () => {
-  return useBottomSheetTimingConfigs({
-    duration: 300,
-    easing: Easing.out(Easing.ease),
+  return useBottomSheetSpringConfigs({
+    damping: 80,
+    overshootClamping: true,
+    stiffness: 500,
   });
 };

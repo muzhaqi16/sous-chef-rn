@@ -97,7 +97,7 @@ export const LowStockItems: React.FC = () => {
           >
             <View style={[commonStyles.card, styles.itemCard]}>
               <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.item?.name}</Text>
+                <Text style={styles.itemName}>{item.itemName}</Text>
                 <Text style={[commonStyles.caption, styles.itemDetails]}>
                   {item.quantity} {item.unit.symbol} remaining
                 </Text>

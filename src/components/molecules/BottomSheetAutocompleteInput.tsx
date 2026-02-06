@@ -6,7 +6,7 @@ import React, {
   useMemo,
   memo,
 } from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
+import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -95,7 +95,6 @@ export function BottomSheetAutocompleteInput<T>({
   onModalOpen,
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
-  const { height } = useWindowDimensions();
   const { theme } = useUnistyles();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const userDismissedRef = useRef(false);
@@ -141,12 +140,14 @@ export function BottomSheetAutocompleteInput<T>({
     onModalOpen,
   ]);
 
-  // Update lastDataRef when we get new data
+  // Update lastDataRef when we get new data, clear when results are definitively empty
   useEffect(() => {
     if (data.length > 0) {
       lastDataRef.current = data;
+    } else if (!loading) {
+      lastDataRef.current = [];
     }
-  }, [data]);
+  }, [data, loading]);
 
   // Compute display data - show previous results while loading to prevent flickering
   const displayData = useMemo(() => {
@@ -226,7 +227,7 @@ export function BottomSheetAutocompleteInput<T>({
     if (!isOnline) {
       return (
         <BottomSheetView
-          style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+          style={styles.messageContainer}
         >
           <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
           <Text style={styles.emptyText}>Search unavailable offline</Text>
@@ -239,7 +240,7 @@ export function BottomSheetAutocompleteInput<T>({
 
     return (
       <BottomSheetView
-        style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+        style={styles.messageContainer}
       >
         <Text style={styles.emptyText}>{emptyText}</Text>
         {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
@@ -249,7 +250,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   const defaultLoadingComponent = () => (
     <BottomSheetView
-      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+      style={styles.messageContainer}
     >
       <Text style={styles.loadingText}>Loading...</Text>
     </BottomSheetView>
@@ -283,49 +284,49 @@ export function BottomSheetAutocompleteInput<T>({
         handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         backgroundStyle={{ backgroundColor: theme.colors.surface }}
       >
-        <BottomSheetFlatList
-          data={displayData}
-          keyExtractor={keyExtractor}
-          renderItem={({ item }: { item: T }) => {
-            const element = renderItem(item);
-            // Clone the element and override onPress to ensure bottom sheet closes
-            return React.cloneElement(element as React.ReactElement<any>, {
-              onPress: () => handleSelectItem(item),
-            });
-          }}
-          ItemSeparatorComponent={AutocompleteSeparator}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          // Performance optimizations
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={true}
-          initialNumToRender={10}
-          updateCellsBatchingPeriod={50}
-          ListHeaderComponent={
-            <View style={styles.headerSection}>
-              <Text style={styles.autocompleteTitle}>{title}</Text>
+        <BottomSheetView style={{ flex: 1 }}>
+          <View style={styles.headerSection}>
+            <Text style={styles.autocompleteTitle}>{title}</Text>
 
-              <BottomSheetTextInput
-                style={styles.bottomSheetInput}
-                value={searchTerm}
-                onChangeText={handleBottomSheetTextChange}
-                placeholder={searchPlaceholder}
-                autoFocus={showAutocomplete}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmitCustomValue}
-                testID={testID ? `${testID}-search` : undefined}
-                autoCapitalize={autoCapitalize}
-              />
-            </View>
-          }
-          ListEmptyComponent={
-            loading
-              ? renderLoadingComponent?.() || defaultLoadingComponent()
-              : renderEmptyComponent?.() || defaultEmptyComponent()
-          }
-        />
+            <BottomSheetTextInput
+              style={styles.bottomSheetInput}
+              value={searchTerm}
+              onChangeText={handleBottomSheetTextChange}
+              placeholder={searchPlaceholder}
+              autoFocus={showAutocomplete}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmitCustomValue}
+              testID={testID ? `${testID}-search` : undefined}
+              autoCapitalize={autoCapitalize}
+            />
+          </View>
+          <BottomSheetFlatList
+            data={displayData}
+            keyExtractor={keyExtractor}
+            renderItem={({ item }: { item: T }) => {
+              const element = renderItem(item);
+              // Clone the element and override onPress to ensure bottom sheet closes
+              return React.cloneElement(element as React.ReactElement<any>, {
+                onPress: () => handleSelectItem(item),
+              });
+            }}
+            ItemSeparatorComponent={AutocompleteSeparator}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            // Performance optimizations
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true}
+            initialNumToRender={10}
+            updateCellsBatchingPeriod={50}
+            ListEmptyComponent={
+              loading
+                ? renderLoadingComponent?.() || defaultLoadingComponent()
+                : renderEmptyComponent?.() || defaultEmptyComponent()
+            }
+          />
+        </BottomSheetView>
       </BottomSheetModal>
     </View>
   );
@@ -338,7 +339,6 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: theme.spacing.lg,
-    flexGrow: 1,
     backgroundColor: theme.colors.surface,
   },
   autocompleteTitle: {

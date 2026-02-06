@@ -17,6 +17,7 @@ export interface ExpirationStatus {
 
 interface PantryItem {
   id: string;
+  itemName?: string | null;
   expiresAt?: string | null;
   createdAt?: string | null;
   quantity: number;
@@ -328,7 +329,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
 
       return {
         id: item.id,
-        title: item.item?.name || '',
+        title: item.itemName || '',
         subtitle: buildSubtitle(),
         rightElement: (
           <View style={{ alignItems: 'flex-end' }}>
