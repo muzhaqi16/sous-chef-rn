@@ -78,6 +78,26 @@ export const useDefaultHome = () => {
       errorPolicy: 'ignore',
     });
 
+  // Allow pantry query to start immediately when persisted selections exist.
+  // This runs in parallel with GetHomes instead of waiting for selection init.
+  useEffect(() => {
+    if (
+      canAttemptQueries &&
+      selectedHomeId &&
+      selectedPantryId &&
+      !isHomeSelectionReady
+    ) {
+      console.log('⚡ Early ready: using persisted home/pantry IDs');
+      setIsHomeSelectionReady(true);
+    }
+  }, [
+    canAttemptQueries,
+    selectedHomeId,
+    selectedPantryId,
+    isHomeSelectionReady,
+    setIsHomeSelectionReady,
+  ]);
+
   // Execute query ONCE when authenticated to populate Apollo cache
   // This runs on every app startup (hasInitializedHomeData resets) to ensure
   // the cache has home data, even if selectedHomeId is already persisted

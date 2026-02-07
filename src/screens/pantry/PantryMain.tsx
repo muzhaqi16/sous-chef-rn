@@ -6,7 +6,6 @@ import React, {
   useState,
 } from 'react';
 import { View } from 'react-native';
-import { NetworkStatus } from '@apollo/client';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -115,13 +114,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     isReady,
   } = useCurrentPantry();
 
-  // Storage locations for custom filter tabs
-  const {
-    locations: storageLocations,
-    createLocation,
-    creating: creatingLocation,
-  } = useStorageLocationManagement(selectedHomeId ?? undefined);
-
   // Keep query for pull-to-refresh
   // Gate query with isReady and isFocused to prevent firing:
   // - before home selection is complete (isReady)
@@ -155,11 +147,26 @@ const PantryMainScreen: React.FC = React.memo(() => {
     removeItem,
     refetch,
     loading,
-    networkStatus,
+    isRefreshing,
     error: pantryError,
     loadMore,
     locationCounts,
   } = usePantryManagement(pantry?.id);
+
+  // PERF: Defer storage locations until pantry data has loaded (data-driven)
+  // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
+  const [storageLocationsReady, setStorageLocationsReady] = useState(false);
+  useEffect(() => {
+    if (!loading && isReady) {
+      setStorageLocationsReady(true);
+    }
+  }, [loading, isReady]);
+
+  const {
+    locations: storageLocations,
+    createLocation,
+    creating: creatingLocation,
+  } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
 
   // Extract item actions (modal state + mutations + handlers) to separate hook
   const {
@@ -312,9 +319,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     locationFilteredItems.length === 0 &&
     !allItems?.length;
 
-  // Only show refreshing indicator during explicit user-initiated pull-to-refresh
-  // Background fetches from cache-and-network are silent to avoid loading flash on navigation
-  const isRefreshing = networkStatus === NetworkStatus.refetch;
+  // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
 
   // Get user display name and avatar
   const userName =
@@ -364,40 +369,50 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-      <ConsumePantryItemModal
-        visible={consumeModal.visible}
-        pantryItem={consumeModal.item}
-        onClose={consumeModal.close}
-        onConfirm={handleConfirmConsume}
-      />
-      <RecordWastePantryItemModal
-        visible={wasteModal.visible}
-        pantryItem={wasteModal.item}
-        onClose={wasteModal.close}
-        onConfirm={handleConfirmWaste}
-      />
-      <RestockPantryItemModal
-        visible={restockModal.visible}
-        pantryItem={restockModal.item}
-        onClose={restockModal.close}
-        onConfirm={handleConfirmRestock}
-      />
+      {consumeModal.visible && (
+        <ConsumePantryItemModal
+          visible={consumeModal.visible}
+          pantryItem={consumeModal.item}
+          onClose={consumeModal.close}
+          onConfirm={handleConfirmConsume}
+        />
+      )}
+      {wasteModal.visible && (
+        <RecordWastePantryItemModal
+          visible={wasteModal.visible}
+          pantryItem={wasteModal.item}
+          onClose={wasteModal.close}
+          onConfirm={handleConfirmWaste}
+        />
+      )}
+      {restockModal.visible && (
+        <RestockPantryItemModal
+          visible={restockModal.visible}
+          pantryItem={restockModal.item}
+          onClose={restockModal.close}
+          onConfirm={handleConfirmRestock}
+        />
+      )}
 
       {/* Add to Pantry Sheet */}
-      <AddToPantrySheet
-        visible={addSheetVisible}
-        pantryId={pantry?.id}
-        onClose={() => setAddSheetVisible(false)}
-        onItemAdded={handleItemAdded}
-      />
+      {addSheetVisible && (
+        <AddToPantrySheet
+          visible={addSheetVisible}
+          pantryId={pantry?.id}
+          onClose={() => setAddSheetVisible(false)}
+          onItemAdded={handleItemAdded}
+        />
+      )}
 
       {/* Add Storage Location Sheet */}
-      <AddStorageLocationSheet
-        visible={addLocationSheetVisible}
-        onClose={() => setAddLocationSheetVisible(false)}
-        onCreateLocation={createLocation}
-        creating={creatingLocation}
-      />
+      {addLocationSheetVisible && (
+        <AddStorageLocationSheet
+          visible={addLocationSheetVisible}
+          onClose={() => setAddLocationSheetVisible(false)}
+          onCreateLocation={createLocation}
+          creating={creatingLocation}
+        />
+      )}
 
       {/* Home switch hint overlay */}
       {homeSwitchHint.isVisible && (

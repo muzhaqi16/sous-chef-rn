@@ -177,7 +177,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   }));
 
   // PERFORMANCE: Defer heavy list render until after navigation animation
-  const isReady = useDeferredRender();
+  const isReady = useDeferredRender(500);
 
   // Once content has been shown, latch the module-level flag so skeletons
   // never reappear on remounts or stack navigation (only resets on app restart).

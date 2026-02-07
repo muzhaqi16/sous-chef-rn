@@ -34,8 +34,8 @@ export function createAnimatedTabNavigator<
       () => ({
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        lazy: false,
-        freezeOnBlur: false,
+        lazy: true,
+        freezeOnBlur: true,
         animation: 'fade',
         sceneStyle: { backgroundColor: theme.colors.background },
       }),
