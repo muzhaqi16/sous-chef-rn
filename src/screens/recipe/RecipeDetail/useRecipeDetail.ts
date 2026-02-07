@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
@@ -49,7 +50,7 @@ export interface RecipeDisplayData {
 }
 
 export function useRecipeDetail() {
-  const route = useRoute<RecipeDetailRouteProp>();
+  const route = useRoute() as RecipeDetailRouteProp;
   const { goBack } = useAppNavigation();
   const { recipeId, externalSource, externalId } = route.params;
 
@@ -374,6 +375,8 @@ export function useRecipeDetail() {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchRecipe = async () => {
       if (recipeId) {
         setLoading(backendLoading);
@@ -394,7 +397,7 @@ export function useRecipeDetail() {
           const data = await spoonacularService.getRecipeInformation({
             id: Number(externalId),
             includeNutrition: true,
-          });
+          }, controller.signal);
           setExternalRecipe(data);
 
           // Preload recipe to backend (fire-and-forget)
@@ -406,6 +409,7 @@ export function useRecipeDetail() {
           throw new Error(`Unsupported external source: ${externalSource}`);
         }
       } catch (err: any) {
+        if (err.name === 'AbortError') return;
         console.error('Failed to fetch recipe:', err);
         setError('Failed to load recipe. Please try again.');
       } finally {
@@ -414,6 +418,8 @@ export function useRecipeDetail() {
     };
 
     fetchRecipe();
+
+    return () => controller.abort();
   }, [externalSource, externalId, recipeId, backendLoading, preloadRecipe]);
 
   // Normalize recipes data

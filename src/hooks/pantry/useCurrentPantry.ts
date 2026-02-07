@@ -12,9 +12,9 @@ import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
  * 3. First pantry (if no default marked)
  * 4. Minimal object (during loading/network errors)
  *
- * PERFORMANCE: Uses cache-and-network with nextFetchPolicy cache-first
- * (per docs/apollo-client-patterns.md standard). Shows cached data immediately,
- * fetches fresh in background on first mount. Subsequent renders use cache-first.
+ * PERFORMANCE: Uses cache-only — useDefaultHome already fetches fresh data with
+ * network-only and populates the cache. This hook reads from cache to avoid a
+ * duplicate GetHomes network request during startup.
  */
 export function useCurrentPantry() {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
@@ -24,8 +24,7 @@ export function useCurrentPantry() {
   const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
 
   const { data: homesData } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-only',
     errorPolicy: 'ignore',
   });
 

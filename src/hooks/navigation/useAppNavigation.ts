@@ -10,7 +10,7 @@ export function useAppNavigation() {
   // Core navigation methods
   const navigate = useCallback(
     (name: string, params?: any) => {
-      navigation.navigate(name as any, params);
+      (navigation as any).navigate(name, params);
     },
     [navigation],
   );
@@ -18,7 +18,7 @@ export function useAppNavigation() {
   // Navigate to nested stack screens
   const navigateToNested = useCallback(
     (stackName: string, screenName: string, params?: any) => {
-      navigation.navigate(stackName as any, {
+      (navigation as any).navigate(stackName, {
         screen: screenName,
         params: params,
       });

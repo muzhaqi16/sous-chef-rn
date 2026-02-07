@@ -1,3 +1,4 @@
+import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { PantryMain } from '#screens/pantry/PantryMain';
 import { PantryItemScreen } from '#screens/pantry/PantryItemScreen';
@@ -27,7 +28,7 @@ export type PantryStackParamList = {
 
 const Stack = createNativeStackNavigator<PantryStackParamList>();
 
-export const PantryStack = () => (
+export const PantryStack = React.memo(() => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
@@ -46,4 +47,4 @@ export const PantryStack = () => (
     <Stack.Screen name="NutritionScreen" component={NutritionScreen} />
     <Stack.Screen name="RecipeDetail" component={RecipeDetail} />
   </Stack.Navigator>
-);
+));

@@ -180,6 +180,8 @@ export const PantryItemDetail: React.FC<{
       return;
     }
 
+    const controller = new AbortController();
+
     // Cache miss - fetch from API
     const fetchRecipes = async () => {
       setLoadingRecipes(true);
@@ -188,13 +190,14 @@ export const PantryItemDetail: React.FC<{
           query: itemName,
           number: 5,
           addRecipeInformation: true,
-        });
+        }, controller.signal);
         const results = recipes.results as unknown as RecipeInformation[];
         setSuggestedRecipes(results);
 
         // Cache the results
         setCachedSuggestions(itemName, results);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to fetch suggested recipes:', error);
       } finally {
         setLoadingRecipes(false);
@@ -202,6 +205,8 @@ export const PantryItemDetail: React.FC<{
     };
 
     fetchRecipes();
+
+    return () => controller.abort();
   }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
 
   const handleDelete = () => {

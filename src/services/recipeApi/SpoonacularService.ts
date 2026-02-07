@@ -52,6 +52,7 @@ class SpoonacularService {
   private async fetch<T>(
     endpoint: string,
     params: Record<string, any> = {},
+    signal?: AbortSignal,
   ): Promise<T> {
     this.checkRateLimit();
 
@@ -73,6 +74,7 @@ class SpoonacularService {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal,
       });
 
       if (!response.ok) {
@@ -114,6 +116,7 @@ class SpoonacularService {
    */
   async searchRecipesByIngredients(
     params: SearchRecipesByIngredientsParams,
+    signal?: AbortSignal,
   ): Promise<RecipeSearchResult[]> {
     const {
       ingredients,
@@ -127,7 +130,7 @@ class SpoonacularService {
       number: Math.min(number, 10), // Limit to 10 to save API calls
       ranking,
       ignorePantry,
-    });
+    }, signal);
   }
 
   /**
@@ -139,12 +142,13 @@ class SpoonacularService {
    */
   async getRecipeInformation(
     params: GetRecipeInformationParams,
+    signal?: AbortSignal,
   ): Promise<RecipeInformation> {
     const { id, includeNutrition = true } = params;
 
     return this.fetch<RecipeInformation>(`/recipes/${id}/information`, {
       includeNutrition,
-    });
+    }, signal);
   }
 
   /**
@@ -156,6 +160,7 @@ class SpoonacularService {
    */
   async searchRecipes(
     params: SearchRecipesParams,
+    signal?: AbortSignal,
   ): Promise<SearchRecipesResponse> {
     const { query, number = 10, offset = 0, ...restParams } = params;
 
@@ -164,7 +169,7 @@ class SpoonacularService {
       number: Math.min(number, 10), // Limit to 10 to save API calls
       offset,
       ...restParams,
-    });
+    }, signal);
   }
 
   /**
@@ -176,6 +181,7 @@ class SpoonacularService {
    */
   async getRandomRecipes(
     params: GetRandomRecipesParams = {},
+    signal?: AbortSignal,
   ): Promise<RecipeInformation[]> {
     const { number = 10, tags, includeNutrition = false } = params;
 
@@ -186,6 +192,7 @@ class SpoonacularService {
         tags,
         includeNutrition,
       },
+      signal,
     );
 
     return response.recipes;
@@ -198,14 +205,14 @@ class SpoonacularService {
    * @param ids - Array of recipe IDs
    * @returns Array of recipe information
    */
-  async getBulkRecipeInformation(ids: number[]): Promise<RecipeInformation[]> {
+  async getBulkRecipeInformation(ids: number[], signal?: AbortSignal): Promise<RecipeInformation[]> {
     // Note: This is more efficient than individual calls
     // but still counts as 1 request per recipe
     const idsString = ids.join(',');
 
     return this.fetch<RecipeInformation[]>('/recipes/informationBulk', {
       ids: idsString,
-    });
+    }, signal);
   }
 
   /**

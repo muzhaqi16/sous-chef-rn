@@ -189,6 +189,31 @@ jobs:
             ls -hal ./android/app/build/outputs/apk/release/ || echo "No release APK outputs found"
           fi
 
+      - name: Verify 16KB page alignment
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            APK_DIR="./android/app/build/outputs/apk/staging"
+          else
+            APK_DIR="./android/app/build/outputs/apk/release"
+          fi
+
+          ALIGNMENT_OK=true
+          for APK in "$APK_DIR"/*.apk; do
+            [ -f "$APK" ] || continue
+            echo "Checking 16KB alignment: $(basename "$APK")"
+            if ! $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools/ | tail -n1)/zipalign -c -P 16 -v 4 "$APK" > /dev/null 2>&1; then
+              echo "::warning::APK $(basename "$APK") is NOT 16KB page-aligned. This may cause issues on Android 15+ devices."
+              ALIGNMENT_OK=false
+            else
+              echo "$(basename "$APK") is properly 16KB aligned"
+            fi
+          done
+
+          if [ "$ALIGNMENT_OK" = false ]; then
+            echo "::warning::Some APKs failed 16KB alignment check. Review third-party native libraries."
+          fi
+
       - name: Rename APK files
         if: env.IS_PLAYSTORE != 'true'
         run: |

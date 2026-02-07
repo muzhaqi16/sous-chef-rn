@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -84,7 +85,7 @@ const validateDeepLinkToken = (
  * Queues deep link actions until app is hydrated and routes to appropriate handlers.
  */
 export const useDeepLinkRouter = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation() as NavigationProp<RootStackParamList>;
   const isHydrated = useAppStore(state => state.isHydrated);
   const { isAuthenticated } = useAuth();
 

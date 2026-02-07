@@ -21,7 +21,7 @@ import {
   useCreateShoppingListMutation,
 } from '#generated';
 import {
-  createRemoveFromQueryFieldUpdater,
+  createRemoveFromQueryConnectionUpdater,
   createAddToQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
@@ -43,7 +43,7 @@ export const ListSettings: React.FC<{
 }> = ({ route }) => {
   const { theme } = useUnistyles();
   const listId = route.params?.listId;
-  const { navigate, goBack, navigateTo } = useAppNavigation();
+  const { navigate, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -89,7 +89,7 @@ export const ListSettings: React.FC<{
       if (!data?.deleteShoppingList || !variables) return;
 
       try {
-        const removeFromShoppingListsCache = createRemoveFromQueryFieldUpdater(
+        const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
           'shoppingLists',
           'ShoppingList',
         );
@@ -184,6 +184,7 @@ export const ListSettings: React.FC<{
           style: 'destructive',
           onPress: async () => {
             // Register parent deletion to prevent subscription race conditions
+            // 10s auto-cleanup timeout in service handles unregistration
             subscriptionService.registerParentDeletion(listId);
 
             try {
@@ -195,9 +196,11 @@ export const ListSettings: React.FC<{
 
               // Set default list if found, otherwise null to trigger auto-select
               setSelectedShoppingListId(defaultList?.id || null);
-              navigateTo.shoppingListMain();
-            } finally {
-              // Cleanup (timeout in service provides fallback)
+              // Use goBack() to pop ListSettings off the stack, unmounting its
+              // query watcher so late subscription updates can't trigger a refetch
+              goBack();
+            } catch {
+              // Deletion failed — list wasn't actually deleted, so unregister immediately
               subscriptionService.unregisterParentDeletion(listId);
             }
           },

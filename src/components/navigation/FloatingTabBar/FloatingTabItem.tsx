@@ -16,7 +16,7 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
   activeIndex,
   onPress,
   onLongPress,
-  icon: IconComponent,
+  icon: tabBarIcon,
   accessibilityLabel,
   isActive,
 }) => {
@@ -45,6 +45,17 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
     };
   }, [index]);
 
+  const iconColor = isActive ? theme.colors.iconOnPrimary : theme.colors.iconDisabled;
+
+  const renderIcon = () => {
+    if (!tabBarIcon) return null;
+    if (typeof tabBarIcon === 'function') {
+      const result = tabBarIcon({ focused: isActive, color: iconColor, size: 24 });
+      return result as React.ReactNode;
+    }
+    return null;
+  };
+
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
     <View style={styles.tabItem}>
@@ -57,13 +68,7 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
         style={[{ flex: 1, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}
         activeOpacity={0.7}
       >
-        {IconComponent && (
-          <IconComponent
-            focused={isActive}
-            color={isActive ? theme.colors.iconOnPrimary : theme.colors.iconDisabled}
-            size={24}
-          />
-        )}
+        {renderIcon()}
       </AnimatedTouchableOpacity>
     </View>
   );

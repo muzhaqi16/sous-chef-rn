@@ -15,7 +15,8 @@ import Animated, {
   withSpring,
   clamp,
 } from 'react-native-reanimated';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -37,7 +38,7 @@ const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 
 export const ImageCropScreen = () => {
   const { goBack } = useSafeNavigation();
-  const route = useRoute<ImageCropRouteProp>();
+  const route = useRoute() as ImageCropRouteProp;
   const { theme } = useUnistyles();
   const { imageFile } = route.params;
 

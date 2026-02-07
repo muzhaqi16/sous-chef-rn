@@ -1,12 +1,24 @@
-import React, { useEffect } from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { Text, Pressable } from 'react-native';
 import Animated, {
+  Easing,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  useAnimatedReaction,
+  withTiming,
   withSequence,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#/utils/iconUtils';
+import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
+
+const TAB_ICON_MAP: Record<string, [string, string]> = {
+  Pantry: ['home', 'home-outline'],
+  ShoppingList: ['list', 'list-outline'],
+  Recipe: ['book', 'book-outline'],
+  Profile: ['person', 'person-outline'],
+};
 
 interface TabItemProps {
   route: {
@@ -15,17 +27,11 @@ interface TabItemProps {
     params?: object;
   };
   isFocused: boolean;
-  options: {
-    title?: string;
-    tabBarIcon?: React.ComponentType<{
-      focused: boolean;
-      color: string;
-      size: number;
-    }>;
-    tabBarAccessibilityLabel?: string;
-  };
+  options: Pick<BottomTabNavigationOptions, 'title' | 'tabBarAccessibilityLabel'>;
   onPress: () => void;
   showLabel: boolean;
+  activeTabIndex: SharedValue<number>;
+  tabIndex: number;
 }
 
 export const TabItem: React.FC<TabItemProps> = React.memo(({
@@ -34,23 +40,31 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
   options,
   onPress,
   showLabel,
+  activeTabIndex,
+  tabIndex,
 }) => {
   const { theme } = useUnistyles();
   const iconScale = useSharedValue(isFocused ? 1.2 : 1);
 
-  // Update scale when focus changes
-  useEffect(() => {
-    iconScale.value = withSpring(isFocused ? 1.2 : 1, {
-      damping: 35,
-      stiffness: 250,
-    });
-  }, [isFocused, iconScale]);
+  // Drive scale animation from shared value on the UI thread
+  useAnimatedReaction(
+    () => activeTabIndex.value === tabIndex,
+    (isActive, prevIsActive) => {
+      if (isActive !== prevIsActive) {
+        iconScale.value = withTiming(isActive ? 1.2 : 1, {
+          duration: 150,
+          easing: Easing.inOut(Easing.ease),
+        });
+      }
+    },
+    [tabIndex],
+  );
 
   const handlePress = () => {
-    // Animate icon scale on press (squeeze then expand)
+    // Animate icon scale on press (squeeze then expand to active size)
     iconScale.value = withSequence(
-      withSpring(0.85, { damping: 15, stiffness: 300 }),
-      withSpring(isFocused ? 1.2 : 1, { damping: 15, stiffness: 300 })
+      withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
+      withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) })
     );
     onPress();
   };
@@ -60,33 +74,36 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
   }));
 
   const label = options.title || route.name;
-  const TabBarIcon = options.tabBarIcon;
+  const iconColor = isFocused ? theme.colors.primary : theme.colors.textTertiary;
+  const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || ['help-circle', 'help-circle'];
+
+  const renderIcon = () => (
+    <Icon
+      library="Ionicons"
+      name={isFocused ? activeIcon : inactiveIcon}
+      size={24}
+      color={iconColor}
+    />
+  );
 
   return (
-    <TouchableOpacity
+    <Pressable
       testID={`tab-${route.name.toLowerCase().replace(/\s+/g, '-')}`}
       accessibilityRole="button"
       accessibilityState={isFocused ? { selected: true } : {}}
       accessibilityLabel={options.tabBarAccessibilityLabel}
       onPress={handlePress}
       style={styles.tabItem}
-      activeOpacity={0.7}
     >
       <Animated.View style={animatedIconStyle}>
-        {TabBarIcon && (
-          <TabBarIcon
-            focused={isFocused}
-            color={isFocused ? theme.colors.primary : theme.colors.textTertiary}
-            size={24}
-          />
-        )}
+        {renderIcon()}
       </Animated.View>
       {showLabel && (
         <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
           {label}
         </Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 

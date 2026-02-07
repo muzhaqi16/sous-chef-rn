@@ -1,7 +1,6 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {useUnistyles} from 'react-native-unistyles';
 import {getFocusedRouteNameFromRoute} from '@react-navigation/native';
-import {Icon} from '#/utils/iconUtils';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
 import {RecipeStack} from './RecipeStack';
@@ -20,36 +19,19 @@ const { Navigator, Screen } = createAnimatedTabNavigator<HomeTabParamList>();
 export const HomeTabs = () => {
   const {theme} = useUnistyles();
 
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      tabBarHideOnKeyboard: true,
+      tabBarActiveTintColor: theme.colors.primary,
+      tabBarInactiveTintColor: theme.colors.textSecondary,
+    }),
+    [theme.colors.primary, theme.colors.textSecondary],
+  );
+
   return (
     <Navigator
-      screenOptions={({route}) => ({
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarIcon: ({focused, color, size}) => {
-          const iconMap: Record<string, [string, string]> = {
-            Pantry: ['home', 'home-outline'],
-            ShoppingList: ['list', 'list-outline'],
-            Recipe: ['book', 'book-outline'],
-            Profile: ['person', 'person-outline'],
-          };
-
-          const [activeIcon, inactiveIcon] = iconMap[route.name] || [
-            'help-circle',
-            'help-circle',
-          ];
-
-          return (
-            <Icon
-              library="Ionicons"
-              name={focused ? activeIcon : inactiveIcon}
-              size={size}
-              color={color}
-            />
-          );
-        },
-      })}>
+      screenOptions={screenOptions}>
     <Screen
       name="Pantry"
       component={PantryStack}
@@ -57,8 +39,7 @@ export const HomeTabs = () => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'PantryMain';
         return {
           title: 'Pantry',
-          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none' as const} : undefined,
         };
       }}
     />
@@ -69,8 +50,7 @@ export const HomeTabs = () => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'ShoppingListMain';
         return {
           title: 'List',
-          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none' as const} : undefined,
         };
       }}
     />
@@ -81,8 +61,7 @@ export const HomeTabs = () => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'RecipeMain';
         return {
           title: 'Recipes',
-          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none' as const} : undefined,
         };
       }}
     />
@@ -91,7 +70,6 @@ export const HomeTabs = () => {
       component={ProfileScreen}
       options={{
         title: 'Profile',
-        freezeOnBlur: true, // Prevent re-renders when tab is not active
       }}
     />
   </Navigator>

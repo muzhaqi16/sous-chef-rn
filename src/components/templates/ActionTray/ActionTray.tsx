@@ -26,16 +26,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const isOpenRef = useRef(false);
     const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
-    // Trigger hideBackdrop at the START of the dismiss animation
-    const handleAnimate = useCallback(
-      (_fromIndex: number, toIndex: number) => {
-        if (toIndex === -1) {
-          hideBackdrop();
-        }
-      },
-      [hideBackdrop],
-    );
-
     // Handle sheet state changes for open/close tracking
     const handleSheetChanges = useCallback(
       (index: number) => {
@@ -43,11 +33,15 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           isOpenRef.current = true;
           onOpen?.();
         } else {
+          // Safety net: ensure backdrop is hidden when sheet fully closes
+          if (isOpenRef.current && enableBackdrop) {
+            hideBackdrop();
+          }
           isOpenRef.current = false;
           onClose?.();
         }
       },
-      [onOpen, onClose],
+      [onOpen, onClose, enableBackdrop, hideBackdrop],
     );
 
     // Cleanup on unmount
@@ -64,6 +58,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       ref,
       () => ({
         open: () => {
+          if (isOpenRef.current) return;
           if (enableBackdrop) {
             showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
           }
@@ -97,7 +92,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         enableDynamicSizing={true}
         enablePanDownToClose={true}
         backdropComponent={NullBackdrop}
-        onAnimate={handleAnimate}
         onChange={handleSheetChanges}
         style={[styles.modal, style]}
         backgroundStyle={styles.background}

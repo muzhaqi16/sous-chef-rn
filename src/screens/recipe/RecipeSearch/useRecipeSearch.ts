@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
@@ -27,7 +28,7 @@ export interface RecipeFilters {
 export function useRecipeSearch() {
   const { navigate } = useAppNavigation();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const route = useRoute<RecipeSearchRouteProp>();
+  const route = useRoute() as RecipeSearchRouteProp;
   const initialQuery = route.params?.initialQuery || '';
 
   // Track screen performance

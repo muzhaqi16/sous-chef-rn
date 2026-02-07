@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { NutritionDetailList } from '#components/molecules/NutritionDetailList';
@@ -13,7 +14,7 @@ type NutritionScreenRouteProp = RouteProp<PantryStackParamList, 'NutritionScreen
 
 export const NutritionScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
-  const route = useRoute<NutritionScreenRouteProp>();
+  const route = useRoute() as NutritionScreenRouteProp;
   const { itemName, nutritions, actualServingGrams } = route.params;
 
   return (

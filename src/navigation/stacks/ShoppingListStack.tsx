@@ -1,3 +1,4 @@
+import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { ShoppingListMain } from '#screens/shoppingList/ShoppingListMain';
 import { ListSettings } from '#screens/shoppingList/ListSettings';
@@ -34,7 +35,7 @@ export type ShoppingListStackParamList = {
 
 const Stack = createNativeStackNavigator<ShoppingListStackParamList>();
 
-export const ShoppingListStack = () => (
+export const ShoppingListStack = React.memo(() => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
@@ -51,4 +52,4 @@ export const ShoppingListStack = () => (
     <Stack.Screen name="ItemDetail" component={ShoppingListItemDetail} />
     <Stack.Screen name="PurchaseHistory" component={PurchaseHistoryScreen} />
   </Stack.Navigator>
-);
+));

@@ -4,7 +4,6 @@ import { useDeferredCallback } from './performance/useDeferredCallback';
 import {
   useGetCommonUnitsLazyQuery,
   useGetShoppingListsLiteLazyQuery,
-  useGetPantryLazyQuery,
   useMySavedRecipesLazyQuery,
 } from '#generated';
 import { useAppStore, selectAuthState } from '#store/useAppStore';
@@ -23,7 +22,7 @@ import { useAppStore, selectAuthState } from '#store/useAppStore';
  *
  * Background preloading:
  * - After login completes, waits for UI interactions to settle
- * - Then preloads shopping lists, pantry, and saved recipes in parallel
+ * - Then preloads shopping lists and saved recipes in staggered order
  * - Non-blocking: doesn't interfere with current screen's essential data
  */
 export function useDataPreloading() {
@@ -33,9 +32,7 @@ export function useDataPreloading() {
 
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
-  const selectedPantryId = useAppStore(state => state.selectedPantryId);
   const isOnline = useAppStore(state => state.isOnline);
-  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   // PERFORMANCE: Track if units have been cached to prevent infinite loop
   const hasCachedUnitsRef = useRef(false);
@@ -56,11 +53,6 @@ export function useDataPreloading() {
 
   // Lazy queries for background preloading (non-blocking)
   const [fetchShoppingLists] = useGetShoppingListsLiteLazyQuery({
-    fetchPolicy: 'network-only',
-    errorPolicy: 'ignore',
-  });
-
-  const [fetchPantry] = useGetPantryLazyQuery({
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
   });
@@ -89,25 +81,22 @@ export function useDataPreloading() {
     }
   }, [isOnline, fetchCommonUnits]);
 
-  // PERFORMANCE: Defer common units query by 1500ms to avoid competing with
-  // screen-critical queries (Pantry, StorageLocations) at startup.
+  // PERFORMANCE: Defer common units query by 6000ms to avoid competing with
+  // screen-critical queries (GetHomes, GetPantry) at startup.
   // Units are only needed when user opens add item sheet.
-  useDeferredCallback(fetchUnits, isAuthenticated && isOnline, 1500);
+  useDeferredCallback(fetchUnits, isAuthenticated && isOnline, 6000);
 
-  // Background preload function - fires all queries in parallel
+  // Background preload function - staggers queries to avoid JS thread contention
   const runBackgroundPreload = useCallback(() => {
     if (!isOnline) return;
 
-    // Fire all in parallel (non-blocking, results go to Apollo cache)
+    // Stagger queries 500ms apart so each gets its own JS thread window
     fetchShoppingLists();
 
-    // Gate pantry preload on isHomeSelectionReady to prevent queries with stale IDs after home deletion
-    if (selectedPantryId && isHomeSelectionReady) {
-      fetchPantry({ variables: { id: selectedPantryId } });
-    }
-
-    fetchSavedRecipes();
-  }, [isOnline, selectedPantryId, isHomeSelectionReady, fetchShoppingLists, fetchPantry, fetchSavedRecipes]);
+    setTimeout(() => {
+      fetchSavedRecipes();
+    }, 500);
+  }, [isOnline, fetchShoppingLists, fetchSavedRecipes]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)
@@ -119,11 +108,12 @@ export function useDataPreloading() {
   }, [data?.units, setCachedUnits]);
 
   // Trigger background preload when runtime is idle (non-blocking)
+  // PERFORMANCE: 5000ms timeout ensures GetHomes + GetPantry complete first
   useDeferredCallback(() => {
     if (hasPreloadedRef.current) return;
     hasPreloadedRef.current = true;
     runBackgroundPreload();
-  }, isAuthenticated && isOnline);
+  }, isAuthenticated && isOnline, 5000);
 
   // Reset preload flags on logout so queries run again on next login
   useEffect(() => {

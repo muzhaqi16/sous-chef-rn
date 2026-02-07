@@ -7,13 +7,13 @@ import { useState, useEffect } from 'react';
  * before signaling that the component is ready to render heavy content.
  * This prevents janky animations during screen transitions.
  *
- * @param delay - Timeout in ms to guarantee callback execution (default: 150ms)
+ * @param delay - Timeout in ms to guarantee callback execution (default: 50ms)
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
  * ```tsx
  * const MyComponent = ({ items }) => {
- *   const isReady = useDeferredRender(); // Default 150ms timeout
+ *   const isReady = useDeferredRender(); // Default 50ms timeout
  *
  *   if (!isReady) {
  *     return <SkeletonPlaceholder />;
@@ -28,17 +28,17 @@ import { useState, useEffect } from 'react';
  * return useDeferredValue(true, false); // React 19 initialValue
  * ```
  */
-export function useDeferredRender(delay = 150): boolean {
+export function useDeferredRender(delay = 50): boolean {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // requestIdleCallback runs when the runtime is idle
-    // timeout ensures callback fires within (delay + 150)ms max
+    // timeout ensures callback fires within (delay + 50)ms max
     const id = requestIdleCallback(
       () => {
         setIsReady(true);
       },
-      { timeout: delay + 150 },
+      { timeout: delay + 50 },
     );
 
     return () => cancelIdleCallback(id);

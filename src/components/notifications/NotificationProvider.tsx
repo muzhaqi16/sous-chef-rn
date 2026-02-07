@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotifications } from '#hooks/notifications/useNotifications';
 import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -19,10 +19,21 @@ const NotificationListener: React.FC = () => {
   const {user, isAuthenticated} = useAuth();
   const {settings} = useNotificationSettings();
 
+  // Defer subscription by 3s to avoid competing with startup queries on the JS thread
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const timer = setTimeout(() => setReady(true), 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setReady(false);
+    }
+  }, [isAuthenticated, user]);
+
   // Initialize real-time notifications with user settings
-  // skip when not authenticated to prevent unnecessary subscription attempts
+  // skip when not authenticated or during the startup deferral window
   useNotifications({
-    skip: !isAuthenticated || !user,
+    skip: !ready,
     enablePantryNotifications: settings.pantryChanges,
     enableShoppingListNotifications: settings.shoppingListUpdates,
     enableMembershipNotifications: settings.homeInvites,

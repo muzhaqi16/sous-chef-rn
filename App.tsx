@@ -5,7 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens } from 'react-native-screens';
+import { enableScreens, enableFreeze } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
@@ -33,6 +33,8 @@ import { initializeDeviceId } from '#/utils/deviceId';
 
 // Enable native screens for better performance
 enableScreens();
+// Freeze inactive stack screens to suspend their React subtrees
+enableFreeze();
 
 const App = () => {
   const isHydrated = useAppStore(selectHydrated);

@@ -1,27 +1,24 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Defers a callback until the runtime is idle.
- * Production-ready replacement for InteractionManager.runAfterInteractions.
+ * Defers a callback using a two-phase approach: setTimeout + requestIdleCallback.
  *
- * Unlike setTimeout, this is event-driven: it triggers when the
- * JavaScript runtime has no pending work, naturally yielding to
- * user interactions, animations, and navigation.
+ * Phase 1: Wait for the minimum timeout to elapse (ensures we're past the startup hot zone).
+ * Phase 2: Wait for the JS thread to be idle (avoids competing with active renders/interactions).
  *
- * IMPORTANT: On iOS, requestIdleCallback may never fire without a timeout.
- * See: https://github.com/facebook/react-native/issues/28602
- * The timeout parameter ensures the callback fires on iOS.
+ * This is more reliable than requestIdleCallback alone (which is timer-based on iOS
+ * due to RN issue #28602) and ensures a guaranteed minimum delay before execution.
  *
  * @param callback - Function to call when idle
  * @param enabled - Whether the callback should run (default: true)
- * @param timeout - Max time to wait before forcing execution (default: 1000ms)
+ * @param timeout - Minimum time to wait before execution (default: 1000ms)
  *
  * @example
  * ```tsx
  * // Run heavy work after screen settles
  * useDeferredCallback(() => {
  *   fetchBackgroundData();
- * }, isAuthenticated && isOnline);
+ * }, isAuthenticated && isOnline, 5000);
  * ```
  */
 export function useDeferredCallback(
@@ -34,14 +31,28 @@ export function useDeferredCallback(
 
   useEffect(() => {
     if (!enabled) return;
+    let cancelled = false;
+    let idleId: ReturnType<typeof requestIdleCallback> | null = null;
 
-    const idleId = requestIdleCallback(
-      () => {
-        callbackRef.current();
-      },
-      { timeout },
-    );
+    // Phase 1: Wait for minimum timeout
+    const timer = setTimeout(() => {
+      // Phase 2: Wait for JS thread to be idle
+      idleId = requestIdleCallback(
+        () => {
+          if (!cancelled) {
+            callbackRef.current();
+          }
+        },
+        { timeout: 1000 },
+      );
+    }, timeout);
 
-    return () => cancelIdleCallback(idleId);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (idleId !== null) {
+        cancelIdleCallback(idleId);
+      }
+    };
   }, [enabled, timeout]);
 }

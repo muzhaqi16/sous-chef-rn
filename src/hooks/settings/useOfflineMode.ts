@@ -1,6 +1,20 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '#store';
-import { useAppSettings } from '#hooks/profile/useAppSettings';
+import { storage } from '#/storage/mmkv';
+
+/**
+ * Read offlineMode from MMKV (synced by useAppSettings).
+ * Defaults to false — offline mode is rarely enabled.
+ *
+ * PERFORMANCE: Avoids calling useAppSettings() which triggers the GetUserSettings
+ * GraphQL query. This hook is called from multiple startup-path components
+ * (e.g., usePantryItemSuggestions, offlineFetchPolicies) and was causing
+ * GetUserSettings to fire at startup competing with critical queries.
+ */
+function useOfflineModePreference(): boolean {
+  const [value] = useState(() => storage.getBoolean('user_offline_mode') ?? false);
+  return value;
+}
 
 /**
  * Offline mode state and feature gating
@@ -25,9 +39,8 @@ export const useOfflineMode = () => {
   // Device network state from Zustand
   const isOnline = useStore(state => state.isOnline);
 
-  // User's offline mode preference from server settings
-  const { settings, loading } = useAppSettings();
-  const isOfflineModeEnabled = settings.offlineMode;
+  // User's offline mode preference from MMKV (no GraphQL query)
+  const isOfflineModeEnabled = useOfflineModePreference();
 
   // Computed states
   const isDeviceOffline = !isOnline;
@@ -58,10 +71,10 @@ export const useOfflineMode = () => {
     canUseNetwork,
 
     /**
-     * Loading state from server settings
+     * Loading state - always false since we read from MMKV
      */
-    loading,
-  }), [isEffectivelyOffline, isDeviceOffline, isOfflineModeEnabled, canUseNetwork, loading]);
+    loading: false,
+  }), [isEffectivelyOffline, isDeviceOffline, isOfflineModeEnabled, canUseNetwork]);
 };
 
 /**
@@ -70,8 +83,8 @@ export const useOfflineMode = () => {
  */
 export const useIsEffectivelyOffline = (): boolean => {
   const isOnline = useStore(state => state.isOnline);
-  const { settings } = useAppSettings();
-  return settings.offlineMode || !isOnline;
+  const isOfflineModeEnabled = useOfflineModePreference();
+  return isOfflineModeEnabled || !isOnline;
 };
 
 /**
@@ -79,6 +92,6 @@ export const useIsEffectivelyOffline = (): boolean => {
  */
 export const useCanUseNetwork = (): boolean => {
   const isOnline = useStore(state => state.isOnline);
-  const { settings } = useAppSettings();
-  return isOnline && !settings.offlineMode;
+  const isOfflineModeEnabled = useOfflineModePreference();
+  return isOnline && !isOfflineModeEnabled;
 };

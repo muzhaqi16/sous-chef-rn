@@ -147,19 +147,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Register add button action - open add to pantry sheet
   useTabBarAddButton(() => setAddSheetVisible(true));
 
-  // PERFORMANCE: Debounce focus transition to let subscription events coalesce
-  // before FlashList reads the data, preventing layout corruption from rapid updates
-  const [queryEnabled, setQueryEnabled] = useState(isFocused);
-  useEffect(() => {
-    if (isFocused) {
-      const id = requestAnimationFrame(() => setQueryEnabled(true));
-      return () => cancelAnimationFrame(id);
-    } else {
-      setQueryEnabled(false);
-    }
-  }, [isFocused]);
-
-  // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
     items: pantryItems,
     allItems,
@@ -172,7 +159,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     error: pantryError,
     loadMore,
     locationCounts,
-  } = usePantryManagement(queryEnabled ? pantry?.id : undefined);
+  } = usePantryManagement(pantry?.id);
 
   // Extract item actions (modal state + mutations + handlers) to separate hook
   const {

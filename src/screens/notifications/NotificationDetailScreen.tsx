@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
 
 export const NotificationDetailScreen: React.FC<{

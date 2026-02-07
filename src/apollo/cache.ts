@@ -129,6 +129,20 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
  * - Prevents unbounded cache growth through periodic cleanup
  * - Target maximum: ~100MB (approximately 100,000 typical entities)
  */
+// Track the dev-mode cache monitoring interval for cleanup
+let cacheMonitoringInterval: NodeJS.Timeout | null = null;
+
+/**
+ * Stop the dev-mode cache size monitoring interval.
+ * Called during logout to prevent stale interval from running.
+ */
+export function stopCacheMonitoring(): void {
+  if (cacheMonitoringInterval) {
+    clearInterval(cacheMonitoringInterval);
+    cacheMonitoringInterval = null;
+  }
+}
+
 export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
     // Configure possibleTypes for proper fragment matching on interfaces
@@ -500,8 +514,7 @@ export function makeCache(): InMemoryCache {
     const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
     const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
 
-    // Track global interval to prevent memory leaks during hot reload
-    let gcInterval: NodeJS.Timeout | null = null;
+    // Use module-level interval to prevent memory leaks during hot reload
 
     // Optimized cache size estimator using sampling instead of full traversal
     // Samples first 100 keys and extrapolates, reducing 50-150ms to <5ms
@@ -575,20 +588,10 @@ export function makeCache(): InMemoryCache {
     };
 
     // Clear any existing interval before creating new one (prevents memory leak during hot reload)
-    if (gcInterval) {
-      clearInterval(gcInterval);
-    }
+    stopCacheMonitoring();
 
     // Monitor cache every 5 minutes in development (reduced from 2 min to minimize overhead)
-    gcInterval = setInterval(monitorCacheSize, 5 * 60 * 1000);
-
-    // Expose cleanup function for testing/logout
-    (cache as any).__stopMonitoring = () => {
-      if (gcInterval) {
-        clearInterval(gcInterval);
-        gcInterval = null;
-      }
-    };
+    cacheMonitoringInterval = setInterval(monitorCacheSize, 5 * 60 * 1000);
   }
 
   return cache;

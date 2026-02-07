@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface ShowBackdropOptions {
@@ -58,9 +59,12 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
   const hideBackdrop = useCallback(() => {
     activeCountRef.current = Math.max(0, activeCountRef.current - 1);
     if (activeCountRef.current === 0) {
-      opacity.value = withTiming(0, { duration: 100 });
-      setIsVisible(false);
       onPressCallbackRef.current = null;
+      opacity.value = withTiming(0, { duration: 100 }, (finished) => {
+        if (finished) {
+          scheduleOnRN(setIsVisible, false);
+        }
+      });
     }
   }, [opacity]);
 

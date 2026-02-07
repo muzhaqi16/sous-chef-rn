@@ -147,7 +147,7 @@ function RootNavigator() {
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
-            animationDuration: 300,
+            animationDuration: 250,
           }}
         >
           {/* Auth Group */}

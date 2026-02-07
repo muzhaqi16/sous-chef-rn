@@ -38,7 +38,7 @@ export function useOnboardingNavigation() {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex < ONBOARDING_STEPS.length - 1) {
         const nextScreen = ONBOARDING_STEPS[currentIndex + 1];
-        navigation.navigate(nextScreen as any);
+        (navigation as any).navigate(nextScreen);
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[nextScreen];
@@ -55,7 +55,7 @@ export function useOnboardingNavigation() {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex > 0) {
         const previousScreen = ONBOARDING_STEPS[currentIndex - 1];
-        navigation.navigate(previousScreen as any);
+        (navigation as any).navigate(previousScreen);
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[previousScreen];
@@ -70,7 +70,7 @@ export function useOnboardingNavigation() {
   const skipToStep = useCallback(
     (stepName: string) => {
       if (ONBOARDING_STEPS.includes(stepName as any)) {
-        navigation.navigate(stepName as any);
+        (navigation as any).navigate(stepName);
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[stepName];

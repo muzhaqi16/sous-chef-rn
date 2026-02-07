@@ -1,3 +1,4 @@
+import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { RecipeMain } from '#screens/recipe/RecipeMain';
 import { RecipeDetail } from '#screens/recipe/RecipeDetail';
@@ -17,7 +18,7 @@ export type RecipeStackParamList = {
 
 const Stack = createNativeStackNavigator<RecipeStackParamList>();
 
-export const RecipeStack = () => (
+export const RecipeStack = React.memo(() => (
   <Stack.Navigator
     screenOptions={{
       headerShown: false,
@@ -30,4 +31,4 @@ export const RecipeStack = () => (
     <Stack.Screen name="RecipeDetail" component={RecipeDetail} />
     <Stack.Screen name="RecipeSearch" component={RecipeSearch} />
   </Stack.Navigator>
-);
+));

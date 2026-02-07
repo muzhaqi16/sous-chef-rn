@@ -71,6 +71,8 @@ export const RecipeMain: React.FC = React.memo(() => {
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchRandomRecipes = async () => {
       // Only fetch if:
       // 1. User has no saved recipes
@@ -91,9 +93,10 @@ export const RecipeMain: React.FC = React.memo(() => {
       try {
         const random = await spoonacularService.getRandomRecipes({
           number: 10,
-        });
+        }, controller.signal);
         setRandomRecipes(random);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to fetch random recipes:', error);
         // Reset flag so user can retry
         hasFetchedRandom.current = false;
@@ -103,6 +106,8 @@ export const RecipeMain: React.FC = React.memo(() => {
     };
 
     fetchRandomRecipes();
+
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes.length, loading]); // Intentionally exclude loadingRandom to prevent infinite loop
 
