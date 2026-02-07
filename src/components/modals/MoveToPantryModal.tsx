@@ -13,7 +13,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { Header } from '#components/molecules/Header';
-import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Icon } from '#utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -294,7 +294,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   />
                 </View>
                 <View style={styles.unitField}>
-                  <InlineUnitsAutocomplete
+                  <UnitAutocompleteField
+                    variant="inline"
                     label="Unit"
                     value={unitValue}
                     onChangeText={setUnitValue}

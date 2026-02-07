@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useImperativeHandle } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
+import { FlashList, type FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getItemImageUrl } from '#utils/imageUtils';
@@ -123,6 +123,10 @@ interface PantryContentProps {
   onSwipeableClose?: () => void;
 }
 
+export interface PantryContentRef {
+  scrollToTop(): void;
+}
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -131,7 +135,7 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: '🗄️' },
 ];
 
-export const PantryContent: React.FC<PantryContentProps> = ({
+export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -162,8 +166,15 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   loading = false,
   onSwipeableWillOpen,
   onSwipeableClose: _onSwipeableClose,
-}) => {
+}, ref) => {
   const { theme } = useUnistyles();
+  const flashListRef = useRef<FlashListRef<PantryItem>>(null);
+
+  useImperativeHandle(ref, () => ({
+    scrollToTop() {
+      flashListRef.current?.scrollToTop({ animated: true });
+    },
+  }));
 
   // PERFORMANCE: Defer heavy list render until after navigation animation
   const isReady = useDeferredRender();
@@ -394,10 +405,13 @@ export const PantryContent: React.FC<PantryContentProps> = ({
             pointerEvents={showSkeletons ? 'none' : 'auto'}
           >
             <FlashList<PantryItem>
+              key={locationFilter}
+              ref={flashListRef}
               data={showSkeletons ? EMPTY_ARRAY : sortedItems}
               renderItem={renderItem}
               keyExtractor={(item, index) => item?.id ?? `fallback-${index}`}
               extraData={sortOption}
+              maintainVisibleContentPosition={{ autoscrollToTopThreshold: 1 }}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
@@ -440,7 +454,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       </View>
     </PantryActionsProvider>
   );
-};
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

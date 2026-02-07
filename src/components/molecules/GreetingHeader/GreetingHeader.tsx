@@ -91,7 +91,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           testID={`${testIDPrefix}-avatar`}
         >
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{displayInitial}</Text>

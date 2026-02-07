@@ -29,7 +29,7 @@ import { useProfileData } from '#hooks/profile/useProfileData';
 import type { LocationFilter } from '#/utils/pantryFilters';
 
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
-import { PantryContent } from '#components/pantry/PantryContent';
+import { PantryContent, type PantryContentRef } from '#components/pantry/PantryContent';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
@@ -80,6 +80,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
   );
 
   const selectorRef = useRef<ItemSelectorRef>(null);
+  const pantryContentRef = useRef<PantryContentRef>(null);
+
+  const handleItemAdded = useCallback(() => {
+    pantryContentRef.current?.scrollToTop();
+  }, []);
 
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
@@ -332,6 +337,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   return (
     <View style={styles.container} testID="pantry-screen">
       <PantryContent
+        ref={pantryContentRef}
         userName={userName}
         householdName={householdName}
         avatarUrl={profile?.avatar}
@@ -395,6 +401,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         visible={addSheetVisible}
         pantryId={pantry?.id}
         onClose={() => setAddSheetVisible(false)}
+        onItemAdded={handleItemAdded}
       />
 
       {/* Add Storage Location Sheet */}

@@ -3,10 +3,9 @@ import React, {
   useRef,
   useCallback,
   useEffect,
-  useMemo,
   memo,
 } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -54,6 +53,9 @@ interface BottomSheetAutocompleteInputProps<T> {
   renderEmptyComponent?: () => React.ReactElement;
   renderLoadingComponent?: () => React.ReactElement;
 
+  // Footer
+  listFooterComponent?: React.ReactElement | null;
+
   // Optional callbacks
   onSearchChange?: (searchTerm: string) => void;
   onModalOpen?: () => void;
@@ -90,6 +92,9 @@ export function BottomSheetAutocompleteInput<T>({
   renderEmptyComponent,
   renderLoadingComponent,
 
+  // Footer
+  listFooterComponent,
+
   // Callbacks
   onSearchChange,
   onModalOpen,
@@ -99,7 +104,6 @@ export function BottomSheetAutocompleteInput<T>({
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
-  const lastDataRef = useRef<T[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
   const animationConfigs = useSharedBottomSheetConfigs();
@@ -139,27 +143,6 @@ export function BottomSheetAutocompleteInput<T>({
     showAutocomplete,
     onModalOpen,
   ]);
-
-  // Update lastDataRef when we get new data, clear when results are definitively empty
-  useEffect(() => {
-    if (data.length > 0) {
-      lastDataRef.current = data;
-    } else if (!loading) {
-      lastDataRef.current = [];
-    }
-  }, [data, loading]);
-
-  // Compute display data - show previous results while loading to prevent flickering
-  const displayData = useMemo(() => {
-    if (data.length > 0) {
-      return data;
-    }
-    // Keep showing last results while loading to prevent flickering
-    if (loading && lastDataRef.current.length > 0) {
-      return lastDataRef.current;
-    }
-    return data;
-  }, [data, loading]);
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -301,15 +284,16 @@ export function BottomSheetAutocompleteInput<T>({
             />
           </View>
           <BottomSheetFlatList
-            data={displayData}
+            data={data}
             keyExtractor={keyExtractor}
-            renderItem={({ item }: { item: T }) => {
-              const element = renderItem(item);
-              // Clone the element and override onPress to ensure bottom sheet closes
-              return React.cloneElement(element as React.ReactElement<any>, {
-                onPress: () => handleSelectItem(item),
-              });
-            }}
+            renderItem={({ item }: { item: T }) => (
+              <Pressable
+                onPress={() => handleSelectItem(item)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                {renderItem(item)}
+              </Pressable>
+            )}
             ItemSeparatorComponent={AutocompleteSeparator}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -320,6 +304,7 @@ export function BottomSheetAutocompleteInput<T>({
             removeClippedSubviews={true}
             initialNumToRender={10}
             updateCellsBatchingPeriod={50}
+            ListFooterComponent={listFooterComponent}
             ListEmptyComponent={
               loading
                 ? renderLoadingComponent?.() || defaultLoadingComponent()

@@ -18,7 +18,7 @@ export const styles = StyleSheet.create(theme => {
     // Container style for Swipeable component
     swipeableContainer: {
       overflow: 'visible' as const,
-      backgroundColor: theme.colors.charade['950'],
+      backgroundColor: 'transparent',
       borderRadius: SWIPEABLE_RADIUS,
     },
 

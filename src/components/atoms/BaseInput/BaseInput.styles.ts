@@ -58,10 +58,6 @@ export default StyleSheet.create(theme => ({
       md: theme.spacing.md,
     },
     paddingVertical: 0,
-    lineHeight: {
-      xs: theme.fonts.size.sm * 1.5,
-      md: theme.fonts.size.md * 1.5,
-    },
   },
 
   iconWrapper: {

@@ -10,7 +10,7 @@ import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBa
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { InlineUnitsAutocomplete } from '#/components/molecules/InlineUnitsAutocomplete';
+import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
 
@@ -449,7 +449,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           )}
 
           {/* Autocomplete for custom/search */}
-          <InlineUnitsAutocomplete
+          <UnitAutocompleteField
+            variant="inline"
             value={unitName || ''}
             onChangeText={text => {
               // Convert empty string to null to properly clear the unit

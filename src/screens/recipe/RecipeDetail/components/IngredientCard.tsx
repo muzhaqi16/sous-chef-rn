@@ -33,7 +33,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       activeOpacity={0.7}
     >
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.image} />
+        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
       ) : (
         <View style={styles.imagePlaceholder}>
           <Ionicons name="leaf-outline" size={32} color={theme.colors.textSecondary} />

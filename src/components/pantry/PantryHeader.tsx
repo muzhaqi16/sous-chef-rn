@@ -62,7 +62,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
         {/* Avatar */}
         <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon

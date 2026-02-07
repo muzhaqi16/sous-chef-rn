@@ -99,11 +99,11 @@ export const colors = {
     activeBg: '#F97316',
     activeText: '#FFFFFF',
     inactiveBg: '#F3F4F6',
-    inactiveText: '#4B5563',
+    inactiveText: '#000000',
     filteredBg: '#FFF7ED', // Subtle orange tint for filtered state
     filteredText: '#EA580C', // Orange text for filtered state
-    countBg: '#E5E7EB',
-    countText: '#6B7280',
+    countBg: '#D1D5DB',
+    countText: '#000000',
     activeCountBg: 'rgba(255,255,255,0.25)',
   },
 

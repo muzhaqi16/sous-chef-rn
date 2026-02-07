@@ -19,15 +19,19 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   onPress,
   testID,
 }) => {
-  styles.useVariants({ active: isActive });
   const hasCount = count !== undefined;
 
   return (
-    <Pressable key={routeKey} onPress={onPress} testID={testID} style={styles.tab}>
-      <Text style={styles.tabLabel}>{title}</Text>
+    <Pressable
+      key={routeKey}
+      onPress={onPress}
+      testID={testID}
+      style={[styles.tab, isActive && styles.tabActive]}
+    >
+      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{title}</Text>
       {hasCount && (
-        <View style={styles.countBadge}>
-          <Text style={styles.countText}>{count}</Text>
+        <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
+          <Text style={[styles.countText, isActive && styles.countTextActive]}>{count}</Text>
         </View>
       )}
     </Pressable>
@@ -46,41 +50,33 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl,
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
-    variants: {
-      active: {
-        true: { backgroundColor: theme.colors.filterTab.activeBg },
-      },
-    },
+  },
+  tabActive: {
+    backgroundColor: theme.colors.filterTab.activeBg,
   },
   tabLabel: {
     fontSize: theme.typography.fontSize.sm - 1,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.filterTab.inactiveText,
-    variants: {
-      active: {
-        true: { color: theme.colors.filterTab.activeText },
-      },
-    },
+  },
+  tabLabelActive: {
+    color: theme.colors.filterTab.activeText,
   },
   countBadge: {
     paddingHorizontal: theme.spacing.xs + 3,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.filterTab.countBg,
-    variants: {
-      active: {
-        true: { backgroundColor: theme.colors.filterTab.activeCountBg },
-      },
-    },
+  },
+  countBadgeActive: {
+    backgroundColor: theme.colors.filterTab.activeCountBg,
   },
   countText: {
     fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.filterTab.countText,
-    variants: {
-      active: {
-        true: { color: theme.colors.filterTab.activeText },
-      },
-    },
+  },
+  countTextActive: {
+    color: theme.colors.filterTab.activeText,
   },
 }));

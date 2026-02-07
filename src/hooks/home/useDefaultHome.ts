@@ -247,6 +247,14 @@ export const useDefaultHome = () => {
     hasAutoSelectedRef.current = true;
     setSelectedHomeId(firstHome.id);
 
+    // Set pantry immediately from local data (mutation will confirm/update later)
+    const localDefaultPantry =
+      firstHome.pantries?.find((p: any) => p.isDefault) ||
+      firstHome.pantries?.[0];
+    if (localDefaultPantry?.id && !selectedPantryId) {
+      setSelectedPantryId(localDefaultPantry.id);
+    }
+
     // Sync to server - set this home as the default
     // The mutation returns the default pantry, which we use to set selectedPantryId
     setDefaultHomeMutation({

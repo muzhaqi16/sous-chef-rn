@@ -93,7 +93,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
     const containerStyle = useMemo(
       () => ({
         width: tabBarWidth,
-        bottom: Math.max(safeBottom, 16), // Ensure minimum 16px bottom spacing
+        bottom:
+          Platform.OS === 'ios'
+            ? Math.max(safeBottom * 0.5, 16)
+            : Math.max(safeBottom, 16),
       }),
       [tabBarWidth, safeBottom],
     );

@@ -25,12 +25,14 @@ interface AddToPantrySheetProps {
   visible: boolean;
   pantryId: string | undefined;
   onClose: () => void;
+  onItemAdded?: () => void;
 }
 
 export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   visible,
   pantryId,
   onClose,
+  onItemAdded,
 }) => {
   const { navigateTo } = useAppNavigation();
   const client = useApolloClient();
@@ -149,11 +151,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             quantity: 1,
           },
         },
+      }).then(() => {
+        onItemAdded?.();
       }).catch(() => {
         toastService.error('Failed to add item. Please try again.');
       });
     },
-    [pantryId, creating, createPantryItem, removeFromSuggestionsCache],
+    [pantryId, creating, createPantryItem, removeFromSuggestionsCache, onItemAdded],
   );
 
   // Handle quick add from pantry item suggestion (fire-and-forget)
@@ -179,13 +183,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             quantity: 1,
           },
         },
+      }).then(() => {
+        onItemAdded?.();
       }).catch(() => {
         // On error: remove from exiting, show error toast
         state.completeExitAnimation(pantryItem.itemId);
         toastService.error('Failed to add item');
       });
     },
-    [pantryId, creating, state, createPantryItem],
+    [pantryId, creating, state, createPantryItem, onItemAdded],
   );
 
   // Handle exit animation complete
@@ -202,7 +208,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     setShowAddDetails(false);
     suggestionsResult.refetch();
     toastService.success('Item added to pantry');
-  }, [suggestionsResult]);
+    onItemAdded?.();
+  }, [suggestionsResult, onItemAdded]);
 
   // Handle close details sheet
   const handleCloseDetails = useCallback(() => {

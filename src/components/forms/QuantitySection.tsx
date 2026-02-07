@@ -4,7 +4,7 @@ import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 
 interface QuantitySectionProps {
@@ -51,7 +51,8 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           control={control}
           name="unit"
           render={({ field: { onChange, value } }) => (
-            <UnitsAutocompleteInput
+            <UnitAutocompleteField
+              variant="modal"
               label="Unit"
               value={value || ''}
               onChangeText={onChange}

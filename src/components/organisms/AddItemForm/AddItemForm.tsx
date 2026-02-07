@@ -13,8 +13,6 @@ import { FormSelect } from '#/components/molecules/FormSelect';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 import { ProductImagePicker } from '#/components/molecules/ProductImagePicker';
 import type { ImageFile } from '#/components/molecules/ImagePicker';
-import { UnitsAutocompleteInput } from '#/components/molecules/UnitsAutocompleteInput';
-import { BrandAutocompleteInput } from '#/components/molecules/BrandAutocompleteInput';
 import { DynamicFormFields, type FieldDef } from '#/components/molecules/DynamicFormFields';
 
 interface AddItemFormProps {
@@ -117,7 +115,7 @@ const getFormSections = (
         name: 'vendor',
         label: 'Brand/Vendor',
         placeholder: 'Enter brand or vendor name',
-        component: BrandAutocompleteInput,
+        component: 'brandAutocomplete',
         props: {
           componentType: 'autocomplete',
           onBrandSelected: (brandId: string | null) =>
@@ -140,7 +138,7 @@ const getFormSections = (
         name: 'displayUnitId',
         label: 'Display Unit',
         placeholder: 'kg, lbs, pcs, etc.',
-        component: UnitsAutocompleteInput,
+        component: 'unitAutocomplete',
         props: {
           componentType: 'autocomplete',
           onUnitSelected: (unitId: string | null) => setSelectedUnitId(unitId),

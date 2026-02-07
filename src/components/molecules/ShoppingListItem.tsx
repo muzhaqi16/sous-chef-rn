@@ -89,7 +89,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
         </TouchableOpacity>
 
         {imageUrl && (
-          <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+          <Image source={{ uri: imageUrl }} style={styles.itemImage} resizeMode="cover" />
         )}
 
         <View style={styles.contentContainer}>
