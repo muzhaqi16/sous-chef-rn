@@ -58,7 +58,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "yarn"
+          cache: "npm"
 
       - name: Clean workspace
         run: |
@@ -70,10 +70,8 @@ jobs:
           cd ios
           xcodebuild clean -workspace your_app.xcworkspace -scheme your_app
 
-      - name: install yarn dependencies
-        run: |
-          cd ios
-          yarn install
+      - name: install npm dependencies
+        run: npm install
 
       - name: install Cocoapod dependencies
         run: |
