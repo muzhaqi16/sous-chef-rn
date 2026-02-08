@@ -72,6 +72,16 @@ jobs:
           pod repo update
           pod install
 
+      - name: Set version from git tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#ios-}"
+          VERSION="${VERSION#v}"
+          echo "Setting marketing version to: $VERSION"
+          echo "Setting build number to: ${{ github.run_number }}"
+          cd ios
+          agvtool new-marketing-version "$VERSION"
+          agvtool new-version -all "${{ github.run_number }}"
+
       - name: build archive
         run: |
           cd ios
@@ -113,6 +123,20 @@ jobs:
           </plist>
           PLIST
           xcodebuild -exportArchive -archivePath $RUNNER_TEMP/SousChefRN.xcarchive -exportOptionsPlist "$EXPORT_OPTS_PATH" -exportPath $RUNNER_TEMP/build
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          API_KEY_PATH=$RUNNER_TEMP/AuthKey_$ASC_API_KEY_ID.p8
+          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$API_KEY_PATH"
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$RUNNER_TEMP/build/SousChefRN.ipa" \
+            --apiKey "$ASC_API_KEY_ID" \
+            --apiIssuer "$ASC_API_ISSUER_ID"
 
       - name: Upload application
         uses: actions/upload-artifact@v4
