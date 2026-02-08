@@ -10,13 +10,13 @@ import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
-import { InlineBrandAutocomplete } from '#components/molecules/InlineBrandAutocomplete';
-import { InlineStorageLocationAutocomplete } from '#components/molecules/InlineStorageLocationAutocomplete';
+import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import type { StorageLocation } from '#components/molecules/InlineStorageLocationAutocomplete';
+import type { StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { StorageState, useCreatePantryItemMutation } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -411,7 +411,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
             {/* Brand */}
             <View style={[styles.section, { zIndex: 10 }]}>
-              <InlineBrandAutocomplete
+              <BrandAutocompleteField
+                variant="inline"
                 label="Brand"
                 value={brand}
                 onChangeText={setBrand}
@@ -422,24 +423,27 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             </View>
 
             {/* Quantity + Unit */}
-            <FieldRow>
-              <EditableCounter
-                label="Quantity"
-                required
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                placeholder="1"
-                testID="add-pantry-item-quantity-input"
-              />
-              <InlineUnitsAutocomplete
-                label="Unit"
-                value={unit}
-                onChangeText={setUnit}
-                onUnitSelected={handleUnitSelected}
-                placeholder="pcs, dozen"
-                testID="add-pantry-item-unit-picker"
-              />
-            </FieldRow>
+            <View style={{ zIndex: 1 }}>
+              <FieldRow>
+                <EditableCounter
+                  label="Quantity"
+                  required
+                  value={quantityInput}
+                  onChangeText={setQuantityInput}
+                  placeholder="1"
+                  testID="add-pantry-item-quantity-input"
+                />
+                <UnitAutocompleteField
+                  variant="inline"
+                  label="Unit"
+                  value={unit}
+                  onChangeText={setUnit}
+                  onUnitSelected={handleUnitSelected}
+                  placeholder="pcs, dozen"
+                  testID="add-pantry-item-unit-picker"
+                />
+              </FieldRow>
+            </View>
 
             {/* Storage State */}
             <SegmentedControl
@@ -485,7 +489,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           >
             {/* Storage Location */}
             <View style={[styles.section, { zIndex: 10 }]}>
-              <InlineStorageLocationAutocomplete
+              <StorageLocationAutocompleteField
+                variant="inline"
                 label="Storage Location"
                 value={storageLocation}
                 onChangeText={setStorageLocation}

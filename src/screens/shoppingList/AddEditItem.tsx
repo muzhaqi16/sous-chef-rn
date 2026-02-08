@@ -10,13 +10,13 @@ import {
 } from '#generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { Input } from '#components/base/Input';
-import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
-import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
-import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocompleteInput';
+import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
@@ -24,13 +24,13 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 
-type RouteParams = ShoppingListStackParamList['AddItem' | 'EditItem'] & {
+type RouteParams = {
+  listId: string;
   itemId?: string;
+  initialItemName?: string;
 };
 
-export const AddEditItem: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route }) => {
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
@@ -287,7 +287,8 @@ export const AddEditItem: React.FC<{
           testID="edit-item-name-input"
         />
       ) : (
-        <ItemAutocompleteInput
+        <ItemAutocompleteField
+          variant="modal"
           label="Item Name"
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
@@ -309,7 +310,8 @@ export const AddEditItem: React.FC<{
           placeholder="1"
           testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
         />
-        <UnitsAutocompleteInput
+        <UnitAutocompleteField
+          variant="modal"
           label="Unit"
           value={unit}
           onChangeText={text => updateField('unit', text)}
@@ -320,7 +322,8 @@ export const AddEditItem: React.FC<{
       </FieldRow>
 
       {/* Category Field */}
-      <CategoryAutocompleteInput
+      <CategoryAutocompleteField
+        variant="modal"
         label="Category"
         value={category}
         onChangeText={text => updateField('category', text)}

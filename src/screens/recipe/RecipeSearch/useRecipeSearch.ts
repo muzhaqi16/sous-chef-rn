@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useDefaultHome } from '#hooks/home/useDefaultHome';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
@@ -12,10 +12,6 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useGetHomeQuery, ReligiousDiet } from '#generated';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
 
-type RecipeSearchRouteProp = RouteProp<
-  { RecipeSearch: { initialQuery?: string } },
-  'RecipeSearch'
->;
 
 export interface RecipeFilters {
   diet: string | null;
@@ -27,8 +23,8 @@ export interface RecipeFilters {
 export function useRecipeSearch() {
   const { navigate } = useAppNavigation();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const route = useRoute<RecipeSearchRouteProp>();
-  const initialQuery = route.params?.initialQuery || '';
+  const route = useRoute();
+  const initialQuery = (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
 
   // Track screen performance
   useScreenTransition('RecipeSearch');
@@ -102,7 +98,7 @@ export function useRecipeSearch() {
     if (!searchQuery.trim()) {
       if (pantryItems?.length) {
         const ingredientNames = pantryItems
-          .map(item => item.item?.name || item.itemName)
+          .map(item => item.itemName)
           .filter(Boolean)
           .slice(0, 20)
           .join(',');
@@ -211,7 +207,7 @@ export function useRecipeSearch() {
     } else if (pantryItems?.length) {
       // Auto-search with pantry ingredients
       const ingredientNames = pantryItems
-        .map(item => item.item?.name || item.itemName)
+        .map(item => item.itemName)
         .filter(Boolean)
         .slice(0, 20) // Limit to 20 ingredients for API
         .join(',');

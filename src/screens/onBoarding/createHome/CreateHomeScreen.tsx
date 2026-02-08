@@ -45,8 +45,10 @@ import { getCreateHomeSchema } from '#/utils/validation/onboarding';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 const CreateHomeScreenComponent = () => {
+  useScreenTransition('CreateHomeScreen');
   const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();

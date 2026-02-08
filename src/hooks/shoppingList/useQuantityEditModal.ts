@@ -17,6 +17,7 @@ export interface QuantityEditItem {
   unitName: string | null;
   unitId: string | null;
   category: string | null;
+  imageUrl?: string | null;
   version: number;
   itemUnits: Array<{
     id: string;
@@ -115,6 +116,7 @@ export function useQuantityEditModal(
               selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
             unitId: selectedItemRaw.unit?.id || null,
             category: selectedItemRaw.category || null,
+            imageUrl: selectedItemRaw.item?.imageUrl || null,
             version: selectedItemRaw.version,
             itemUnits:
               selectedItemRaw.item?.units

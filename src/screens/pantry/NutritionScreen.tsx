@@ -1,20 +1,22 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { NutritionDetailList } from '#components/molecules/NutritionDetailList';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
-import type { PantryStackParamList } from '#navigation/stacks/PantryStack';
-
-type NutritionScreenRouteProp = RouteProp<PantryStackParamList, 'NutritionScreen'>;
 
 export const NutritionScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
-  const route = useRoute<NutritionScreenRouteProp>();
-  const { itemName, nutritions, actualServingGrams } = route.params;
+  const route = useRoute();
+  const { itemName, nutritions, actualServingGrams } = route.params as {
+    itemId: string;
+    itemName: string;
+    nutritions: unknown;
+    actualServingGrams?: number;
+  };
 
   return (
     <View style={commonStyles.container}>

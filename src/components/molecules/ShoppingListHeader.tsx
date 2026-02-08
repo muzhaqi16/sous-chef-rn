@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 interface ShoppingListHeaderProps {
   listName: string;
@@ -29,9 +30,8 @@ export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
         <TouchableOpacity onPress={onAvatarPress}>
           <View style={styles.avatar}>
             {avatarUrl ? (
-              <Image
-                alt=""
-                source={{ uri: avatarUrl }}
+              <CachedImage
+                uri={avatarUrl}
                 style={styles.avatarImg}
               />
             ) : (

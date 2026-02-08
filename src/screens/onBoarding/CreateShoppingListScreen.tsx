@@ -20,12 +20,14 @@ import {
 } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { createShoppingListSchema } from '#utils/validation/onboarding';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 type FormValues = {
   shoppingListName: string;
 };
 
 export const CreateShoppingListScreen = () => {
+  useScreenTransition('CreateShoppingListScreen');
   const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
 
   const setSelectedShoppingListId = useAppStore(

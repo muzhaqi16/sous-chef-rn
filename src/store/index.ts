@@ -166,6 +166,13 @@ export const useStore = create<RootState>()(
               // This ensures persisted notifications are filtered correctly
               // after app updates or context changes
               state?.cleanupOrphanedSubscriptions();
+
+              // PERF: If persisted home+pantry IDs exist, mark ready immediately
+              // so usePantryQuery fires on the FIRST render instead of waiting
+              // for useDefaultHome's effect (which runs after render)
+              if (state?.selectedHomeId && state?.selectedPantryId) {
+                state?.setIsHomeSelectionReady(true);
+              }
             }
           };
         },

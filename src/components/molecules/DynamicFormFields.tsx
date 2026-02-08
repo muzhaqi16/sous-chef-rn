@@ -10,22 +10,20 @@ import {
 
 import { StyleSheet } from 'react-native-unistyles';
 
-// Import your autocomplete components
-import { ItemAutocompleteInput } from './ItemAutocompleteInput';
-import { BrandAutocompleteInput } from './BrandAutocompleteInput';
-import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
-import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
-import { StorageLocationAutocompleteInput } from './StorageLocationAutocompleteInput';
+// Import new unified autocomplete components
+import { ItemAutocompleteField } from './AutocompleteField/ItemAutocompleteField';
+import { BrandAutocompleteField } from './AutocompleteField/BrandAutocompleteField';
+import { UnitAutocompleteField } from './AutocompleteField/UnitAutocompleteField';
+import { CategoryAutocompleteField } from './AutocompleteField/CategoryAutocompleteField';
+import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLocationAutocompleteField';
 import { FormInput } from './FormInput';
 
 // Create memoized versions to prevent re-renders
-const MemoizedItemAutocomplete = React.memo(ItemAutocompleteInput);
-const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteInput);
-const MemoizedUnitsAutocomplete = React.memo(UnitsAutocompleteInput);
-const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteInput);
-const MemoizedStorageLocationAutocomplete = React.memo(
-  StorageLocationAutocompleteInput,
-);
+const MemoizedItemAutocomplete = React.memo(ItemAutocompleteField);
+const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteField);
+const MemoizedUnitsAutocomplete = React.memo(UnitAutocompleteField);
+const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteField);
+const MemoizedStorageLocationAutocomplete = React.memo(StorageLocationAutocompleteField);
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -172,6 +170,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 if (Input === 'itemAutocomplete') {
                   return (
                     <MemoizedItemAutocomplete
+                      variant="modal"
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}
@@ -188,6 +187,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 if (Input === 'brandAutocomplete') {
                   return (
                     <MemoizedBrandAutocomplete
+                      variant="modal"
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}
@@ -202,6 +202,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 if (Input === 'unitAutocomplete') {
                   return (
                     <MemoizedUnitsAutocomplete
+                      variant="modal"
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}
@@ -216,6 +217,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 if (Input === 'categoryAutocomplete') {
                   return (
                     <MemoizedCategoryAutocomplete
+                      variant="modal"
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}
@@ -231,6 +233,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 if (Input === 'storageLocationAutocomplete') {
                   return (
                     <MemoizedStorageLocationAutocomplete
+                      variant="modal"
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}

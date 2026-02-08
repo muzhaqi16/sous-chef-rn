@@ -13,6 +13,7 @@ import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/base/Button';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 type RouteParams = {
   homeId: string;
@@ -21,6 +22,7 @@ type RouteParams = {
 export const HomeDetailScreen: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
+  useScreenTransition('HomeDetailScreen');
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription

@@ -1,27 +1,25 @@
-import {useNavigation, useRoute, useIsFocused} from '@react-navigation/native';
+import {useNavigation, useRoute, useIsFocused, StackActions, CommonActions} from '@react-navigation/native';
 import {useMemo, useCallback} from 'react';
-import {StackActions} from '@react-navigation/native';
 
 export function useAppNavigation() {
   const navigation = useNavigation();
   const route = useRoute();
   const isFocused = useIsFocused();
 
-  // Core navigation methods
   const navigate = useCallback(
-    (name: string, params?: any) => {
-      navigation.navigate(name as any, params);
+    (name: string, params?: object) => {
+      navigation.dispatch(CommonActions.navigate(name, params));
     },
     [navigation],
   );
 
   // Navigate to nested stack screens
   const navigateToNested = useCallback(
-    (stackName: string, screenName: string, params?: any) => {
-      navigation.navigate(stackName as any, {
+    (stackName: string, screenName: string, params?: object) => {
+      navigation.dispatch(CommonActions.navigate(stackName, {
         screen: screenName,
-        params: params,
-      });
+        params,
+      }));
     },
     [navigation],
   );
@@ -139,4 +137,3 @@ export function useAppNavigation() {
     navigateTo,
   };
 }
-

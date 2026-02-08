@@ -297,17 +297,21 @@ export const useNotifications = (config: NotificationConfig = {}) => {
 
   // Log subscription status for debugging
   useEffect(() => {
-    if (user?.id) {
+    if (!config.skip && user?.id) {
       console.log(
         '✅ [NotificationReceived] Subscription ACTIVE for user:',
         user.id,
+      );
+    } else if (config.skip) {
+      console.log(
+        '⏸️ [NotificationReceived] Subscription DEFERRED - startup delay',
       );
     } else {
       console.log(
         '⏸️ [NotificationReceived] Subscription SKIPPED - no user ID',
       );
     }
-  }, [user?.id]);
+  }, [user?.id, config.skip]);
 
   // PERFORMANCE: Use store getter instead of stale notifications array in closure
   const handleMarkAllAsRead = useCallback(async () => {

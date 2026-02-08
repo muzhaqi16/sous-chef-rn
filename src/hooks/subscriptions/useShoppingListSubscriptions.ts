@@ -86,6 +86,9 @@ export function useShoppingListSubscriptions(
     customOnData: (payload: any, client: any) => {
       if (!payload || !selectedShoppingListId) return;
 
+      // Skip processing if the parent list is being deleted
+      if (subscriptionService.isParentDeleting(selectedShoppingListId)) return;
+
       const mutation = payload.mutation;
       const item = payload.item;
       const payloadUserId = payload.userId;
@@ -270,6 +273,21 @@ export function useShoppingListSubscriptions(
     cacheUpdateStrategy: CacheStrategy.AUTOMATIC, // Apollo handles metadata updates
     enableLogging: true,
     entityId: selectedShoppingListId,
+    // Re-evict entity if it's pending deletion — Apollo auto-normalizes
+    // subscription data back into cache before onData runs, so we must
+    // counter that by evicting again here.
+    customOnData: (payload: any, client: any) => {
+      if (!payload) return;
+      const node = payload.node;
+      if (!node?.id) return;
+      if (subscriptionService.isParentDeleting(node.id)) {
+        const cacheId = client.cache.identify({ __typename: 'ShoppingList', id: node.id });
+        if (cacheId) {
+          client.cache.evict({ id: cacheId });
+          client.cache.gc();
+        }
+      }
+    },
   });
 
   useShoppingListUpdatedSubscription({
@@ -312,6 +330,9 @@ export function useShoppingListSubscriptions(
     entityId: selectedShoppingListId,
     customOnData: (payload: any, client: any) => {
       if (!payload || !selectedShoppingListId) return;
+
+      // Skip processing if the parent list is being deleted
+      if (subscriptionService.isParentDeleting(selectedShoppingListId)) return;
 
       const payloadUserId = payload.userId;
       const clearedItemIds = payload.clearedItemIds || [];

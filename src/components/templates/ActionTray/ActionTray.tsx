@@ -26,28 +26,30 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const isOpenRef = useRef(false);
     const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
-    // Handle sheet state changes for GlobalBackdrop integration
+    // Handle sheet state changes for open/close tracking
     const handleSheetChanges = useCallback(
       (index: number) => {
         if (index >= 0) {
           isOpenRef.current = true;
-          if (enableBackdrop) {
-            showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
-          }
           onOpen?.();
         } else {
+          // Safety net: ensure backdrop is hidden when sheet fully closes
+          if (isOpenRef.current && enableBackdrop) {
+            hideBackdrop();
+          }
           isOpenRef.current = false;
-          hideBackdrop();
           onClose?.();
         }
       },
-      [enableBackdrop, showBackdrop, hideBackdrop, onOpen, onClose],
+      [onOpen, onClose, enableBackdrop, hideBackdrop],
     );
 
     // Cleanup on unmount
     useEffect(() => {
       return () => {
-        hideBackdrop();
+        if (isOpenRef.current) {
+          hideBackdrop();
+        }
       };
     }, [hideBackdrop]);
 
@@ -55,18 +57,27 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     useImperativeHandle(
       ref,
       () => ({
-        open: () => bottomSheetRef.current?.present(),
+        open: () => {
+          if (isOpenRef.current) return;
+          if (enableBackdrop) {
+            showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
+          }
+          bottomSheetRef.current?.present();
+        },
         close: () => bottomSheetRef.current?.dismiss(),
         toggle: () => {
           if (isOpenRef.current) {
             bottomSheetRef.current?.dismiss();
           } else {
+            if (enableBackdrop) {
+              showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
+            }
             bottomSheetRef.current?.present();
           }
         },
         isActive: () => isOpenRef.current,
       }),
-      [],
+      [enableBackdrop, showBackdrop],
     );
 
     const handleClose = useCallback(() => {

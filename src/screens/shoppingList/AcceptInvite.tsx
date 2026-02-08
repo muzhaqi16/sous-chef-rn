@@ -23,7 +23,7 @@ type InvitationType = 'shopping_list' | 'home' | 'unknown';
 export const AcceptInvite: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { token, inviteId } = route.params as {
+  const { token, inviteId } = (route.params ?? {}) as {
     token?: string;
     inviteId?: string;
   };

@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
+import { View, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -31,9 +31,14 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 export const RecipeMain: React.FC = React.memo(() => {
+  useScreenTransition('RecipeMain');
+  useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,6 +76,8 @@ export const RecipeMain: React.FC = React.memo(() => {
 
   // Fetch random recipes ONLY ONCE when user has no saved recipes
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchRandomRecipes = async () => {
       // Only fetch if:
       // 1. User has no saved recipes
@@ -91,9 +98,10 @@ export const RecipeMain: React.FC = React.memo(() => {
       try {
         const random = await spoonacularService.getRandomRecipes({
           number: 10,
-        });
+        }, controller.signal);
         setRandomRecipes(random);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to fetch random recipes:', error);
         // Reset flag so user can retry
         hasFetchedRandom.current = false;
@@ -103,6 +111,8 @@ export const RecipeMain: React.FC = React.memo(() => {
     };
 
     fetchRandomRecipes();
+
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes.length, loading]); // Intentionally exclude loadingRandom to prevent infinite loop
 
@@ -226,7 +236,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
           <View style={commonStyles.listItemImageContainerCompact}>
-            <Image source={{ uri: imageUrl }} style={commonStyles.listItemImageCompact} />
+            <CachedImage uri={imageUrl} style={commonStyles.listItemImageCompact} />
           </View>
         ) : undefined,
       };

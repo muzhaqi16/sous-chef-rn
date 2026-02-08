@@ -237,3 +237,5 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
 }));
+
+export default DebugInfo;

@@ -33,17 +33,26 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  // Track whether this instance has an active backdrop request to prevent double show/hide
+  const isActiveRef = useRef(false);
+
   const handlePress = useCallback(() => {
     if (pressBehavior === 'none') return;
     onCloseRef.current?.();
   }, [pressBehavior]);
 
   const handleShow = useCallback(() => {
-    showBackdrop({ opacity, onPress: pressBehavior !== 'none' ? handlePress : undefined });
+    if (!isActiveRef.current) {
+      isActiveRef.current = true;
+      showBackdrop({ opacity, onPress: pressBehavior !== 'none' ? handlePress : undefined });
+    }
   }, [showBackdrop, opacity, pressBehavior, handlePress]);
 
   const handleHide = useCallback(() => {
-    hideBackdrop();
+    if (isActiveRef.current) {
+      isActiveRef.current = false;
+      hideBackdrop();
+    }
   }, [hideBackdrop]);
 
   // React to animated index changes to show/hide global backdrop
@@ -65,7 +74,10 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      hideBackdrop();
+      if (isActiveRef.current) {
+        isActiveRef.current = false;
+        hideBackdrop();
+      }
     };
   }, [hideBackdrop]);
 

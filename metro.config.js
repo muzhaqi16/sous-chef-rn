@@ -11,17 +11,7 @@ const defaultConfig = getDefaultConfig(__dirname);
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {
-  resolver: {
-    // Enable package exports with the right condition names for React Native
-    unstable_enablePackageExports: true,
-    unstable_conditionNames: [
-      'require',
-      'react-native',
-      'default',
-    ],
-  },
-};
+const config = {};
 
 module.exports = wrapWithReanimatedMetroConfig(
   mergeConfig(defaultConfig, config),

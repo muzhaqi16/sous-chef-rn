@@ -1,17 +1,11 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Label } from '#components/atoms/Label';
@@ -40,6 +34,9 @@ export interface InlineAutocompleteProps<T> {
   keyExtractor: (item: T) => string;
   onSelect: (item: T) => void;
 
+  // Footer
+  footerComponent?: React.ReactNode;
+
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
@@ -47,12 +44,8 @@ export interface InlineAutocompleteProps<T> {
 /**
  * InlineAutocomplete - Generic autocomplete component for bottom sheets.
  *
- * Features:
- * - Smart visibility: keeps results visible until new ones arrive (no flickering)
- * - Loading indicator in input row instead of replacing content
- * - Theme-aware shadows for proper dark mode support
- * - Debounced input to prevent excessive re-renders
- * - Ref-backed value tracking to prevent cursor jumping
+ * Anti-flicker is handled upstream by useAutocompleteSearch — this component
+ * receives stable, pre-processed items and focuses on presentation only.
  */
 export function InlineAutocomplete<T>({
   label,
@@ -70,46 +63,25 @@ export function InlineAutocomplete<T>({
   renderItem,
   keyExtractor,
   onSelect,
+  footerComponent,
   autoCapitalize = 'none',
 }: InlineAutocompleteProps<T>) {
   const { theme } = useUnistyles();
 
   // Track internal search term for visibility logic
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Ref-backed value tracking to prevent cursor jumping
   const inputValueRef = useRef(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keep last results to prevent flickering during loading
-  const lastResultsRef = useRef<T[]>([]);
+  // Items sliced to max results
+  const slicedItems = items.slice(0, maxResults);
 
-  // Update lastResultsRef when we get new items
-  useEffect(() => {
-    if (items.length > 0) {
-      lastResultsRef.current = items;
-    }
-  }, [items]);
-
-  // Display items: show current items, or last results while loading
-  const displayItems = useMemo(() => {
-    if (items.length > 0) {
-      return items.slice(0, maxResults);
-    }
-    // Keep showing last results while loading to prevent flickering
-    if (loading && lastResultsRef.current.length > 0) {
-      return lastResultsRef.current.slice(0, maxResults);
-    }
-    return [];
-  }, [items, loading, maxResults]);
-
-  // Smart visibility logic - prevents flickering
-  // Only show dropdown when:
-  // 1. Search term meets minimum length
-  // 2. We have items to display OR we're loading with previous results OR search finished with no results
+  // Smart visibility logic
   const hasSearchQuery = searchTerm.length >= minSearchLength;
-  const hasData = displayItems.length > 0 || (hasSearchQuery && !loading);
+  const hasData = slicedItems.length > 0 || (hasSearchQuery && !loading);
   const shouldShowDropdown = showDropdown && hasSearchQuery && hasData;
 
   // Cleanup debounce timer on unmount
@@ -121,8 +93,12 @@ export function InlineAutocomplete<T>({
     };
   }, []);
 
-  // Sync input value ref when value prop changes externally
+  // Sync local state when value prop changes externally (e.g., after selection)
   useEffect(() => {
+    // If no debounce is pending, this is an external change — sync local state
+    if (!debounceTimerRef.current) {
+      setSearchTerm(value);
+    }
     inputValueRef.current = value;
   }, [value]);
 
@@ -141,6 +117,7 @@ export function InlineAutocomplete<T>({
       // Notify parent after debounce
       debounceTimerRef.current = setTimeout(() => {
         onChangeText(text);
+        debounceTimerRef.current = null;
       }, debounceMs);
     },
     [onChangeText, debounceMs],
@@ -148,10 +125,14 @@ export function InlineAutocomplete<T>({
 
   const handleSelect = useCallback(
     (item: T) => {
-      // Clear last results when selecting to prevent stale data on next search
-      lastResultsRef.current = [];
       setShowDropdown(false);
-      setSearchTerm('');
+
+      // Clear pending debounce so value sync effect works immediately
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+
       onSelect(item);
     },
     [onSelect],
@@ -163,10 +144,10 @@ export function InlineAutocomplete<T>({
   }, []);
 
   const handleFocus = useCallback(() => {
-    if (searchTerm.length >= minSearchLength && displayItems.length > 0) {
+    if (searchTerm.length >= minSearchLength && slicedItems.length > 0) {
       setShowDropdown(true);
     }
-  }, [searchTerm.length, minSearchLength, displayItems.length]);
+  }, [searchTerm.length, minSearchLength, slicedItems.length]);
 
   return (
     <View style={styles.container}>
@@ -174,7 +155,7 @@ export function InlineAutocomplete<T>({
       <View style={styles.inputContainer}>
         <BottomSheetTextInput
           style={[styles.input, error && styles.inputError]}
-          value={value}
+          value={searchTerm}
           onChangeText={handleTextChange}
           placeholder={placeholder}
           onBlur={handleBlur}
@@ -192,7 +173,7 @@ export function InlineAutocomplete<T>({
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {shouldShowDropdown && displayItems.length > 0 && (
+      {shouldShowDropdown && (slicedItems.length > 0 || footerComponent) && (
         <View style={styles.suggestionsContainer}>
           <ScrollView
             style={styles.scrollView}
@@ -200,19 +181,20 @@ export function InlineAutocomplete<T>({
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={true}
           >
-            {displayItems.map((item, index) => (
+            {slicedItems.map((item, index) => (
               <React.Fragment key={keyExtractor(item)}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => handleSelect(item)}
-                  activeOpacity={0.7}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
                   {renderItem(item, index)}
-                </TouchableOpacity>
-                {index < displayItems.length - 1 && (
+                </Pressable>
+                {index < slicedItems.length - 1 && (
                   <View style={styles.separator} />
                 )}
               </React.Fragment>
             ))}
+            {footerComponent}
           </ScrollView>
         </View>
       )}
@@ -266,6 +248,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     maxHeight: 220,
     zIndex: theme.zIndex.dropdown,
+    overflow: 'hidden',
     ...theme.shadows.lg,
   },
   scrollView: {

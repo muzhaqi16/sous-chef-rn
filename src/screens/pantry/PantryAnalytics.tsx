@@ -13,14 +13,11 @@ import { TrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#generated';
-import type { RouteProp } from '@react-navigation/native';
-import type { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 
-type PantryAnalyticsRouteProp = RouteProp<PantryStackParamList, 'PantryAnalytics'>;
-
-interface PantryAnalyticsProps {
-  route: PantryAnalyticsRouteProp;
-}
+type PantryAnalyticsProps = StaticScreenProps<{
+  pantryId: string;
+}>;
 
 // Helper functions to format enum values
 function formatPurpose(purpose: string): string {

@@ -4,12 +4,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 
-import { format } from 'date-fns';
-import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
+import { format } from 'date-fns/format';
+import type { StaticScreenProps } from '@react-navigation/native';
+import type { NotificationItem } from '#store/slices/notificationSlice';
 
-export const NotificationDetailScreen: React.FC<{
-  route: { params: NotificationStackParamList['NotificationDetail'] };
-}> = ({ route }) => {
+export const NotificationDetailScreen: React.FC<StaticScreenProps<{
+  notification: NotificationItem;
+}>> = ({ route }) => {
   const notification = route.params?.notification;
 
   if (!notification) {

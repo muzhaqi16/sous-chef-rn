@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Counter } from './Counter';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 type ItemCardProps = {
   item: any;
@@ -18,12 +20,13 @@ const ItemCard: React.FC<ItemCardProps> = ({
   onIncrement,
   onDecrement,
 }) => {
+  useRenderTime('ItemCard');
   return (
     <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
-      <Image
-        alt={item?.name}
+      <CachedImage
+        accessibilityLabel={item?.name}
         resizeMode="contain"
-        source={{ uri: item?.item?.imageUrl || undefined }}
+        uri={item?.item?.imageUrl || undefined}
         style={styles.cardImg}
       />
       <View style={styles.cardBody}>

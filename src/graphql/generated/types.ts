@@ -9073,6 +9073,7 @@ export type UpdatePantryItemInput = {
   brandName?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;

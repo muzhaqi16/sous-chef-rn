@@ -67,6 +67,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const { user, isAuthenticated } = useAuth();
   // Block subscriptions until token is validated/refreshed to prevent 401 race condition
   const [isTokenReady, setIsTokenReady] = useState(false);
+  // Defer WebSocket subscriptions to avoid competing with startup queries on the JS thread
+  const [subscriptionsReady, setSubscriptionsReady] = useState(false);
 
   // Enable/disable auto-reconnect and cleanup subscriptions based on auth state
   useEffect(() => {
@@ -98,6 +100,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         subscriptionService.cleanup();
         // Reset for next login
         setIsTokenReady(false);
+        setSubscriptionsReady(false);
       }
     };
 
@@ -105,18 +108,31 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  // Delay subscription mounting by 3s so startup queries (GetHomes, GetPantry)
+  // complete without competing with 12+ WebSocket subscription setups on the JS thread
+  useEffect(() => {
+    if (isTokenReady) {
+      const timer = setTimeout(() => setSubscriptionsReady(true), 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setSubscriptionsReady(false);
+    }
+  }, [isTokenReady]);
+
   return (
     <ListAnimationProvider>
-      {/* Only initialize data and subscriptions when user is authenticated AND token is ready
+      {/* Only initialize data when user is authenticated AND token is ready
           This prevents WebSocket connection attempts with expired tokens on app restart,
           eliminating "Socket closed" 401 errors by ensuring token is validated first */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
       {isAuthenticated && user?.id && isTokenReady && (
-        <>
-          <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
-          <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
-        </>
+        <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
+      )}
+      {/* Subscriptions deferred by 3s — initial data comes from queries, real-time
+          updates can safely start after the startup window completes */}
+      {isAuthenticated && user?.id && subscriptionsReady && (
+        <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
       )}
       {children}
     </ListAnimationProvider>

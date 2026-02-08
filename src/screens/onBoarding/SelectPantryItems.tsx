@@ -18,8 +18,10 @@ import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { AnimatedButton } from '#components/atoms/AnimatedButton';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const SelectPantryItems = () => {
+  useScreenTransition('SelectPantryItems');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
 

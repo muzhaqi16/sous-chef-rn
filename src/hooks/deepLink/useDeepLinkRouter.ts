@@ -1,11 +1,10 @@
 import { useEffect, useCallback } from 'react';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
-import { RootStackParamList } from '#navigation/RootNavigator';
 import { toastService } from '#/services/toastService';
 
 interface DeepLinkTokenPayload {
@@ -84,7 +83,7 @@ const validateDeepLinkToken = (
  * Queues deep link actions until app is hydrated and routes to appropriate handlers.
  */
 export const useDeepLinkRouter = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation();
   const isHydrated = useAppStore(state => state.isHydrated);
   const { isAuthenticated } = useAuth();
 
@@ -114,12 +113,12 @@ export const useDeepLinkRouter = () => {
           token,
           timestamp: Date.now(),
         });
-        navigation.navigate('Auth');
+        navigation.dispatch(CommonActions.navigate('Auth'));
         return;
       }
 
       // User is authenticated, proceed with verification
-      navigation.navigate('EmailVerification', { token });
+      navigation.dispatch(CommonActions.navigate('EmailVerification', { token }));
     },
     [isAuthenticated, navigation, setPendingDeepLinkAction],
   );
@@ -140,7 +139,7 @@ export const useDeepLinkRouter = () => {
 
       // Always redirect to auth stack for password reset
       // This will clear any existing auth state
-      navigation.navigate('ResetPassword', { token });
+      navigation.dispatch(CommonActions.navigate('ResetPassword', { token }));
     },
     [navigation],
   );
@@ -166,12 +165,12 @@ export const useDeepLinkRouter = () => {
           token,
           timestamp: Date.now(),
         });
-        navigation.navigate('Auth');
+        navigation.dispatch(CommonActions.navigate('Auth'));
         return;
       }
 
       // User is authenticated, proceed with invitation
-      navigation.navigate('AcceptInvitation', { token });
+      navigation.dispatch(CommonActions.navigate('AcceptInvitation', { token }));
     },
     [isAuthenticated, navigation, setPendingDeepLinkAction],
   );

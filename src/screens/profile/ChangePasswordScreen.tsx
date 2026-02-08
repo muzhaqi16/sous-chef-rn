@@ -239,3 +239,5 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
 }));
+
+export default ChangePasswordScreen;

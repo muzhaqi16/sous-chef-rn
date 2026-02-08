@@ -82,6 +82,7 @@ const addItemSchema = object({
 
 // Schema for edit mode
 const editItemSchema = object({
+  itemName: string(),
   quantityInput: string().required('Quantity is required'),
   unit: string(), // Tracking unit
   minQuantity: string(),
@@ -190,6 +191,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       // Tracking unit (for counting items) - from item.unit or item.unitName
       const trackingUnitSymbol = item.unit.symbol;
       return {
+        itemName: item.itemName || '',
         quantityInput: item.quantity?.toString() || '1',
         unit: trackingUnitSymbol, // Tracking unit
         minQuantity: item.minQuantity?.toString() || '',
@@ -502,7 +504,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 control={control}
                 errors={errors}
                 mode="edit"
-                currentItemName={item?.item?.name || item?.itemName || 'Unknown Item'}
                 suggestedBrands={suggestedBrands}
                 onBrandSelected={setSelectedBrandId}
               />
@@ -583,22 +584,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  readOnlyField: {
-    padding: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  readOnlyLabel: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  readOnlyText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textTertiary,
   },
   errorText: {
     fontSize: theme.fonts.size.lg,

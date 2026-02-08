@@ -28,7 +28,8 @@ export function useRenderTime(
     slowThreshold?: number;
   },
 ) {
-  const renderStartTime = useRef<number>(performance.now());
+  const renderStartTime = useRef<number>(0);
+  renderStartTime.current = performance.now();
   const renderCount = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
@@ -99,8 +100,6 @@ export function useRenderTime(
       }
     }
 
-    // Reset start time for next render
-    renderStartTime.current = performance.now();
   });
 }
 

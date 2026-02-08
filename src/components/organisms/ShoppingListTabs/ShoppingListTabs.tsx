@@ -360,8 +360,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         onIndexChange={handleIndexChange}
         initialLayout={{ width: layout.width }}
         swipeEnabled={true}
-        lazy={true}
-        lazyPreloadDistance={0}
+        lazy={false}
         overScrollMode="never"
       />
     </View>

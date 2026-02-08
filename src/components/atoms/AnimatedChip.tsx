@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, View } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
   Easing,
   FadeIn,
@@ -69,10 +70,9 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         style={animatedContainerStyle}
       >
         {imageUrl && (
-          <Image
-            source={{ uri: imageUrl }}
+          <CachedImage
+            uri={imageUrl}
             style={styles.image}
-            resizeMode="cover"
           />
         )}
         <Animated.Text style={[styles.label, animatedTextStyle]}>

@@ -18,11 +18,13 @@ import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
 
 export const ProfileScreen = () => {
+  useScreenTransition('ProfileScreen');
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, biometricLoading } =

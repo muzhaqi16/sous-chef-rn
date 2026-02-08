@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, TextStyle, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, TextStyle, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
@@ -9,6 +9,8 @@ import { Counter } from './Counter';
 import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
 import { DisplayFormat } from '#/graphql/generated';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 interface ShoppingListItemProps {
   id: string;
@@ -41,6 +43,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
   onDelete,
   onEdit,
 }) => {
+  useRenderTime('ShoppingListItem');
   const { theme } = useUnistyles();
   const { width: screenWidth } = useWindowDimensions();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
@@ -89,7 +92,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
         </TouchableOpacity>
 
         {imageUrl && (
-          <Image source={{ uri: imageUrl }} style={styles.itemImage} />
+          <CachedImage uri={imageUrl} style={styles.itemImage} />
         )}
 
         <View style={styles.contentContainer}>

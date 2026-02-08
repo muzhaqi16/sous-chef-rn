@@ -49,6 +49,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
     // Memoize tab bar width calculation
     const tabBarWidth = useMemo(() => screenWidth * 0.95, [screenWidth]);
 
+    // Shared value for immediate tab icon feedback (UI thread)
+    const activeTabIndex = useSharedValue(state.index);
+
+    // Sync shared value with React Navigation state
+    useEffect(() => {
+      activeTabIndex.value = state.index;
+    }, [state.index, activeTabIndex]);
+
     // Animated values for smooth hide/show
     const translateY = useSharedValue(0);
     const opacity = useSharedValue(1);
@@ -93,7 +101,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
     const containerStyle = useMemo(
       () => ({
         width: tabBarWidth,
-        bottom: Math.max(safeBottom, 16), // Ensure minimum 16px bottom spacing
+        bottom:
+          Platform.OS === 'ios'
+            ? Math.max(safeBottom * 0.5, 16)
+            : Math.max(safeBottom, 16),
       }),
       [tabBarWidth, safeBottom],
     );
@@ -106,7 +117,11 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       (
         route: { key: string; name: string; params?: object },
         isFocused: boolean,
+        targetIndex: number,
       ) => {
+        // Set shared value immediately for instant UI-thread icon feedback
+        activeTabIndex.value = targetIndex;
+
         const event = navigation.emit({
           type: 'tabPress',
           target: route.key,
@@ -137,7 +152,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
           }
         }
       },
-      [navigation],
+      [navigation, activeTabIndex],
     );
 
     return (
@@ -156,8 +171,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
                 route={route}
                 isFocused={isFocused}
                 options={options}
-                onPress={() => handleTabPress(route, isFocused)}
+                onPress={() => handleTabPress(route, isFocused, index)}
                 showLabel={showNavigationLabels}
+                activeTabIndex={activeTabIndex}
+                tabIndex={index}
               />
             );
           })}
@@ -187,8 +204,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
                 route={route}
                 isFocused={isFocused}
                 options={options}
-                onPress={() => handleTabPress(route, isFocused)}
+                onPress={() => handleTabPress(route, isFocused, actualIndex)}
                 showLabel={showNavigationLabels}
+                activeTabIndex={activeTabIndex}
+                tabIndex={actualIndex}
               />
             );
           })}

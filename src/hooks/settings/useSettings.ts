@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAppStore } from '#/store/useAppStore';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
+import { storage } from '#/storage/mmkv';
 
 /**
  * Unified settings interface combining local (Zustand) and server (GraphQL) settings
@@ -135,10 +136,13 @@ export const useSettings = () => {
 /**
  * Selector hook for just the showTutorials setting
  * Use this when you only need to check if tutorials are enabled
+ *
+ * PERFORMANCE: Reads from MMKV instead of triggering the GetUserSettings GraphQL query.
+ * The MMKV value is synced whenever useAppSettings loads fresh data (see useAppSettings).
  */
 export const useShowTutorials = (): boolean => {
-  const { settings } = useAppSettings();
-  return settings.showTutorials;
+  const [value] = useState(() => storage.getBoolean('user_show_tutorials') ?? true);
+  return value;
 };
 
 /**

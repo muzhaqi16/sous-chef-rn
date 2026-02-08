@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 /**
  * Generic interface for recently deleted items
@@ -31,6 +33,7 @@ export function ItemRecentCard<T extends RecentItem>({
   disabled,
   placeholderIcon = 'inventory-2',
 }: ItemRecentCardProps<T>) {
+  useRenderTime('ItemRecentCard');
   const { theme } = useUnistyles();
 
   // Format the time since the item was added
@@ -48,7 +51,7 @@ export function ItemRecentCard<T extends RecentItem>({
       {/* Item Image or Placeholder */}
       <View style={styles.imageContainer}>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
+          <CachedImage uri={imageUrl} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Icon
@@ -107,7 +110,6 @@ const styles = StyleSheet.create(theme => ({
   image: {
     width: 48,
     height: 48,
-    resizeMode: 'cover',
   },
   imagePlaceholder: {
     width: 48,

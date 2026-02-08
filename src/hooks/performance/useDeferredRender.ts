@@ -1,19 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useDeferredValue } from 'react';
 
 /**
- * Hook to defer heavy rendering until after the runtime is idle.
+ * Hook to defer heavy rendering until React's concurrent scheduler is ready.
  *
- * Uses requestIdleCallback to wait until the JavaScript runtime is idle
- * before signaling that the component is ready to render heavy content.
- * This prevents janky animations during screen transitions.
+ * Uses React 19's `useDeferredValue` with an initial value of `false`,
+ * which transitions to `true` once the runtime is idle. This replaces
+ * `requestIdleCallback` which has iOS reliability issues (RN #28602).
  *
- * @param delay - Timeout in ms to guarantee callback execution (default: 150ms)
+ * React's concurrent scheduler is interruptible and cross-platform,
+ * making it more reliable than manual idle detection.
+ *
+ * @param _delay - Unused, kept for backward compatibility
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
  * ```tsx
  * const MyComponent = ({ items }) => {
- *   const isReady = useDeferredRender(); // Default 150ms timeout
+ *   const isReady = useDeferredRender();
  *
  *   if (!isReady) {
  *     return <SkeletonPlaceholder />;
@@ -22,27 +25,7 @@ import { useState, useEffect } from 'react';
  *   return <HeavyListComponent items={items} />;
  * };
  * ```
- *
- * @note If requestIdleCallback causes issues, can switch to useDeferredValue:
- * ```tsx
- * return useDeferredValue(true, false); // React 19 initialValue
- * ```
  */
-export function useDeferredRender(delay = 150): boolean {
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    // requestIdleCallback runs when the runtime is idle
-    // timeout ensures callback fires within (delay + 150)ms max
-    const id = requestIdleCallback(
-      () => {
-        setIsReady(true);
-      },
-      { timeout: delay + 150 },
-    );
-
-    return () => cancelIdleCallback(id);
-  }, [delay]);
-
-  return isReady;
+export function useDeferredRender(_delay = 50): boolean {
+  return useDeferredValue(true, false);
 }

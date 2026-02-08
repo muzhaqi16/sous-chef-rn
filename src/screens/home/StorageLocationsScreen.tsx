@@ -14,6 +14,7 @@ import { StorageLocationCard } from '#components/organisms/storageLocation/Stora
 import { StorageLocationSheet } from '#components/modals/StorageLocationSheet/StorageLocationSheet';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 type RouteParams = {
   homeId: string;
@@ -22,6 +23,7 @@ type RouteParams = {
 export const StorageLocationsScreen: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
+  useScreenTransition('StorageLocationsScreen');
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();

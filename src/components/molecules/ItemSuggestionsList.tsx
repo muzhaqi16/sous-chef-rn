@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { ItemSuggestion } from '#generated';
 
 interface ItemSuggestionsListProps {
@@ -70,7 +71,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
       >
         <View style={styles.imageContainer}>
           {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.image} />
+            <CachedImage uri={imageUrl} style={styles.image} />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Icon
@@ -153,7 +154,6 @@ const styles = StyleSheet.create(theme => ({
   image: {
     width: 40,
     height: 40,
-    resizeMode: 'cover',
   },
   imagePlaceholder: {
     width: 40,

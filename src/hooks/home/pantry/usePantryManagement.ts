@@ -23,7 +23,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     pantryItems,
     filteredItems,
     loading,
-    networkStatus,
+    isRefreshing,
     error,
     refetch,
     hasMore,
@@ -48,7 +48,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     items: filteredItems,
     allItems: pantryItems,
     loading,
-    networkStatus,
+    isRefreshing,
     error,
 
     // Redesign data

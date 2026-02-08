@@ -4,11 +4,9 @@ import type { SortOption, SortDirection } from '../PantryContent';
 // Item type for sorting (minimal interface)
 interface SortableItem {
   id: string;
+  itemName?: string | null;
   expiresAt?: string | null;
   quantity: number;
-  item?: {
-    name?: string;
-  } | null;
   createdAt?: string;
 }
 
@@ -130,8 +128,8 @@ export function usePantrySorting<T extends SortableItem>(
         let comparison = 0;
         switch (sortOption) {
           case 'name':
-            comparison = (a.item.item?.name || '').localeCompare(
-              b.item.item?.name || '',
+            comparison = (a.item.itemName || '').localeCompare(
+              b.item.itemName || '',
             );
             break;
           case 'expiry':

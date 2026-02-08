@@ -1,99 +1,75 @@
 import React from 'react';
+import { View } from 'react-native';
 import {useUnistyles} from 'react-native-unistyles';
 import {getFocusedRouteNameFromRoute} from '@react-navigation/native';
-import {Icon} from '#/utils/iconUtils';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
 import {RecipeStack} from './RecipeStack';
 import {ProfileScreen} from '#screens/profile/ProfileScreen';
-import {createAnimatedTabNavigator} from '#components/navigation/AnimatedTabNavigator';
+import {TabBarActionsProvider} from '#/context/TabBarActionsContext';
+import {FloatingTabBar} from '#components/navigation/FloatingTabBar/FloatingTabBar';
 
-export type HomeTabParamList = {
-  Pantry: undefined;
-  ShoppingList: undefined;
-  Recipe: undefined;
-  Profile: undefined;
-};
-
-const { Navigator, Screen } = createAnimatedTabNavigator<HomeTabParamList>();
-
-export const HomeTabs = () => {
-  const {theme} = useUnistyles();
-
+function HomeTabsLayout({ children }: { children: React.ReactNode }) {
+  const { theme } = useUnistyles();
   return (
-    <Navigator
-      screenOptions={({route}) => ({
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarIcon: ({focused, color, size}) => {
-          const iconMap: Record<string, [string, string]> = {
-            Pantry: ['home', 'home-outline'],
-            ShoppingList: ['list', 'list-outline'],
-            Recipe: ['book', 'book-outline'],
-            Profile: ['person', 'person-outline'],
-          };
+    <TabBarActionsProvider>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        {children}
+      </View>
+    </TabBarActionsProvider>
+  );
+}
 
-          const [activeIcon, inactiveIcon] = iconMap[route.name] || [
-            'help-circle',
-            'help-circle',
-          ];
-
-          return (
-            <Icon
-              library="Ionicons"
-              name={focused ? activeIcon : inactiveIcon}
-              size={size}
-              color={color}
-            />
-          );
-        },
-      })}>
-    <Screen
-      name="Pantry"
-      component={PantryStack}
-      options={({route}) => {
+export const HomeTabs = createBottomTabNavigator({
+  implementation: 'custom',
+  detachInactiveScreens: false,
+  tabBar: (props) => <FloatingTabBar {...props} />,
+  layout: HomeTabsLayout,
+  screenOptions: {
+    headerShown: false,
+    tabBarHideOnKeyboard: true,
+    lazy: true,
+    freezeOnBlur: true,
+    animation: 'fade',
+  },
+  screens: {
+    Pantry: {
+      screen: PantryStack,
+      options: ({route}: {route: any}) => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'PantryMain';
         return {
           title: 'Pantry',
-          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none' as const} : undefined,
         };
-      }}
-    />
-    <Screen
-      name="ShoppingList"
-      component={ShoppingListStack}
-      options={({route}) => {
+      },
+    },
+    ShoppingList: {
+      screen: ShoppingListStack,
+      options: ({route}: {route: any}) => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'ShoppingListMain';
         return {
           title: 'List',
-          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none' as const} : undefined,
         };
-      }}
-    />
-    <Screen
-      name="Recipe"
-      component={RecipeStack}
-      options={({route}) => {
+      },
+    },
+    Recipe: {
+      screen: RecipeStack,
+      options: ({route}: {route: any}) => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'RecipeMain';
         return {
           title: 'Recipes',
-          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
-          freezeOnBlur: true, // Prevent re-renders when tab is not active
+          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none' as const} : undefined,
         };
-      }}
-    />
-    <Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{
+      },
+    },
+    Profile: {
+      screen: ProfileScreen,
+      options: {
         title: 'Profile',
-        freezeOnBlur: true, // Prevent re-renders when tab is not active
-      }}
-    />
-  </Navigator>
-  );
-};
+      },
+      linking: 'profile',
+    },
+  },
+});

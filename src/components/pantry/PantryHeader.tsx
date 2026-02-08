@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, Image } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 interface PantryHeaderProps {
   /** User's display name */
@@ -62,7 +63,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
         {/* Avatar */}
         <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <CachedImage uri={avatarUrl} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon

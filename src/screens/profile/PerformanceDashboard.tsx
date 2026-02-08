@@ -435,3 +435,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
 }));
+
+export default PerformanceDashboard;

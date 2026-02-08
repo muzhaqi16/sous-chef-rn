@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
-  Image,
   ViewStyle,
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemImage } from '#/types/nutrition';
 import {
   parseImages,
@@ -121,17 +121,17 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             />
           </View>
         ) : (
-          <Image
+          <CachedImage
             key={currentImageUrl}
-            source={{ uri: currentImageUrl }}
+            uri={currentImageUrl}
             style={styles.image}
             resizeMode="contain"
-            onLoadStart={() => {
+            onStart={() => {
               setImageLoading(true);
               setImageError(false);
             }}
-            onLoadEnd={() => setImageLoading(false)}
-            onError={() => {
+            onCompletion={() => setImageLoading(false)}
+            onFailure={() => {
               setImageLoading(false);
               setImageError(true);
             }}

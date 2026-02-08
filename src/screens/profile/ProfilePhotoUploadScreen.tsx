@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteProp, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -30,17 +30,6 @@ import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
 
-type RootStackParamList = {
-  ProfilePhotoUpload: undefined;
-  ImageCrop: {
-    imageFile: ImageFile;
-  };
-};
-
-type ProfilePhotoUploadRouteProp = RouteProp<
-  RootStackParamList,
-  'ProfilePhotoUpload'
->;
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -53,9 +42,7 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
 
-export const ProfilePhotoUploadScreen: React.FC<{
-  route: ProfilePhotoUploadRouteProp;
-}> = () => {
+export const ProfilePhotoUploadScreen: React.FC = () => {
   const { navigation, goBack } = useSafeNavigation();
   const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
@@ -441,3 +428,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.secondary,
   },
 }));
+
+export default ProfilePhotoUploadScreen;

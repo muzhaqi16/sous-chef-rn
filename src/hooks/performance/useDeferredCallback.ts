@@ -1,27 +1,25 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Defers a callback until the runtime is idle.
- * Production-ready replacement for InteractionManager.runAfterInteractions.
+ * Defers a callback execution using a simple timeout.
  *
- * Unlike setTimeout, this is event-driven: it triggers when the
- * JavaScript runtime has no pending work, naturally yielding to
- * user interactions, animations, and navigation.
+ * Waits for the specified timeout to elapse before executing the callback.
+ * This ensures we're past the startup hot zone before running background work.
  *
- * IMPORTANT: On iOS, requestIdleCallback may never fire without a timeout.
- * See: https://github.com/facebook/react-native/issues/28602
- * The timeout parameter ensures the callback fires on iOS.
+ * Previously used a two-phase approach (setTimeout + requestIdleCallback),
+ * but the inner requestIdleCallback added negligible value after long timeouts
+ * and had iOS reliability issues (RN #28602).
  *
- * @param callback - Function to call when idle
+ * @param callback - Function to call after timeout
  * @param enabled - Whether the callback should run (default: true)
- * @param timeout - Max time to wait before forcing execution (default: 1000ms)
+ * @param timeout - Time to wait before execution (default: 1000ms)
  *
  * @example
  * ```tsx
  * // Run heavy work after screen settles
  * useDeferredCallback(() => {
  *   fetchBackgroundData();
- * }, isAuthenticated && isOnline);
+ * }, isAuthenticated && isOnline, 5000);
  * ```
  */
 export function useDeferredCallback(
@@ -35,13 +33,10 @@ export function useDeferredCallback(
   useEffect(() => {
     if (!enabled) return;
 
-    const idleId = requestIdleCallback(
-      () => {
-        callbackRef.current();
-      },
-      { timeout },
-    );
+    const timer = setTimeout(() => {
+      callbackRef.current();
+    }, timeout);
 
-    return () => cancelIdleCallback(idleId);
+    return () => clearTimeout(timer);
   }, [enabled, timeout]);
 }

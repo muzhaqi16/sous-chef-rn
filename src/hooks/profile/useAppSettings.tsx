@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {useStore} from '#store';
 import {
   useGetUserSettingsQuery,
@@ -6,6 +6,7 @@ import {
   AppTheme,
   UnitSystem,
 } from '#generated';
+import {storage} from '#/storage/mmkv';
 
 export interface AppSettings {
   theme: AppTheme;
@@ -90,6 +91,19 @@ export const useAppSettings = () => {
   }, [updateMultipleSettings]);
 
   const memoizedSettings = useMemo(() => getAppSettings(), [getAppSettings]);
+
+  // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
+  // without triggering the GetUserSettings GraphQL query at startup.
+  // - useShowTutorials reads 'user_show_tutorials' from MMKV
+  // - useOfflineMode reads 'user_offline_mode' from MMKV
+  useEffect(() => {
+    if (settings?.showTutorials !== undefined) {
+      storage.set('user_show_tutorials', settings.showTutorials);
+    }
+    if (settings?.offlineMode !== undefined) {
+      storage.set('user_offline_mode', settings.offlineMode);
+    }
+  }, [settings?.showTutorials, settings?.offlineMode]);
 
   return {
     settings: memoizedSettings,

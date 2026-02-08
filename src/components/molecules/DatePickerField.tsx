@@ -87,14 +87,15 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
       {error && <Text style={styles.errorText}>{error}</Text>}
 
       {showPicker && (
-        <DateTimePicker
-          value={value || new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
-          onChange={handleDateChange}
-        />
+          <DateTimePicker
+            style={styles.calendarPicker}
+            value={value || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            minimumDate={minimumDate}
+            maximumDate={maximumDate}
+            onChange={handleDateChange}
+          />
       )}
     </View>
   );
@@ -139,5 +140,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
+  },
+  calendarPicker: {
+    alignSelf: 'center',
   },
 }));

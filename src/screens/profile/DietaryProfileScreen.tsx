@@ -454,3 +454,5 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
   },
 }));
+
+export default DietaryProfileScreen;

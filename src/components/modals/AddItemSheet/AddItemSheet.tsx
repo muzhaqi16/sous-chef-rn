@@ -9,8 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppStore } from '#store/useAppStore';
-import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
+import { ItemSuggestion } from '#generated';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
   BottomSheetSearchBar,
@@ -18,6 +17,7 @@ import {
 } from '#components/molecules/BottomSheetSearchBar';
 import { ActionCard } from '#components/molecules/ActionCard';
 import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
+import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import type {
   AddItemSheetProps,
   BaseSuggestionItem,
@@ -60,9 +60,6 @@ export function AddItemSheet({
   const animationConfigs = useSharedBottomSheetConfigs();
   useBottomSheetBackHandler(bottomSheetRef, visible);
 
-  // Online status for autocomplete
-  const isOnline = useAppStore(state => state.isOnline);
-
   // Shared state management
   const state = useAddItemSheetState({
     visible,
@@ -76,18 +73,13 @@ export function AddItemSheet({
   // Use external exiting items if provided, otherwise use internal state
   const exitingItems = externalExitingItems ?? state.exitingItems;
 
-  // Autocomplete query for search
-  const [fetchItems, { data: autocompleteData, loading: searchLoading }] =
-    useAutocompleteItemsLazyQuery({ fetchPolicy: 'cache-and-network' });
-
-  const searchSuggestions =
-    autocompleteData?.autocompleteItems?.suggestions ?? [];
+  // Autocomplete search — debounceMs: 0 because BottomSheetSearchBar already debounces
+  const autocomplete = useItemAutocomplete({ debounceMs: 0 });
+  const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
 
   // Determine when to show search results vs suggestions
-  // Only show search results when we have results OR search finished with no results
-  // This prevents flickering by keeping suggestions visible until results arrive
-  const hasSearchQuery = state.searchQuery.length >= 2;
-  const hasSearchData = searchSuggestions.length > 0 || (hasSearchQuery && !searchLoading);
+  const hasSearchQuery = autocomplete.searchTerm.length >= 2;
+  const hasSearchData = autocomplete.displayItems.length > 0 || (hasSearchQuery && !autocomplete.isLoading);
   const showSearchResults = hasSearchQuery && hasSearchData;
   const showSuggestions = !showSearchResults;
 
@@ -95,13 +87,9 @@ export function AddItemSheet({
   const handleSearchChange = useCallback(
     (text: string) => {
       setSearchQuery(text);
-
-      // Only search when online and query is long enough
-      if (text.length >= 2 && isOnline) {
-        fetchItems({ variables: { input: { query: text, limit: 10 } } });
-      }
+      handleSearchTermChange(text);
     },
-    [isOnline, fetchItems, setSearchQuery],
+    [setSearchQuery, handleSearchTermChange],
   );
 
   // Control bottom sheet visibility
@@ -112,8 +100,9 @@ export function AddItemSheet({
       searchBarRef.current?.clear();
     } else {
       bottomSheetRef.current?.dismiss();
+      resetAutocomplete();
     }
-  }, [visible, contextId]);
+  }, [visible, contextId, resetAutocomplete]);
 
   // Wrap onAddManually to provide search value
   const handleAddManually = useCallback(() => {
@@ -128,8 +117,9 @@ export function AddItemSheet({
       // Clear search after adding
       searchBarRef.current?.clear();
       setSearchQuery('');
+      resetAutocomplete();
     },
-    [onQuickAddSearchSuggestion, setSearchQuery],
+    [onQuickAddSearchSuggestion, setSearchQuery, resetAutocomplete],
   );
 
   // Render a suggestion item with exit animation support
@@ -228,7 +218,7 @@ export function AddItemSheet({
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
               initialValue={initialSearchQuery}
-              isLoading={searchLoading && hasSearchQuery}
+              isLoading={autocomplete.isLoading && hasSearchQuery}
               rightActions={[
                 {
                   icon: 'qr-code-scanner',
@@ -241,8 +231,8 @@ export function AddItemSheet({
             {showSearchResults && (
               <ItemSuggestionsList
                 searchQuery={state.searchQuery}
-                suggestions={searchSuggestions}
-                loading={searchLoading}
+                suggestions={autocomplete.displayItems}
+                loading={autocomplete.isLoading}
                 addManuallyPosition={config.addManuallyPosition}
                 onAddManually={handleAddManually}
                 onSelectSuggestion={handleSelectSearchSuggestion}

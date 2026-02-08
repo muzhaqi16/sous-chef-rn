@@ -8,7 +8,7 @@
  * - Preserve data during failures
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -41,7 +41,7 @@ export function usePantryQuery(pantryId: string | undefined) {
   // Gate on isHomeSelectionReady to prevent queries with stale IDs after home deletion
   const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut && isHomeSelectionReady;
 
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useGetPantryQuery({
+  const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: {
       id: pantryId || '',
       itemsFirst: 25, // Initial page size
@@ -50,9 +50,13 @@ export function usePantryQuery(pantryId: string | undefined) {
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
+    // PERF: Removed notifyOnNetworkStatusChange to eliminate 2 extra re-renders
+    // per mount (loading→ready transitions). Manual isRefreshing tracks pull-to-refresh instead.
     errorPolicy: 'ignore', // Return cached data on network errors
   });
+
+  // Track pull-to-refresh state manually (replaces notifyOnNetworkStatusChange)
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Normalize pantry data to flatten Connection pattern
   const normalizedPantry = useMemo(
@@ -86,9 +90,14 @@ export function usePantryQuery(pantryId: string | undefined) {
     cursorVariableName: 'itemsCursor',
   });
 
-  // Memoize refetch to prevent unnecessary re-renders
+  // Wrap refetch to track pull-to-refresh state
   const memoizedRefetch = useCallback(async () => {
-    await refetch();
+    setIsRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [refetch]);
 
   return {
@@ -96,7 +105,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     filteredItems,
     normalizedPantry,
     loading,
-    networkStatus,
+    isRefreshing,
     error,
     refetch: memoizedRefetch,
 

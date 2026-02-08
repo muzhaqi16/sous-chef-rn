@@ -5,7 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens } from 'react-native-screens';
+import { enableScreens, enableFreeze } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { client } from '#/apollo/client';
@@ -17,6 +17,7 @@ import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -33,6 +34,8 @@ import { initializeDeviceId } from '#/utils/deviceId';
 
 // Enable native screens for better performance
 enableScreens();
+// Freeze inactive stack screens to suspend their React subtrees
+enableFreeze();
 
 const App = () => {
   const isHydrated = useAppStore(selectHydrated);
@@ -75,6 +78,18 @@ const App = () => {
       // Initialize telemetry service
       Telemetry.updateConfig(getTelemetryConfig());
       Telemetry.initialize();
+
+      // Report JS startup duration (time from index.js entry to store hydration)
+      if (global.__APP_START_TIMESTAMP) {
+        const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
+        Telemetry.histogram('app_startup_duration_ms', startupDuration, {
+          type: 'js_to_hydrated',
+        });
+        global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
+      }
+
+      // Initialize native performance metrics (startup marks, bundle load times)
+      NativePerformanceService.initialize();
 
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');

@@ -27,8 +27,10 @@ import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 const RecipeDetailScreen: React.FC = () => {
+  useScreenTransition('RecipeDetail');
   const { theme } = useUnistyles();
   const {
     goBack,

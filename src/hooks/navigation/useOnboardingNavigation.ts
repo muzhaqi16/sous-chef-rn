@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useShallow } from 'zustand/shallow';
 import { useAppStore, selectUser, selectNavigationUtils } from '#store/useAppStore';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
@@ -30,7 +30,7 @@ export function useOnboardingNavigation() {
   const user = useAppStore(selectUser);
 
   const getCurrentStepIndex = useCallback((screenName: string) => {
-    return ONBOARDING_STEPS.indexOf(screenName as any);
+    return ONBOARDING_STEPS.indexOf(screenName);
   }, []);
 
   const navigateToNextStep = useCallback(
@@ -38,7 +38,7 @@ export function useOnboardingNavigation() {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex < ONBOARDING_STEPS.length - 1) {
         const nextScreen = ONBOARDING_STEPS[currentIndex + 1];
-        navigation.navigate(nextScreen as any);
+        navigation.dispatch(CommonActions.navigate(nextScreen));
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[nextScreen];
@@ -55,7 +55,7 @@ export function useOnboardingNavigation() {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex > 0) {
         const previousScreen = ONBOARDING_STEPS[currentIndex - 1];
-        navigation.navigate(previousScreen as any);
+        navigation.dispatch(CommonActions.navigate(previousScreen));
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[previousScreen];
@@ -69,8 +69,8 @@ export function useOnboardingNavigation() {
 
   const skipToStep = useCallback(
     (stepName: string) => {
-      if (ONBOARDING_STEPS.includes(stepName as any)) {
-        navigation.navigate(stepName as any);
+      if (ONBOARDING_STEPS.includes(stepName)) {
+        navigation.dispatch(CommonActions.navigate(stepName));
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[stepName];
@@ -105,9 +105,9 @@ export function useOnboardingNavigation() {
 
   // Helper to get progress percentage
   const getProgressPercentage = useCallback(() => {
-    const currentStep =
-      navigation.getState()?.routes[navigation.getState()?.index ?? 0]?.name;
-    const currentIndex = ONBOARDING_STEPS.indexOf(currentStep as any);
+    const state = navigation.getState();
+    const currentStep = state?.routes[state?.index ?? 0]?.name;
+    const currentIndex = ONBOARDING_STEPS.indexOf(currentStep as string);
 
     if (currentIndex === -1) return 0;
     return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);

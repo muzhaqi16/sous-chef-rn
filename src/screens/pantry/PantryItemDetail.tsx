@@ -19,7 +19,7 @@ import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
@@ -30,6 +30,7 @@ import { Header } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -105,9 +106,10 @@ const formatCurrency = (amount?: number | null): string | null => {
   return `$${amount.toFixed(2)}`;
 };
 
-export const PantryItemDetail: React.FC<{
-  route: { params: PantryStackParamList['PantryItemDetail'] };
-}> = ({ route }) => {
+export const PantryItemDetail: React.FC<StaticScreenProps<{
+  itemId: string;
+}>> = ({ route }) => {
+  useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
   const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();
@@ -170,7 +172,7 @@ export const PantryItemDetail: React.FC<{
 
   // Fetch suggested recipes based on pantry item - use cache when available
   useEffect(() => {
-    const itemName = item?.item?.name;
+    const itemName = item?.itemName;
     if (!itemName) return;
 
     // Check cache first
@@ -180,6 +182,8 @@ export const PantryItemDetail: React.FC<{
       return;
     }
 
+    const controller = new AbortController();
+
     // Cache miss - fetch from API
     const fetchRecipes = async () => {
       setLoadingRecipes(true);
@@ -188,13 +192,14 @@ export const PantryItemDetail: React.FC<{
           query: itemName,
           number: 5,
           addRecipeInformation: true,
-        });
+        }, controller.signal);
         const results = recipes.results as unknown as RecipeInformation[];
         setSuggestedRecipes(results);
 
         // Cache the results
         setCachedSuggestions(itemName, results);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error('Failed to fetch suggested recipes:', error);
       } finally {
         setLoadingRecipes(false);
@@ -202,7 +207,9 @@ export const PantryItemDetail: React.FC<{
     };
 
     fetchRecipes();
-  }, [item?.item?.name, getCachedSuggestions, setCachedSuggestions]);
+
+    return () => controller.abort();
+  }, [item?.itemName, getCachedSuggestions, setCachedSuggestions]);
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
@@ -254,7 +261,7 @@ export const PantryItemDetail: React.FC<{
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.quantity || 1,
             unitId: data?.pantryItem?.unit.id ?? '',
-            itemName: data?.pantryItem?.item?.name || '',
+            itemName: data?.pantryItem?.itemName || '',
           },
         },
       });
@@ -362,7 +369,7 @@ export const PantryItemDetail: React.FC<{
         {/* Title Row - Name */}
         <View style={styles.titleRow}>
           <Text style={styles.itemTitle} numberOfLines={2}>
-            {item.item?.name || item.itemName}
+            {item.itemName}
           </Text>
         </View>
 
@@ -427,7 +434,7 @@ export const PantryItemDetail: React.FC<{
               onPress={() =>
                 navigateTo.nutritionScreen({
                   itemId: item.id,
-                  itemName: item.item?.name || item.itemName,
+                  itemName: item.itemName,
                   nutritions: item.item?.nutritions,
                 })
               }

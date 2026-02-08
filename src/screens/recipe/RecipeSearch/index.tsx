@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Image, FlatList, Text, TouchableOpacity } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
@@ -12,6 +12,8 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useRecipeSearch } from './useRecipeSearch';
 import { OfflineGate } from '#components/atoms/OfflineGate';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 const INGREDIENT_ITEM_HEIGHT = 56;
 
@@ -74,6 +76,7 @@ const RecipeSearchContent: React.FC<{
 };
 
 export const RecipeSearch: React.FC = () => {
+  useScreenTransition('RecipeSearch');
   const { theme } = useUnistyles();
   const {
     navigate,
@@ -103,7 +106,7 @@ export const RecipeSearch: React.FC = () => {
 
   const renderIngredientItem = useCallback(
     ({ item }: { item: any }) => {
-      const itemName = item.item?.name || item.itemName || '';
+      const itemName = item.itemName || '';
       return (
         <IngredientItem
           name={itemName}
@@ -123,7 +126,7 @@ export const RecipeSearch: React.FC = () => {
       ...item,
       leftElement: item.imageUrl ? (
         <View style={commonStyles.listItemImageContainerCompact}>
-          <Image source={{ uri: item.imageUrl }} style={commonStyles.listItemImageCompact} />
+          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} />
         </View>
       ) : undefined,
     }));

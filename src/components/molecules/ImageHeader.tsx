@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Image } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 export const ImageHeader: React.FC = () => {
   return (
     <View style={styles.header}>
-      <Image
-        alt="App Logo"
+      <CachedImage
+        accessibilityLabel="App Logo"
         resizeMode="contain"
         style={styles.headerImg}
-        source={{ uri: 'https://assets.withfra.me/SignIn.2.png' }}
+        uri="https://assets.withfra.me/SignIn.2.png"
       />
     </View>
   );

@@ -5,8 +5,10 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import {Button} from '#components/base/Button';
 import {useAppStore} from '#store/useAppStore';
 import {useCompleteOnboardingMutation} from '#generated';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const OnboardingCompleteScreen = () => {
+  useScreenTransition('OnboardingCompleteScreen');
   const user = useAppStore(state => state.user);
   const updateUser = useAppStore(state => state.updateUser);
   const [isCompleting, setIsCompleting] = useState(false);

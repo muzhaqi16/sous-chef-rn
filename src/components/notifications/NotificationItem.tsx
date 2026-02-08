@@ -2,7 +2,7 @@ import React, {useCallback, useMemo} from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {formatDistanceToNow} from 'date-fns';
+import {formatDistanceToNow} from 'date-fns/formatDistanceToNow';
 import {NotificationItem as NotificationType} from '#store/slices/notificationSlice';
 import {getNotificationIcon} from '#utils/notifications/notificationHelpers';
 import {safeParseDate} from '#utils/dateUtils';

@@ -26,7 +26,10 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // Restore persisted cache if available
+  // PERFORMANCE: Restore cache synchronously (~50ms for 131 entities).
+  // This is critical because cache-first queries (GetNotificationPreferences,
+  // GetUserProfile) will miss and hit the network if cache is empty at query time,
+  // adding 600-2000ms per query. The ~50ms sync cost saves seconds of network time.
   const persistedCache = apolloCachePersistence.load();
   if (persistedCache) {
     logger.info('📦 Apollo: Restoring cache from storage');

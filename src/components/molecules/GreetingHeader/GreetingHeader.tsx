@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
-import { View, Text, TextInput, Pressable, Image } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 import type { GreetingHeaderProps } from './types';
 
 /**
@@ -91,7 +92,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           testID={`${testIDPrefix}-avatar`}
         >
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <CachedImage uri={avatarUrl} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{displayInitial}</Text>

@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Image, Text } from 'react-native';
+import { View, Text } from 'react-native';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { StorageState } from '#generated';
 
 // Location type for filtering
@@ -17,6 +18,7 @@ export interface ExpirationStatus {
 
 interface PantryItem {
   id: string;
+  itemName?: string | null;
   expiresAt?: string | null;
   createdAt?: string | null;
   quantity: number;
@@ -328,7 +330,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
 
       return {
         id: item.id,
-        title: item.item?.name || '',
+        title: item.itemName || '',
         subtitle: buildSubtitle(),
         rightElement: (
           <View style={{ alignItems: 'flex-end' }}>
@@ -368,9 +370,10 @@ export function usePantryItemTransformation<T extends PantryItem>(
               { backgroundColor: theme.colors.surface },
             ]}
           >
-            <Image
-              source={{ uri: imageUrl }}
-              style={[commonStyles.listItemImage, { resizeMode: 'contain' }]}
+            <CachedImage
+              uri={imageUrl}
+              style={commonStyles.listItemImage}
+              resizeMode="contain"
             />
           </View>
         ) : undefined,

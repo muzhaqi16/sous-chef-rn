@@ -539,3 +539,5 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
 }));
+
+export default DeleteAccountScreen;

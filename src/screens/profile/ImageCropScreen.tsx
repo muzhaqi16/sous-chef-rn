@@ -15,7 +15,7 @@ import Animated, {
   withSpring,
   clamp,
 } from 'react-native-reanimated';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -24,22 +24,14 @@ import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 
-type RootStackParamList = {
-  ImageCrop: {
-    imageFile: ImageFile;
-  };
-};
-
-type ImageCropRouteProp = RouteProp<RootStackParamList, 'ImageCrop'>;
-
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 
 export const ImageCropScreen = () => {
   const { goBack } = useSafeNavigation();
-  const route = useRoute<ImageCropRouteProp>();
+  const route = useRoute();
+  const { imageFile } = route.params as { imageFile: ImageFile };
   const { theme } = useUnistyles();
-  const { imageFile } = route.params;
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
@@ -493,3 +485,5 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
   },
 }));
+
+export default ImageCropScreen;

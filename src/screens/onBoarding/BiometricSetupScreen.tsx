@@ -7,8 +7,10 @@ import { useAuth } from '#hooks/auth/useAuth';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { useAppStore, selectUser } from '#store/useAppStore';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const BiometricSetupScreen = () => {
+  useScreenTransition('BiometricSetupScreen');
   const { theme } = useUnistyles();
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useAppStore(selectUser);

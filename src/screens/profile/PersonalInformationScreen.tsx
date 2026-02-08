@@ -146,3 +146,5 @@ export const PersonalInformationScreen: React.FC = () => {
     </ProfileScreenWrapper>
   );
 };
+
+export default PersonalInformationScreen;

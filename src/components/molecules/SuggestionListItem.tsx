@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -7,6 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
@@ -101,7 +102,7 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
       >
         <View style={styles.imageContainer}>
           {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.image} />
+            <CachedImage uri={imageUrl} style={styles.image} />
           ) : (
             <View style={styles.imagePlaceholder}>
               <Icon
@@ -162,7 +163,6 @@ const styles = StyleSheet.create(theme => ({
   image: {
     width: 40,
     height: 40,
-    resizeMode: 'cover',
   },
   imagePlaceholder: {
     width: 40,

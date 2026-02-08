@@ -1,13 +1,15 @@
-import {useNavigation} from '@react-navigation/native'; // Use the hook instead
+import {useNavigation, CommonActions} from '@react-navigation/native';
 import {useCallback} from 'react';
 import {useAppStore} from '#store/useAppStore';
 import {useStore} from '#store';
 
 export function useAuthNavigation() {
-  const navigation = useNavigation(); // Get navigation from the hook
+  const navigation = useNavigation();
   const setAuth = useAppStore(state => state.setAuth);
   const setRememberMe = useAppStore(state => state.setRememberMe);
-  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
+  const setUserNavigationState = useAppStore(
+    state => state.setUserNavigationState,
+  );
 
   const handleSuccessfulLogin = useCallback(
     (authData: any, rememberMe?: boolean) => {
@@ -65,16 +67,15 @@ export function useAuthNavigation() {
   }, []);
 
   const navigateToForgotPassword = useCallback(() => {
-    // Use the navigation from the hook
-    navigation.navigate('ForgotPassword' as never);
+    navigation.dispatch(CommonActions.navigate('ForgotPassword'));
   }, [navigation]);
 
   const navigateToLogin = useCallback(() => {
-    navigation.navigate('Login' as never);
+    navigation.dispatch(CommonActions.navigate('Login'));
   }, [navigation]);
 
   const navigateToSignUp = useCallback(() => {
-    navigation.navigate('SignUp' as never);
+    navigation.dispatch(CommonActions.navigate('SignUp'));
   }, [navigation]);
 
   return {

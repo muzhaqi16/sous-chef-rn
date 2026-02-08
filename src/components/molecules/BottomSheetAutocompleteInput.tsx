@@ -3,10 +3,9 @@ import React, {
   useRef,
   useCallback,
   useEffect,
-  useMemo,
   memo,
 } from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -54,6 +53,9 @@ interface BottomSheetAutocompleteInputProps<T> {
   renderEmptyComponent?: () => React.ReactElement;
   renderLoadingComponent?: () => React.ReactElement;
 
+  // Footer
+  listFooterComponent?: React.ReactElement | null;
+
   // Optional callbacks
   onSearchChange?: (searchTerm: string) => void;
   onModalOpen?: () => void;
@@ -90,17 +92,18 @@ export function BottomSheetAutocompleteInput<T>({
   renderEmptyComponent,
   renderLoadingComponent,
 
+  // Footer
+  listFooterComponent,
+
   // Callbacks
   onSearchChange,
   onModalOpen,
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
-  const { height } = useWindowDimensions();
   const { theme } = useUnistyles();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
-  const lastDataRef = useRef<T[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
   const animationConfigs = useSharedBottomSheetConfigs();
@@ -140,25 +143,6 @@ export function BottomSheetAutocompleteInput<T>({
     showAutocomplete,
     onModalOpen,
   ]);
-
-  // Update lastDataRef when we get new data
-  useEffect(() => {
-    if (data.length > 0) {
-      lastDataRef.current = data;
-    }
-  }, [data]);
-
-  // Compute display data - show previous results while loading to prevent flickering
-  const displayData = useMemo(() => {
-    if (data.length > 0) {
-      return data;
-    }
-    // Keep showing last results while loading to prevent flickering
-    if (loading && lastDataRef.current.length > 0) {
-      return lastDataRef.current;
-    }
-    return data;
-  }, [data, loading]);
 
   // Modal only closes via explicit user action:
   // - handleSelectItem (user selects an item)
@@ -226,7 +210,7 @@ export function BottomSheetAutocompleteInput<T>({
     if (!isOnline) {
       return (
         <BottomSheetView
-          style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+          style={styles.messageContainer}
         >
           <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
           <Text style={styles.emptyText}>Search unavailable offline</Text>
@@ -239,7 +223,7 @@ export function BottomSheetAutocompleteInput<T>({
 
     return (
       <BottomSheetView
-        style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+        style={styles.messageContainer}
       >
         <Text style={styles.emptyText}>{emptyText}</Text>
         {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
@@ -249,7 +233,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   const defaultLoadingComponent = () => (
     <BottomSheetView
-      style={[styles.messageContainer, { minHeight: height * 0.5 }]}
+      style={styles.messageContainer}
     >
       <Text style={styles.loadingText}>Loading...</Text>
     </BottomSheetView>
@@ -283,49 +267,51 @@ export function BottomSheetAutocompleteInput<T>({
         handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         backgroundStyle={{ backgroundColor: theme.colors.surface }}
       >
-        <BottomSheetFlatList
-          data={displayData}
-          keyExtractor={keyExtractor}
-          renderItem={({ item }: { item: T }) => {
-            const element = renderItem(item);
-            // Clone the element and override onPress to ensure bottom sheet closes
-            return React.cloneElement(element as React.ReactElement<any>, {
-              onPress: () => handleSelectItem(item),
-            });
-          }}
-          ItemSeparatorComponent={AutocompleteSeparator}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-          // Performance optimizations
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={true}
-          initialNumToRender={10}
-          updateCellsBatchingPeriod={50}
-          ListHeaderComponent={
-            <View style={styles.headerSection}>
-              <Text style={styles.autocompleteTitle}>{title}</Text>
+        <BottomSheetView style={{ flex: 1 }}>
+          <View style={styles.headerSection}>
+            <Text style={styles.autocompleteTitle}>{title}</Text>
 
-              <BottomSheetTextInput
-                style={styles.bottomSheetInput}
-                value={searchTerm}
-                onChangeText={handleBottomSheetTextChange}
-                placeholder={searchPlaceholder}
-                autoFocus={showAutocomplete}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmitCustomValue}
-                testID={testID ? `${testID}-search` : undefined}
-                autoCapitalize={autoCapitalize}
-              />
-            </View>
-          }
-          ListEmptyComponent={
-            loading
-              ? renderLoadingComponent?.() || defaultLoadingComponent()
-              : renderEmptyComponent?.() || defaultEmptyComponent()
-          }
-        />
+            <BottomSheetTextInput
+              style={styles.bottomSheetInput}
+              value={searchTerm}
+              onChangeText={handleBottomSheetTextChange}
+              placeholder={searchPlaceholder}
+              autoFocus={showAutocomplete}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmitCustomValue}
+              testID={testID ? `${testID}-search` : undefined}
+              autoCapitalize={autoCapitalize}
+            />
+          </View>
+          <BottomSheetFlatList
+            data={data}
+            keyExtractor={keyExtractor}
+            renderItem={({ item }: { item: T }) => (
+              <Pressable
+                onPress={() => handleSelectItem(item)}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                {renderItem(item)}
+              </Pressable>
+            )}
+            ItemSeparatorComponent={AutocompleteSeparator}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            // Performance optimizations
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true}
+            initialNumToRender={10}
+            updateCellsBatchingPeriod={50}
+            ListFooterComponent={listFooterComponent}
+            ListEmptyComponent={
+              loading
+                ? renderLoadingComponent?.() || defaultLoadingComponent()
+                : renderEmptyComponent?.() || defaultEmptyComponent()
+            }
+          />
+        </BottomSheetView>
       </BottomSheetModal>
     </View>
   );
@@ -338,7 +324,6 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: theme.spacing.lg,
-    flexGrow: 1,
     backgroundColor: theme.colors.surface,
   },
   autocompleteTitle: {

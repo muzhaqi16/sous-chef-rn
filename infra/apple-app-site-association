@@ -1,0 +1,28 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "KRR7955LB8.dev.souschef.app"
+        ],
+        "paths": [
+          "/verify-email/*",
+          "/reset-password/*",
+          "/accept-invitation/*",
+          "/pantry",
+          "/pantry/*",
+          "/shopping",
+          "/shopping/*",
+          "/notifications",
+          "/notifications/*",
+          "/profile",
+          "/scan",
+          "/scan/*",
+          "/home-management",
+          "/home-management/*"
+        ]
+      }
+    ]
+  }
+}

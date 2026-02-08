@@ -75,10 +75,10 @@ export function useAllPendingInvites(userId?: string) {
     }
   }, [userId, fetchShoppingListInvites, fetchHomeInvites]);
 
-  // PERFORMANCE: Defer invitation queries by 2500ms to avoid competing with
-  // screen-critical queries (Pantry, StorageLocations) at startup.
-  // Invitations are not time-critical - users can wait a few seconds to see them.
-  useDeferredCallback(fetchInvitations, !!userId, 2500);
+  // PERFORMANCE: Defer invitation queries by 10000ms to avoid competing with
+  // screen-critical queries (GetHomes, GetPantry) at startup.
+  // Invitations are not time-critical - users can wait several seconds to see them.
+  useDeferredCallback(fetchInvitations, !!userId, 10000);
 
   // Reset fetch flag on logout so queries run again on next login
   useEffect(() => {
