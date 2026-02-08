@@ -176,7 +176,7 @@ const RootStack = createNativeStackNavigator({
         },
         ResetPassword: {
           screen: ResetPasswordScreen,
-          linking: 'reset-password/:token',
+          linking: 'reset-password',
         },
         AcceptInvitation: {
           screen: AcceptInvite,
