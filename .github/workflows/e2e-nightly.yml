@@ -11,7 +11,7 @@ jobs:
   # Run all test suites on iOS
   full-suite-ios:
     name: Full E2E Suite (iOS)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     strategy:
       fail-fast: false

@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_with_signing:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version

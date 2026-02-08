@@ -11,7 +11,7 @@ jobs:
   # iOS E2E Tests
   e2e-ios:
     name: E2E Tests (iOS)
-    runs-on: macos-14 # Latest macOS with Apple Silicon
+    runs-on: macos-15
     timeout-minutes: 60
 
     steps:
