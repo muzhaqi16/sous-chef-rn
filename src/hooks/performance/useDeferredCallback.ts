@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Defers a callback using a two-phase approach: setTimeout + requestIdleCallback.
+ * Defers a callback execution using a simple timeout.
  *
- * Phase 1: Wait for the minimum timeout to elapse (ensures we're past the startup hot zone).
- * Phase 2: Wait for the JS thread to be idle (avoids competing with active renders/interactions).
+ * Waits for the specified timeout to elapse before executing the callback.
+ * This ensures we're past the startup hot zone before running background work.
  *
- * This is more reliable than requestIdleCallback alone (which is timer-based on iOS
- * due to RN issue #28602) and ensures a guaranteed minimum delay before execution.
+ * Previously used a two-phase approach (setTimeout + requestIdleCallback),
+ * but the inner requestIdleCallback added negligible value after long timeouts
+ * and had iOS reliability issues (RN #28602).
  *
- * @param callback - Function to call when idle
+ * @param callback - Function to call after timeout
  * @param enabled - Whether the callback should run (default: true)
- * @param timeout - Minimum time to wait before execution (default: 1000ms)
+ * @param timeout - Time to wait before execution (default: 1000ms)
  *
  * @example
  * ```tsx
@@ -31,28 +32,11 @@ export function useDeferredCallback(
 
   useEffect(() => {
     if (!enabled) return;
-    let cancelled = false;
-    let idleId: ReturnType<typeof requestIdleCallback> | null = null;
 
-    // Phase 1: Wait for minimum timeout
     const timer = setTimeout(() => {
-      // Phase 2: Wait for JS thread to be idle
-      idleId = requestIdleCallback(
-        () => {
-          if (!cancelled) {
-            callbackRef.current();
-          }
-        },
-        { timeout: 1000 },
-      );
+      callbackRef.current();
     }, timeout);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      if (idleId !== null) {
-        cancelIdleCallback(idleId);
-      }
-    };
+    return () => clearTimeout(timer);
   }, [enabled, timeout]);
 }

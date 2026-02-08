@@ -24,7 +24,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const { user, updateUser } = useAuth();
   const toast = useToast();
 
-  const { token } = route.params as EmailVerificationRouteParams;
+  const { token } = (route.params ?? {}) as Partial<EmailVerificationRouteParams>;
 
   const [verifyEmail] = useVerifyEmailMutation();
   const [isVerifying, setIsVerifying] = useState(true);
@@ -95,6 +95,8 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   };
 
   const handleRetry = () => {
+    if (!token) return;
+
     setIsVerifying(true);
     setVerificationResult(null);
     setErrorMessage('');

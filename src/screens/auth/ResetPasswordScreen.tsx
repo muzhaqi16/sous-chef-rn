@@ -48,7 +48,7 @@ export const ResetPasswordScreen: React.FC = () => {
   const { navigateToLogin } = useAuthNavigation();
   const toast = useToast();
 
-  const { token } = route.params as ResetPasswordRouteParams;
+  const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
 
   const [resetPassword] = useResetPasswordMutation();
   const [isSubmitting, setIsSubmitting] = useState(false);

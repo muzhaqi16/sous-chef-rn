@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 interface AutocompleteRowProps {
   icon?: string;
@@ -13,8 +14,6 @@ interface AutocompleteRowProps {
   highlighted?: boolean;
 }
 
-const TRANSPARENT_PIXEL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
 export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
   icon,
@@ -30,10 +29,9 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     {icon != null && <Text style={styles.icon}>{icon}</Text>}
     {image !== undefined &&
       (image ? (
-        <Image
-          source={{ uri: image }}
+        <CachedImage
+          uri={image}
           style={styles.image}
-          defaultSource={{ uri: TRANSPARENT_PIXEL }}
         />
       ) : (
         <View style={styles.imagePlaceholder} />

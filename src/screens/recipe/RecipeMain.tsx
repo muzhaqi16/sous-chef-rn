@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { View, Image, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
+import { View, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -31,9 +31,14 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useStore } from '#store';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 export const RecipeMain: React.FC = React.memo(() => {
+  useScreenTransition('RecipeMain');
+  useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,7 +236,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
           <View style={commonStyles.listItemImageContainerCompact}>
-            <Image source={{ uri: imageUrl }} style={commonStyles.listItemImageCompact} />
+            <CachedImage uri={imageUrl} style={commonStyles.listItemImageCompact} />
           </View>
         ) : undefined,
       };

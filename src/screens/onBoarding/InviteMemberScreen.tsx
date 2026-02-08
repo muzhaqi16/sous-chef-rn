@@ -12,6 +12,7 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 type InviteEntry = {
   id: string;
@@ -20,6 +21,7 @@ type InviteEntry = {
 };
 
 export const InviteMemberScreen = () => {
+  useScreenTransition('InviteMemberScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
   const { user } = useAuth();
 

@@ -3,17 +3,13 @@ import {
   CommonActions,
   StackActions,
 } from '@react-navigation/native';
-import type { RootStackParamList } from '#/navigation/RootNavigator';
 
-export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+export const navigationRef = createNavigationContainerRef();
 
 class NavigationServiceClass {
-  navigate<T extends keyof RootStackParamList>(
-    name: T,
-    params?: RootStackParamList[T],
-  ) {
+  navigate(name: string, params?: object) {
     if (navigationRef.isReady()) {
-      navigationRef.navigate(name as any, params);
+      navigationRef.dispatch(CommonActions.navigate(name, params));
     }
   }
 
@@ -34,21 +30,15 @@ class NavigationServiceClass {
     }
   }
 
-  push<T extends keyof RootStackParamList>(
-    name: T,
-    params?: RootStackParamList[T],
-  ) {
+  push(name: string, params?: object) {
     if (navigationRef.isReady()) {
-      navigationRef.dispatch(StackActions.push(name as string, params));
+      navigationRef.dispatch(StackActions.push(name, params));
     }
   }
 
-  replace<T extends keyof RootStackParamList>(
-    name: T,
-    params?: RootStackParamList[T],
-  ) {
+  replace(name: string, params?: object) {
     if (navigationRef.isReady()) {
-      navigationRef.dispatch(StackActions.replace(name as string, params));
+      navigationRef.dispatch(StackActions.replace(name, params));
     }
   }
 
@@ -58,9 +48,9 @@ class NavigationServiceClass {
     }
   }
 
-  preload(name: keyof RootStackParamList) {
+  preload(name: string) {
     if (navigationRef.isReady()) {
-      navigationRef.dispatch(CommonActions.preload(name as string));
+      navigationRef.dispatch(CommonActions.preload(name));
     }
   }
 }

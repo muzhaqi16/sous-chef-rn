@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -12,6 +12,8 @@ import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { commonStyles } from '#/styles/commonStyles';
 import { parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 type RouteParams = {
   listId: string;
@@ -21,6 +23,7 @@ type RouteParams = {
 export const ShoppingListItemDetail: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
+  useScreenTransition('ShoppingListItemDetail');
   const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -91,8 +94,8 @@ export const ShoppingListItemDetail: React.FC<{
                 imageHeight={160}
               />
             ) : item.item?.imageUrl ? (
-              <Image
-                source={{ uri: item.item.imageUrl }}
+              <CachedImage
+                uri={item.item.imageUrl}
                 style={styles.itemImage}
               />
             ) : (

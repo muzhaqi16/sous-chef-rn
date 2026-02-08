@@ -39,3 +39,11 @@ declare function requestIdleCallback(
  * Cancels a previously scheduled idle callback.
  */
 declare function cancelIdleCallback(handle: number): void;
+
+/**
+ * Global properties added for performance tracking
+ */
+declare namespace globalThis {
+  // eslint-disable-next-line no-var
+  var __APP_START_TIMESTAMP: number | undefined;
+}

@@ -5,12 +5,11 @@ import { useGetHomesLazyQuery, useSetDefaultHomeMutation } from '#generated';
 import {
   useAppStore,
   selectPantryState,
-  selectHasInitializedHomeData,
-  selectSetHasInitializedHomeData,
   selectIsHomeSelectionReady,
   selectSetIsHomeSelectionReady,
   selectIsLoggingOut,
 } from '#store/useAppStore';
+import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import {
@@ -51,13 +50,6 @@ export const useDefaultHome = () => {
     }
     wasLoggingOutRef.current = isLoggingOut;
   }, [isLoggingOut]);
-
-  // PERFORMANCE: Use Zustand to track if data has been fetched
-  // This survives component remounts (unlike refs) and prevents duplicate queries
-  const hasInitializedHomeData = useAppStore(selectHasInitializedHomeData);
-  const setHasInitializedHomeData = useAppStore(
-    selectSetHasInitializedHomeData,
-  );
 
   // Home selection ready state - gates pantry queries
   const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
@@ -101,8 +93,11 @@ export const useDefaultHome = () => {
   // Execute query ONCE when authenticated to populate Apollo cache
   // This runs on every app startup (hasInitializedHomeData resets) to ensure
   // the cache has home data, even if selectedHomeId is already persisted
+  // PERF: Read hasInitializedHomeData non-reactively to avoid triggering a full
+  // re-render of PantryMainScreen when this flag changes (false→true)
   useEffect(() => {
-    if (canAttemptQueries && !hasInitializedHomeData) {
+    const { hasInitializedHomeData: hasInitialized, setHasInitializedHomeData } = useStore.getState();
+    if (canAttemptQueries && !hasInitialized) {
       setHasInitializedHomeData(true);
       // Pass network-only override to bypass cache on login
       // This ensures we get fresh data for the new user, not cached data from previous user
@@ -112,7 +107,7 @@ export const useDefaultHome = () => {
         fetchPolicy: 'network-only',
       });
     }
-  }, [canAttemptQueries, hasInitializedHomeData, setHasInitializedHomeData, getHomes]);
+  }, [canAttemptQueries, getHomes]);
 
   // Preserve homes data even when query fails - prevents cascade failures
   // Extract nodes from connection type (homes returns HomeConnection)

@@ -33,8 +33,10 @@ import {
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const HomeManagement: React.FC = () => {
+  useScreenTransition('HomeManagement');
   const { goBack, navigate } = useAppNavigation();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();

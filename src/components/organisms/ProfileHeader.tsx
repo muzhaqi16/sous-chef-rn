@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
 import { Icon } from '#/utils/iconUtils';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;
@@ -30,14 +31,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       />
       <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
+          <CachedImage
+            uri={avatarUrl}
             style={styles.avatar}
-            resizeMode="cover"
-            onError={() =>
+            onFailure={() =>
               console.log('Avatar image failed to load:', avatarUrl)
             }
-            onLoad={() => {}}
           />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>

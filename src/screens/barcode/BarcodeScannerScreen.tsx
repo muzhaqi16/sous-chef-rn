@@ -22,7 +22,7 @@ import {
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '#hooks/useBarcodeScanner';
 import BarcodeMask from '#components/organisms/BarcodeMask';
@@ -32,9 +32,11 @@ import { HapticService } from '#services/haptic/HapticService';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const BarcodeScannerScreen: React.FC<{
-  route: { params?: BarcodeStackParamList['BarcodeScanner'] };
-}> = ({ route }) => {
+export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
+  source?: 'pantry' | 'shoppingList';
+  pantryId?: string;
+  shoppingListId?: string;
+} | undefined>> = ({ route }) => {
   const { navigate, goBack, navigation } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();

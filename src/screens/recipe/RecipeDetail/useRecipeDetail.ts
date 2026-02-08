@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRoute } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
-import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
@@ -29,7 +27,13 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
 
-type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
+type RecipeDetailParams = {
+  recipeId?: string;
+  externalSource?: string;
+  externalId?: string;
+  sourceTab?: 'Pantry' | 'ShoppingList' | 'Recipe';
+  sourcePantryItemId?: string;
+};
 
 export interface RecipeDisplayData {
   title: string;
@@ -50,9 +54,10 @@ export interface RecipeDisplayData {
 }
 
 export function useRecipeDetail() {
-  const route = useRoute() as RecipeDetailRouteProp;
+  const route = useRoute();
+  const params = route.params as RecipeDetailParams | undefined;
   const { goBack } = useAppNavigation();
-  const { recipeId, externalSource, externalId } = route.params;
+  const { recipeId, externalSource, externalId } = params ?? {};
 
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } =

@@ -17,6 +17,7 @@ import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -77,6 +78,18 @@ const App = () => {
       // Initialize telemetry service
       Telemetry.updateConfig(getTelemetryConfig());
       Telemetry.initialize();
+
+      // Report JS startup duration (time from index.js entry to store hydration)
+      if (global.__APP_START_TIMESTAMP) {
+        const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
+        Telemetry.histogram('app_startup_duration_ms', startupDuration, {
+          type: 'js_to_hydrated',
+        });
+        global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
+      }
+
+      // Initialize native performance metrics (startup marks, bundle load times)
+      NativePerformanceService.initialize();
 
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');

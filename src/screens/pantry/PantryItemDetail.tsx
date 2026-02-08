@@ -19,7 +19,7 @@ import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
@@ -30,6 +30,7 @@ import { Header } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -105,9 +106,10 @@ const formatCurrency = (amount?: number | null): string | null => {
   return `$${amount.toFixed(2)}`;
 };
 
-export const PantryItemDetail: React.FC<{
-  route: { params: PantryStackParamList['PantryItemDetail'] };
-}> = ({ route }) => {
+export const PantryItemDetail: React.FC<StaticScreenProps<{
+  itemId: string;
+}>> = ({ route }) => {
+  useScreenTransition('PantryItemDetail');
   const itemId = route.params.itemId;
   const { goBack, navigateTo, navigate } = useAppNavigation();
   const { theme } = useUnistyles();

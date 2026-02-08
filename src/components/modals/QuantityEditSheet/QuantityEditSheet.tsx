@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, Keyboard } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -8,6 +8,7 @@ import {
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { CachedImage } from '#components/atoms/CachedImage';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
@@ -290,10 +291,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         {item && (
           <View style={styles.header}>
             {item.imageUrl && (
-              <Image
-                source={{ uri: item.imageUrl }}
+              <CachedImage
+                uri={item.imageUrl}
                 style={styles.itemImage}
-                resizeMode="cover"
               />
             )}
             <View style={styles.headerText}>

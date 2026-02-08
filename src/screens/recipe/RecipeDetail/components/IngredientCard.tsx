@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 interface IngredientCardProps {
   ingredient: any;
@@ -33,7 +34,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
       activeOpacity={0.7}
     >
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+        <CachedImage uri={imageUrl} style={styles.image} />
       ) : (
         <View style={styles.imagePlaceholder}>
           <Ionicons name="leaf-outline" size={32} color={theme.colors.textSecondary} />

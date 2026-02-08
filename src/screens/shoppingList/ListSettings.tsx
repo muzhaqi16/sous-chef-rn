@@ -36,11 +36,11 @@ import {
   getShoppingListOwnerInfo,
 } from '#utils/ownershipHelpers';
 
-import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 
-export const ListSettings: React.FC<{
-  route: { params?: ShoppingListStackParamList['ListSettings'] };
-}> = ({ route }) => {
+export const ListSettings: React.FC<StaticScreenProps<{
+  listId?: string;
+} | undefined>> = ({ route }) => {
   const { theme } = useUnistyles();
   const listId = route.params?.listId;
   const { navigate, goBack } = useAppNavigation();

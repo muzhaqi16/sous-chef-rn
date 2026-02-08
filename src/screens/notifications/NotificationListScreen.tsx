@@ -13,17 +13,16 @@ import {
   NotificationItem as NotificationType,
   NotificationCategory,
 } from '#store/slices/notificationSlice';
-import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
   groupNotificationsByDate,
   createSectionListData,
 } from '#utils/notificationGrouping';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
-export const NotificationListScreen: React.FC<{
-  route: { params?: NotificationStackParamList['NotificationList'] };
-}> = () => {
+export const NotificationListScreen: React.FC = () => {
+  useScreenTransition('NotificationListScreen');
   const { navigate, navigateTo, goBack } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);

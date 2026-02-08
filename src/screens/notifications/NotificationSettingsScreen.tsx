@@ -478,3 +478,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
 }));
+
+export default NotificationSettingsScreen;

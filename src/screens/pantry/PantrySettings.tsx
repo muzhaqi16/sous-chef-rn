@@ -19,14 +19,14 @@ import {
 } from '#generated';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 
-export const PantrySettings: React.FC<{
-  route: { params?: PantryStackParamList['PantrySettings'] };
-}> = ({ route }) => {
+export const PantrySettings: React.FC<StaticScreenProps<{
+  pantryId?: string;
+} | undefined>> = ({ route }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;

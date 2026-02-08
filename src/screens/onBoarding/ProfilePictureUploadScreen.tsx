@@ -32,6 +32,7 @@ import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -45,6 +46,7 @@ const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
+  useScreenTransition('ProfilePictureUploadScreen');
   const { navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();

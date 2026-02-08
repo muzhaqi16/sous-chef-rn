@@ -31,6 +31,7 @@ import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { useRenderTime } from '#hooks/performance/useRenderTime';
 
 // Stable empty array reference to avoid FlashList re-renders when showing skeletons
 const EMPTY_ARRAY: PantryItem[] = [];
@@ -167,6 +168,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   onSwipeableWillOpen,
   onSwipeableClose: _onSwipeableClose,
 }, ref) => {
+  useRenderTime('PantryContent');
   const { theme } = useUnistyles();
   const flashListRef = useRef<FlashListRef<PantryItem>>(null);
 
@@ -267,11 +269,20 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     return sorted.filter(item => item?.id);
   }, [items, sortItems]);
 
-  // Render a pantry item card
-  const renderItemCard = useCallback(
-    (item: PantryItem, variant: ItemVariant = 'normal') => {
+  // Render list item - homogeneous list (items only)
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<PantryItem>) => {
+      // Guard against undefined items during concurrent rendering
+      if (!item) return null;
+
+      // Calculate expiration once per item (was previously duplicated across renderItem + renderItemCard)
       const expiresIn = calculateExpiresIn(item.expiresAt);
       const expStatus = getExpirationStatus(expiresIn);
+      const isExpired = expiresIn !== null && expiresIn < 0;
+      const isExpiringSoon =
+        expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
+
       const unitSymbol = item.unit.symbol;
       const quantityDisplay = formatQuantityDisplay(item.quantity, unitSymbol);
       const location = getLocationString(item.storageState);
@@ -312,24 +323,6 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       onItemRestock,
       onSwipeableWillOpen,
     ],
-  );
-
-  // Render list item - homogeneous list (items only)
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<PantryItem>) => {
-      // Guard against undefined items during concurrent rendering
-      if (!item) return null;
-
-      const expiresIn = calculateExpiresIn(item.expiresAt);
-      const isExpired = expiresIn !== null && expiresIn < 0;
-      const isExpiringSoon =
-        expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      return renderItemCard(
-        item,
-        isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal',
-      );
-    },
-    [renderItemCard],
   );
 
   // Build tabs with optional add button at the end

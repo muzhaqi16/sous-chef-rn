@@ -1,3 +1,6 @@
+// Record JS entry timestamp before any imports for startup time measurement
+global.__APP_START_TIMESTAMP = Date.now();
+
 /**
  * Polyfill for crypto.getRandomValues()
  * Required for crypto.randomUUID() to work in React Native

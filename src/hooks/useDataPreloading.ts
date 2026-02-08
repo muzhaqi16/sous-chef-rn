@@ -1,12 +1,11 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState, startTransition } from 'react';
 import { useShallow } from 'zustand/shallow';
-import { useDeferredCallback } from './performance/useDeferredCallback';
 import {
   useGetCommonUnitsLazyQuery,
   useGetShoppingListsLiteLazyQuery,
   useMySavedRecipesLazyQuery,
 } from '#generated';
-import { useAppStore, selectAuthState } from '#store/useAppStore';
+import { useAppStore, selectAuthState, selectIsHomeSelectionReady } from '#store/useAppStore';
 
 /**
  * Preloads essential reference data for offline access
@@ -20,10 +19,10 @@ import { useAppStore, selectAuthState } from '#store/useAppStore';
  * - Minimal impact on app startup (loads only ~10-50 common units instead of 1000+)
  * - For full unit search, use SearchUnits query in autocomplete components
  *
- * Background preloading:
- * - After login completes, waits for UI interactions to settle
- * - Then preloads shopping lists and saved recipes in staggered order
- * - Non-blocking: doesn't interfere with current screen's essential data
+ * Event-driven preloading:
+ * - Waits for `isHomeSelectionReady` (GetHomes + pantry selection complete)
+ * - Uses `startTransition` to deprioritize vs user interactions
+ * - No arbitrary timeouts — React's concurrent scheduler handles timing
  */
 export function useDataPreloading() {
   // Access auth state directly from store to avoid circular dependency with useAuth
@@ -33,6 +32,7 @@ export function useDataPreloading() {
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const isOnline = useAppStore(state => state.isOnline);
+  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
 
   // PERFORMANCE: Track if units have been cached to prevent infinite loop
   const hasCachedUnitsRef = useRef(false);
@@ -62,41 +62,32 @@ export function useDataPreloading() {
     errorPolicy: 'ignore',
   });
 
-  // Fetch common units with deferred execution
-  const fetchUnits = useCallback(async () => {
-    if (hasUnitsQueryFetchedRef.current || !isOnline) return;
+  // Trigger all preloading when home selection is ready (purely event-driven)
+  // startTransition ensures React deprioritizes these vs user interactions
+  useEffect(() => {
+    if (!isAuthenticated || !isOnline || !isHomeSelectionReady) return;
+    if (hasPreloadedRef.current) return;
+    hasPreloadedRef.current = true;
     hasUnitsQueryFetchedRef.current = true;
 
     if (__DEV__) {
-      console.log('📦 [useDataPreloading] Deferred common units query started');
+      console.log('📦 [useDataPreloading] Home ready — starting background preload');
     }
 
     setUnitsLoading(true);
-    try {
-      await fetchCommonUnits();
-    } catch (err) {
-      setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
-    } finally {
-      setUnitsLoading(false);
-    }
-  }, [isOnline, fetchCommonUnits]);
 
-  // PERFORMANCE: Defer common units query by 6000ms to avoid competing with
-  // screen-critical queries (GetHomes, GetPantry) at startup.
-  // Units are only needed when user opens add item sheet.
-  useDeferredCallback(fetchUnits, isAuthenticated && isOnline, 6000);
-
-  // Background preload function - staggers queries to avoid JS thread contention
-  const runBackgroundPreload = useCallback(() => {
-    if (!isOnline) return;
-
-    // Stagger queries 500ms apart so each gets its own JS thread window
-    fetchShoppingLists();
-
-    setTimeout(() => {
+    startTransition(() => {
+      fetchShoppingLists();
       fetchSavedRecipes();
-    }, 500);
-  }, [isOnline, fetchShoppingLists, fetchSavedRecipes]);
+      fetchCommonUnits()
+        .catch(err => {
+          setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
+        })
+        .finally(() => {
+          setUnitsLoading(false);
+        });
+    });
+  }, [isAuthenticated, isOnline, isHomeSelectionReady, fetchShoppingLists, fetchSavedRecipes, fetchCommonUnits]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)
@@ -106,14 +97,6 @@ export function useDataPreloading() {
       hasCachedUnitsRef.current = true;
     }
   }, [data?.units, setCachedUnits]);
-
-  // Trigger background preload when runtime is idle (non-blocking)
-  // PERFORMANCE: 5000ms timeout ensures GetHomes + GetPantry complete first
-  useDeferredCallback(() => {
-    if (hasPreloadedRef.current) return;
-    hasPreloadedRef.current = true;
-    runBackgroundPreload();
-  }, isAuthenticated && isOnline, 5000);
 
   // Reset preload flags on logout so queries run again on next login
   useEffect(() => {

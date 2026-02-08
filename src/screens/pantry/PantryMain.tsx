@@ -1,5 +1,6 @@
 import React, {
   useMemo,
+  useDeferredValue,
   useEffect,
   useCallback,
   useRef,
@@ -18,7 +19,7 @@ import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
-import { useStore } from '#store';
+import { useShallow } from 'zustand/react/shallow';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarActions } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
@@ -45,11 +46,16 @@ const PantryMainScreen: React.FC = React.memo(() => {
   useUnistyles();
   const { setOverlayOpen } = useTabBarActions();
 
+  // PERF: Defer non-critical features until after React paints the initial render.
+  // React 19's useDeferredValue returns `false` on first render (initial value),
+  // then schedules a background re-render returning `true` to activate deferred features.
+  const isInteractive = useDeferredValue(true, false);
+
   // Get user profile for greeting
   const { profile } = useProfileData();
 
-  // Track screen performance
-  useScreenTransition('PantryMain');
+  // Track screen performance (deferred — telemetry not needed during initial render)
+  useScreenTransition('PantryMain', { enabled: isInteractive });
 
   // Feature hint for home switch button
   const homeSwitchHint = useFeatureHint({
@@ -57,14 +63,24 @@ const PantryMainScreen: React.FC = React.memo(() => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
-  const unreadCount = useStore(state => state.unreadCount);
-
-  // Pantry sort preferences from store
-  const pantrySortOption = useAppStore(s => s.pantrySortOption) ?? 'recent';
-  const pantrySortDirection = useAppStore(s => s.pantrySortDirection) ?? 'desc';
-  const setPantrySortOption = useAppStore(s => s.setPantrySortOption);
-  const setPantrySortDirection = useAppStore(s => s.setPantrySortDirection);
+  // PERF: Single shallow selector instead of 6 individual store subscriptions
+  const {
+    showBiometricSetup,
+    unreadCount,
+    pantrySortOption,
+    pantrySortDirection,
+    setPantrySortOption,
+    setPantrySortDirection,
+  } = useAppStore(
+    useShallow(s => ({
+      showBiometricSetup: s.showBiometricSetup,
+      unreadCount: s.unreadCount,
+      pantrySortOption: s.pantrySortOption ?? 'recent',
+      pantrySortDirection: s.pantrySortDirection ?? 'desc',
+      setPantrySortOption: s.setPantrySortOption,
+      setPantrySortDirection: s.setPantrySortDirection,
+    })),
+  );
 
   // Callback to persist sort changes to store (defensive - check functions exist)
   const handleSortChange = useCallback(
@@ -118,17 +134,18 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Gate query with isReady and isFocused to prevent firing:
   // - before home selection is complete (isReady)
   // - when screen loses focus during navigation (isFocused)
+  // - before interactions complete (isInteractive) — not needed during initial mount
   const shouldFetchHome =
-    isFocused && isReady && !!selectedHomeId && !currentHome;
+    isInteractive && isFocused && isReady && !!selectedHomeId && !currentHome;
   const { refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId! },
     skip: !shouldFetchHome,
     fetchPolicy: 'cache-and-network',
   });
 
-  // Set up scanner button
+  // Set up scanner button (deferred — scanner not needed during initial render)
   useScannerSetup({
-    enabled: true,
+    enabled: isInteractive,
     homeId: selectedHomeId,
     context: {
       source: 'pantry',
@@ -267,8 +284,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
     setAddLocationSheetVisible(true);
   }, []);
 
-  // Track screen view on mount
+  // Track screen view (deferred — telemetry not needed during initial render)
   useEffect(() => {
+    if (!isInteractive) return;
     Telemetry.trackScreen('PantryMain', {
       home_id: selectedHomeId,
       pantry_id: pantry?.id,
@@ -276,6 +294,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       has_pantries: pantries.length > 0,
     });
   }, [
+    isInteractive,
     selectedHomeId,
     pantry?.id,
     locationFilteredItems.length,
@@ -285,6 +304,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
+    if (!isInteractive) return;
     if (
       selectedHomeId &&
       locationFilteredItems.length > 0 &&
@@ -299,12 +319,23 @@ const PantryMainScreen: React.FC = React.memo(() => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    isInteractive,
     locationFilteredItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
     homeSwitchHint.show,
     showBiometricSetup,
   ]);
+
+  const handleItemPress = useCallback(
+    (id: string) => navigateTo.pantryItemDetail({ itemId: id }),
+    [navigateTo],
+  );
+
+  const handleHomePress = useCallback(
+    () => navigate('HomeManagement', { homeId: selectedHomeId }),
+    [navigate, selectedHomeId],
+  );
 
   const handleRefresh = async () => {
     await Promise.all([refetch(), refetchHome()]);
@@ -345,16 +376,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
         initialSortOption={pantrySortOption}
         initialSortDirection={pantrySortDirection}
         onSortChange={handleSortChange}
-        onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
+        onItemPress={handleItemPress}
         onItemEdit={handleEditItem}
         onItemDelete={handleDeleteItem}
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
         onAvatarPress={() => navigate('Notifications')}
-        onHomePress={() =>
-          navigate('HomeManagement', { homeId: selectedHomeId })
-        }
+        onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
         onRefresh={handleRefresh}
         onEndReached={loadMore}

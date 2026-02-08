@@ -16,7 +16,7 @@ import { CategoryAutocompleteField } from '#components/molecules/AutocompleteFie
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 import {
@@ -24,13 +24,13 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 
-type RouteParams = ShoppingListStackParamList['AddItem' | 'EditItem'] & {
+type RouteParams = {
+  listId: string;
   itemId?: string;
+  initialItemName?: string;
 };
 
-export const AddEditItem: React.FC<{
-  route: { params: RouteParams };
-}> = ({ route }) => {
+export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route }) => {
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)

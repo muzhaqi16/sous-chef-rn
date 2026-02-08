@@ -12,14 +12,18 @@ import { ItemNotFound } from '#components/barcode/ItemNotFound';
 import { SearchResults } from '#components/barcode/SearchResults';
 import { Header } from '#components/molecules/Header';
 import AddItemForm from '#components/organisms/AddItemForm/AddItemForm';
-import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks/useSearchResults';
 import { useShallow } from 'zustand/react/shallow';
 
-export const SearchResultsScreen: React.FC<{
-  route: { params: BarcodeStackParamList['SearchResults'] };
-}> = ({ route }) => {
+export const SearchResultsScreen: React.FC<StaticScreenProps<{
+  barcode: string;
+  format: string;
+  source?: 'pantry' | 'shoppingList';
+  pantryId?: string;
+  shoppingListId?: string;
+}>> = ({ route }) => {
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
   const { goBack, navigation } = useAppNavigation();

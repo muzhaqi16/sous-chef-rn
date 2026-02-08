@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { CachedImage } from '#components/atoms/CachedImage';
 import type { CardLeftSlotProps } from './types';
 
 /**
@@ -52,9 +53,9 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
           dimmed && styles.dimmed,
         ]}
       >
-        <Image
-          source={{ uri: imageUrl }}
-          style={[commonStyles.listItemImageCompact, { resizeMode: 'cover' }]}
+        <CachedImage
+          uri={imageUrl}
+          style={commonStyles.listItemImageCompact}
         />
       </View>
     );

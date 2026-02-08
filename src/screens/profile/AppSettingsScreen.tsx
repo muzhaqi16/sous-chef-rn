@@ -205,3 +205,5 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.warning + '20',
   },
 }));
+
+export default AppSettingsScreen;
