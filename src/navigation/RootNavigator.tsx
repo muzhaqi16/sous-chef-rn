@@ -172,15 +172,15 @@ const RootStack = createNativeStackNavigator({
       screens: {
         EmailVerification: {
           screen: EmailVerificationDeepLinkScreen,
-          linking: 'verify-email/:token',
+          linking: 'verify-email',
         },
         ResetPassword: {
           screen: ResetPasswordScreen,
-          linking: 'reset-password/:token',
+          linking: 'reset-password',
         },
         AcceptInvitation: {
           screen: AcceptInvite,
-          linking: 'accept-invitation/:token',
+          linking: 'accept-invitation',
         },
         NotFound: {
           screen: NotFoundScreen,
