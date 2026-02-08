@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "2.5.4",
+  "version": "2.5.5",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -35,6 +35,7 @@
     "android:build": "npx react-native build-android --mode=release",
     "android:build:prod": "npm run android:clean && npx react-native build-android --mode=release",
     "ios": "react-native run-ios",
+    "ios:clean": "cd ios && rm -rf build && pod install && cd ..",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "start": "react-native start",
