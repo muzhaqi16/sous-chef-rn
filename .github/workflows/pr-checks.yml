@@ -85,7 +85,7 @@ jobs:
   # E2E smoke tests (fast feedback)
   e2e-smoke:
     name: E2E Smoke Tests
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 25
 
     steps:
@@ -106,6 +106,9 @@ jobs:
         with:
           ruby-version: "3.2"
           bundler-cache: true
+
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
 
       - name: Install CocoaPods
         run: |
