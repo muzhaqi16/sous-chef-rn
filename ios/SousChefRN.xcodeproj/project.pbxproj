@@ -270,7 +270,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = AF21E45479A23913AB3C227A /* Pods-SousChef.debug.xcconfig */;
 			buildSettings = {
-				API_KEY = ios_89d944ffa4e92208003f9ac3ae56cf0117bcc8438ba402a21512076bf9642c03;
 				API_URL = "https://api.souschef.dev/graphql";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -307,7 +306,6 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7D011261455248FCBEC7103F /* Pods-SousChef.release.xcconfig */;
 			buildSettings = {
-				API_KEY = ios_89d944ffa4e92208003f9ac3ae56cf0117bcc8438ba402a21512076bf9642c03;
 				API_URL = "https://api.souschef.dev/graphql";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

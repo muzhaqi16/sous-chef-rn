@@ -11,6 +11,7 @@ on:
 jobs:
   build_with_signing:
     runs-on: macos-15
+    environment: prod
     steps:
       - name: Select Xcode 16.4
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
@@ -65,6 +66,19 @@ jobs:
 
       - name: install npm dependencies
         run: npm install
+
+      - name: Generate .env file
+        run: |
+          cat > .env <<EOF
+          API_URL=${{ vars.API_URL }}
+          API_KEY=${{ secrets.IOS_API_KEY }}
+          WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}
+          NODE_ENV=production
+          LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}
+          PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}
+          SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}
+          EOF
+          echo "Generated .env file"
 
       - name: install Cocoapod dependencies
         run: |
