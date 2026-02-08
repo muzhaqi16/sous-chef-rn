@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2026-02-08
 **Status:** ✅ Active
 
 This document describes the Continuous Integration and Continuous Deployment (CI/CD) pipeline for the Sous Chef React Native application.
@@ -9,14 +9,16 @@ This document describes the Continuous Integration and Continuous Deployment (CI
 
 ## 📊 Overview
 
-The CI/CD pipeline consists of 4 GitHub Actions workflows that automate testing, building, and quality assurance:
+The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing, building, and deployment:
 
 | Workflow | Trigger | Duration | Purpose |
 |----------|---------|----------|---------|
 | **PR Checks** | Every PR | ~15-20 min | Fast feedback: lint, typecheck, unit tests, smoke tests |
 | **E2E Smoke Tests** | PR + Push | ~10-15 min | Quick E2E verification |
-| **E2E Tests** | PR + Push to main/develop | ~60 min | Full E2E test suite (iOS + Android) |
+| **E2E Tests** | PR + Push to main/dev | ~60 min | Full E2E test suite (iOS + Android) |
 | **E2E Nightly** | Daily at 2 AM UTC | ~90 min | Comprehensive nightly regression testing |
+| **Build Android** | Git tags or manual dispatch | ~30 min | Build & release Android APK/AAB |
+| **Build iOS** | Git tags (`v*`, `ios-v*`) | ~30 min | Build, sign & upload to App Store Connect |
 
 ---
 
@@ -180,7 +182,133 @@ gh workflow run e2e-nightly.yml
 
 ---
 
-## 🏗️ Build Configuration
+## 📱 Build & Deployment Workflows
+
+### 5. Build Android (`build-android.yml`)
+
+**Triggers:**
+- Push tags: `dev-v*`, `stg-v*`, `prod-v*`, `playstore-v*`
+- Manual workflow dispatch (choose environment + build type)
+
+**Runner:** Self-hosted
+
+**Environment:** Resolved from tag prefix or manual input
+
+| Tag prefix | Environment | Build output |
+|---|---|---|
+| `dev-v*` | dev | APK |
+| `stg-v*` | stg | APK (staging variant) |
+| `prod-v*` | prod | APK |
+| `playstore-v*` | prod | AAB (Play Store bundle) |
+
+**Pipeline steps:**
+
+1. Checkout repository
+2. Setup Android SDK, `local.properties`
+3. Validate Gradle wrapper
+4. Install npm dependencies (`npm ci`)
+5. Setup keystore — Play Store upload key or regular release key (from environment secrets)
+6. Clean Gradle build
+7. Generate `.env` file — Writes environment-specific config from GitHub environment secrets/variables for `react-native-config`
+8. Build — `assembleRelease`, `assembleStaging`, or `bundleRelease` (Play Store)
+9. Verify 16KB page alignment (APK builds only)
+10. Rename APK files with tag name and architecture
+11. Create GitHub Release with build artifacts
+12. Cleanup sensitive files and Gradle caches
+
+**Usage:**
+```bash
+# Development build
+git tag dev-v1.2.0 && git push origin dev-v1.2.0
+
+# Staging build
+git tag stg-v1.2.0 && git push origin stg-v1.2.0
+
+# Production APK
+git tag prod-v1.2.0 && git push origin prod-v1.2.0
+
+# Play Store AAB
+git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
+
+# Or trigger manually via Actions tab:
+# Actions → Build Android → Run workflow → Choose environment + build type
+```
+
+---
+
+### 6. Build iOS (`build-ios.yml`)
+
+**Triggers:**
+- Push tags: `v*`, `ios-v*`
+
+**Runner:** macOS 15 (GitHub-hosted)
+
+**Environment:** Always `prod`
+
+The version number is extracted from the tag (stripping the `v` or `ios-v` prefix) and set as the marketing version. The GitHub Actions run number is used as the build number.
+
+**Pipeline steps:**
+
+1. Select Xcode 16.4
+2. Checkout repository
+3. Install Apple certificate & provisioning profile — Decodes base64 secrets, creates a temporary keychain, installs the distribution certificate and provisioning profiles
+4. Setup Node.js (v20)
+5. Clean workspace and npm cache
+6. Install npm dependencies
+7. Generate `.env` file — Writes config from the `prod` environment secrets/variables for `react-native-config`
+8. Install CocoaPods dependencies
+9. Set version from git tag (marketing version + build number)
+10. Build Xcode archive — Manual code signing with Apple Distribution certificate and `souschef-appstore-dist` provisioning profile
+11. Export IPA — App Store distribution method
+12. Upload to App Store Connect — Uses App Store Connect API key via `xcrun altool`
+13. Upload build artifact to GitHub Actions (3-day retention)
+
+**Usage:**
+```bash
+# Using a shared version tag (also triggers Android if prod-v* exists)
+git tag v1.2.0 && git push origin v1.2.0
+
+# Using an iOS-specific tag
+git tag ios-v1.2.0 && git push origin ios-v1.2.0
+```
+
+**Required secrets (prod environment):**
+
+| Secret | Purpose |
+|---|---|
+| `IOS_API_KEY` | Backend API key for iOS builds |
+| `SPOONACULAR_API_KEY` | Spoonacular recipe API key |
+| `IOS_BUILD_CERTIFICATE_BASE64` | Apple Distribution certificate (p12, base64) |
+| `P12_PASSWORD` | Certificate password |
+| `PROVISION_PROFILES_BASE64` | Provisioning profiles archive (tgz, base64) |
+| `KEYCHAIN_PASSWORD` | Temporary keychain password |
+| `ASC_API_KEY_BASE64` | App Store Connect API key (p8, base64) |
+| `ASC_API_KEY_ID` | App Store Connect key ID |
+| `ASC_API_ISSUER_ID` | App Store Connect issuer ID |
+
+---
+
+## 🚀 Quick Reference: Triggering Releases
+
+```bash
+# Android
+git tag dev-v1.2.0 && git push origin dev-v1.2.0        # Dev APK
+git tag stg-v1.2.0 && git push origin stg-v1.2.0        # Staging APK
+git tag prod-v1.2.0 && git push origin prod-v1.2.0      # Production APK
+git tag playstore-v1.2.0 && git push origin playstore-v1.2.0  # Play Store AAB
+
+# iOS
+git tag ios-v1.2.0 && git push origin ios-v1.2.0        # App Store
+git tag v1.2.0 && git push origin v1.2.0                # App Store (alternate)
+
+# Check build status
+gh run list --workflow=build-android.yml
+gh run list --workflow=build-ios.yml
+```
+
+---
+
+## 🏗️ Build Configuration (E2E Testing)
 
 ### iOS Build
 
