@@ -82,8 +82,10 @@ export const useFeatureHint = ({
   const tutorialsEnabled = useShowTutorials();
   const tutorialsEnabledRef = useStableRef(tutorialsEnabled);
 
-  // Check if hint has been shown before
-  const hasBeenShown = storage.getBoolean(storageKey) ?? false;
+  // Check if hint has been shown before (reactive state so dismiss updates immediately)
+  const [hasBeenShown, setHasBeenShown] = useState(
+    () => storage.getBoolean(storageKey) ?? false,
+  );
 
   const [isVisible, setIsVisible] = useState(false);
 
@@ -102,11 +104,11 @@ export const useFeatureHint = ({
   }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 
   const show = useCallback(() => {
-    // Only show if tutorials are enabled globally
-    if (tutorialsEnabledRef.current) {
+    // Only show if tutorials are enabled globally and hint hasn't been dismissed
+    if (tutorialsEnabledRef.current && !(storage.getBoolean(storageKey) ?? false)) {
       setIsVisible(true);
     }
-  }, [tutorialsEnabledRef]);
+  }, [tutorialsEnabledRef, storageKey]);
 
   const hide = useCallback(() => {
     setIsVisible(false);
@@ -114,11 +116,13 @@ export const useFeatureHint = ({
 
   const dismiss = useCallback(() => {
     setIsVisible(false);
+    setHasBeenShown(true);
     storage.set(storageKey, true);
   }, [storageKey]);
 
   const reset = useCallback(() => {
     storage.remove(storageKey);
+    setHasBeenShown(false);
     setIsVisible(false);
   }, [storageKey]);
 
