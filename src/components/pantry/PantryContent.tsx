@@ -51,6 +51,10 @@ interface PantryItem {
   expiresAt?: string | null;
   quantity: number;
   storageState?: string | null;
+  storageLocation?: {
+    id: string;
+    name: string;
+  } | null;
   createdAt?: string;
   unit: {
     symbol: string;
@@ -250,7 +254,8 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
 
   // Get location string from storage state
   const getLocationString = useCallback(
-    (storageState?: string | null): string => {
+    (storageState?: string | null, storageLocation?: { name: string } | null): string => {
+      if (storageLocation?.name) return storageLocation.name;
       switch (storageState) {
         case StorageState.Refrigerated:
           return 'Fridge';
@@ -285,7 +290,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
 
       const unitSymbol = item.unit.symbol;
       const quantityDisplay = formatQuantityDisplay(item.quantity, unitSymbol);
-      const location = getLocationString(item.storageState);
+      const location = getLocationString(item.storageState, item.storageLocation);
       const imageUrl = getItemImageUrl(item.item);
       const hasExpiry = item.expiresAt != null;
       const isOutOfStock = item.quantity === 0;
@@ -341,6 +346,12 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     ];
   }, [tabs, onAddLocation]);
 
+  const sectionTitle = useMemo(() => {
+    const activeTab = tabs.find(tab => tab.id === locationFilter);
+    const label = activeTab?.label ?? 'All';
+    return `${label.toUpperCase()} ITEMS`;
+  }, [tabs, locationFilter]);
+
   return (
     <PantryActionsProvider actions={itemActions}>
       <View style={styles.container}>
@@ -383,8 +394,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
           testIDPrefix="pantry-location-tab"
         />
         <SectionHeader
-          title="ALL ITEMS"
-          count={sortedItems.length}
+          title={sectionTitle}
           variant="default"
           actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
           onActionPress={openSortModal}

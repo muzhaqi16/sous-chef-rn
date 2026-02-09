@@ -22,6 +22,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const {
     pantryItems,
     filteredItems,
+    totalCount,
     loading,
     isRefreshing,
     error,
@@ -34,7 +35,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   } = usePantryQuery(pantryId);
 
   // Stats hook - computes location counts
-  const { locationCounts } = usePantryStats(pantryItems);
+  const { locationCounts } = usePantryStats(pantryItems, totalCount);
 
   // Mutations hook - CRUD operations
   const { addItem, updateItem, removeItem } = usePantryItemMutations({

@@ -205,6 +205,7 @@ export const useStore = create<RootState>()(
             activeFilters,
             toastMessage,
             toastType,
+            pendingPantryScrollToTop,
 
             // Navigation transient state
             onBoardingStep, // Restart onboarding flow on app restart

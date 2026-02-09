@@ -10,6 +10,7 @@ import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore } from '#/store/useAppStore';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
+import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 
 export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
@@ -26,6 +27,9 @@ export const AppSettingsScreen: React.FC = () => {
   const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
   const showNavigationLabels = useAppStore(state => state.showNavigationLabels);
   const setShowNavigationLabels = useAppStore(state => state.setShowNavigationLabels);
+
+  // Per-user preferences
+  const { preferences: userPrefs, updatePreference, resetPreferences: resetUserPreferences } = useUserPreferences();
 
   // Telemetry consent
   const userConsent = useAppStore(state => state.userConsent);
@@ -56,8 +60,9 @@ export const AppSettingsScreen: React.FC = () => {
             setUpdating('reset');
             try {
               const success = await resetToDefaults();
-              // Also reset feature hints/tutorials
+              // Also reset feature hints/tutorials and per-user preferences
               resetAllFeatureHints();
+              resetUserPreferences();
               if (success) {
                 Alert.alert('Success', 'Settings and tutorials have been reset to defaults.');
               } else {
@@ -155,6 +160,13 @@ export const AppSettingsScreen: React.FC = () => {
           description="Show text labels below navigation icons"
           value={showNavigationLabels}
           onValueChange={setShowNavigationLabels}
+        />
+        <SettingSwitch
+          testID="settings-show-shopping-list-images-switch"
+          title="Shopping List Images"
+          description="Show product images in shopping lists"
+          value={userPrefs.showShoppingListImages}
+          onValueChange={value => updatePreference({ showShoppingListImages: value })}
         />
         <SettingSwitch
           testID="settings-share-usage-data-switch"

@@ -19,7 +19,6 @@ import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarActions } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
@@ -63,24 +62,16 @@ const PantryMainScreen: React.FC = React.memo(() => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  // PERF: Single shallow selector instead of 6 individual store subscriptions
-  const {
-    showBiometricSetup,
-    unreadCount,
-    pantrySortOption,
-    pantrySortDirection,
-    setPantrySortOption,
-    setPantrySortDirection,
-  } = useAppStore(
-    useShallow(s => ({
-      showBiometricSetup: s.showBiometricSetup,
-      unreadCount: s.unreadCount,
-      pantrySortOption: s.pantrySortOption ?? 'recent',
-      pantrySortDirection: s.pantrySortDirection ?? 'desc',
-      setPantrySortOption: s.setPantrySortOption,
-      setPantrySortDirection: s.setPantrySortDirection,
-    })),
-  );
+  // Individual atomic selectors for primitives and stable setters —
+  // Object.is check is cheaper than useShallow's object allocation + key comparison
+  const showBiometricSetup = useAppStore(s => s.showBiometricSetup);
+  const unreadCount = useAppStore(s => s.unreadCount);
+  const pantrySortOption = useAppStore(s => s.pantrySortOption) ?? 'recent';
+  const pantrySortDirection = useAppStore(s => s.pantrySortDirection) ?? 'desc';
+  const setPantrySortOption = useAppStore(s => s.setPantrySortOption);
+  const setPantrySortDirection = useAppStore(s => s.setPantrySortDirection);
+  const pendingPantryScrollToTop = useAppStore(s => s.pendingPantryScrollToTop);
+  const setPendingPantryScrollToTop = useAppStore(s => s.setPendingPantryScrollToTop);
 
   // Callback to persist sort changes to store (defensive - check functions exist)
   const handleSortChange = useCallback(
@@ -100,6 +91,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const handleItemAdded = useCallback(() => {
     pantryContentRef.current?.scrollToTop();
   }, []);
+
+  // Scroll to top when returning from barcode scanner after adding an item
+  useEffect(() => {
+    if (isFocused && pendingPantryScrollToTop) {
+      pantryContentRef.current?.scrollToTop();
+      setPendingPantryScrollToTop(false);
+    }
+  }, [isFocused, pendingPantryScrollToTop, setPendingPantryScrollToTop]);
 
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
@@ -313,17 +312,16 @@ const PantryMainScreen: React.FC = React.memo(() => {
     ) {
       // Show hint after a delay to let UI settle
       const timer = setTimeout(() => {
-        homeSwitchHint.show();
+        homeSwitchHint.actions.show();
       }, 2000); // 2 seconds delay
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isInteractive,
     locationFilteredItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
-    homeSwitchHint.show,
+    homeSwitchHint.actions,
     showBiometricSetup,
   ]);
 
@@ -455,7 +453,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
               library: 'MaterialDesignIcons',
               size: 40,
             },
-            onDismiss: homeSwitchHint.dismiss,
+            onDismiss: homeSwitchHint.actions.dismiss,
           }}
         />
       )}

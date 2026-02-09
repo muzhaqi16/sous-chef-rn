@@ -8,6 +8,7 @@ import {
   useAddItemToShoppingListMutation,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { useAppStore } from '#store/useAppStore';
 
 // Cache updater for Pantry.itemsConnection
 const addToPantryItemsConnection = createAddToParentConnectionUpdater<any>(
@@ -42,6 +43,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const setPendingPantryScrollToTop = useAppStore(s => s.setPendingPantryScrollToTop);
   const [addToPantry] = useCreatePantryItemMutation({
     update: (cache, { data }: any) => {
       if (data?.createPantryItem && pantryId) {
@@ -86,6 +88,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           },
         });
         setIsAdded(true);
+        setPendingPantryScrollToTop(true);
         onScanAnother();
       } else if (source === 'shoppingList' && shoppingListId) {
         await addToShoppingList({

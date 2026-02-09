@@ -35,6 +35,9 @@ export interface UIState {
   toastMessage: string | null;
   toastType: 'success' | 'error' | 'info' | 'warning' | null;
 
+  // Cross-navigation scroll flags
+  pendingPantryScrollToTop: boolean;
+
   // Actions
   setLoading: (loading: boolean) => void;
   setError: (error: boolean) => void;
@@ -57,6 +60,7 @@ export interface UIState {
   clearFormData: (formId: string) => void;
   setGlobalSearchQuery: (query: string) => void;
   setActiveFilters: (filters: Record<string, any>) => void;
+  setPendingPantryScrollToTop: (pending: boolean) => void;
   showToast: (
     message: string,
     type: 'success' | 'error' | 'info' | 'warning',
@@ -83,6 +87,7 @@ const initialUIState = {
   activeFilters: {},
   toastMessage: null,
   toastType: null,
+  pendingPantryScrollToTop: false,
 };
 
 export const createUISlice: StateCreator<
@@ -173,6 +178,12 @@ export const createUISlice: StateCreator<
   setActiveFilters: filters => {
     set(state => {
       state.activeFilters = filters;
+    });
+  },
+
+  setPendingPantryScrollToTop: pending => {
+    set(state => {
+      state.pendingPantryScrollToTop = pending;
     });
   },
 

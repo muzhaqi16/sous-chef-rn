@@ -173,12 +173,12 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         );
         if (unpurchasedForHint.length > 0) {
           const timer = setTimeout(() => {
-            swipeHint.show();
+            swipeHint.actions.show();
           }, 1500);
           return () => clearTimeout(timer);
         }
       }
-    }, [items.length, swipeHint, itemsRef]);
+    }, [items.length, swipeHint.hasBeenShown, swipeHint.actions, itemsRef]);
 
     // Handle refresh
     const handleRefresh = useCallback(async () => {
@@ -453,7 +453,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
         {/* Swipe gesture hint overlay */}
         {swipeHint.isVisible && (
-          <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
+          <SwipeHintOverlay onDismiss={swipeHint.actions.dismiss} />
         )}
 
         {/* Modals are rendered inside ShoppingListModalsProvider */}

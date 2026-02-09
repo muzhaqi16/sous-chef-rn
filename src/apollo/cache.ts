@@ -288,7 +288,7 @@ export function makeCache(): InMemoryCache {
               if (!incoming) return existing;
 
               // If no existing data or this is an initial load (no cursor), return incoming
-              if (!existing || !args?.itemsCursor) {
+              if (!existing || !args?.after) {
                 return incoming;
               }
 
@@ -316,7 +316,7 @@ export function makeCache(): InMemoryCache {
             keyArgs: false,
             merge(existing, incoming, { args }) {
               if (!incoming) return existing;
-              if (!existing || !args?.storageLocationsCursor) return incoming;
+              if (!existing || !args?.after) return incoming;
 
               // Pagination - append edges
               return {
@@ -447,6 +447,15 @@ export function makeCache(): InMemoryCache {
             merge(existing = [], incoming) {
               // Suggestions are server-generated, so incoming replaces existing
               // Preserve existing if network request failed
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          shoppingListSuggestions: {
+            keyArgs: ['shoppingListId', 'limit'],
+            merge(existing = [], incoming) {
               if (!incoming || incoming.length === 0) {
                 return existing;
               }
