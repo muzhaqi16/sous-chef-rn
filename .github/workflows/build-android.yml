@@ -249,26 +249,25 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 90
 
-      - name: Create GitHub Release (Play Store)
+      - name: Upload Play Store AAB to S3
         if: env.IS_PLAYSTORE == 'true' && startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Play Store Release ${{ github.ref_name }}
-          body: |
-            Official Play Store release bundle.
-            This AAB is signed with the Play Store upload certificate and ready for Google Play Console upload.
-          files: android/app/build/outputs/bundle/release/app-release.aab
-          prerelease: false
+        run: |
+          mcli cp \
+            android/app/build/outputs/bundle/release/app-release.aab \
+            "minio/sous-chef-app-prod/android/${{ github.ref_name }}/app-release.aab"
+          echo "Uploaded AAB to sous-chef-app-prod/android/${{ github.ref_name }}/"
 
-      - name: Create GitHub Release (APK)
+      - name: Upload APKs to S3
         if: env.IS_PLAYSTORE != 'true' && startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "${{ env.BUILD_ENV == 'prod' && 'Production' || env.BUILD_ENV == 'stg' && 'Staging' || 'Development' }} Release ${{ github.ref_name }}"
-          files: |
-            android/app/build/outputs/apk/${{ env.BUILD_ENV == 'stg' && 'staging' || 'release' }}/sous-chef-*.apk
-          generate_release_notes: true
-          prerelease: ${{ env.BUILD_ENV != 'prod' }}
+        run: |
+          BUCKET="sous-chef-app-${{ env.BUILD_ENV }}"
+          APK_DIR="android/app/build/outputs/apk/${{ env.BUILD_ENV == 'stg' && 'staging' || 'release' }}"
+          for APK in "$APK_DIR"/sous-chef-*.apk; do
+            [ -f "$APK" ] || continue
+            FILENAME=$(basename "$APK")
+            mcli cp "$APK" "minio/${BUCKET}/android/${{ github.ref_name }}/$FILENAME"
+            echo "Uploaded $FILENAME to ${BUCKET}/android/${{ github.ref_name }}/"
+          done
 
       - name: Cleanup
         if: always()
