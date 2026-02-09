@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_with_signing:
-    runs-on: macos-15
+    runs-on: souschef-runner
     environment: prod
     steps:
       - name: Select Xcode 16.4
@@ -119,7 +119,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key>
-            <string>app-store</string>
+            <string>app-store-connect</string>
             <key>signingStyle</key>
             <string>manual</string>
             <key>teamID</key>
@@ -144,8 +144,8 @@ jobs:
           ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: |
-          API_KEY_PATH=$RUNNER_TEMP/AuthKey_$ASC_API_KEY_ID.p8
-          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o "$API_KEY_PATH"
+          mkdir -p ~/.private_keys
+          echo -n "$ASC_API_KEY_BASE64" | base64 --decode -o ~/.private_keys/AuthKey_${ASC_API_KEY_ID}.p8
           xcrun altool --upload-app \
             --type ios \
             --file "$RUNNER_TEMP/build/SousChefRN.ipa" \

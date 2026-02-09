@@ -33,6 +33,9 @@ export const urlRule = string().url('Please enter a valid URL').optional();
 
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = number()
+  .transform((value, originalValue) =>
+    String(originalValue).trim() === '' ? undefined : value
+  )
   .integer('Must be a whole number')
   .min(1, 'Shelf life must be at least 1 day')
   .max(3650, 'Shelf life cannot exceed 10 years')
@@ -50,6 +53,9 @@ export const displayPricePerUnitRule = string()
 
 // Net weight validation
 export const netWeightRule = number()
+  .transform((value, originalValue) =>
+    String(originalValue).trim() === '' ? undefined : value
+  )
   .min(0.001, 'Net weight must be greater than 0')
   .optional();
 
@@ -59,6 +65,9 @@ export const displayUnitIdRule = string()
 
 // Unit quantity validation
 export const unitQtyRule = number()
+  .transform((value, originalValue) =>
+    String(originalValue).trim() === '' ? undefined : value
+  )
   .min(0.001, 'Unit quantity must be greater than 0')
   .optional();
 

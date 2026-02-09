@@ -5,6 +5,15 @@ import { RootState } from '../index';
 export type PantrySortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type PantrySortDirection = 'asc' | 'desc';
 
+// Per-user preferences (keyed by userId)
+export interface UserPreferences {
+  showShoppingListImages: boolean;
+}
+
+export const defaultUserPreferences: UserPreferences = {
+  showShoppingListImages: true,
+};
+
 export enum ThemePreference {
   LIGHT = 'LIGHT',
   DARK = 'DARK',
@@ -44,6 +53,12 @@ export interface PreferencesState {
   setPantrySortOption: (option: PantrySortOption) => void;
   setPantrySortDirection: (direction: PantrySortDirection) => void;
 
+  // Per-user preferences
+  userPreferences: Record<string, UserPreferences>;
+  setUserPreference: (userId: string, prefs: Partial<UserPreferences>) => void;
+  getUserPreferences: (userId: string) => UserPreferences;
+  resetUserPreferences: (userId: string) => void;
+
   // Reset
   resetPreferences: () => void;
 }
@@ -65,8 +80,9 @@ export const createPreferencesSlice: StateCreator<
   [['zustand/immer', never]],
   [],
   PreferencesState
-> = set => ({
+> = (set, get) => ({
   ...initialPreferencesState,
+  userPreferences: {},
 
   setTheme: theme => set({ theme }),
   setLanguage: language => set({ language }),
@@ -77,6 +93,23 @@ export const createPreferencesSlice: StateCreator<
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
+
+  setUserPreference: (userId, prefs) => {
+    set(state => {
+      const existing = state.userPreferences[userId] ?? { ...defaultUserPreferences };
+      state.userPreferences[userId] = { ...existing, ...prefs };
+    });
+  },
+
+  getUserPreferences: (userId) => {
+    return get().userPreferences[userId] ?? defaultUserPreferences;
+  },
+
+  resetUserPreferences: (userId) => {
+    set(state => {
+      state.userPreferences[userId] = { ...defaultUserPreferences };
+    });
+  },
 
   resetPreferences: () => set(initialPreferencesState),
 });

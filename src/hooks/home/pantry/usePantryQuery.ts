@@ -104,6 +104,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     pantryItems,
     filteredItems,
     normalizedPantry,
+    totalCount: normalizedPantry?.itemsTotalCount ?? 0,
     loading,
     isRefreshing,
     error,

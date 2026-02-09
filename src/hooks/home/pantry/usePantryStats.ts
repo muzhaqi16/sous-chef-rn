@@ -19,7 +19,7 @@ import type { LocationCounts } from './types';
  * const { locationCounts } = usePantryStats(pantryItems);
  * ```
  */
-export function usePantryStats(pantryItems: any[]) {
+export function usePantryStats(pantryItems: any[], totalCount?: number) {
   // PERFORMANCE: Single-pass computation for all values
   return useMemo(() => {
     if (!pantryItems || pantryItems.length === 0) {
@@ -64,12 +64,12 @@ export function usePantryStats(pantryItems: any[]) {
 
     return {
       locationCounts: {
-        all: pantryItems.length,
+        all: totalCount ?? pantryItems.length,
         fridge,
         freezer,
         pantry: pantryCount,
         ...customLocationCounts,
       } as LocationCounts,
     };
-  }, [pantryItems]);
+  }, [pantryItems, totalCount]);
 }

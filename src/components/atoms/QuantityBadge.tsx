@@ -52,6 +52,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
     const accessibilityText = unit ? `${formattedQuantity} ${unit}` : formattedQuantity;
 
     const isDisabled = disabled || isPurchased;
+    const isInlineUnit = unit ? unit.length <= 3 : false;
 
     return (
       <Pressable
@@ -66,6 +67,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
           style={[
             styles.container,
             { backgroundColor: colors.surfaceVariant },
+            isInlineUnit && styles.containerInline,
             isDisabled && styles.disabled,
           ]}
         >
@@ -81,7 +83,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
           {unit && (
             <Text
               style={[
-                styles.unitText,
+                isInlineUnit ? styles.unitTextInline : styles.unitText,
                 { color: colors.textSecondary },
                 isPurchased && styles.purchasedText,
               ]}
@@ -104,6 +106,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  containerInline: {
+    flexDirection: 'row',
+    gap: 2,
+  },
   quantityText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
@@ -115,6 +121,12 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 13,
+  },
+  unitTextInline: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   disabled: {
     opacity: 0.5,

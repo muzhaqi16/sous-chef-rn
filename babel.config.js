@@ -4,8 +4,15 @@ const workletsPluginOptions = {
   // Your custom options.
 };
 
-module.exports = {
-  presets: ['module:@react-native/babel-preset'],
+module.exports = api => {
+  const isTest = api.env('test');
+  return {
+  presets: [
+    [
+      'module:@react-native/babel-preset',
+      {disableImportExportTransform: !isTest},
+    ],
+  ],
   plugins: [
     // React Compiler for automatic memoization (must be first)
     'babel-plugin-react-compiler',
@@ -60,4 +67,5 @@ module.exports = {
     // react-native-worklets/plugin has to be listed last.
     ['react-native-worklets/plugin', workletsPluginOptions],
   ].filter(Boolean),
+  };
 };

@@ -10,7 +10,7 @@ export interface SectionHeaderProps {
   /** Section title (will be uppercased) */
   title: string;
   /** Item count to display */
-  count: number;
+  count?: number;
   /** Visual variant affecting text color */
   variant?: SectionHeaderVariant;
   /** Optional action button label */
@@ -63,7 +63,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       <View style={styles.leftContent}>
         {icon && <Text style={styles.icon}>{icon}</Text>}
         <Text style={[styles.title, { color: getTitleColor() }]}>
-          {title} ({count})
+          {title}{count !== undefined ? ` (${count})` : ''}
         </Text>
       </View>
 

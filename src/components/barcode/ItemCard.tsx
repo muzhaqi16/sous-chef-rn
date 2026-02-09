@@ -20,6 +20,11 @@ interface ItemCardProps {
   format?: string;
 }
 
+const formatWeight = (value: number): string => {
+  const rounded = Math.round(value * 100) / 100;
+  return parseFloat(rounded.toFixed(2)).toString();
+};
+
 export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
   return (
     <View style={styles.itemCard}>
@@ -42,7 +47,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
         )}
         {item.netWeight != null && (
           <Text style={styles.itemWeight}>
-            {item.netWeight}
+            {formatWeight(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}

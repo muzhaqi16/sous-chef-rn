@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import type {
   SortableShoppingListItem,
@@ -36,6 +37,7 @@ interface MultiSourceTransformOptions {
 function transformItem(
   item: ShoppingListItemDisplayFragment,
   forcePurchasedState?: boolean,
+  showImages: boolean = true,
 ): SortableShoppingListItem | null {
   // Skip items without ID or name (invalid/corrupt data)
   if (!item.id || !item.itemName) {
@@ -60,14 +62,15 @@ function transformItem(
     disabled: isPurchasedValue ?? false,
   };
 
-  // Create image config (only if image exists)
-  const leftElementConfig: ImageElementConfig | undefined = imageUrl
-    ? {
-        type: 'image',
-        url: imageUrl,
-        isPurchased: isPurchasedValue,
-      }
-    : undefined;
+  // Create image config (only if images are enabled and image exists)
+  const leftElementConfig: ImageElementConfig | undefined =
+    showImages && imageUrl
+      ? {
+          type: 'image',
+          url: imageUrl,
+          isPurchased: isPurchasedValue,
+        }
+      : undefined;
 
   return {
     id: item.id,
@@ -86,9 +89,10 @@ function transformItem(
 function transformItems(
   items: ShoppingListItemDisplayFragment[],
   forcePurchasedState?: boolean,
+  showImages: boolean = true,
 ): SortableShoppingListItem[] {
   return items
-    .map(item => transformItem(item, forcePurchasedState))
+    .map(item => transformItem(item, forcePurchasedState, showImages))
     .filter((item): item is SortableShoppingListItem => item !== null);
 }
 
@@ -110,11 +114,12 @@ export function useShoppingListTransform(
   options?: TransformOptions,
 ) {
   const { forcePurchasedState } = options ?? {};
+  const showImages = useShowShoppingListImages();
 
   // Transform items using the extracted helper function
   const sortableItems = useMemo(
-    () => transformItems(items, forcePurchasedState),
-    [items, forcePurchasedState],
+    () => transformItems(items, forcePurchasedState, showImages),
+    [items, forcePurchasedState, showImages],
   );
 
   // Partition by purchase status
@@ -150,18 +155,19 @@ export function useShoppingListTransform(
  */
 export function useShoppingListTransformMulti(options: MultiSourceTransformOptions) {
   const { items, rawUnpurchasedItems, rawPurchasedItems } = options;
+  const showImages = useShowShoppingListImages();
 
   // Transform all arrays in a single useMemo call
   const result = useMemo(
     () => ({
       // All items (for backwards compatibility / search)
-      sortableItems: transformItems(items),
+      sortableItems: transformItems(items, undefined, showImages),
       // Paginated unpurchased items (force isPurchased: false for checkbox consistency)
-      unpurchasedItems: transformItems(rawUnpurchasedItems, false),
+      unpurchasedItems: transformItems(rawUnpurchasedItems, false, showImages),
       // Paginated purchased items (force isPurchased: true for checkbox consistency)
-      purchasedItems: transformItems(rawPurchasedItems, true),
+      purchasedItems: transformItems(rawPurchasedItems, true, showImages),
     }),
-    [items, rawUnpurchasedItems, rawPurchasedItems],
+    [items, rawUnpurchasedItems, rawPurchasedItems, showImages],
   );
 
   return result;

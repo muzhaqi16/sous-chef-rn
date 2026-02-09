@@ -57,9 +57,10 @@ prod environment: PROD_KEYSTORE_BASE64 (overrides for production)
 
 | Environment | Workflow File | Triggered By | Purpose |
 |-------------|---------------|--------------|---------|
-| `dev` | build-android.yml | `v*` tags | Development testing |
-| `stg` | build-android-staging.yml | `stg-v*` tags | Pre-production QA |
-| `prod` | build-android-release.yml, playstore-release.yml | `release-v*`, `playstore-v*` tags | Production releases |
+| `dev` | build-android.yml | `dev-v*` tags | Development testing |
+| `stg` | build-android.yml | `stg-v*` tags | Pre-production QA |
+| `prod` | build-android.yml | `prod-v*`, `playstore-v*` tags | Production releases (Android) |
+| `prod` | build-ios.yml | `v*`, `ios-v*` tags | Production releases (iOS, App Store) |
 
 ### What Each Environment Contains
 
@@ -290,21 +291,26 @@ ${{ github.environment }}
 ## Our Build Commands
 
 ```bash
-# Dev build → uses 'dev' environment
-npm run tag:dev
+# Android: Dev build → uses 'dev' environment
+git tag dev-v1.2.0 && git push origin dev-v1.2.0
 
-# Staging build → uses 'stg' environment
-npm run tag:stg
+# Android: Staging build → uses 'stg' environment
+git tag stg-v1.2.0 && git push origin stg-v1.2.0
 
-# Production APK → uses 'prod' environment
-npm run tag:release
+# Android: Production APK → uses 'prod' environment
+git tag prod-v1.2.0 && git push origin prod-v1.2.0
 
-# Play Store AAB → uses 'prod' environment
-npm run tag:playstore
+# Android: Play Store AAB → uses 'prod' environment
+git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
+
+# iOS: App Store → uses 'prod' environment
+git tag ios-v1.2.0 && git push origin ios-v1.2.0
+# or: git tag v1.2.0 && git push origin v1.2.0
 ```
 
-Each command creates a tag, GitHub matches it to a workflow, workflow loads the appropriate environment configuration.
+Each tag push triggers the matching workflow, which loads the appropriate environment configuration.
 
 ---
 
-For keystore setup and detailed build instructions, see `android-build-setup.md`.
+For keystore setup and detailed Android build instructions, see `android-build-setup.md`.
+For full pipeline documentation including E2E testing, see `CI_CD.md`.

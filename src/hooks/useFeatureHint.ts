@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
+import { useStableRef } from '#/hooks/utils/useStableRef';
+import { useAppStore } from '#store/useAppStore';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
 
@@ -13,23 +15,36 @@ export interface UseFeatureHintOptions {
   delay?: number;
 }
 
-export interface UseFeatureHintReturn {
-  /** Whether the hint should be visible */
-  isVisible: boolean;
+export interface UseFeatureHintActions {
   /** Show the hint manually */
   show: () => void;
   /** Hide the hint and mark as shown */
   dismiss: () => void;
   /** Hide the hint without marking as shown (will show again next time) */
   hide: () => void;
-  /** Check if hint has been shown before */
-  hasBeenShown: boolean;
   /** Reset the hint (will show again next time) */
   reset: () => void;
 }
 
+export interface UseFeatureHintReturn {
+  /** Whether the hint should be visible */
+  isVisible: boolean;
+  /** Check if hint has been shown before */
+  hasBeenShown: boolean;
+  /** Stable actions object — reference never changes */
+  actions: UseFeatureHintActions;
+}
+
 /**
  * Reusable hook for managing feature hints with MMKV persistence
+ *
+ * Returns `{ isVisible, hasBeenShown, actions }` where `actions` is a stable
+ * object (reference never changes) containing `show`, `dismiss`, `hide`, `reset`.
+ * Consumers should use `hint.actions` in effect deps instead of individual
+ * callbacks to avoid re-triggers when visibility state changes.
+ *
+ * Storage keys are scoped per-user when a user is logged in, so different users
+ * on the same device get independent hint state.
  *
  * @example
  * const swipeHint = useFeatureHint({
@@ -38,15 +53,16 @@ export interface UseFeatureHintReturn {
  *   delay: 1000,
  * });
  *
+ * // In effects — use actions (stable reference)
+ * useEffect(() => {
+ *   if (ready) swipeHint.actions.show();
+ * }, [ready, swipeHint.actions]);
+ *
+ * // In JSX — use top-level state
  * return (
  *   <>
  *     {swipeHint.isVisible && (
- *       <FeatureHintOverlay
- *         config={{
- *           title: 'Swipe left to mark as purchased',
- *           onDismiss: swipeHint.dismiss,
- *         }}
- *       />
+ *       <FeatureHintOverlay onDismiss={swipeHint.actions.dismiss} />
  *     )}
  *   </>
  * );
@@ -56,10 +72,15 @@ export const useFeatureHint = ({
   showOnMount = false,
   delay = 0,
 }: UseFeatureHintOptions): UseFeatureHintReturn => {
-  const storageKey = `${FEATURE_HINT_PREFIX}${featureId}`;
+  // Per-user storage key scoping
+  const userId = useAppStore(state => state.user?.id);
+  const storageKey = userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
 
   // Check global showTutorials setting
   const tutorialsEnabled = useShowTutorials();
+  const tutorialsEnabledRef = useStableRef(tutorialsEnabled);
 
   // Check if hint has been shown before
   const hasBeenShown = storage.getBoolean(storageKey) ?? false;
@@ -82,10 +103,10 @@ export const useFeatureHint = ({
 
   const show = useCallback(() => {
     // Only show if tutorials are enabled globally
-    if (tutorialsEnabled) {
+    if (tutorialsEnabledRef.current) {
       setIsVisible(true);
     }
-  }, [tutorialsEnabled]);
+  }, [tutorialsEnabledRef]);
 
   const hide = useCallback(() => {
     setIsVisible(false);
@@ -101,45 +122,58 @@ export const useFeatureHint = ({
     setIsVisible(false);
   }, [storageKey]);
 
-  return useMemo(
-    () => ({
-      isVisible,
-      show,
-      dismiss,
-      hide,
-      hasBeenShown,
-      reset,
-    }),
-    [isVisible, show, dismiss, hide, hasBeenShown, reset],
+  // Stable actions object — all callbacks are stable useCallbacks,
+  // so this object reference is created once and never changes
+  const actions = useMemo<UseFeatureHintActions>(
+    () => ({ show, dismiss, hide, reset }),
+    [show, dismiss, hide, reset],
   );
+
+  return { isVisible, hasBeenShown, actions };
 };
 
 /**
  * Check if a specific feature hint has been shown
  */
-export const hasFeatureHintBeenShown = (featureId: string): boolean => {
-  const storageKey = `${FEATURE_HINT_PREFIX}${featureId}`;
+export const hasFeatureHintBeenShown = (
+  featureId: string,
+  userId?: string,
+): boolean => {
+  const storageKey = userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
   return storage.getBoolean(storageKey) ?? false;
 };
 
 /**
  * Mark a feature hint as shown without displaying it
  */
-export const markFeatureHintAsShown = (featureId: string): void => {
-  const storageKey = `${FEATURE_HINT_PREFIX}${featureId}`;
+export const markFeatureHintAsShown = (
+  featureId: string,
+  userId?: string,
+): void => {
+  const storageKey = userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
   storage.set(storageKey, true);
 };
 
 /**
  * Reset a feature hint (will show again next time)
  */
-export const resetFeatureHint = (featureId: string): void => {
-  const storageKey = `${FEATURE_HINT_PREFIX}${featureId}`;
+export const resetFeatureHint = (
+  featureId: string,
+  userId?: string,
+): void => {
+  const storageKey = userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
   storage.remove(storageKey);
 };
 
 /**
  * Reset all feature hints (useful for debugging or settings)
+ * Clears all hints regardless of user prefix.
  */
 export const resetAllFeatureHints = (): void => {
   const allKeys = storage.getAllKeys();
