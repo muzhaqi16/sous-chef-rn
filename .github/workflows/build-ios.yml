@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_with_signing:
-    runs-on: macos-15
+    runs-on: souschef-runner
     environment: prod
     steps:
       - name: Select Xcode 16.4
