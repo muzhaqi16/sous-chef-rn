@@ -409,15 +409,6 @@ fragment UnitFragment on ItemUnit {
   maxQuantity
   quantityStep
   averagePricePerUnit
-  lastPriceUpdate
-  priceSource
-  usageCount
-  lastUsedAt
-  popularityScore
-  source
-  confidence
-  isVerified
-  verifiedAt
   createdAt
   updatedAt
   version
@@ -425,6 +416,13 @@ fragment UnitFragment on ItemUnit {
   # e.g., "pineapple" / "pineapples" instead of generic "count"
   displayNameSingular
   displayNamePlural
+  contentUnitId
+  contentUnit {
+    id
+    name
+    symbol
+    __typename
+  }
 }
 fragment BrandFragment on ItemBrand {
   id
@@ -570,8 +568,6 @@ fragment PantryItemCore on PantryItem {
   itemId
   itemName
   quantity
-  unitId
-  unitName
   version
   updatedAt
   storageState
@@ -579,9 +575,7 @@ fragment PantryItemCore on PantryItem {
   lowStockAlert
   minQuantity
   lastUsedAt
-  # NEW: netWeight fields for pantry item tracking
   netWeight
-  netWeightUnitId
   __typename
 }
 
@@ -593,6 +587,7 @@ fragment PantryItemDisplay on PantryItem {
   item {
     id
     imageUrl
+    images
     name
     netWeight
     displayUnit {
@@ -627,6 +622,24 @@ fragment PantryItemDisplay on PantryItem {
     __typename
   }
   tags
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    totalNetWeight
+    __typename
+  }
   __typename
 }
 

@@ -125,10 +125,17 @@ const SortableShoppingListComponent = forwardRef<
 
     const handleSwipeableClose = useCallback(() => {}, []);
 
-    // Key extractor - ensure we have a valid ID
+    // Key extractor - validItems already guarantees every item has an id
     const keyExtractor = useCallback(
-      (item: SortableShoppingListItem) =>
-        item?.id ?? `invalid-${Math.random()}`,
+      (item: SortableShoppingListItem) => item.id,
+      [],
+    );
+
+    // Provide approximate item height to reduce blank cells during fast scrolling
+    const overrideItemLayout = useCallback(
+      (layout: { size?: number; span?: number }) => {
+        layout.size = 72;
+      },
       [],
     );
 
@@ -232,6 +239,7 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
+              overrideItemLayout={overrideItemLayout}
               drawDistance={500}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true

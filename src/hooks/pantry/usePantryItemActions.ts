@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useCreatePantryItemUsageMutation,
@@ -40,6 +40,11 @@ export function usePantryItemActions({
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
+  // Stable ref for pantryItems — read from ref in callbacks to keep them stable
+  // across data changes (avoids context cascade when subscription updates the list)
+  const pantryItemsRef = useRef(pantryItems);
+  pantryItemsRef.current = pantryItems;
+
   // Consume item state
   const [consumeModalVisible, setConsumeModalVisible] = useState(false);
   const [selectedItemForConsume, setSelectedItemForConsume] =
@@ -217,39 +222,42 @@ export function usePantryItemActions({
   }, []);
 
   // Handler to open consume modal (for swipe action)
+  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleConsumeItem = useCallback(
     (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
+      const item = pantryItemsRef.current.find(p => p.id === itemId);
       if (item) {
         setSelectedItemForConsume(item);
         setConsumeModalVisible(true);
       }
     },
-    [pantryItems],
+    [],
   );
 
   // Handler to open waste modal (for swipe action)
+  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleWasteItem = useCallback(
     (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
+      const item = pantryItemsRef.current.find(p => p.id === itemId);
       if (item) {
         setSelectedItemForWaste(item);
         setWasteModalVisible(true);
       }
     },
-    [pantryItems],
+    [],
   );
 
   // Handler to open restock modal (for swipe action)
+  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleRestockItem = useCallback(
     (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
+      const item = pantryItemsRef.current.find(p => p.id === itemId);
       if (item) {
         setSelectedItemForRestock(item);
         setRestockModalVisible(true);
       }
     },
-    [pantryItems],
+    [],
   );
 
   // Handler to edit item (for swipe action)

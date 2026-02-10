@@ -531,7 +531,6 @@ subscription PantryLowStockAlert($pantryId: ID!) {
       id
       itemId
       itemName
-      unitName
       item {
         id
         name
@@ -552,7 +551,6 @@ subscription PantryExpiringItemsAlert($pantryId: ID!) {
       id
       itemId
       itemName
-      unitName
       item {
         id
         name

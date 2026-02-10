@@ -131,6 +131,20 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     StorageState.Ambient,
   );
 
+  // Form state - Package Details (on Page 2)
+  const [showPackageDetails, setShowPackageDetails] = useState(false);
+  const [packageSize, setPackageSize] = useState('');
+  const [contentUnit, setContentUnit] = useState('');
+  const [contentUnitId, setContentUnitId] = useState<string | null>(null);
+  const [itemNetWeight, setItemNetWeight] = useState('');
+  const [weightUnit, setWeightUnit] = useState('');
+  const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
+
+  // Form state - Pantry Net Weight (on Page 2, always visible)
+  const [pantryNetWeight, setPantryNetWeight] = useState('');
+  const [pantryNetWeightUnit, setPantryNetWeightUnit] = useState('');
+  const [pantryNetWeightUnitId, setPantryNetWeightUnitId] = useState<string | null>(null);
+
   // Form state - Page 2 (Details)
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
@@ -176,6 +190,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setUnit('');
     setUnitId(null);
     setStorageState(StorageState.Ambient);
+    setShowPackageDetails(false);
+    setPackageSize('');
+    setContentUnit('');
+    setContentUnitId(null);
+    setItemNetWeight('');
+    setWeightUnit('');
+    setWeightUnitId(null);
+    setPantryNetWeight('');
+    setPantryNetWeightUnit('');
+    setPantryNetWeightUnitId(null);
     setExpirationDate(null);
     setStorageLocation('');
     setSelectedStorageLocationId(null);
@@ -207,6 +231,33 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     (id: string | null, name: string | null) => {
       setUnitId(id);
       if (name) setUnit(name);
+    },
+    [],
+  );
+
+  // Handle content unit selection
+  const handleContentUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setContentUnitId(id);
+      if (name) setContentUnit(name);
+    },
+    [],
+  );
+
+  // Handle pantry net weight unit selection
+  const handlePantryNetWeightUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setPantryNetWeightUnitId(id);
+      if (name) setPantryNetWeightUnit(name);
+    },
+    [],
+  );
+
+  // Handle weight unit selection
+  const handleWeightUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setWeightUnitId(id);
+      if (name) setWeightUnit(name);
     },
     [],
   );
@@ -265,6 +316,39 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     }
 
     try {
+      // Build itemUnits array if package details are provided
+      let itemUnits;
+      let netWeight;
+      let displayUnitId;
+      if (showPackageDetails && packageSize && contentUnit) {
+        const pkgSize = parseFloat(packageSize);
+        if (!isNaN(pkgSize) && pkgSize > 0) {
+          itemUnits = [
+            {
+              unitId: unitId || undefined,
+              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
+              packageSize: pkgSize,
+              contentUnitId: contentUnitId || undefined,
+              contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
+              retailUnit: true,
+            },
+            {
+              unitId: contentUnitId || undefined,
+              unitName: !contentUnitId ? contentUnit.trim() : undefined,
+              isDefault: true,
+            },
+          ];
+        }
+        // Set net weight if provided
+        if (itemNetWeight) {
+          const nw = parseFloat(itemNetWeight);
+          if (!isNaN(nw) && nw > 0) {
+            netWeight = nw;
+            displayUnitId = weightUnitId || undefined;
+          }
+        }
+      }
+
       await createPantryItem({
         variables: {
           input: {
@@ -295,6 +379,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             restockQuantity: restockQuantity
               ? parseFloat(restockQuantity)
               : undefined,
+            itemUnits,
+            itemNetWeight: netWeight,
+            itemDisplayUnitId: displayUnitId,
+            netWeight: pantryNetWeight ? parseFloat(pantryNetWeight) || undefined : undefined,
+            netWeightUnitId: pantryNetWeightUnitId || undefined,
           },
         },
       });
@@ -310,6 +399,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     unit,
     unitId,
     storageState,
+    showPackageDetails,
+    packageSize,
+    contentUnit,
+    contentUnitId,
+    itemNetWeight,
+    weightUnitId,
+    pantryNetWeight,
+    pantryNetWeightUnitId,
     expirationDate,
     selectedStorageLocationId,
     storageLocation,
@@ -473,6 +570,94 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               placeholder="Select date"
               minimumDate={new Date()}
             />
+
+            {/* Net Weight */}
+            <View style={{ zIndex: 5 }}>
+              <FieldRow>
+                <FormInput
+                  label="Net Weight"
+                  value={pantryNetWeight}
+                  onChangeText={setPantryNetWeight}
+                  placeholder="e.g., 14.5"
+                  keyboardType="decimal-pad"
+                  useBottomSheetInput
+                />
+                <UnitAutocompleteField
+                  variant="inline"
+                  label="Unit"
+                  value={pantryNetWeightUnit}
+                  onChangeText={setPantryNetWeightUnit}
+                  onUnitSelected={handlePantryNetWeightUnitSelected}
+                  placeholder="oz, g, ml"
+                />
+              </FieldRow>
+            </View>
+
+            {/* Package Details - Progressive Disclosure */}
+            <View style={styles.section}>
+              <TouchableOpacity
+                onPress={() => setShowPackageDetails(!showPackageDetails)}
+                style={styles.toggleButton}
+              >
+                <Text style={styles.toggleButtonText}>
+                  {showPackageDetails ? 'Hide Package Details' : 'Add Package Details'}
+                </Text>
+              </TouchableOpacity>
+
+              {showPackageDetails && (
+                <View style={styles.packageDetailsContainer}>
+                  <Text style={styles.sectionDescription}>
+                    Define what's inside a package (e.g., 12 cans of 335ml each).
+                  </Text>
+
+                  {/* Package Size */}
+                  <View style={styles.section}>
+                    <FormInput
+                      label="Qty per Package"
+                      value={packageSize}
+                      onChangeText={setPackageSize}
+                      placeholder="e.g., 12"
+                      keyboardType="decimal-pad"
+                      useBottomSheetInput
+                    />
+                  </View>
+
+                  {/* Content Unit */}
+                  <View style={[styles.section, { zIndex: 10 }]}>
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label="Content Unit"
+                      value={contentUnit}
+                      onChangeText={setContentUnit}
+                      onUnitSelected={handleContentUnitSelected}
+                      placeholder="e.g., can, bottle"
+                    />
+                  </View>
+
+                  {/* Net Weight + Weight Unit */}
+                  <View style={{ zIndex: 1 }}>
+                    <FieldRow>
+                      <FormInput
+                        label="Weight per Unit"
+                        value={itemNetWeight}
+                        onChangeText={setItemNetWeight}
+                        placeholder="e.g., 335"
+                        keyboardType="decimal-pad"
+                        useBottomSheetInput
+                      />
+                      <UnitAutocompleteField
+                        variant="inline"
+                        label="Weight Unit"
+                        value={weightUnit}
+                        onChangeText={setWeightUnit}
+                        onUnitSelected={handleWeightUnitSelected}
+                        placeholder="mL, g, oz"
+                      />
+                    </FieldRow>
+                  </View>
+                </View>
+              )}
+            </View>
           </BottomSheetKeyboardAwareScrollView>
 
           {/* Page 3: Storage */}
@@ -646,5 +831,17 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
+  },
+  toggleButton: {
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  packageDetailsContainer: {
+    marginTop: theme.spacing.sm,
   },
 }));

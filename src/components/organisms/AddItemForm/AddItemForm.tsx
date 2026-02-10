@@ -5,14 +5,14 @@ import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
-import { StorageState, ItemType } from '#generated';
+import { StorageState, ItemType, type CreateItemInput, type ItemUnitInput } from '#generated';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
 import { FormSelect } from '#/components/molecules/FormSelect';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
-import { ProductImagePicker } from '#/components/molecules/ProductImagePicker';
-import type { ImageFile } from '#/components/molecules/ImagePicker';
+import { MultiImagePicker, type SelectedImage } from '#/components/molecules/MultiImagePicker';
+import { UnitEntryList, type UnitEntry } from '#/components/organisms/UnitEntryList/UnitEntryList';
 import { DynamicFormFields, type FieldDef } from '#/components/molecules/DynamicFormFields';
 
 interface AddItemFormProps {
@@ -106,27 +106,6 @@ const getFormSections = (
         component: FormNumberInput,
         props: { componentType: 'number', keyboardType: 'numeric' },
       },
-    ],
-  },
-  {
-    title: 'Brand & Vendor',
-    fields: [
-      {
-        name: 'vendor',
-        label: 'Brand/Vendor',
-        placeholder: 'Enter brand or vendor name',
-        component: 'brandAutocomplete',
-        props: {
-          componentType: 'autocomplete',
-          onBrandSelected: (brandId: string | null) =>
-            setSelectedBrandId(brandId),
-        },
-      },
-    ],
-  },
-  {
-    title: 'Weight & Units',
-    fields: [
       {
         name: 'netWeight',
         label: 'Net Weight',
@@ -142,6 +121,22 @@ const getFormSections = (
         props: {
           componentType: 'autocomplete',
           onUnitSelected: (unitId: string | null) => setSelectedUnitId(unitId),
+        },
+      },
+    ],
+  },
+  {
+    title: 'Brand & Vendor',
+    fields: [
+      {
+        name: 'vendor',
+        label: 'Brand/Vendor',
+        placeholder: 'Enter brand or vendor name',
+        component: 'brandAutocomplete',
+        props: {
+          componentType: 'autocomplete',
+          onBrandSelected: (brandId: string | null) =>
+            setSelectedBrandId(brandId),
         },
       },
     ],
@@ -203,7 +198,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // Track selected brand and unit IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
+
+  // Multi-image and unit entry state (managed outside react-hook-form)
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
+  const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
 
   // Determine what to populate based on scanned value
   const getInitialValues = () => {
@@ -242,7 +240,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  // Get form sections with access to setSelectedBrandId and setSelectedUnitId
+  // Get form sections with access to setSelectedBrandId, setSelectedUnitId
   const FORM_SECTIONS = getFormSections(setSelectedBrandId, setSelectedUnitId);
 
   const {
@@ -271,8 +269,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
     // Add system tags based on boolean flags
     const systemTags: string[] = [];
-
-    // Add tags when checkboxes are checked
     if (data.isFoodStampItem) {
       systemTags.push('food-stamp-eligible');
     }
@@ -285,9 +281,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     let brandName: string | undefined;
     if (selectedBrandId) {
       brandId = selectedBrandId;
-      brandName = data.vendor; // The display name from the form
+      brandName = data.vendor;
     } else if (data.vendor) {
-      // Only name provided (manual entry)
       brandName = data.vendor;
     }
 
@@ -296,40 +291,39 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     let displayUnitName: string | undefined;
     if (selectedUnitId) {
       displayUnitId = selectedUnitId;
-      displayUnitName = data.displayUnitId; // The display name from the form
+      displayUnitName = data.displayUnitId;
     } else if (data.displayUnitId) {
-      // Only name provided (manual entry)
       displayUnitName = data.displayUnitId;
     }
 
-    // Process units array - create a basic unit entry if unit info is provided
-    let units: any[] = [];
-    if ((displayUnitId || displayUnitName) && data.netWeight) {
-      const unitEntry: any = {
-        isDefault: true,
-        packageSize: data.netWeight,
-      };
+    // Map unit entries to ItemUnitInput[]
+    const units: ItemUnitInput[] = unitEntries
+      .filter(entry => entry.unitId || entry.unitName)
+      .map((entry, index) => ({
+        unitId: entry.unitId || undefined,
+        unitName: entry.unitName || undefined,
+        isDefault: index === 0,
+        packageSize: entry.packageSize ? parseFloat(entry.packageSize) : undefined,
+        contentUnitId: entry.contentUnitId || undefined,
+        contentUnitName: entry.contentUnitName || undefined,
+        retailUnit: entry.retailUnit || undefined,
+      }));
 
-      if (displayUnitId) {
-        unitEntry.unitId = displayUnitId;
-      }
-      if (displayUnitName) {
-        unitEntry.unitName = displayUnitName;
-      }
-
-      units = [unitEntry];
-    }
-
-    const processedData = {
+    const processedData: Partial<CreateItemInput> & {
+      selectedImages: SelectedImage[];
+      brandName?: string;
+      displayUnitName?: string;
+      sku?: string;
+    } = {
       name: data.name,
       description: data.description || undefined,
-      upc: data.upc || undefined,
+      primaryUpc: data.upc || undefined,
       sku: data.sku || undefined,
       netWeight: data.netWeight || undefined,
       displayUnitId: displayUnitId || undefined,
       displayUnitName: displayUnitName || undefined,
-      type: data.type,
-      storageState: data.storageState,
+      type: (data.type as ItemType) || undefined,
+      storageState: (data.storageState as StorageState) || undefined,
       shelfLifeDays: data.shelfLifeDays || undefined,
       imageUrl: data.imageUrl || undefined,
       brandId: brandId || undefined,
@@ -343,11 +337,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         tags.length > 0 || systemTags.length > 0
           ? [...tags, ...systemTags]
           : undefined,
-      // Pass the selected image for post-creation upload
-      selectedImage: selectedImage,
+      selectedImages,
     };
 
-    onSubmit(processedData);
+    onSubmit(processedData as any);
   };
 
   return (
@@ -390,12 +383,20 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           </View>
         ))}
 
-        {/* Image Picker Section */}
+        {/* Dynamic Unit Entries */}
         <View style={styles.section}>
-          <ProductImagePicker
-            selectedImage={selectedImage}
-            onImageSelected={setSelectedImage}
-            onImageRemoved={() => setSelectedImage(null)}
+          <UnitEntryList
+            entries={unitEntries}
+            onEntriesChanged={setUnitEntries}
+            disabled={loading}
+          />
+        </View>
+
+        {/* Multi-Image Picker Section */}
+        <View style={styles.section}>
+          <MultiImagePicker
+            images={selectedImages}
+            onImagesChanged={setSelectedImages}
             onError={error => {
               console.error('Image selection error:', error);
             }}

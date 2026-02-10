@@ -27,6 +27,8 @@ export interface ImageFile {
 
 interface ImagePickerProps {
   onImageSelected: (image: ImageFile) => void;
+  onMultiImageSelected?: (images: ImageFile[]) => void;
+  multiSelect?: boolean;
   onError?: (error: Error) => void;
   disabled?: boolean;
   isProfile?: boolean; // For different validation rules
@@ -43,6 +45,8 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 
 export const ImagePicker: React.FC<ImagePickerProps> = ({
   onImageSelected,
+  onMultiImageSelected,
+  multiSelect = false,
   onError,
   disabled = false,
   isProfile = false,
@@ -53,29 +57,54 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
   const handleImageResponse = useCallback(
     (response: ImagePickerResponse) => {
-      if (response.didCancel || response.errorCode || !response.assets?.[0]) {
+      if (response.didCancel || response.errorCode || !response.assets?.length) {
         return;
       }
 
-      const asset = response.assets[0];
-      const imageFile: ImageFile = {
-        uri: asset.uri!,
-        fileName: asset.fileName,
-        fileSize: asset.fileSize,
-        type: asset.type,
-      };
+      if (multiSelect && onMultiImageSelected) {
+        // Multi-select mode: process all assets
+        const validImages: ImageFile[] = [];
+        for (const asset of response.assets) {
+          if (!asset.uri) continue;
+          const imageFile: ImageFile = {
+            uri: asset.uri,
+            fileName: asset.fileName,
+            fileSize: asset.fileSize,
+            type: asset.type,
+          };
+          try {
+            validateImageFile(imageFile, isProfile);
+            validImages.push(imageFile);
+          } catch (error) {
+            const validationError = error as ImageValidationError;
+            onError?.(validationError);
+          }
+        }
+        if (validImages.length > 0) {
+          onMultiImageSelected(validImages);
+        }
+      } else {
+        // Single-select mode (backward compatible)
+        const asset = response.assets[0];
+        if (!asset?.uri) return;
+        const imageFile: ImageFile = {
+          uri: asset.uri,
+          fileName: asset.fileName,
+          fileSize: asset.fileSize,
+          type: asset.type,
+        };
 
-      try {
-        // Validate the selected image
-        validateImageFile(imageFile, isProfile);
-        onImageSelected(imageFile);
-      } catch (error) {
-        const validationError = error as ImageValidationError;
-        onError?.(validationError);
-        Alert.alert('Invalid Image', validationError.message);
+        try {
+          validateImageFile(imageFile, isProfile);
+          onImageSelected(imageFile);
+        } catch (error) {
+          const validationError = error as ImageValidationError;
+          onError?.(validationError);
+          Alert.alert('Invalid Image', validationError.message);
+        }
       }
     },
-    [onImageSelected, onError, isProfile],
+    [onImageSelected, onMultiImageSelected, multiSelect, onError, isProfile],
   );
 
   // PERFORMANCE: Consolidated permission request logic
@@ -121,10 +150,12 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   }, [requestPermissionAndLaunch]);
 
   const handleLibraryPress = useCallback(() => {
-    // Android Photo Picker doesn't require permissions
-    // iOS also allows launching without explicit permission on modern versions
-    launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-  }, [handleImageResponse]);
+    const libraryOptions: ImageLibraryOptions = {
+      ...DEFAULT_OPTIONS,
+      ...(multiSelect && { selectionLimit: 0 }),
+    };
+    launchImageLibrary(libraryOptions, handleImageResponse);
+  }, [handleImageResponse, multiSelect]);
 
   const showImagePicker = useCallback(() => {
     if (disabled) return;

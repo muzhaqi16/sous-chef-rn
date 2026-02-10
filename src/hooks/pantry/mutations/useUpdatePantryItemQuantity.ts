@@ -97,7 +97,7 @@ export function useUpdatePantryItemQuantity({
     quantityInput,
     quantityValue,
     unitId,
-    unitSymbol,
+    unitSymbol: _unitSymbol,
     trackingUnit,
     currentItem,
   }: UpdateQuantityParams): void => {
@@ -116,8 +116,7 @@ export function useUpdatePantryItemQuantity({
         updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
           quantity: newQuantity,
           unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-          unitId: unitId || currentItem.unitId,
-          unitName: unitSymbol || currentItem.unitName,
+          unitId: unitId || currentItem.unit?.id,
         }),
       },
     }).catch(error => {

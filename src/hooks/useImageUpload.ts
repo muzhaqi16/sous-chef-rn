@@ -281,6 +281,27 @@ export const useImageUpload = () => {
     [uploadImage, confirmItemUpload],
   );
 
+  const uploadItemImages = useCallback(
+    async (
+      files: Array<ImageFile & { perspective?: string }>,
+      itemId: string,
+      options: ImageUploadOptions = {},
+    ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
+      const results: Array<{ imageUrl: string; perspective: string }> = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const imageUrl = await uploadItemImage(file, itemId, {
+          onProgress: (p) => options?.onProgress?.(((i + p) / files.length)),
+        });
+        if (imageUrl) {
+          results.push({ imageUrl, perspective: file.perspective || 'front' });
+        }
+      }
+      return results;
+    },
+    [uploadItemImage],
+  );
+
   const updateProfileAvatarUrl = useCallback(
     async (avatarUrl: string) => {
       try {
@@ -340,6 +361,7 @@ export const useImageUpload = () => {
     progress,
     uploadProfileImage,
     uploadItemImage,
+    uploadItemImages,
     updateProfileAvatarUrl,
     updateProfileCoverUrl,
     updateItemImageUrl,

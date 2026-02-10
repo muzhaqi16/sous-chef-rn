@@ -136,7 +136,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       if (!pantryId || creating) return;
 
       // 1. Show toast immediately
-      toastService.success(pantrySheetConfig.quickAdd.toastMessage(item.name, 1));
+      toastService.success(pantrySheetConfig.quickAdd.toastMessage(item.name));
 
       // 2. Optimistically remove from suggestions cache
       removeFromSuggestionsCache(item.id);
@@ -148,7 +148,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             pantryId,
             itemId: item.id,
             itemName: item.name,
-            quantity: 1,
+            quantity: null,
           },
         },
       }).then(() => {
@@ -171,7 +171,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       state.startExitAnimation(pantryItem.itemId);
 
       // 2. Show toast immediately
-      toastService.success(pantrySheetConfig.quickAdd.toastMessage(pantryItem.name, 1));
+      toastService.success(pantrySheetConfig.quickAdd.toastMessage(pantryItem.name));
 
       // 3. Fire mutation without await
       createPantryItem({
@@ -180,7 +180,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             pantryId,
             itemId: pantryItem.itemId,
             itemName: pantryItem.name,
-            quantity: 1,
+            quantity: null,
           },
         },
       }).then(() => {

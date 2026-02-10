@@ -49,8 +49,7 @@ export const pantrySheetConfig: AddItemSheetConfig = {
   quickAdd: {
     fireAndForget: true,
     enableExitAnimations: true,
-    toastMessage: (name: string, quantity: number) =>
-      `Added ${name} (Qty: ${quantity})`,
+    toastMessage: (name: string) => `Added ${name}`,
   },
   addDetails: {
     enabled: true,

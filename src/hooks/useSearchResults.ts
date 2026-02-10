@@ -155,17 +155,34 @@ export const useSearchResults = (barcode: string, format?: string) => {
         const createdItem = data.createItem;
         let finalItem = createdItem;
 
-        // If there was an image selected, upload it after item creation
+        // If there were images selected, upload them after item creation
         try {
+          const pendingImagesJson = storage.getString(
+            'temp_pending_item_images',
+          );
+          if (pendingImagesJson && createdItem.id) {
+            const images = JSON.parse(pendingImagesJson);
+            let firstImageUrl: string | null = null;
+            for (const image of images) {
+              const imageUrl = await uploadItemImage(image, createdItem.id);
+              if (imageUrl && !firstImageUrl) {
+                firstImageUrl = imageUrl;
+              }
+            }
+            if (firstImageUrl) {
+              // Update the finalItem with the first image URL for display
+              finalItem = { ...createdItem, imageUrl: firstImageUrl };
+            }
+          }
+
+          // Backward compat: also check old singular key
           const pendingImageUpload = storage.getString(
             'temp_pending_item_image',
           );
           if (pendingImageUpload && createdItem.id) {
             const imageFile = JSON.parse(pendingImageUpload);
-
             const imageUrl = await uploadItemImage(imageFile, createdItem.id);
             if (imageUrl) {
-              // Update the finalItem with the new image URL for display
               finalItem = { ...createdItem, imageUrl };
             }
           }
@@ -173,7 +190,8 @@ export const useSearchResults = (barcode: string, format?: string) => {
           console.error('Error handling pending image upload:', error);
           // Continue without showing error since item was created successfully
         } finally {
-          // Clean up the temporary storage
+          // Clean up both storage keys
+          storage.remove('temp_pending_item_images');
           storage.remove('temp_pending_item_image');
         }
 
@@ -190,6 +208,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     },
     onError: error => {
       // Clean up pending data on error
+      storage.remove('temp_pending_item_images');
       storage.remove('temp_pending_item_image');
       pendingBrandNameRef.current = undefined;
 
@@ -342,8 +361,14 @@ export const useSearchResults = (barcode: string, format?: string) => {
       // Store brand name for use in mutation callback
       pendingBrandNameRef.current = formData.brandName;
 
-      // Store the selected image in MMKV for post-creation upload
-      if (formData.selectedImage) {
+      // Store the selected images in MMKV for post-creation upload
+      if (formData.selectedImages && formData.selectedImages.length > 0) {
+        storage.set(
+          'temp_pending_item_images',
+          JSON.stringify(formData.selectedImages),
+        );
+      } else if (formData.selectedImage) {
+        // Backward compat: support singular selectedImage
         storage.set(
           'temp_pending_item_image',
           JSON.stringify(formData.selectedImage),
@@ -375,6 +400,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
         // Weight and Units
         netWeight: formData.netWeight || undefined,
         displayUnitId: formData.displayUnitId || undefined,
+        displayUnitName: formData.displayUnitName || undefined,
 
         // Categories
         categoryIds: formData.categoryIds || undefined,

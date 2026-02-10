@@ -122,7 +122,7 @@ export const SelectPantryItems = () => {
                   itemId: item.id,
                   // Only pass unitId if displayUnit exists, otherwise let backend use its fallback chain
                   ...(item.displayUnit?.id && { unitId: item.displayUnit.id }),
-                  quantity: 1,
+                  quantity: null,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,
                   acquisitionMethod: AcquisitionMethod.Purchased,

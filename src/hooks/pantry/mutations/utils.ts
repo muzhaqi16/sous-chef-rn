@@ -88,6 +88,14 @@ export function buildDirtyUpdateInput(
       : null;
   }
 
+  if (dirtyFields.netWeight) {
+    input.netWeight = data.netWeight ? parseFloat(data.netWeight) : null;
+  }
+
+  if (dirtyFields.netWeightUnitId) {
+    input.netWeightUnitId = data.netWeightUnitId || null;
+  }
+
   // Handle brand updates
   if (dirtyFields.brand) {
     if (brandId) {

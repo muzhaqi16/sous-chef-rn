@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Text, useWindowDimensions } from 'react-native';
+import { Text, Dimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
@@ -9,6 +9,10 @@ import { CardRightSlot } from '../molecules/BaseItemCard/CardRightSlot';
 import type { CardVariant } from '../molecules/BaseItemCard/types';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { SLIDE_PRESETS } from '#/constants/animations';
+import { usePantryActions } from './PantryActionsContext';
+
+// Module-level constant — only used for slide animation distance, no need for reactive updates
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export type ItemVariant = 'normal' | 'warning' | 'expired';
 
@@ -25,13 +29,8 @@ interface PantryItemCardProps {
   variant?: ItemVariant;
   imageUrl?: string | null;
   isOutOfStock?: boolean;
-  onPress?: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onConsume?: () => void;
-  onWaste?: () => void;
-  onRestock?: () => void;
-  onSwipeableWillOpen?: (ref: any) => void;
+  packageBreakdownText?: string | null;
+  netWeightText?: string | null;
 }
 
 
@@ -88,20 +87,22 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   variant = 'normal',
   imageUrl,
   isOutOfStock,
-  onPress,
-  onEdit,
-  onDelete,
-  onConsume,
-  onWaste,
-  onRestock,
-  onSwipeableWillOpen,
+  packageBreakdownText,
+  netWeightText,
 }) => {
-  const { width: screenWidth } = useWindowDimensions();
+  const { actions, swipeable } = usePantryActions();
+
+  // Bind context actions to this item's id — always call useCallback (rules of hooks)
+  const onPress = useCallback(() => actions.onItemPress(id), [actions, id]);
+  const onEdit = useCallback(() => actions.onItemEdit?.(id), [actions, id]);
+  const onConsume = useCallback(() => actions.onItemConsume?.(id), [actions, id]);
+  const onWaste = useCallback(() => actions.onItemWaste?.(id), [actions, id]);
+  const onRestock = useCallback(() => actions.onItemRestock?.(id), [actions, id]);
 
   // Slide animation for delete action
   const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
     itemId: id,
-    slideDistance: screenWidth,
+    slideDistance: SCREEN_WIDTH,
     duration: SLIDE_PRESETS.exitWithFade.duration,
     withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
     opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
@@ -109,10 +110,10 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 
   // Wrap delete action with slide animation (callback after animation completes)
   const handleDelete = useCallback(() => {
-    if (onDelete) {
-      triggerSlide(1, onDelete);
+    if (actions.onItemDelete) {
+      triggerSlide(1, () => actions.onItemDelete!(id));
     }
-  }, [onDelete, triggerSlide]);
+  }, [actions, id, triggerSlide]);
 
 
   // Map ItemVariant to CardVariant
@@ -138,18 +139,27 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
       <BaseItemCard
         variant={cardVariant}
         onPress={onPress}
-        onEdit={onEdit}
-        onDelete={onDelete ? handleDelete : undefined}
-        onConsume={onConsume}
-        onWaste={onWaste}
-        onRestock={onRestock}
-        onSwipeableWillOpen={onSwipeableWillOpen}
+        onEdit={actions.onItemEdit ? onEdit : undefined}
+        onDelete={actions.onItemDelete ? handleDelete : undefined}
+        onConsume={actions.onItemConsume ? onConsume : undefined}
+        onWaste={actions.onItemWaste ? onWaste : undefined}
+        onRestock={actions.onItemRestock ? onRestock : undefined}
+        onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
         leftThreshold={80}
         rightThreshold={80}
         testID={`pantry-item-${id}`}
         leftElement={renderLeftElement()}
         rightElement={
-          <CardRightSlot type="meta" primary={quantity} secondary={location} />
+          <CardRightSlot
+            type="meta"
+            primary={quantity}
+            secondary={packageBreakdownText || netWeightText || location}
+            tertiary={
+              packageBreakdownText && netWeightText
+                ? netWeightText
+                : (packageBreakdownText || netWeightText) ? location : undefined
+            }
+          />
         }
       >
         <CardContent
@@ -185,8 +195,22 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// PERFORMANCE: Memoize to prevent unnecessary re-renders during list scrolling
-export const PantryItemCard = React.memo(PantryItemCardComponent);
+// PERFORMANCE: Custom comparator only checks data primitives — action callbacks come
+// from context and don't appear in props, so every prop is a stable primitive/string.
+export const PantryItemCard = React.memo(PantryItemCardComponent, (prev, next) =>
+  prev.id === next.id &&
+  prev.name === next.name &&
+  prev.expirationText === next.expirationText &&
+  prev.expirationVariant === next.expirationVariant &&
+  prev.quantity === next.quantity &&
+  prev.location === next.location &&
+  prev.storageState === next.storageState &&
+  prev.variant === next.variant &&
+  prev.imageUrl === next.imageUrl &&
+  prev.isOutOfStock === next.isOutOfStock &&
+  prev.packageBreakdownText === next.packageBreakdownText &&
+  prev.netWeightText === next.netWeightText,
+);
 
 // PantryItemVariant alias for backwards compatibility
 export type PantryItemVariant = ItemVariant;

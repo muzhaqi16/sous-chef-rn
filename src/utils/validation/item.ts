@@ -85,9 +85,13 @@ export const categoryIdsRule = array()
 export const unitsRule = array()
   .of(
     object({
-      unitId: string().required(),
+      unitId: string().optional(),
+      unitName: string().optional(),
       isDefault: boolean().default(false),
-      packageSize: number().min(0.001).required(),
+      packageSize: number().min(0.001).optional(),
+      contentUnitId: string().optional(),
+      contentUnitName: string().optional(),
+      retailUnit: boolean().optional(),
       packageDescription: string().optional(),
       conversionRatio: number().min(0.001).optional(),
     })
@@ -103,6 +107,27 @@ export const vendorRule = string()
 export const tagsRule = array()
   .of(string().trim().max(30, 'Each tag cannot exceed 30 characters'))
   .max(10, 'Cannot have more than 10 tags')
+  .optional();
+
+// Selected images validation (for multi-image picker)
+export const selectedImagesRule = array()
+  .of(
+    object({
+      uri: string().required(),
+      fileName: string().optional(),
+      perspective: string()
+        .oneOf([
+          'front',
+          'back',
+          'left',
+          'right',
+          'top',
+          'nutrition_label',
+          'ingredient_list',
+        ])
+        .default('front'),
+    })
+  )
   .optional();
 
 // --- Create Item validation schema -------------------------------------------
@@ -127,6 +152,7 @@ export const createItemSchema = object({
 
   // Images
   imageUrl: urlRule,
+  selectedImages: selectedImagesRule,
 
   // Brand Information
   brandId: string().optional(),
@@ -137,8 +163,6 @@ export const createItemSchema = object({
 
   // Units
   units: unitsRule,
-  unitQty: unitQtyRule,
-  defaultUnit: defaultUnitRule,
 
   // Metadata
   tags: tagsRule,

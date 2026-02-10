@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Text,
 } from 'react-native';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -36,6 +36,8 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
+import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { FieldRow } from '#components/molecules/FieldRow';
 import { Header } from '#components/molecules/Header';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
@@ -58,6 +60,10 @@ interface PantryItemFormData {
   minQuantity?: string;
   restockQuantity?: string;
 
+  // Net weight
+  netWeight?: string;
+  netWeightUnitId?: string;
+
   // Storage fields (both modes)
   storageState: StorageState;
   location: string;
@@ -73,6 +79,8 @@ const addItemSchema = object({
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),
+  netWeight: string(),
+  netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   location: string(),
   notes: string(),
@@ -87,6 +95,8 @@ const editItemSchema = object({
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),
+  netWeight: string(),
+  netWeightUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   location: string(),
   notes: string(),
@@ -123,6 +133,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     { id: string; name: string }[]
   >([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [_selectedNetWeightUnitId, setSelectedNetWeightUnitId] = useState<string | null>(null);
+  const [netWeightUnitDisplay, setNetWeightUnitDisplay] = useState('');
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
   // Get selectedHomeId from Zustand (no GraphQL query triggered)
@@ -189,7 +201,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     if (mode === 'edit' && existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
       // Tracking unit (for counting items) - from item.unit or item.unitName
-      const trackingUnitSymbol = item.unit.symbol;
+      const trackingUnitSymbol = item.unit?.symbol || '';
       return {
         itemName: item.itemName || '',
         quantityInput: item.quantity?.toString() || '1',
@@ -197,6 +209,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         minQuantity: item.minQuantity?.toString() || '',
         restockQuantity: item.restockQuantity?.toString() || '',
         brand: item.brand?.name || '',
+        netWeight: item.netWeight?.toString() || '',
+        netWeightUnitId: item.netWeightUnit?.id || '',
         storageState: item.storageState || StorageState.Ambient,
         location:
           typeof item.storageLocation === 'string'
@@ -217,6 +231,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       unit: '', // Tracking unit
       minQuantity: '',
       restockQuantity: '',
+      netWeight: '',
+      netWeightUnitId: '',
       storageState: StorageState.Ambient,
       location: '',
       notes: '',
@@ -249,12 +265,21 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       // Initialize unit state from existing item
       const item = existingItemData.pantryItem;
       // Tracking unit state
-      setTrackingUnit({
-        id: item.unit.id,
-        name: item.unit.name,
-        symbol: item.unit.symbol,
-        type: item.unit.type ?? null,
-      });
+      if (item.unit) {
+        setTrackingUnit({
+          id: item.unit.id,
+          name: item.unit.name,
+          symbol: item.unit.symbol,
+          type: item.unit.type ?? null,
+        });
+      }
+      // Initialize net weight unit from existing item
+      if (item.netWeightUnit?.id) {
+        setSelectedNetWeightUnitId(item.netWeightUnit.id);
+        setNetWeightUnitDisplay(
+          item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
+        );
+      }
     }
   }, [mode, existingItemData, reset, getInitialValues]);
 
@@ -336,6 +361,17 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       }));
     },
     [],
+  );
+
+  const handleNetWeightUnitSelected = useCallback(
+    (unitId: string | null, unitName: string | null) => {
+      setSelectedNetWeightUnitId(unitId);
+      if (unitName) setNetWeightUnitDisplay(unitName);
+      if (unitId) {
+        setValue('netWeightUnitId', unitId, { shouldDirty: true });
+      }
+    },
+    [setValue],
   );
 
   const handleSave = async (data: PantryItemFormData) => {
@@ -528,6 +564,35 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               // Edit mode stock info (read-only display)
               unitSymbol={item?.unit?.symbol}
             />
+
+            {/* Net Weight Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Net Weight</Text>
+              <FieldRow>
+                <Controller
+                  control={control}
+                  name="netWeight"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <FormInput
+                      label="Net Weight"
+                      value={value || ''}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="e.g., 14.5"
+                      keyboardType="decimal-pad"
+                    />
+                  )}
+                />
+                <UnitAutocompleteField
+                  variant="modal"
+                  label="Unit"
+                  value={netWeightUnitDisplay}
+                  onChangeText={setNetWeightUnitDisplay}
+                  onUnitSelected={handleNetWeightUnitSelected}
+                  placeholder="oz, g, ml"
+                />
+              </FieldRow>
+            </View>
 
             {/* Storage Details Section */}
             <StorageDetailsSection

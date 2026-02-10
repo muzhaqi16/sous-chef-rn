@@ -130,7 +130,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       if (!shoppingListId || adding) return;
 
       // 1. Show toast immediately (don't wait for mutation)
-      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(item.name, 1));
+      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(item.name));
 
       // 2. Fire mutation without await
       addItemMutation({
@@ -139,7 +139,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             shoppingListId,
             itemId: item.id,
             itemName: item.name,
-            quantity: 1,
+            quantity: null,
             unitId: item.defaultUnit?.id,
           },
         },
@@ -168,7 +168,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       state.startExitAnimation(shoppingItem.itemId);
 
       // 2. Show toast immediately (don't wait for mutation)
-      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name, 1));
+      toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name));
 
       // 3. Fire mutation without await
       addItemMutation({
@@ -177,7 +177,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
             shoppingListId,
             itemId: shoppingItem.itemId,
             itemName: shoppingItem.name,
-            quantity: 1,
+            quantity: null,
             unitId,
           },
         },

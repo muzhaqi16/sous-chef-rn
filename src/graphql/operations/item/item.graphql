@@ -315,8 +315,22 @@ mutation CreateItem($input: CreateItemInput!) {
       }
     }
     units {
-      isDefault
+      id
       unitId
+      isDefault
+      packageSize
+      retailUnit
+      contentUnitId
+      unit {
+        id
+        name
+        symbol
+      }
+      contentUnit {
+        id
+        name
+        symbol
+      }
     }
   }
 }

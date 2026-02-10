@@ -1567,8 +1567,11 @@ input CreatePantryItemInput {
   itemDescription: String
   itemDisplayUnitId: String
   itemId: String
+  itemImageUrl: String
+  itemImages: JSON
   itemName: String
   itemNetWeight: Float
+  itemUnits: [ItemUnitInput!]
   itemUpc: String
   lastUsedAt: DateTime
   minQuantity: Float
@@ -3295,9 +3298,9 @@ enum ItemType {
 }
 
 type ItemUnit {
-  addedBy: User
   averagePricePerUnit: Float
-  confidence: Float
+  contentUnit: Unit
+  contentUnitId: String
   createdAt: DateTime!
   deletedAt: DateTime
   displayFormat: DisplayFormat!
@@ -3307,32 +3310,19 @@ type ItemUnit {
   isCommon: Boolean!
   isDefault: Boolean!
   isPreferred: Boolean!
-  isTrackingDefault: Boolean!
-  isVerified: Boolean!
   item: Item
   itemId: String!
-  lastPriceUpdate: DateTime
-  lastUsedAt: DateTime
-  maxDisplayPrecision: Int
   maxQuantity: Float
   minQuantity: Float
   packageDescription: String
   packageSize: Float
-  popularityScore: Float!
-  preferredDenominators: JSON
-  priceSource: String
   quantityStep: Float
   recommendedFor: [UnitRecommendation!]!
   retailUnit: Boolean!
-  roundToNearestFraction: Boolean!
-  source: UnitSource!
   unit: Unit
   unitId: String!
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
-  usageCount: Int!
-  verifiedAt: DateTime
-  verifiedBy: User
   version: Int!
 }
 
@@ -3358,6 +3348,8 @@ type ItemUnitConversion {
 
 input ItemUnitInput {
   averagePricePerUnit: Float
+  contentUnitId: String
+  contentUnitName: String
   isDefault: Boolean
   isPreferred: Boolean
   packageDescription: String
@@ -5116,6 +5108,14 @@ type OperatingSystemStat {
   osName: String!
 }
 
+type PackageBreakdown {
+  contentUnit: Unit!
+  count: Float!
+  perUnitNetWeight: Float
+  perUnitNetWeightUnit: Unit
+  totalNetWeight: Float
+}
+
 """
 Page information for cursor-based pagination (Relay spec)
 """
@@ -5290,7 +5290,7 @@ type PantryItem {
   minQuantity: Float
   netWeight: Float
   netWeightUnit: Unit
-  netWeightUnitId: String
+  packageBreakdown: PackageBreakdown
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
@@ -5306,9 +5306,8 @@ type PantryItem {
   storeId: String
   tags: [String!]!
   totalCost: Float
-  unit: Unit!
-  unitId: String!
-  unitName: String!
+  unit: Unit
+  unitId: String
   updatedAt: DateTime
   usageRecords: [PantryItemUsage!]!
   version: Int
@@ -5389,6 +5388,7 @@ input PantryItemFilters {
 Order by options for pantry items
 """
 input PantryItemOrderBy {
+  addedAt: SortOrder
   createdAt: SortOrder
   currentQuantity: SortOrder
   expiresAt: SortOrder
@@ -5494,13 +5494,13 @@ type PantryItemUsage {
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
-  itemId: ID!
-  itemName: String!
+  itemId: ID
+  itemName: String
   mealPlanItem: MealPlanItem
   mealPlanItemId: String
   notes: String
-  pantry: Pantry!
-  pantryId: ID!
+  pantry: Pantry
+  pantryId: ID
   pantryItem: PantryItem
   pantryItemId: String
   purpose: UsagePurpose!
@@ -7868,8 +7868,11 @@ input SyncPantryItemInput {
   itemDescription: String
   itemDisplayUnitId: String
   itemId: String
+  itemImageUrl: String
+  itemImages: JSON
   itemName: String
   itemNetWeight: Float
+  itemUnits: [ItemUnitInput!]
   itemUpc: String
   lastUsedAt: DateTime
   lowStockAlert: Boolean
@@ -8100,16 +8103,6 @@ enum UnitRecommendation {
   PRECISION_COOKING
   RECIPE_SCALING
   STORAGE_PLANNING
-}
-
-enum UnitSource {
-  AI_SUGGESTED
-  AUTO_DETECTED
-  COMMUNITY
-  IMPORT
-  MANUAL
-  PURCHASE_HISTORY
-  RECIPE_DERIVED
 }
 
 enum UnitSystem {
@@ -8597,6 +8590,7 @@ input UpdatePantryItemInput {
   expiresAt: String
   isComposted: Boolean
   isRecycled: Boolean
+  itemName: String
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float

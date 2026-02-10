@@ -14,7 +14,7 @@ import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
-import { PantryItemCard, ItemVariant } from './PantryItemCard';
+import { PantryItemCard, ItemVariant, ExpirationVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -25,7 +25,9 @@ import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
   formatQuantityDisplay,
-  calculateExpiresIn,
+  formatPackageBreakdown,
+  formatNetWeight,
+  formatNetWeightDisplay,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
@@ -56,9 +58,9 @@ interface PantryItem {
     name: string;
   } | null;
   createdAt?: string;
-  unit: {
+  unit?: {
     symbol: string;
-  };
+  } | null;
   item?: {
     name?: string;
     netWeight?: number | null;
@@ -68,9 +70,17 @@ interface PantryItem {
     category?: {
       name?: string;
     } | null;
-    primaryImage?: {
-      url?: string;
-    } | null;
+    imageUrl?: string | null;
+    images?: unknown;
+  } | null;
+  netWeight?: number | null;
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
+  packageBreakdown?: {
+    count: number;
+    contentUnit: { name: string; symbol?: string | null };
+    perUnitNetWeight?: number | null;
+    perUnitNetWeightUnit?: { symbol?: string | null } | null;
+    totalNetWeight?: number | null;
   } | null;
 }
 
@@ -132,6 +142,18 @@ export interface PantryContentRef {
   scrollToTop(): void;
 }
 
+interface ItemDisplayData {
+  imageUrl: string | null;
+  expirationText: string | null;
+  expirationVariant?: ExpirationVariant;
+  variant: ItemVariant;
+  quantityDisplay: string;
+  location: string;
+  isOutOfStock: boolean;
+  packageBreakdownText: string | null;
+  netWeightText: string | null;
+}
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -140,7 +162,7 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: '🗄️' },
 ];
 
-export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -169,7 +191,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   onEndReached,
   refreshing = false,
   loading = false,
-  onSwipeableWillOpen,
+  onSwipeableWillOpen: _onSwipeableWillOpen,
   onSwipeableClose: _onSwipeableClose,
 }, ref) => {
   useRenderTime('PantryContent');
@@ -274,61 +296,96 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     return sorted.filter(item => item?.id);
   }, [items, sortItems]);
 
-  // Render list item - homogeneous list (items only)
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<PantryItem>) => {
-      // Guard against undefined items during concurrent rendering
-      if (!item) return null;
-
-      // Calculate expiration once per item (was previously duplicated across renderItem + renderItemCard)
-      const expiresIn = calculateExpiresIn(item.expiresAt);
+  // Pre-compute ALL per-item display data once to avoid per-render Date allocations and string formatting
+  const itemDisplayMap = useMemo(() => {
+    const map = new Map<string, ItemDisplayData>();
+    const now = Date.now();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    for (const item of sortedItems) {
+      const expiresIn = item.expiresAt
+        ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
+        : null;
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
-      const isExpiringSoon =
-        expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+      const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
       const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
-
-      const unitSymbol = item.unit.symbol;
-      const quantityDisplay = formatQuantityDisplay(item.quantity, unitSymbol);
-      const location = getLocationString(item.storageState, item.storageLocation);
-      const imageUrl = getItemImageUrl(item.item);
       const hasExpiry = item.expiresAt != null;
-      const isOutOfStock = item.quantity === 0;
+
+      const rawQuantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
+      const rawNetWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
+      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown);
+
+      // When qty=1 + netWeight available + no packageBreakdown:
+      // promote net weight to primary, suppress redundant "1 unit"
+      const shouldPromoteNetWeight =
+        item.quantity === 1 &&
+        item.netWeight != null &&
+        item.netWeight > 0 &&
+        !item.packageBreakdown &&
+        item.netWeightUnit?.symbol === item.unit?.symbol;
+
+      map.set(item.id, {
+        imageUrl: getItemImageUrl(item.item),
+        expirationText: hasExpiry ? expStatus.text : null,
+        expirationVariant: hasExpiry ? expStatus.type : undefined,
+        variant,
+        quantityDisplay: shouldPromoteNetWeight
+          ? formatNetWeightDisplay(item.netWeight, item.netWeightUnit)!
+          : rawQuantityDisplay,
+        location: getLocationString(item.storageState, item.storageLocation),
+        isOutOfStock: item.quantity === 0,
+        packageBreakdownText: pkgBreakdownText,
+        netWeightText: shouldPromoteNetWeight ? null : rawNetWeightText,
+      });
+    }
+    return map;
+  }, [sortedItems, getLocationString]);
+
+  // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
+  const itemDisplayMapRef = useRef(itemDisplayMap);
+  itemDisplayMapRef.current = itemDisplayMap;
+
+  // Scroll to top on filter change (replaces key={locationFilter} remounting)
+  const prevLocationFilter = useRef(locationFilter);
+  useEffect(() => {
+    if (prevLocationFilter.current !== locationFilter) {
+      flashListRef.current?.scrollToTop({ animated: false });
+      prevLocationFilter.current = locationFilter;
+    }
+  }, [locationFilter]);
+
+  // Render list item — stable callback via ref pattern to avoid FlashList full re-renders
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<PantryItem>) => {
+      if (!item) return null;
+      const display = itemDisplayMapRef.current.get(item.id);
+      if (!display) return null;
 
       return (
         <PantryItemCard
           key={item.id}
           id={item.id}
           name={item.itemName || 'Unknown Item'}
-          expirationText={hasExpiry ? expStatus.text : null}
-          expirationVariant={hasExpiry ? expStatus.type : undefined}
-          quantity={quantityDisplay}
-          location={location}
+          expirationText={display.expirationText}
+          expirationVariant={display.expirationVariant}
+          quantity={display.quantityDisplay}
+          location={display.location}
           storageState={item.storageState}
-          variant={variant}
-          imageUrl={imageUrl}
-          isOutOfStock={isOutOfStock}
-          onPress={() => onItemPress(item.id)}
-          onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
-          onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-          onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
-          onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
-          onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
-          onSwipeableWillOpen={onSwipeableWillOpen}
+          variant={display.variant}
+          imageUrl={display.imageUrl}
+          isOutOfStock={display.isOutOfStock}
+          packageBreakdownText={display.packageBreakdownText}
+          netWeightText={display.netWeightText}
         />
       );
     },
-    [
-      getLocationString,
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onItemConsume,
-      onItemWaste,
-      onItemRestock,
-      onSwipeableWillOpen,
-    ],
+    [],
   );
+
+  // Categorize items for FlashList recycling pools — items with images are taller
+  const getItemType = useCallback((item: PantryItem) => {
+    return itemDisplayMapRef.current.get(item.id)?.imageUrl ? 'withImage' : 'noImage';
+  }, []);
 
   // Build tabs with optional add button at the end
   const tabsWithAddButton = useMemo((): FilterTabConfig<LocationFilter>[] => {
@@ -351,6 +408,24 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     const label = activeTab?.label ?? 'All';
     return `${label.toUpperCase()} ITEMS`;
   }, [tabs, locationFilter]);
+
+  // Stable keyExtractor - sortedItems already guarantees every item has an id
+  const keyExtractor = useCallback(
+    (item: PantryItem) => item.id,
+    [],
+  );
+
+  // Provide approximate heights per item type to reduce blank cells during fast scrolling
+  const overrideItemLayout = useCallback(
+    (layout: { size?: number; span?: number }, item: PantryItem) => {
+      const hasImage = itemDisplayMapRef.current.get(item?.id)?.imageUrl;
+      layout.size = hasImage ? 90 : 70;
+    },
+    [],
+  );
+
+  // Memoize extraData to avoid new array reference every render
+  const extraData = useMemo(() => [sortOption, locationFilter], [sortOption, locationFilter]);
 
   return (
     <PantryActionsProvider actions={itemActions}>
@@ -402,19 +477,19 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
 
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
-          {/* Content layer - always mounted to preserve FlashList layout state */}
+          {/* Content layer - flex:1 normal flow so FlashList can measure properly */}
           <Animated.View
-            style={[styles.absoluteFill, contentAnimatedStyle]}
+            style={[styles.contentFill, contentAnimatedStyle]}
             pointerEvents={showSkeletons ? 'none' : 'auto'}
           >
             <FlashList<PantryItem>
-              key={locationFilter}
               ref={flashListRef}
               data={showSkeletons ? EMPTY_ARRAY : sortedItems}
               renderItem={renderItem}
-              keyExtractor={(item, index) => item?.id ?? `fallback-${index}`}
-              extraData={sortOption}
-              maintainVisibleContentPosition={{ autoscrollToTopThreshold: 1 }}
+              keyExtractor={keyExtractor}
+              extraData={extraData}
+              getItemType={getItemType}
+              overrideItemLayout={overrideItemLayout}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
@@ -427,11 +502,11 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
               }
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
-              drawDistance={250}
+              drawDistance={750}
             />
           </Animated.View>
 
-          {/* Skeleton layer (on top, fades out) */}
+          {/* Skeleton layer (absolute on top, fades out) */}
           {showSkeletons && (
             <Animated.View
               style={[styles.absoluteFill, skeletonAnimatedStyle]}
@@ -457,7 +532,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       </View>
     </PantryActionsProvider>
   );
-});
+}));
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -470,6 +545,9 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.xs,
   },
   listContainer: {
+    flex: 1,
+  },
+  contentFill: {
     flex: 1,
   },
   absoluteFill: {

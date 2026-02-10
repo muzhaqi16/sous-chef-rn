@@ -94,6 +94,8 @@ export function useCreatePantryItem({
         restockQuantity: input.restockQuantity
           ? parseFloat(input.restockQuantity)
           : undefined,
+        netWeight: input.netWeight ? parseFloat(input.netWeight) : undefined,
+        netWeightUnitId: input.netWeightUnitId || undefined,
         ...storageLocationInput,
       };
 

@@ -40,6 +40,15 @@ interface PantryItem {
   unit?: {
     symbol?: string;
   } | null;
+  netWeight?: number | null;
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
+  packageBreakdown?: {
+    count: number;
+    contentUnit: { name: string; symbol?: string | null };
+    perUnitNetWeight?: number | null;
+    perUnitNetWeightUnit?: { symbol?: string | null } | null;
+    totalNetWeight?: number | null;
+  } | null;
 }
 
 // Helper to get URGENT time-based info for list display (expiring/expired only)
@@ -142,6 +151,72 @@ export const getCategoryEmoji = (categoryName?: string | null): string => {
   return CATEGORY_EMOJIS[lowerName] || CATEGORY_EMOJIS.default;
 };
 
+// Helper to format package breakdown for display
+export const formatPackageBreakdown = (
+  breakdown: {
+    count: number;
+    contentUnit: { name: string; symbol?: string | null };
+    perUnitNetWeight?: number | null;
+    perUnitNetWeightUnit?: { symbol?: string | null } | null;
+    totalNetWeight?: number | null;
+  } | null | undefined,
+): string | null => {
+  if (!breakdown) return null;
+  const contentDisplay = breakdown.contentUnit.symbol || breakdown.contentUnit.name;
+  if (breakdown.perUnitNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
+    return `${breakdown.count} x ${breakdown.perUnitNetWeight}${breakdown.perUnitNetWeightUnit.symbol} ${contentDisplay}`;
+  }
+  return `${breakdown.count} ${contentDisplay}`;
+};
+
+// Helper to format full package breakdown with total for detail views
+export const formatPackageBreakdownFull = (
+  breakdown: {
+    count: number;
+    contentUnit: { name: string; symbol?: string | null };
+    perUnitNetWeight?: number | null;
+    perUnitNetWeightUnit?: { symbol?: string | null } | null;
+    totalNetWeight?: number | null;
+  } | null | undefined,
+): string | null => {
+  if (!breakdown) return null;
+  const short = formatPackageBreakdown(breakdown);
+  if (!short) return null;
+  if (breakdown.totalNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
+    return `${short} (${breakdown.totalNetWeight}${breakdown.perUnitNetWeightUnit.symbol} total)`;
+  }
+  return short;
+};
+
+// Helper to format net weight for display (e.g., "14.5 oz ea")
+export const formatNetWeight = (
+  netWeight?: number | null,
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+): string | null => {
+  if (!netWeight) return null;
+  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
+  return `${netWeight}${unitStr} ea`;
+};
+
+// Helper to format net weight for primary display (no "ea" suffix, with g→kg / ml→L upscaling)
+export const formatNetWeightDisplay = (
+  netWeight?: number | null,
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+): string | null => {
+  if (!netWeight) return null;
+  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
+
+  // Same g→kg, ml→L upscaling as formatQuantityDisplay
+  if (netWeight >= 1000 && (unitStr === 'g' || unitStr === 'ml')) {
+    return `${(netWeight / 1000).toFixed(1)} ${unitStr === 'g' ? 'kg' : 'L'}`;
+  }
+
+  const formatted = Number.isInteger(netWeight)
+    ? netWeight.toString()
+    : netWeight.toFixed(netWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
+  return `${formatted} ${unitStr}`.trim();
+};
+
 // Helper to format quantity for redesign display
 export const formatQuantityDisplay = (quantity: number, unit?: string): string => {
   const unitStr = unit || '';
@@ -218,6 +293,8 @@ interface TransformedItem {
   quantity: number;
   unitSymbol?: string;
   storageStateDisplay: string;
+  packageBreakdownText?: string | null;
+  netWeightText?: string | null;
 }
 
 interface UsePantryItemTransformationOptions<T extends PantryItem> {
@@ -327,6 +404,8 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const location = getLocation(item.storageState);
       const emoji = getCategoryEmoji((item as any).item?.category?.name);
       const expirationStatus = getExpirationStatus(expiresIn);
+      const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
+      const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
 
       return {
         id: item.id,
@@ -385,6 +464,8 @@ export function usePantryItemTransformation<T extends PantryItem>(
         quantity: item.quantity,
         unitSymbol: item.unit?.symbol,
         storageStateDisplay,
+        packageBreakdownText,
+        netWeightText,
       };
     });
   }, [items, theme]);

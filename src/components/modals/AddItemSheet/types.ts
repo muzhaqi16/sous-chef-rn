@@ -39,7 +39,7 @@ export interface QuickAddConfig {
   /** If true, enable exit animations on suggestion items */
   enableExitAnimations: boolean;
   /** Function to generate toast message */
-  toastMessage: (name: string, quantity: number) => string;
+  toastMessage: (name: string) => string;
 }
 
 /**

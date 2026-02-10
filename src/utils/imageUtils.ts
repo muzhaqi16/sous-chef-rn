@@ -9,16 +9,26 @@ import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
  */
 export const getItemImageUrl = (item: any): string | null => {
   const imageUrl = item?.imageUrl;
-  if (!imageUrl) return null;
-
-  // Only return valid URLs - filenames without full path are invalid
-  // The API should be returning full CDN URLs, not just filenames
-  if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-    console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
-    return null;
+  if (imageUrl) {
+    // Only return valid URLs - filenames without full path are invalid
+    // The API should be returning full CDN URLs, not just filenames
+    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
+      return null;
+    }
+    return imageUrl;
   }
 
-  return imageUrl;
+  // Fallback: extract from images JSON array (used when imageUrl is not populated)
+  if (item?.images) {
+    const parsed = parseImages(item.images);
+    const primary = getPrimaryImage(parsed);
+    if (primary) {
+      return getBestImageUrl(primary);
+    }
+  }
+
+  return null;
 };
 
 // =============================================================================
@@ -115,7 +125,7 @@ export function getPrimaryImage(images: ItemImage[]): ItemImage | null {
 /**
  * Get display label for a perspective
  */
-function getPerspectiveLabel(perspective: string): string {
+export function getPerspectiveLabel(perspective: string): string {
   const labels: Record<string, string> = {
     front: 'Front',
     back: 'Back',

@@ -21,6 +21,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { formatPackageBreakdownFull, formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -260,7 +261,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.quantity || 1,
-            unitId: data?.pantryItem?.unit.id ?? '',
+            unitId: data?.pantryItem?.unit?.id ?? '',
             itemName: data?.pantryItem?.itemName || '',
           },
         },
@@ -306,6 +307,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = hasImages(itemImages) || !!imageUrl;
   const showNutrition = hasNutritionData(itemNutritions);
+  const packageBreakdownText = formatPackageBreakdownFull(item?.packageBreakdown);
+  const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
 
   if (!item) {
     return (
@@ -418,8 +421,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
-              {/* unitName from server includes item-specific display name */}
-              {item.quantity} {item.unitName ?? item.unit?.symbol}
+              {item.quantity} {item.unit?.name}
             </Text>
           </View>
         </View>
@@ -455,11 +457,46 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {/* unitName from server includes item-specific display name */}
-              {item.quantity} {item.unitName ?? item.unit?.name}
+              {item.quantity} {item.unit?.name}
             </Text>
           </View>
         </View>
+
+        {/* Net Weight Row */}
+        {netWeightText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Net Weight</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="scale-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{netWeightText}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Package Details Row - only show if breakdown is available */}
+        {packageBreakdownText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Package</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="layers-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{packageBreakdownText}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Brand Row - only show if brand is set */}
         {brandName && (
@@ -623,8 +660,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {/* unitName from server includes item-specific display name */}
-                {item.minQuantity} {item.unitName ?? item.unit?.symbol}
+                {item.minQuantity} {item.unit?.name}
               </Text>
             </View>
           </View>
@@ -644,8 +680,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {/* unitName from server includes item-specific display name */}
-                {item.restockQuantity} {item.unitName ?? item.unit?.symbol}
+                {item.restockQuantity} {item.unit?.name}
               </Text>
             </View>
           </View>

@@ -184,6 +184,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
     creating: creatingLocation,
   } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
 
+  // Stable navigateTo wrapper for usePantryItemActions
+  const stableNavigateTo = useMemo(
+    () => ({ pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params) }),
+    [navigateTo],
+  );
+
   // Extract item actions (modal state + mutations + handlers) to separate hook
   const {
     consumeModal,
@@ -201,7 +207,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     pantryItems,
     refetch,
     removeItem,
-    navigateTo: { pantryItem: params => navigateTo.pantryItem(params) },
+    navigateTo: stableNavigateTo,
   });
 
   // Refetch pantry items when switching between pantries
@@ -330,14 +336,19 @@ const PantryMainScreen: React.FC = React.memo(() => {
     [navigateTo],
   );
 
+  const handleAvatarPress = useCallback(
+    () => navigate('Notifications'),
+    [navigate],
+  );
+
   const handleHomePress = useCallback(
     () => navigate('HomeManagement', { homeId: selectedHomeId }),
     [navigate, selectedHomeId],
   );
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await Promise.all([refetch(), refetchHome()]);
-  };
+  }, [refetch, refetchHome]);
 
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner
@@ -380,7 +391,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
-        onAvatarPress={() => navigate('Notifications')}
+        onAvatarPress={handleAvatarPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
         onRefresh={handleRefresh}
