@@ -5297,6 +5297,7 @@ type PantryItem {
   purchase: Purchase
   purchaseId: String
   quantity: Float!
+  remainingNetWeight: Float
   restockQuantity: Float
   sourceShoppingListItemId: String
   storageLocation: StorageLocation

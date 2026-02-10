@@ -576,6 +576,7 @@ fragment PantryItemCore on PantryItem {
   minQuantity
   lastUsedAt
   netWeight
+  remainingNetWeight
   __typename
 }
 
@@ -684,6 +685,11 @@ fragment PantryItemFragment on PantryItem {
   usageRecords {
     id
     quantityUsed
+    usageUnit {
+      id
+      name
+      symbol
+    }
     usedAt
     purpose
     notes

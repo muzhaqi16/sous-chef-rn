@@ -52,6 +52,10 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
   const [notes, setNotes] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'weight'>('tracking');
+
+  // Determine if this item supports dual-tracking
+  const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -61,19 +65,33 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       setQuantityInput('1');
       setPurpose(UsagePurpose.General);
       setNotes('');
+      setSelectedUnit('tracking');
     } else {
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
+
+  // Get the available quantity and unit symbol based on selected unit
+  const availableQuantity = selectedUnit === 'weight' && isDualTracked
+    ? pantryItem!.remainingNetWeight!
+    : pantryItem?.quantity ?? 0;
+
+  const activeUnitSymbol = selectedUnit === 'weight' && isDualTracked
+    ? pantryItem!.netWeightUnit!.symbol || ''
+    : pantryItem?.unit?.symbol || '';
+
+  const activeUnitId = selectedUnit === 'weight' && isDualTracked
+    ? pantryItem!.netWeightUnit!.id
+    : pantryItem?.unit?.id;
 
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const consumeAmount = parseFractionalInput(quantityInput);
     if (consumeAmount === null || isNaN(consumeAmount)) return null;
 
-    const remaining = pantryItem.quantity - consumeAmount;
+    const remaining = availableQuantity - consumeAmount;
     return isNaN(remaining) ? null : remaining;
-  }, [pantryItem, quantityInput]);
+  }, [pantryItem, quantityInput, availableQuantity]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -85,12 +103,10 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       return;
     }
 
-    if (quantityValue > pantryItem.quantity) {
+    if (quantityValue > availableQuantity) {
       Alert.alert(
         'Error',
-        `Cannot consume more than available quantity (${pantryItem.quantity} ${
-          pantryItem.unit?.symbol || ''
-        })`,
+        `Cannot consume more than available quantity (${availableQuantity} ${activeUnitSymbol})`,
       );
       return;
     }
@@ -100,10 +116,10 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       quantityInput,
       purpose,
       notes,
-      pantryItem.unit?.id,
+      activeUnitId,
     );
     onClose();
-  }, [pantryItem, quantityInput, purpose, notes, onConfirm, onClose]);
+  }, [pantryItem, quantityInput, purpose, notes, onConfirm, onClose, availableQuantity, activeUnitSymbol, activeUnitId]);
 
   const remaining = pantryItem ? calculateRemaining() : null;
 
@@ -169,8 +185,62 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
                   unitSymbol={pantryItem.unit?.symbol}
                 />
+                {isDualTracked && (
+                  <Text style={commonStyles.bottomSheetItemLabel}>
+                    {' '}({pantryItem.remainingNetWeight} {pantryItem.netWeightUnit?.symbol} remaining)
+                  </Text>
+                )}
               </View>
             </View>
+
+            {/* Unit Toggle for dual-tracked items */}
+            {isDualTracked && (
+              <View style={commonStyles.bottomSheetSection}>
+                <Text style={commonStyles.bottomSheetSectionLabel}>
+                  Consume by
+                </Text>
+                <View style={commonStyles.bottomSheetOptionContainer}>
+                  <TouchableOpacity
+                    style={[
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                    ]}
+                    onPress={() => setSelectedUnit('tracking')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'tracking' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.unit?.symbol || pantryItem.unit?.name || 'Unit'}
+                    </Text>
+                    {selectedUnit === 'tracking' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                    ]}
+                    onPress={() => setSelectedUnit('weight')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'weight' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || 'Weight'}
+                    </Text>
+                    {selectedUnit === 'weight' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
             {/* Quantity Input */}
             <View style={commonStyles.bottomSheetSection}>
@@ -191,7 +261,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                   ]}
                 >
                   Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
-                  {pantryItem.unit?.symbol || ''}
+                  {activeUnitSymbol}
                 </Text>
               )}
             </View>

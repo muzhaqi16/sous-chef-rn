@@ -41,6 +41,7 @@ interface PantryItem {
     symbol?: string;
   } | null;
   netWeight?: number | null;
+  remainingNetWeight?: number | null;
   netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
   packageBreakdown?: {
     count: number;
@@ -217,6 +218,19 @@ export const formatNetWeightDisplay = (
   return `${formatted} ${unitStr}`.trim();
 };
 
+// Helper to format remaining net weight for display (e.g., "25 oz remaining")
+export const formatRemainingNetWeight = (
+  remainingNetWeight?: number | null,
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+): string | null => {
+  if (remainingNetWeight == null) return null;
+  const unitStr = netWeightUnit?.symbol || netWeightUnit?.name || '';
+  const formatted = Number.isInteger(remainingNetWeight)
+    ? remainingNetWeight.toString()
+    : remainingNetWeight.toFixed(remainingNetWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
+  return `${formatted} ${unitStr} remaining`.trim();
+};
+
 // Helper to format quantity for redesign display
 export const formatQuantityDisplay = (quantity: number, unit?: string): string => {
   const unitStr = unit || '';
@@ -295,6 +309,7 @@ interface TransformedItem {
   storageStateDisplay: string;
   packageBreakdownText?: string | null;
   netWeightText?: string | null;
+  remainingNetWeightText?: string | null;
 }
 
 interface UsePantryItemTransformationOptions<T extends PantryItem> {
@@ -406,6 +421,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const expirationStatus = getExpirationStatus(expiresIn);
       const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
       const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
+      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
 
       return {
         id: item.id,
@@ -466,6 +482,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
         storageStateDisplay,
         packageBreakdownText,
         netWeightText,
+        remainingNetWeightText,
       };
     });
   }, [items, theme]);

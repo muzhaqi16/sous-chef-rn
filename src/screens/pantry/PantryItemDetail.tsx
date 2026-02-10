@@ -309,6 +309,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const showNutrition = hasNutritionData(itemNutritions);
   const packageBreakdownText = formatPackageBreakdownFull(item?.packageBreakdown);
   const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
+  const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
 
   if (!item) {
     return (
@@ -476,6 +477,24 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Remaining Weight Row - only show for dual-tracked items */}
+        {remainingNetWeightText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Remaining Weight</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="scale-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{remainingNetWeightText}</Text>
             </View>
           </View>
         )}
@@ -811,7 +830,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                       )}
                     </View>
                     <Text style={styles.purchasePrice}>
-                      -{usage.quantityUsed}
+                      -{usage.quantityUsed}{usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
                     </Text>
                   </View>
                 ))}

@@ -5526,6 +5526,7 @@ export type PantryItem = {
   purchase?: Maybe<Purchase>;
   purchaseId?: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
+  remainingNetWeight?: Maybe<Scalars['Float']['output']>;
   restockQuantity?: Maybe<Scalars['Float']['output']>;
   sourceShoppingListItemId?: Maybe<Scalars['String']['output']>;
   storageLocation?: Maybe<StorageLocation>;
@@ -11524,6 +11525,7 @@ export type PantryItemCoreFragment = {
   minQuantity?: number | null | undefined;
   lastUsedAt?: string | null | undefined;
   netWeight?: number | null | undefined;
+  remainingNetWeight?: number | null | undefined;
 };
 
 export type PantryItemDisplayFragment = {
@@ -11542,6 +11544,7 @@ export type PantryItemDisplayFragment = {
   minQuantity?: number | null | undefined;
   lastUsedAt?: string | null | undefined;
   netWeight?: number | null | undefined;
+  remainingNetWeight?: number | null | undefined;
   item: {
     __typename: 'Item';
     id: string;
@@ -11616,6 +11619,7 @@ export type PantryItemFragmentFragment = {
   minQuantity?: number | null | undefined;
   lastUsedAt?: string | null | undefined;
   netWeight?: number | null | undefined;
+  remainingNetWeight?: number | null | undefined;
   item: {
     __typename: 'Item';
     id: string;
@@ -11746,6 +11750,10 @@ export type PantryItemFragmentFragment = {
     wasteReason?: WasteReason | null | undefined;
     isComposted?: boolean | null | undefined;
     isRecycled?: boolean | null | undefined;
+    usageUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
     pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
     usedBy?: { __typename?: 'User'; id: string } | null | undefined;
     cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
@@ -11930,6 +11938,7 @@ export type PantryFragmentFragment = {
         minQuantity?: number | null | undefined;
         lastUsedAt?: string | null | undefined;
         netWeight?: number | null | undefined;
+        remainingNetWeight?: number | null | undefined;
         item: {
           __typename: 'Item';
           id: string;
@@ -12063,6 +12072,10 @@ export type PantryFragmentFragment = {
           wasteReason?: WasteReason | null | undefined;
           isComposted?: boolean | null | undefined;
           isRecycled?: boolean | null | undefined;
+          usageUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
           pantryItem?:
             | { __typename?: 'PantryItem'; id: string }
             | null
@@ -12653,6 +12666,7 @@ export type HomeFragmentFragment = {
               minQuantity?: number | null | undefined;
               lastUsedAt?: string | null | undefined;
               netWeight?: number | null | undefined;
+              remainingNetWeight?: number | null | undefined;
               item: {
                 __typename: 'Item';
                 id: string;
@@ -12801,6 +12815,15 @@ export type HomeFragmentFragment = {
                 wasteReason?: WasteReason | null | undefined;
                 isComposted?: boolean | null | undefined;
                 isRecycled?: boolean | null | undefined;
+                usageUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    }
+                  | null
+                  | undefined;
                 pantryItem?:
                   | { __typename?: 'PantryItem'; id: string }
                   | null
@@ -13244,6 +13267,7 @@ export type GetHomeQuery = {
                     minQuantity?: number | null | undefined;
                     lastUsedAt?: string | null | undefined;
                     netWeight?: number | null | undefined;
+                    remainingNetWeight?: number | null | undefined;
                     item: {
                       __typename: 'Item';
                       id: string;
@@ -13392,6 +13416,15 @@ export type GetHomeQuery = {
                       wasteReason?: WasteReason | null | undefined;
                       isComposted?: boolean | null | undefined;
                       isRecycled?: boolean | null | undefined;
+                      usageUnit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
                       pantryItem?:
                         | { __typename?: 'PantryItem'; id: string }
                         | null
@@ -14076,6 +14109,7 @@ export type GetHomeByJoinCodeQuery = {
                     minQuantity?: number | null | undefined;
                     lastUsedAt?: string | null | undefined;
                     netWeight?: number | null | undefined;
+                    remainingNetWeight?: number | null | undefined;
                     item: {
                       __typename: 'Item';
                       id: string;
@@ -14224,6 +14258,15 @@ export type GetHomeByJoinCodeQuery = {
                       wasteReason?: WasteReason | null | undefined;
                       isComposted?: boolean | null | undefined;
                       isRecycled?: boolean | null | undefined;
+                      usageUnit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
                       pantryItem?:
                         | { __typename?: 'PantryItem'; id: string }
                         | null
@@ -14508,6 +14551,7 @@ export type CreateHomeMutation = {
                 minQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                remainingNetWeight?: number | null | undefined;
                 item: {
                   __typename: 'Item';
                   id: string;
@@ -14656,6 +14700,15 @@ export type CreateHomeMutation = {
                   wasteReason?: WasteReason | null | undefined;
                   isComposted?: boolean | null | undefined;
                   isRecycled?: boolean | null | undefined;
+                  usageUnit?:
+                    | {
+                        __typename?: 'Unit';
+                        id: string;
+                        name: string;
+                        symbol: string;
+                      }
+                    | null
+                    | undefined;
                   pantryItem?:
                     | { __typename?: 'PantryItem'; id: string }
                     | null
@@ -14939,6 +14992,7 @@ export type UpdateHomeMutation = {
                 minQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 netWeight?: number | null | undefined;
+                remainingNetWeight?: number | null | undefined;
                 item: {
                   __typename: 'Item';
                   id: string;
@@ -15087,6 +15141,15 @@ export type UpdateHomeMutation = {
                   wasteReason?: WasteReason | null | undefined;
                   isComposted?: boolean | null | undefined;
                   isRecycled?: boolean | null | undefined;
+                  usageUnit?:
+                    | {
+                        __typename?: 'Unit';
+                        id: string;
+                        name: string;
+                        symbol: string;
+                      }
+                    | null
+                    | undefined;
                   pantryItem?:
                     | { __typename?: 'PantryItem'; id: string }
                     | null
@@ -16684,6 +16747,7 @@ export type GetPantryQuery = {
               minQuantity?: number | null | undefined;
               lastUsedAt?: string | null | undefined;
               netWeight?: number | null | undefined;
+              remainingNetWeight?: number | null | undefined;
               item: {
                 __typename: 'Item';
                 id: string;
@@ -16830,6 +16894,7 @@ export type GetPantryItemQuery = {
     minQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
     item: {
       __typename: 'Item';
       id: string;
@@ -16963,6 +17028,10 @@ export type GetPantryItemQuery = {
       wasteReason?: WasteReason | null | undefined;
       isComposted?: boolean | null | undefined;
       isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
       usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
@@ -17376,6 +17445,7 @@ export type CreatePantryItemMutation = {
     minQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
     item: {
       __typename: 'Item';
       id: string;
@@ -17461,6 +17531,7 @@ export type UpdatePantryItemMutation = {
     minQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
     item: {
       __typename: 'Item';
       id: string;
@@ -17594,6 +17665,10 @@ export type UpdatePantryItemMutation = {
       wasteReason?: WasteReason | null | undefined;
       isComposted?: boolean | null | undefined;
       isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
       usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
@@ -17696,6 +17771,7 @@ export type CreatePantryItemUsageMutation = {
           minQuantity?: number | null | undefined;
           lastUsedAt?: string | null | undefined;
           netWeight?: number | null | undefined;
+          remainingNetWeight?: number | null | undefined;
           item: {
             __typename: 'Item';
             id: string;
@@ -17839,6 +17915,15 @@ export type CreatePantryItemUsageMutation = {
             wasteReason?: WasteReason | null | undefined;
             isComposted?: boolean | null | undefined;
             isRecycled?: boolean | null | undefined;
+            usageUnit?:
+              | {
+                  __typename?: 'Unit';
+                  id: string;
+                  name: string;
+                  symbol: string;
+                }
+              | null
+              | undefined;
             pantryItem?:
               | { __typename?: 'PantryItem'; id: string }
               | null
@@ -17943,6 +18028,7 @@ export type RestockPantryItemMutation = {
           minQuantity?: number | null | undefined;
           lastUsedAt?: string | null | undefined;
           netWeight?: number | null | undefined;
+          remainingNetWeight?: number | null | undefined;
           item: {
             __typename: 'Item';
             id: string;
@@ -18086,6 +18172,15 @@ export type RestockPantryItemMutation = {
             wasteReason?: WasteReason | null | undefined;
             isComposted?: boolean | null | undefined;
             isRecycled?: boolean | null | undefined;
+            usageUnit?:
+              | {
+                  __typename?: 'Unit';
+                  id: string;
+                  name: string;
+                  symbol: string;
+                }
+              | null
+              | undefined;
             pantryItem?:
               | { __typename?: 'PantryItem'; id: string }
               | null
@@ -18180,6 +18275,7 @@ export type UpdatePantryItemQuantityMutation = {
     minQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
     item: {
       __typename: 'Item';
       id: string;
@@ -18313,6 +18409,10 @@ export type UpdatePantryItemQuantityMutation = {
       wasteReason?: WasteReason | null | undefined;
       isComposted?: boolean | null | undefined;
       isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
       usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
@@ -18398,6 +18498,7 @@ export type SyncPantryItemMutation = {
           minQuantity?: number | null | undefined;
           lastUsedAt?: string | null | undefined;
           netWeight?: number | null | undefined;
+          remainingNetWeight?: number | null | undefined;
           item: {
             __typename: 'Item';
             id: string;
@@ -18541,6 +18642,15 @@ export type SyncPantryItemMutation = {
             wasteReason?: WasteReason | null | undefined;
             isComposted?: boolean | null | undefined;
             isRecycled?: boolean | null | undefined;
+            usageUnit?:
+              | {
+                  __typename?: 'Unit';
+                  id: string;
+                  name: string;
+                  symbol: string;
+                }
+              | null
+              | undefined;
             pantryItem?:
               | { __typename?: 'PantryItem'; id: string }
               | null
@@ -18762,6 +18872,7 @@ export type PantryItemsChangedSubscription = {
       minQuantity?: number | null | undefined;
       lastUsedAt?: string | null | undefined;
       netWeight?: number | null | undefined;
+      remainingNetWeight?: number | null | undefined;
       item: {
         __typename: 'Item';
         id: string;
@@ -22901,6 +23012,7 @@ export type MoveShoppingItemToPantryMutation = {
     minQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
     item: {
       __typename: 'Item';
       id: string;
@@ -23034,6 +23146,10 @@ export type MoveShoppingItemToPantryMutation = {
       wasteReason?: WasteReason | null | undefined;
       isComposted?: boolean | null | undefined;
       isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
       usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;

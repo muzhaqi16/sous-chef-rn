@@ -28,6 +28,7 @@ import {
   formatPackageBreakdown,
   formatNetWeight,
   formatNetWeightDisplay,
+  formatRemainingNetWeight,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
@@ -74,6 +75,7 @@ interface PantryItem {
     images?: unknown;
   } | null;
   netWeight?: number | null;
+  remainingNetWeight?: number | null;
   netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
   packageBreakdown?: {
     count: number;
@@ -152,6 +154,7 @@ interface ItemDisplayData {
   isOutOfStock: boolean;
   packageBreakdownText: string | null;
   netWeightText: string | null;
+  remainingNetWeightText: string | null;
 }
 
 // Default filter tabs for pantry (fallback if none provided)
@@ -314,6 +317,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const rawQuantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
       const rawNetWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
       const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown);
+      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
 
       // When qty=1 + netWeight available + no packageBreakdown:
       // promote net weight to primary, suppress redundant "1 unit"
@@ -336,6 +340,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         isOutOfStock: item.quantity === 0,
         packageBreakdownText: pkgBreakdownText,
         netWeightText: shouldPromoteNetWeight ? null : rawNetWeightText,
+        remainingNetWeightText,
       });
     }
     return map;
@@ -376,6 +381,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           isOutOfStock={display.isOutOfStock}
           packageBreakdownText={display.packageBreakdownText}
           netWeightText={display.netWeightText}
+          remainingNetWeightText={display.remainingNetWeightText}
         />
       );
     },
