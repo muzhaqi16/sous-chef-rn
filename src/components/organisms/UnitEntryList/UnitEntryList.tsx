@@ -3,9 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
-import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
-import { FieldRow } from '#/components/molecules/FieldRow';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 
 export interface UnitEntry {
@@ -13,9 +11,6 @@ export interface UnitEntry {
   unitId?: string;
   unitName?: string;
   packageSize?: string;
-  contentUnitId?: string;
-  contentUnitName?: string;
-  retailUnit?: boolean;
   isDefault?: boolean;
 }
 
@@ -79,46 +74,27 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
     [entries, onEntriesChanged],
   );
 
-  const handleContentUnitSelected = useCallback(
-    (index: number, unitId: string | null, unitName: string | null) => {
-      const updated = entries.map((entry, i) =>
-        i === index
-          ? {
-              ...entry,
-              contentUnitId: unitId ?? undefined,
-              contentUnitName: unitName ?? undefined,
-            }
-          : entry,
-      );
-      onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
-
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Units</Text>
 
       {entries.map((entry, index) => (
-        <View key={entry.id} style={styles.entryCard}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryLabel}>
-              Unit {index + 1}
-              {entry.isDefault ? ' (Default)' : ''}
-            </Text>
-            <TouchableOpacity
-              onPress={() => handleRemoveEntry(index)}
-              disabled={disabled}
-              style={styles.removeButton}
-            >
-              <Icon name="delete" size={20} color={theme.colors.error} />
-            </TouchableOpacity>
+        <View key={entry.id} style={styles.entryRow}>
+          <View style={styles.packageSizeField}>
+            <FormInput
+              label="Size"
+              value={entry.packageSize || ''}
+              onChangeText={(text: string) =>
+                handleEntryChange(index, 'packageSize', text)
+              }
+              placeholder="e.g., 12"
+              keyboardType="decimal-pad"
+            />
           </View>
-
-          <FieldRow>
+          <View style={styles.unitField}>
             <UnitAutocompleteField
               variant="modal"
-              label="Unit"
+              label={index === 0 ? 'Unit (Default)' : 'Unit'}
               value={entry.unitName || ''}
               onChangeText={(text: string) =>
                 handleEntryChange(index, 'unitName', text)
@@ -128,38 +104,14 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 handleUnitSelected(index, unitId, unitName)
               }
             />
-            <FormInput
-              label="Package Size"
-              value={entry.packageSize || ''}
-              onChangeText={(text: string) =>
-                handleEntryChange(index, 'packageSize', text)
-              }
-              placeholder="e.g., 12"
-              keyboardType="decimal-pad"
-            />
-          </FieldRow>
-
-          <UnitAutocompleteField
-            variant="modal"
-            label="Content Unit"
-            value={entry.contentUnitName || ''}
-            onChangeText={(text: string) =>
-              handleEntryChange(index, 'contentUnitName', text)
-            }
-            placeholder="e.g., can, bottle"
-            onUnitSelected={(unitId, unitName) =>
-              handleContentUnitSelected(index, unitId, unitName)
-            }
-          />
-
-          <FormCheckbox
-            label="Retail Unit"
-            checked={entry.retailUnit || false}
-            onPress={() =>
-              handleEntryChange(index, 'retailUnit', !entry.retailUnit)
-            }
+          </View>
+          <TouchableOpacity
+            onPress={() => handleRemoveEntry(index)}
             disabled={disabled}
-          />
+            style={styles.deleteButton}
+          >
+            <Icon name="delete" size={20} color={theme.colors.error} />
+          </TouchableOpacity>
         </View>
       ))}
 
@@ -187,26 +139,21 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderLight,
   },
-  entryCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.borderLight,
-  },
-  entryHeader: {
+  entryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  packageSizeField: {
+    flex: 0.35,
+  },
+  unitField: {
+    flex: 0.55,
+  },
+  deleteButton: {
+    flex: 0.1,
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  entryLabel: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textSecondary,
-  },
-  removeButton: {
-    padding: theme.spacing.xs,
+    paddingTop: theme.spacing.xl,
   },
 }));

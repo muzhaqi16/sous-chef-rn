@@ -5,7 +5,7 @@ import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
-import { StorageState, ItemType, type CreateItemInput, type ItemUnitInput } from '#generated';
+import { StorageState, ItemType, BaseDimension, type CreateItemInput, type ItemUnitInput } from '#generated';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
@@ -105,6 +105,35 @@ const getFormSections = (
         placeholder: 'Enter shelf life in days',
         component: FormNumberInput,
         props: { componentType: 'number', keyboardType: 'numeric' },
+      },
+      {
+        name: 'baseDimension',
+        label: 'Base Dimension',
+        component: FormSelect,
+        props: { componentType: 'select' },
+        options: [
+          { label: 'None', value: '' },
+          { label: 'Volume', value: BaseDimension.Volume },
+          { label: 'Mass', value: BaseDimension.Mass },
+          { label: 'Count', value: BaseDimension.Count },
+        ],
+      },
+      {
+        name: 'defaultConsumeIncrement',
+        label: 'Default Consume Increment',
+        placeholder: 'e.g., 1',
+        component: FormNumberInput,
+        props: { componentType: 'number', keyboardType: 'decimal-pad' },
+      },
+      {
+        name: 'defaultConsumeUnitId',
+        label: 'Default Consume Unit',
+        placeholder: 'tsp, cup, etc.',
+        component: 'unitAutocomplete',
+        props: {
+          componentType: 'autocomplete',
+          onUnitSelected: (_unitId: string | null) => {},
+        },
       },
       {
         name: 'netWeight',
@@ -219,6 +248,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       storageState: StorageState.Ambient,
       type: ItemType.Foundation,
       shelfLifeDays: undefined,
+      baseDimension: '',
+      defaultConsumeIncrement: undefined,
+      defaultConsumeUnitId: '',
       vendor: '',
       isFoodStampItem: false,
       isFsaEligible: false,
@@ -304,9 +336,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         unitName: entry.unitName || undefined,
         isDefault: index === 0,
         packageSize: entry.packageSize ? parseFloat(entry.packageSize) : undefined,
-        contentUnitId: entry.contentUnitId || undefined,
-        contentUnitName: entry.contentUnitName || undefined,
-        retailUnit: entry.retailUnit || undefined,
       }));
 
     const processedData: Partial<CreateItemInput> & {
@@ -314,6 +343,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       brandName?: string;
       displayUnitName?: string;
       sku?: string;
+      baseDimension?: string;
+      defaultConsumeIncrement?: number;
+      defaultConsumeUnitId?: string;
     } = {
       name: data.name,
       description: data.description || undefined,
@@ -325,6 +357,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       type: (data.type as ItemType) || undefined,
       storageState: (data.storageState as StorageState) || undefined,
       shelfLifeDays: data.shelfLifeDays || undefined,
+      baseDimension: data.baseDimension || undefined,
+      defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
+      defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
       imageUrl: data.imageUrl || undefined,
       brandId: brandId || undefined,
       brandName: brandName || undefined,

@@ -1,10 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getPerspectiveLabel } from '#utils/imageUtils';
 import { ImagePicker, type ImageFile } from './ImagePicker';
-import Chip from '#/components/atoms/Chip';
+import { ModalPicker } from './ModalPicker';
 
 export interface SelectedImage extends ImageFile {
   perspective: string;
@@ -24,10 +24,14 @@ const PERSPECTIVES = [
   'back',
   'left',
   'right',
-  'top',
   'nutrition_label',
   'ingredient_list',
 ] as const;
+
+const PERSPECTIVE_OPTIONS = PERSPECTIVES.map(p => ({
+  label: getPerspectiveLabel(p),
+  value: p,
+}));
 
 const getNextAvailablePerspective = (existingImages: SelectedImage[]): string => {
   const usedPerspectives = new Set(existingImages.map(img => img.perspective));
@@ -44,7 +48,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   onImagesChanged,
   onError,
   disabled = false,
-  maxImages = 7,
+  maxImages = 6,
   label = 'Product Images',
 }) => {
   const { theme } = useUnistyles();
@@ -107,6 +111,8 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
     [images, onImagesChanged],
   );
 
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+
   if (images.length === 0) {
     return (
       <View style={styles.container}>
@@ -161,20 +167,21 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 <Icon name="close" size={14} color={theme.colors.white} />
               </TouchableOpacity>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.chipRow}
+            <TouchableOpacity
+              style={styles.perspectiveButton}
+              onPress={() => setPickerIndex(index)}
+              disabled={disabled}
             >
-              {PERSPECTIVES.map(p => (
-                <Chip
-                  key={p}
-                  label={getPerspectiveLabel(p)}
-                  selected={image.perspective === p}
-                  onPress={() => handlePerspectiveChange(index, p)}
-                />
-              ))}
-            </ScrollView>
+              <Text style={styles.perspectiveText} numberOfLines={1}>
+                {getPerspectiveLabel(image.perspective)}
+              </Text>
+              <Icon
+                library="Feather"
+                name="chevron-down"
+                size={14}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
         ))}
 
@@ -198,6 +205,20 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           </ImagePicker>
         )}
       </ScrollView>
+
+      <ModalPicker
+        label="Select Perspective"
+        visible={pickerIndex !== null}
+        options={PERSPECTIVE_OPTIONS}
+        selected={pickerIndex !== null ? images[pickerIndex]?.perspective ?? '' : ''}
+        onSelect={value => {
+          if (pickerIndex !== null) {
+            handlePerspectiveChange(pickerIndex, value);
+          }
+          setPickerIndex(null);
+        }}
+        onCancel={() => setPickerIndex(null)}
+      />
     </View>
   );
 };
@@ -264,9 +285,23 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  chipRow: {
+  perspectiveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
     marginTop: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.full,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
     maxWidth: 120,
+  },
+  perspectiveText: {
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+    flexShrink: 1,
   },
   addMoreButton: {
     width: 80,

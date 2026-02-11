@@ -52,37 +52,82 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
   const [notes, setNotes] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'weight'>('tracking');
+  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'content' | 'weight'>('tracking');
 
   // Determine if this item supports dual-tracking
   const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
+
+  // Detect content unit availability (package items like "12 x 335 mL cans")
+  const hasContentUnit = isDualTracked
+    && pantryItem?.packageBreakdown != null
+    && pantryItem.packageBreakdown.perUnitNetWeight != null
+    && pantryItem.packageBreakdown.perUnitNetWeight > 0;
+
+  // Compute how many content units remain (e.g., how many cans)
+  // Prefer server-computed totalContentUnits when available
+  const contentUnitCount = pantryItem?.quantityBreakdown?.totalContentUnits != null
+    ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
+    : (hasContentUnit && pantryItem?.remainingNetWeight != null
+      ? Math.floor(pantryItem.remainingNetWeight / pantryItem.packageBreakdown!.perUnitNetWeight!)
+      : 0);
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
     if (visible && pantryItem) {
       bottomSheetRef.current?.present();
       // Reset form when modal opens with new item
-      setQuantityInput('1');
+      // Pre-fill from defaultConsumeIncrement/defaultConsumeUnit if available
+      const defaultIncrement = pantryItem.item?.defaultConsumeIncrement;
+      setQuantityInput(defaultIncrement ? defaultIncrement.toString() : '1');
       setPurpose(UsagePurpose.General);
       setNotes('');
-      setSelectedUnit('tracking');
+
+      // Check if defaultConsumeUnit matches one of the available unit options
+      const defaultConsumeUnitId = pantryItem.item?.defaultConsumeUnitId;
+      if (defaultConsumeUnitId) {
+        if (pantryItem.unit?.id === defaultConsumeUnitId) {
+          setSelectedUnit('tracking');
+        } else if (
+          isDualTracked &&
+          hasContentUnit &&
+          pantryItem.packageBreakdown?.contentUnit?.id === defaultConsumeUnitId
+        ) {
+          setSelectedUnit('content');
+        } else if (isDualTracked && pantryItem.netWeightUnit?.id === defaultConsumeUnitId) {
+          setSelectedUnit('weight');
+        } else {
+          setSelectedUnit('tracking');
+        }
+      } else {
+        setSelectedUnit('tracking');
+      }
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, pantryItem]);
+  }, [visible, pantryItem, isDualTracked, hasContentUnit]);
 
   // Get the available quantity and unit symbol based on selected unit
-  const availableQuantity = selectedUnit === 'weight' && isDualTracked
-    ? pantryItem!.remainingNetWeight!
-    : pantryItem?.quantity ?? 0;
+  const availableQuantity = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return contentUnitCount;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.remainingNetWeight!;
+    return pantryItem?.quantity ?? 0;
+  })();
 
-  const activeUnitSymbol = selectedUnit === 'weight' && isDualTracked
-    ? pantryItem!.netWeightUnit!.symbol || ''
-    : pantryItem?.unit?.symbol || '';
+  const activeUnitSymbol = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) {
+      return pantryItem!.packageBreakdown!.contentUnit.symbol || pantryItem!.packageBreakdown!.contentUnit.name;
+    }
+    if (selectedUnit === 'weight' && isDualTracked) {
+      return pantryItem!.netWeightUnit!.symbol || '';
+    }
+    return pantryItem?.unit?.symbol || '';
+  })();
 
-  const activeUnitId = selectedUnit === 'weight' && isDualTracked
-    ? pantryItem!.netWeightUnit!.id
-    : pantryItem?.unit?.id;
+  const activeUnitId = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return pantryItem!.packageBreakdown!.contentUnit.id;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.netWeightUnit!.id;
+    return pantryItem?.unit?.id;
+  })();
 
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
@@ -187,7 +232,12 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 />
                 {isDualTracked && (
                   <Text style={commonStyles.bottomSheetItemLabel}>
-                    {' '}({pantryItem.remainingNetWeight} {pantryItem.netWeightUnit?.symbol} remaining)
+                    {' '}({pantryItem.quantityBreakdown
+                      ? `${pantryItem.quantityBreakdown.fullPackages} full + ${Math.floor(pantryItem.quantityBreakdown.looseContentUnits)} loose ${pantryItem.quantityBreakdown.contentUnit?.symbol || ''}`
+                      : hasContentUnit
+                        ? `${contentUnitCount} ${pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}`
+                        : `${pantryItem.remainingNetWeight} ${pantryItem.netWeightUnit?.symbol}`
+                    } remaining)
                   </Text>
                 )}
               </View>
@@ -219,6 +269,27 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
                   </TouchableOpacity>
+                  {hasContentUnit && (
+                    <TouchableOpacity
+                      style={[
+                        commonStyles.bottomSheetOption,
+                        selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                      ]}
+                      onPress={() => setSelectedUnit('content')}
+                    >
+                      <Text
+                        style={[
+                          commonStyles.bottomSheetOptionText,
+                          selectedUnit === 'content' && commonStyles.bottomSheetOptionTextSelected,
+                        ]}
+                      >
+                        {pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}
+                      </Text>
+                      {selectedUnit === 'content' && (
+                        <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[
                       commonStyles.bottomSheetOption,

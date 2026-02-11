@@ -131,7 +131,6 @@ export function getPerspectiveLabel(perspective: string): string {
     back: 'Back',
     left: 'Left',
     right: 'Right',
-    top: 'Top',
     nutrition_label: 'Nutrition',
     ingredient_list: 'Ingredients',
   };
@@ -158,7 +157,6 @@ export function groupImagesByPerspective(images: ItemImage[]): ImageTab[] {
     'back',
     'left',
     'right',
-    'top',
     'nutrition_label',
     'ingredient_list',
   ];

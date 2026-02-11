@@ -97,7 +97,6 @@ const styles = StyleSheet.create(theme => ({
   secondary: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textTertiary,
-    textTransform: 'capitalize',
     marginTop: theme.spacing.xs,
   },
   counterContainer: {

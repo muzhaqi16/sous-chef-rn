@@ -526,6 +526,14 @@ fragment ItemFragment on Item {
     name
     symbol
   }
+  baseDimension
+  defaultConsumeUnit {
+    id
+    name
+    symbol
+  }
+  defaultConsumeUnitId
+  defaultConsumeIncrement
   displayUnit {
     id
     name
@@ -641,6 +649,25 @@ fragment PantryItemDisplay on PantryItem {
     totalNetWeight
     __typename
   }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    __typename
+  }
   __typename
 }
 
@@ -694,6 +721,7 @@ fragment PantryItemFragment on PantryItem {
     purpose
     notes
     wasteReason
+    adjustmentReason
     isComposted
     isRecycled
     pantryItem {

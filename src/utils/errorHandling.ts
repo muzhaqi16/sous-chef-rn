@@ -112,6 +112,9 @@ export class ErrorHandler {
     VERSION_CONFLICT:
       'This item was updated by another user. Please refresh and try again.',
 
+    // Pantry Errors
+    PANTRY_ITEM_ALREADY_EXISTS: 'This item is already in your pantry',
+
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
     SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
@@ -144,6 +147,7 @@ export class ErrorHandler {
     SERVICE_: 'Service',
     CIRCUIT_: 'Circuit Breaker',
     EMAIL_: 'Email',
+    PANTRY_: 'Pantry',
     SHOPPING_: 'Shopping',
     HOME_: 'Home Management',
   };

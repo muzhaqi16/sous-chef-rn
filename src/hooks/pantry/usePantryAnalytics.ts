@@ -3,16 +3,28 @@ import {
   useGetPantryLedgerAnalyticsQuery,
   useGetPantryUsageAnalyticsQuery,
   useGetPantryWasteAnalyticsQuery,
+  useGetPantryConsumptionRateQuery,
+  useGetPantryRestockingFrequencyQuery,
+  useGetPantryExpirationRiskQuery,
+  useGetPantryEffectiveUsageRateQuery,
   PeriodGranularity,
   DateRange,
   type AnalyticsFilterInput,
   type GetPantryUsageAnalyticsQuery,
   type GetPantryWasteAnalyticsQuery,
+  type GetPantryConsumptionRateQuery,
+  type GetPantryRestockingFrequencyQuery,
+  type GetPantryExpirationRiskQuery,
+  type GetPantryEffectiveUsageRateQuery,
 } from '#generated';
 
 // Type aliases for cleaner usage
 type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantryUsageAnalytics']>;
 type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantryWasteAnalytics']>;
+type ConsumptionRateData = GetPantryConsumptionRateQuery['pantryConsumptionRate'];
+type RestockingFrequencyData = GetPantryRestockingFrequencyQuery['pantryRestockingFrequency'];
+type ExpirationRiskData = NonNullable<GetPantryExpirationRiskQuery['pantryExpirationRisk']>;
+type EffectiveUsageRateData = GetPantryEffectiveUsageRateQuery['pantryEffectiveUsageRate'];
 
 interface UsePantryAnalyticsOptions {
   pantryId: string | undefined;
@@ -95,6 +107,26 @@ interface UsePantryAnalyticsReturn {
   ledgerLoading: boolean;
   ledgerError: Error | undefined;
 
+  // Consumption rate data
+  consumptionRateData: ConsumptionRateData | null;
+  consumptionRateLoading: boolean;
+  consumptionRateError: Error | undefined;
+
+  // Restocking frequency data
+  restockingFrequencyData: RestockingFrequencyData | null;
+  restockingFrequencyLoading: boolean;
+  restockingFrequencyError: Error | undefined;
+
+  // Expiration risk data
+  expirationRiskData: ExpirationRiskData | null;
+  expirationRiskLoading: boolean;
+  expirationRiskError: Error | undefined;
+
+  // Effective usage rate data
+  effectiveUsageRateData: EffectiveUsageRateData | null;
+  effectiveUsageRateLoading: boolean;
+  effectiveUsageRateError: Error | undefined;
+
   // Combined loading state
   loading: boolean;
 
@@ -167,9 +199,73 @@ export function usePantryAnalytics({
     errorPolicy: 'all',
   });
 
+  const {
+    data: consumptionRateQueryData,
+    loading: consumptionRateLoading,
+    error: consumptionRateError,
+    refetch: refetchConsumptionRate,
+  } = useGetPantryConsumptionRateQuery({
+    variables: { pantryId: pantryId ?? '', filter },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+
+  const {
+    data: restockingFrequencyQueryData,
+    loading: restockingFrequencyLoading,
+    error: restockingFrequencyError,
+    refetch: refetchRestockingFrequency,
+  } = useGetPantryRestockingFrequencyQuery({
+    variables: { pantryId: pantryId ?? '', filter },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+
+  const {
+    data: expirationRiskQueryData,
+    loading: expirationRiskLoading,
+    error: expirationRiskError,
+    refetch: refetchExpirationRisk,
+  } = useGetPantryExpirationRiskQuery({
+    variables: { pantryId: pantryId ?? '', daysThreshold: 7 },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+
+  const {
+    data: effectiveUsageRateQueryData,
+    loading: effectiveUsageRateLoading,
+    error: effectiveUsageRateError,
+    refetch: refetchEffectiveUsageRate,
+  } = useGetPantryEffectiveUsageRateQuery({
+    variables: { pantryId: pantryId ?? '', filter },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+
   const refetch = useCallback(async () => {
-    await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
-  }, [refetchUsage, refetchWaste, refetchLedger]);
+    await Promise.all([
+      refetchUsage(),
+      refetchWaste(),
+      refetchLedger(),
+      refetchConsumptionRate(),
+      refetchRestockingFrequency(),
+      refetchExpirationRisk(),
+      refetchEffectiveUsageRate(),
+    ]);
+  }, [
+    refetchUsage,
+    refetchWaste,
+    refetchLedger,
+    refetchConsumptionRate,
+    refetchRestockingFrequency,
+    refetchExpirationRisk,
+    refetchEffectiveUsageRate,
+  ]);
 
   return {
     usageData: usageQueryData?.pantryUsageAnalytics ?? null,
@@ -181,6 +277,18 @@ export function usePantryAnalytics({
     ledgerData: (ledgerQueryData?.pantryLedgerAnalytics as LedgerAnalytics) ?? null,
     ledgerLoading,
     ledgerError: ledgerError as Error | undefined,
+    consumptionRateData: consumptionRateQueryData?.pantryConsumptionRate ?? null,
+    consumptionRateLoading,
+    consumptionRateError: consumptionRateError as Error | undefined,
+    restockingFrequencyData: restockingFrequencyQueryData?.pantryRestockingFrequency ?? null,
+    restockingFrequencyLoading,
+    restockingFrequencyError: restockingFrequencyError as Error | undefined,
+    expirationRiskData: expirationRiskQueryData?.pantryExpirationRisk ?? null,
+    expirationRiskLoading,
+    expirationRiskError: expirationRiskError as Error | undefined,
+    effectiveUsageRateData: effectiveUsageRateQueryData?.pantryEffectiveUsageRate ?? null,
+    effectiveUsageRateLoading,
+    effectiveUsageRateError: effectiveUsageRateError as Error | undefined,
     loading: usageLoading || wasteLoading || ledgerLoading,
     dateRange,
     setDateRange,

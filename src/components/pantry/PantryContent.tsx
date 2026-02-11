@@ -26,9 +26,8 @@ import {
   getExpirationStatus,
   formatQuantityDisplay,
   formatPackageBreakdown,
-  formatNetWeight,
-  formatNetWeightDisplay,
   formatRemainingNetWeight,
+  formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
@@ -83,6 +82,14 @@ interface PantryItem {
     perUnitNetWeight?: number | null;
     perUnitNetWeightUnit?: { symbol?: string | null } | null;
     totalNetWeight?: number | null;
+  } | null;
+  quantityBreakdown?: {
+    fullPackages: number;
+    looseContentUnits: number;
+    contentUnit?: { name?: string; symbol?: string | null } | null;
+    totalContentUnits: number;
+    remainingWeight?: number | null;
+    remainingWeightUnit?: { symbol?: string | null } | null;
   } | null;
 }
 
@@ -153,8 +160,8 @@ interface ItemDisplayData {
   location: string;
   isOutOfStock: boolean;
   packageBreakdownText: string | null;
-  netWeightText: string | null;
   remainingNetWeightText: string | null;
+  quantityBreakdownText: string | null;
 }
 
 // Default filter tabs for pantry (fallback if none provided)
@@ -311,36 +318,25 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
       const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
+      const variant: ItemVariant = (item as any).condition === 'EXPIRED' || isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
       const hasExpiry = item.expiresAt != null;
 
-      const rawQuantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
-      const rawNetWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
-      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown);
+      const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
+      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits);
       const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
-
-      // When qty=1 + netWeight available + no packageBreakdown:
-      // promote net weight to primary, suppress redundant "1 unit"
-      const shouldPromoteNetWeight =
-        item.quantity === 1 &&
-        item.netWeight != null &&
-        item.netWeight > 0 &&
-        !item.packageBreakdown &&
-        item.netWeightUnit?.symbol === item.unit?.symbol;
+      const qtyBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
 
       map.set(item.id, {
         imageUrl: getItemImageUrl(item.item),
         expirationText: hasExpiry ? expStatus.text : null,
         expirationVariant: hasExpiry ? expStatus.type : undefined,
         variant,
-        quantityDisplay: shouldPromoteNetWeight
-          ? formatNetWeightDisplay(item.netWeight, item.netWeightUnit)!
-          : rawQuantityDisplay,
+        quantityDisplay,
         location: getLocationString(item.storageState, item.storageLocation),
         isOutOfStock: item.quantity === 0,
         packageBreakdownText: pkgBreakdownText,
-        netWeightText: shouldPromoteNetWeight ? null : rawNetWeightText,
         remainingNetWeightText,
+        quantityBreakdownText: qtyBreakdownText,
       });
     }
     return map;
@@ -350,14 +346,24 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   const itemDisplayMapRef = useRef(itemDisplayMap);
   itemDisplayMapRef.current = itemDisplayMap;
 
-  // Scroll to top on filter change (replaces key={locationFilter} remounting)
+  // Scroll to top when filter or sort changes — FlashList v2's
+  // maintainVisibleContentPosition causes layout corruption on data reorder
   const prevLocationFilter = useRef(locationFilter);
+  const prevSortOption = useRef(sortOption);
+  const prevSortDirection = useRef(sortDirection);
   useEffect(() => {
-    if (prevLocationFilter.current !== locationFilter) {
+    const changed =
+      prevLocationFilter.current !== locationFilter ||
+      prevSortOption.current !== sortOption ||
+      prevSortDirection.current !== sortDirection;
+
+    if (changed) {
       flashListRef.current?.scrollToTop({ animated: false });
       prevLocationFilter.current = locationFilter;
+      prevSortOption.current = sortOption;
+      prevSortDirection.current = sortDirection;
     }
-  }, [locationFilter]);
+  }, [locationFilter, sortOption, sortDirection]);
 
   // Render list item — stable callback via ref pattern to avoid FlashList full re-renders
   const renderItem = useCallback(
@@ -380,8 +386,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           imageUrl={display.imageUrl}
           isOutOfStock={display.isOutOfStock}
           packageBreakdownText={display.packageBreakdownText}
-          netWeightText={display.netWeightText}
           remainingNetWeightText={display.remainingNetWeightText}
+          quantityBreakdownText={display.quantityBreakdownText}
         />
       );
     },
@@ -421,17 +427,11 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     [],
   );
 
-  // Provide approximate heights per item type to reduce blank cells during fast scrolling
-  const overrideItemLayout = useCallback(
-    (layout: { size?: number; span?: number }, item: PantryItem) => {
-      const hasImage = itemDisplayMapRef.current.get(item?.id)?.imageUrl;
-      layout.size = hasImage ? 90 : 70;
-    },
-    [],
-  );
-
   // Memoize extraData to avoid new array reference every render
-  const extraData = useMemo(() => [sortOption, locationFilter], [sortOption, locationFilter]);
+  const extraData = useMemo(
+    () => [sortOption, sortDirection, locationFilter],
+    [sortOption, sortDirection, locationFilter],
+  );
 
   return (
     <PantryActionsProvider actions={itemActions}>
@@ -495,7 +495,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               keyExtractor={keyExtractor}
               extraData={extraData}
               getItemType={getItemType}
-              overrideItemLayout={overrideItemLayout}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={

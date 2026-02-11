@@ -50,6 +50,14 @@ interface PantryItem {
     perUnitNetWeightUnit?: { symbol?: string | null } | null;
     totalNetWeight?: number | null;
   } | null;
+  quantityBreakdown?: {
+    fullPackages: number;
+    looseContentUnits: number;
+    contentUnit?: { name?: string; symbol?: string | null } | null;
+    totalContentUnits: number;
+    remainingWeight?: number | null;
+    remainingWeightUnit?: { symbol?: string | null } | null;
+  } | null;
 }
 
 // Helper to get URGENT time-based info for list display (expiring/expired only)
@@ -161,13 +169,15 @@ export const formatPackageBreakdown = (
     perUnitNetWeightUnit?: { symbol?: string | null } | null;
     totalNetWeight?: number | null;
   } | null | undefined,
+  remainingContentUnits?: number | null,
 ): string | null => {
   if (!breakdown) return null;
+  const displayCount = remainingContentUnits ?? breakdown.count;
   const contentDisplay = breakdown.contentUnit.symbol || breakdown.contentUnit.name;
   if (breakdown.perUnitNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
-    return `${breakdown.count} x ${breakdown.perUnitNetWeight}${breakdown.perUnitNetWeightUnit.symbol} ${contentDisplay}`;
+    return `${displayCount} x ${breakdown.perUnitNetWeight} ${breakdown.perUnitNetWeightUnit.symbol} ${contentDisplay}`;
   }
-  return `${breakdown.count} ${contentDisplay}`;
+  return `${displayCount} ${contentDisplay}`;
 };
 
 // Helper to format full package breakdown with total for detail views
@@ -184,7 +194,7 @@ export const formatPackageBreakdownFull = (
   const short = formatPackageBreakdown(breakdown);
   if (!short) return null;
   if (breakdown.totalNetWeight && breakdown.perUnitNetWeightUnit?.symbol) {
-    return `${short} (${breakdown.totalNetWeight}${breakdown.perUnitNetWeightUnit.symbol} total)`;
+    return `${short} (${breakdown.totalNetWeight} ${breakdown.perUnitNetWeightUnit.symbol} total)`;
   }
   return short;
 };
@@ -229,6 +239,25 @@ export const formatRemainingNetWeight = (
     ? remainingNetWeight.toString()
     : remainingNetWeight.toFixed(remainingNetWeight < 10 ? 2 : 1).replace(/\.?0+$/, '');
   return `${formatted} ${unitStr} remaining`.trim();
+};
+
+// Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
+export const formatQuantityBreakdown = (
+  breakdown: {
+    fullPackages: number;
+    looseContentUnits: number;
+    contentUnit?: { name?: string; symbol?: string | null } | null;
+    totalContentUnits: number;
+    remainingWeight?: number | null;
+    remainingWeightUnit?: { symbol?: string | null } | null;
+  } | null | undefined,
+  _trackingUnitSymbol?: string | null,
+): string | null => {
+  if (!breakdown) return null;
+  const total = Math.floor(breakdown.totalContentUnits);
+  if (total <= 0) return null;
+  const contentLabel = breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
+  return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
 };
 
 // Helper to format quantity for redesign display
@@ -310,6 +339,7 @@ interface TransformedItem {
   packageBreakdownText?: string | null;
   netWeightText?: string | null;
   remainingNetWeightText?: string | null;
+  quantityBreakdownText?: string | null;
 }
 
 interface UsePantryItemTransformationOptions<T extends PantryItem> {
@@ -422,6 +452,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const packageBreakdownText = formatPackageBreakdown(item.packageBreakdown);
       const netWeightText = formatNetWeight(item.netWeight, item.netWeightUnit);
       const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
+      const quantityBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
 
       return {
         id: item.id,
@@ -483,6 +514,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
         packageBreakdownText,
         netWeightText,
         remainingNetWeightText,
+        quantityBreakdownText,
       };
     });
   }, [items, theme]);

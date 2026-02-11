@@ -30,8 +30,8 @@ interface PantryItemCardProps {
   imageUrl?: string | null;
   isOutOfStock?: boolean;
   packageBreakdownText?: string | null;
-  netWeightText?: string | null;
   remainingNetWeightText?: string | null;
+  quantityBreakdownText?: string | null;
 }
 
 
@@ -89,8 +89,8 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   imageUrl,
   isOutOfStock,
   packageBreakdownText,
-  netWeightText,
   remainingNetWeightText,
+  quantityBreakdownText,
 }) => {
   const { actions, swipeable } = usePantryActions();
 
@@ -155,13 +155,9 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
           <CardRightSlot
             type="meta"
             primary={quantity}
-            secondary={remainingNetWeightText || packageBreakdownText || netWeightText || location}
+            secondary={quantityBreakdownText || packageBreakdownText || remainingNetWeightText || location}
             tertiary={
-              remainingNetWeightText
-                ? (packageBreakdownText || netWeightText || location)
-                : packageBreakdownText && netWeightText
-                  ? netWeightText
-                  : (packageBreakdownText || netWeightText) ? location : undefined
+              (quantityBreakdownText || packageBreakdownText || remainingNetWeightText) ? location : undefined
             }
           />
         }
@@ -213,8 +209,8 @@ export const PantryItemCard = React.memo(PantryItemCardComponent, (prev, next) =
   prev.imageUrl === next.imageUrl &&
   prev.isOutOfStock === next.isOutOfStock &&
   prev.packageBreakdownText === next.packageBreakdownText &&
-  prev.netWeightText === next.netWeightText &&
-  prev.remainingNetWeightText === next.remainingNetWeightText,
+  prev.remainingNetWeightText === next.remainingNetWeightText &&
+  prev.quantityBreakdownText === next.quantityBreakdownText,
 );
 
 // PantryItemVariant alias for backwards compatibility

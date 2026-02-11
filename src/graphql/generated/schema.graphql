@@ -526,6 +526,21 @@ type AdditionCostAnalytics {
 }
 
 """
+Input for adjusting pantry item quantity to match physical count.
+Creates an ADJUSTMENT usage record for audit trail.
+"""
+input AdjustPantryItemQuantityInput {
+  """
+  The actual quantity from physical count
+  """
+  newQuantity: Float!
+  """
+  Why the adjustment was made (required for audit trail)
+  """
+  reason: String!
+}
+
+"""
 Input for batch deleting images from S3/MinIO storage.
 Used by admin panel after duplicate detection.
 """
@@ -664,6 +679,12 @@ enum AutomatedFlag {
 input BanUserInput {
   reason: String!
   userId: ID!
+}
+
+enum BaseDimension {
+  COUNT
+  MASS
+  VOLUME
 }
 
 """
@@ -1136,6 +1157,20 @@ type ConsumptionFailure {
 }
 
 """
+Consumption rate for an item or pantry
+"""
+type ConsumptionRate {
+  averageDailyConsumption: Float!
+  dataPoints: Int!
+  daysUntilEmpty: Float
+  itemId: String
+  itemName: String
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  unitName: String
+}
+
+"""
 Conversion availability result
 """
 type ConversionAvailability {
@@ -1562,6 +1597,7 @@ input CreatePantryItemInput {
   condition: ItemCondition
   costPerUnit: Float
   expiresAt: String
+  forceAdd: Boolean
   itemBrand: String
   itemCategory: String
   itemDescription: String
@@ -2333,6 +2369,20 @@ interface Edge {
   node: Node!
 }
 
+"""
+Effective usage rate: consumed / (consumed + wasted)
+"""
+type EffectiveUsageRate {
+  effectiveRate: Float!
+  itemId: String
+  itemName: String
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  totalConsumed: Float!
+  totalWasted: Float!
+  unitName: String
+}
+
 enum ExpirationAction {
   CONSUMED
   COOKED
@@ -2380,6 +2430,28 @@ enum ExpirationNotificationType {
   EXPIRES_TODAY
   EXPIRES_TOMORROW
   WEEKLY_DIGEST
+}
+
+"""
+Expiration risk summary for a pantry
+"""
+type ExpirationRisk {
+  daysThreshold: Int!
+  items: [ExpirationRiskItem!]!
+  totalAtRisk: Int!
+}
+
+"""
+Items at risk of expiring within a given threshold
+"""
+type ExpirationRiskItem {
+  condition: ItemCondition!
+  daysUntilExpiry: Int!
+  expiresAt: DateTime!
+  itemName: String!
+  pantryItemId: ID!
+  quantity: Float!
+  unitName: String
 }
 
 enum ExportFormat {
@@ -3013,11 +3085,15 @@ type Item {
   alternateUpcs: [String!]!
   approvedAt: DateTime
   approvedBy: User
+  baseDimension: BaseDimension
   brands: [ItemBrand!]!
   categories: [ItemCategory!]
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
   dataSource: DataSource!
+  defaultConsumeIncrement: Float
+  defaultConsumeUnit: Unit
+  defaultConsumeUnitId: String
   deletedAt: DateTime
   density: Float
   description: String
@@ -3087,6 +3163,7 @@ type ItemCategory {
 }
 
 enum ItemCondition {
+  EXPIRED
   FAIR
   GOOD
   SPOILED
@@ -4192,6 +4269,15 @@ type Mutation {
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
   """
+  Adjust pantry item quantity to match a physical count.
+  Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
+  The delta (positive or negative) is calculated automatically.
+  """
+  adjustPantryItemQuantity(
+    id: ID!
+    input: AdjustPantryItemQuantityInput!
+  ): PantryItem!
+  """
   Delete images from S3/MinIO storage and update related Item records.
 
   For batches >50 images (or when useQueue=true), the operation runs
@@ -4277,6 +4363,12 @@ type Mutation {
     pantryId: ID!
     recipeId: ID!
   ): RecipeConsumptionResult!
+  """
+  Convert an expired pantry item to waste in one step.
+  Sets condition to SPOILED, creates a WASTE usage record with wasteReason=EXPIRED,
+  and sets quantity to 0. Use after expiration job marks item as EXPIRED.
+  """
+  convertExpiredToWaste(pantryItemId: ID!): PantryItem!
   createBrand(input: CreateBrandInput!): Brand!
   createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
   createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
@@ -5297,6 +5389,7 @@ type PantryItem {
   purchase: Purchase
   purchaseId: String
   quantity: Float!
+  quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
   restockQuantity: Float
   sourceShoppingListItemId: String
@@ -5489,6 +5582,7 @@ type PantryItemSuggestion {
 }
 
 type PantryItemUsage {
+  adjustmentReason: String
   cookingLog: CookingLog
   cookingLogId: String
   costPerUnit: Float
@@ -5859,6 +5953,33 @@ input PutUnderReviewInput {
   userId: ID!
 }
 
+type QuantityBreakdown {
+  """
+  The content unit (e.g., can)
+  """
+  contentUnit: Unit
+  """
+  Number of full unopened packages (e.g., 1 full case)
+  """
+  fullPackages: Int!
+  """
+  Loose content units from opened packages (e.g., 9 cans)
+  """
+  looseContentUnits: Float!
+  """
+  Total remaining weight/volume
+  """
+  remainingWeight: Float
+  """
+  Unit of the remaining weight
+  """
+  remainingWeightUnit: Unit
+  """
+  Total expressed as content units (e.g., 21 cans)
+  """
+  totalContentUnits: Float!
+}
+
 """
 Quantity displayed in multiple formats
 Useful for showing both fraction and decimal representations
@@ -6135,6 +6256,34 @@ type Query {
     pagination: PaginationInput
   ): PantryConnection!
   pantry(id: ID!): Pantry
+  """
+  Get consumption rate for a pantry or specific item.
+  Shows average daily consumption and estimated days until empty.
+  """
+  pantryConsumptionRate(
+    filter: AnalyticsFilterInput
+    itemId: String
+    pantryId: ID!
+  ): [ConsumptionRate!]!
+  """
+  Get effective usage rate: consumed / (consumed + wasted).
+  A rate of 1.0 means no waste; 0.5 means half was wasted.
+  """
+  pantryEffectiveUsageRate(
+    filter: AnalyticsFilterInput
+    itemId: String
+    pantryId: ID!
+  ): [EffectiveUsageRate!]!
+  """
+  Get items at risk of expiring within a given number of days.
+  """
+  pantryExpirationRisk(
+    """
+    Number of days ahead to check (default: 7)
+    """
+    daysThreshold: Int = 7
+    pantryId: ID!
+  ): ExpirationRisk!
   pantryItem(id: ID!): PantryItem!
   """
   Get the change history for a specific pantry item.
@@ -6184,6 +6333,15 @@ type Query {
     itemId: String
     pantryId: ID!
   ): LedgerAnalytics!
+  """
+  Get restocking frequency for a pantry or specific item.
+  Shows average days between restocks and total restock count.
+  """
+  pantryRestockingFrequency(
+    filter: AnalyticsFilterInput
+    itemId: String
+    pantryId: ID!
+  ): [RestockingFrequency!]!
   pantryStats(pantryId: ID!): PantryStats!
   """
   Get comprehensive usage analytics for a pantry
@@ -6737,6 +6895,19 @@ input RestockPantryItemInput {
   storeId: String
   totalCost: Float
   unitId: String
+}
+
+"""
+Restocking frequency for an item or pantry
+"""
+type RestockingFrequency {
+  averageDaysBetweenRestocks: Float!
+  itemId: String
+  itemName: String
+  lastRestockedAt: DateTime
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  totalRestocks: Int!
 }
 
 enum RestrictionSeverity {
@@ -7862,6 +8033,7 @@ input SyncPantryItemInput {
   costPerUnit: Float
   expirationAlert: Boolean
   expiresAt: String
+  forceAdd: Boolean
   isComposted: Boolean
   isRecycled: Boolean
   itemBrand: String
@@ -8595,6 +8767,8 @@ input UpdatePantryItemInput {
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   minQuantity: Float
+  netWeight: Float
+  netWeightUnitId: String
   quantity: Float
   restockQuantity: Float
   storageLocationId: String
@@ -8975,6 +9149,7 @@ type UsageByUnit {
 }
 
 enum UsagePurpose {
+  ADJUSTMENT
   COOKING
   GENERAL
   GIFT
@@ -9382,12 +9557,16 @@ type WasteByReason {
 }
 
 enum WasteReason {
+  BURNT
   COOKING_FAIL
   EXPIRED
+  GAVE_AWAY
   MOLD
   OTHER
   OVERSTOCK
   PEST
+  SPILLED
   SPOILED
   TASTE
+  UNKNOWN_LOSS
 }

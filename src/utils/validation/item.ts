@@ -149,6 +149,14 @@ export const createItemSchema = object({
   type: string().nullable().optional(),
   storageState: string().nullable().optional(),
   shelfLifeDays: shelfLifeDaysRule,
+  baseDimension: string().nullable().optional(),
+  defaultConsumeIncrement: number()
+    .transform((value, originalValue) =>
+      String(originalValue).trim() === '' ? undefined : value
+    )
+    .min(0.001, 'Must be greater than 0')
+    .optional(),
+  defaultConsumeUnitId: string().optional(),
 
   // Images
   imageUrl: urlRule,

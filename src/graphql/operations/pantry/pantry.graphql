@@ -323,6 +323,84 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
   }
 }
 
+query GetPantryConsumptionRate(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+) {
+  pantryConsumptionRate(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    averageDailyConsumption
+    daysUntilEmpty
+    dataPoints
+    unitName
+    periodStart
+    periodEnd
+  }
+}
+
+query GetPantryRestockingFrequency(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+) {
+  pantryRestockingFrequency(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    averageDaysBetweenRestocks
+    totalRestocks
+    lastRestockedAt
+    periodStart
+    periodEnd
+  }
+}
+
+query GetPantryExpirationRisk($pantryId: ID!, $daysThreshold: Int = 7) {
+  pantryExpirationRisk(pantryId: $pantryId, daysThreshold: $daysThreshold) {
+    totalAtRisk
+    daysThreshold
+    items {
+      pantryItemId
+      itemName
+      quantity
+      unitName
+      expiresAt
+      daysUntilExpiry
+      condition
+    }
+  }
+}
+
+query GetPantryEffectiveUsageRate(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+) {
+  pantryEffectiveUsageRate(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    effectiveRate
+    totalConsumed
+    totalWasted
+    unitName
+    periodStart
+    periodEnd
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -449,6 +527,23 @@ mutation UpdatePantryItemQuantity(
     version: $version
   ) {
     ...PantryItemFragment
+  }
+}
+
+mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInput!) {
+  adjustPantryItemQuantity(id: $id, input: $input) {
+    id
+    quantity
+    version
+  }
+}
+
+mutation ConvertExpiredToWaste($pantryItemId: ID!) {
+  convertExpiredToWaste(pantryItemId: $pantryItemId) {
+    id
+    quantity
+    condition
+    wasteReason
   }
 }
 

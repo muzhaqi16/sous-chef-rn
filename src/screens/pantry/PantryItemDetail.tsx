@@ -14,6 +14,7 @@ import {
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
   StorageState,
+  UsagePurpose,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
@@ -21,7 +22,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
-import { formatPackageBreakdownFull, formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
+import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown } from '#hooks/pantry/usePantryItemTransformation';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -32,6 +33,9 @@ import { Icon } from '#/utils/iconUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useConvertExpiredToWaste } from '#hooks/pantry/mutations/useConvertExpiredToWaste';
+import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPantryItemQuantity';
+import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -169,6 +173,23 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     },
   });
 
+  // Adjust quantity modal state
+  const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+
+  // Expired to waste mutation
+  const { convertExpiredToWaste } = useConvertExpiredToWaste({
+    onSuccess: () => {
+      Alert.alert('Done', 'Expired item has been discarded.');
+    },
+  });
+
+  // Adjust quantity mutation
+  const { adjustQuantity } = useAdjustPantryItemQuantity({
+    onSuccess: () => {
+      Alert.alert('Done', 'Quantity has been adjusted.');
+    },
+  });
+
   const item = data?.pantryItem;
 
   // Fetch suggested recipes based on pantry item - use cache when available
@@ -293,6 +314,30 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     });
   };
 
+  const handleDiscardExpired = useCallback(() => {
+    if (!item) return;
+    Alert.alert(
+      'Discard Expired Item',
+      `This will mark the remaining ${item.quantity} ${item.unit?.name || ''} as wasted due to expiration.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => convertExpiredToWaste(item.id),
+        },
+      ],
+    );
+  }, [item, convertExpiredToWaste]);
+
+  const handleConfirmAdjust = useCallback(
+    (newQuantity: number, reason: string) => {
+      if (!item) return;
+      adjustQuantity(item.id, newQuantity, reason);
+    },
+    [item, adjustQuantity],
+  );
+
   // Computed values
   const imageUrl = getItemImageUrl(item?.item);
   const expiryInfo = getExpiryInfo(item?.expiresAt);
@@ -310,6 +355,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const packageBreakdownText = formatPackageBreakdownFull(item?.packageBreakdown);
   const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
   const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
+  const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
 
   if (!item) {
     return (
@@ -337,6 +383,21 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             loading: addToListStatus === 'loading',
             library: 'Ionicons',
             testID: 'pantry-item-add-to-list-button',
+          },
+          ...(item.condition === 'EXPIRED' && item.quantity > 0
+            ? [{
+                icon: 'close-circle-outline' as const,
+                onPress: handleDiscardExpired,
+                variant: 'error' as const,
+                library: 'Ionicons' as const,
+                testID: 'pantry-item-discard-button',
+              }]
+            : []),
+          {
+            icon: 'swap-vertical-outline',
+            onPress: () => setAdjustModalVisible(true),
+            library: 'Ionicons',
+            testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
@@ -499,6 +560,24 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           </View>
         )}
 
+        {/* Inventory Breakdown Row - live remaining decomposition */}
+        {quantityBreakdownText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Inventory</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="layers-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{quantityBreakdownText}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Package Details Row - only show if breakdown is available */}
         {packageBreakdownText && (
           <View style={styles.infoRow}>
@@ -585,7 +664,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="fitness-outline"
                   size={16}
                   color={
-                    item.condition === 'SPOILED'
+                    item.condition === 'SPOILED' || item.condition === 'EXPIRED'
                       ? theme.colors.error
                       : theme.colors.warning
                   }
@@ -595,7 +674,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               <Text
                 style={[
                   styles.infoValue,
-                  item.condition === 'SPOILED' && styles.infoValueError,
+                  (item.condition === 'SPOILED' || item.condition === 'EXPIRED') && styles.infoValueError,
                   item.condition === 'FAIR' && styles.infoValueWarning,
                 ]}
               >
@@ -817,23 +896,43 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
             {purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
-                {item.usageRecords.slice(0, 5).map(usage => (
-                  <View key={usage.id} style={styles.purchaseRow}>
-                    <View style={styles.purchaseDateStore}>
-                      <Text style={styles.purchaseDate}>
-                        {formatDate(usage.usedAt)}
-                      </Text>
-                      {usage.purpose && (
-                        <Text style={styles.purchaseStore}>
-                          {usage.purpose}
+                {item.usageRecords.slice(0, 5).map(usage => {
+                  const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
+                  const purposeLabel = isAdjustment
+                    ? 'Inventory adjusted'
+                    : usage.purpose;
+                  const quantityPrefix = isAdjustment
+                    ? (usage.quantityUsed >= 0 ? '+' : '')
+                    : '-';
+                  return (
+                    <View key={usage.id} style={styles.purchaseRow}>
+                      <View style={styles.purchaseDateStore}>
+                        <Text style={styles.purchaseDate}>
+                          {formatDate(usage.usedAt)}
                         </Text>
-                      )}
+                        {purposeLabel && (
+                          <Text style={[
+                            styles.purchaseStore,
+                            isAdjustment && styles.adjustmentPurpose,
+                          ]}>
+                            {purposeLabel}
+                          </Text>
+                        )}
+                        {isAdjustment && usage.adjustmentReason && (
+                          <Text style={styles.adjustmentReason}>
+                            {usage.adjustmentReason}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.purchasePrice,
+                        isAdjustment && styles.adjustmentQuantity,
+                      ]}>
+                        {quantityPrefix}{usage.quantityUsed}{usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
+                      </Text>
                     </View>
-                    <Text style={styles.purchasePrice}>
-                      -{usage.quantityUsed}{usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
-                    </Text>
-                  </View>
-                ))}
+                  );
+                })}
                 {item.usageRecords.length > 5 && (
                   <Text style={styles.noPurchaseData}>
                     +{item.usageRecords.length - 5} more entries
@@ -888,6 +987,15 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {/* Bottom padding for safe area */}
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
+
+      {adjustModalVisible && (
+        <AdjustQuantityModal
+          visible={adjustModalVisible}
+          pantryItem={item}
+          onClose={() => setAdjustModalVisible(false)}
+          onConfirm={handleConfirmAdjust}
+        />
+      )}
     </View>
   );
 };
@@ -1083,6 +1191,17 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  adjustmentPurpose: {
+    color: theme.colors.info,
+  },
+  adjustmentReason: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
+    marginTop: 1,
+  },
+  adjustmentQuantity: {
+    color: theme.colors.info,
   },
   notesSection: {
     marginHorizontal: theme.spacing.lg,
