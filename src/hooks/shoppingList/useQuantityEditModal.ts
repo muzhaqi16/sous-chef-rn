@@ -6,6 +6,7 @@ import {
 } from '#generated';
 import { Telemetry } from '#/services/telemetry';
 import { useStableRef } from '#/hooks/utils/useStableRef';
+import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
  * Transformed item for QuantityEditSheet
@@ -116,7 +117,7 @@ export function useQuantityEditModal(
               selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,
             unitId: selectedItemRaw.unit?.id || null,
             category: selectedItemRaw.category || null,
-            imageUrl: selectedItemRaw.item?.imageUrl || null,
+            imageUrl: resolveImageUrl(selectedItemRaw) || null,
             version: selectedItemRaw.version,
             itemUnits:
               selectedItemRaw.item?.units

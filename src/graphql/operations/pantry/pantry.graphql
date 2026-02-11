@@ -142,6 +142,11 @@ query GetPantryItemSuggestions(
       name
       symbol
     }
+    item {
+      id
+      imageUrl
+      images
+    }
     currentQuantity
     minQuantity
     restockQuantity
@@ -532,9 +537,13 @@ mutation UpdatePantryItemQuantity(
 
 mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInput!) {
   adjustPantryItemQuantity(id: $id, input: $input) {
-    id
-    quantity
-    version
+    ...PantryItemFragment
+  }
+}
+
+mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!) {
+  correctPantryItemWeight(id: $id, input: $input) {
+    ...PantryItemFragment
   }
 }
 

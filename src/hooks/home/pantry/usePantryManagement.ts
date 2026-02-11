@@ -48,6 +48,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: pantryItems,
+    totalCount,
     loading,
     isRefreshing,
     error,

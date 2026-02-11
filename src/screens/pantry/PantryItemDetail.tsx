@@ -21,7 +21,7 @@ import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown } from '#hooks/pantry/usePantryItemTransformation';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
@@ -35,7 +35,9 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useConvertExpiredToWaste } from '#hooks/pantry/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPantryItemQuantity';
+import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPantryItemWeight';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
+import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -175,6 +177,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
   // Adjust quantity modal state
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+  // Correct weight modal state
+  const [correctWeightVisible, setCorrectWeightVisible] = useState(false);
 
   // Expired to waste mutation
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
@@ -184,11 +188,10 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   });
 
   // Adjust quantity mutation
-  const { adjustQuantity } = useAdjustPantryItemQuantity({
-    onSuccess: () => {
-      Alert.alert('Done', 'Quantity has been adjusted.');
-    },
-  });
+  const { adjustQuantity } = useAdjustPantryItemQuantity();
+
+  // Correct weight mutation
+  const { correctWeight } = useCorrectPantryItemWeight();
 
   const item = data?.pantryItem;
 
@@ -331,15 +334,23 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   }, [item, convertExpiredToWaste]);
 
   const handleConfirmAdjust = useCallback(
-    (newQuantity: number, reason: string) => {
+    (newQuantity: number, reason: string, remainingNetWeight?: number) => {
       if (!item) return;
-      adjustQuantity(item.id, newQuantity, reason);
+      adjustQuantity(item.id, newQuantity, reason, item.version ?? undefined, remainingNetWeight);
     },
     [item, adjustQuantity],
   );
 
+  const handleCorrectWeight = useCallback(
+    (netWeight: number, reason: string, netWeightUnitId?: string) => {
+      if (!item) return;
+      correctWeight(item.id, netWeight, reason, item.version ?? 0, netWeightUnitId);
+    },
+    [item, correctWeight],
+  );
+
   // Computed values
-  const imageUrl = getItemImageUrl(item?.item);
+  const imageUrl = resolveImageUrl(item);
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState);
@@ -538,6 +549,20 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
+              {item.lastUsedAt && (
+                <TouchableOpacity
+                  onPress={() => setCorrectWeightVisible(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.correctWeightButton}
+                >
+                  <Icon
+                    name="create-outline"
+                    size={16}
+                    color={theme.colors.primary}
+                    library="Ionicons"
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -996,6 +1021,15 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           onConfirm={handleConfirmAdjust}
         />
       )}
+
+      {correctWeightVisible && (
+        <CorrectWeightModal
+          visible={correctWeightVisible}
+          pantryItem={item}
+          onClose={() => setCorrectWeightVisible(false)}
+          onConfirm={handleCorrectWeight}
+        />
+      )}
     </View>
   );
 };
@@ -1137,6 +1171,10 @@ const styles = StyleSheet.create(theme => ({
   infoValueMuted: {
     color: theme.colors.textTertiary,
     fontStyle: 'italic',
+  },
+  correctWeightButton: {
+    marginLeft: theme.spacing.sm,
+    padding: theme.spacing.xs,
   },
   infoValueError: {
     color: theme.colors.error,

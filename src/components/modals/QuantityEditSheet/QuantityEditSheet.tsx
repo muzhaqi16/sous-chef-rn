@@ -280,7 +280,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       android_keyboardInputMode="adjustResize"
       animationConfigs={animationConfigs}
       handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      backgroundStyle={{ backgroundColor: theme.colors.surface }}
     >
       <BottomSheetKeyboardAwareScrollView
         contentContainerStyle={styles.content}

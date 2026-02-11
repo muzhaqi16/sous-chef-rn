@@ -408,7 +408,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           return;
         }
 
-        const dirtyFieldsRecord = dirtyFields as Record<string, boolean>;
+        const dirtyFieldsRecord = { ...dirtyFields } as Record<string, boolean>;
+
+        // Strip weight fields when locked — weight changes must go through correctPantryItemWeight
+        if (isWeightLocked) {
+          delete dirtyFieldsRecord.netWeight;
+          delete dirtyFieldsRecord.netWeightUnitId;
+        }
+
         const quantityOrUnitChanged =
           dirtyFieldsRecord.quantityInput || dirtyFieldsRecord.unit;
 
@@ -470,6 +477,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   }
 
   const item = existingItemData?.pantryItem;
+  const isWeightLocked = mode === 'edit' && !!item?.lastUsedAt;
 
   // Tags section fields (edit mode only)
   const tagsFields: FieldDef<PantryItemFormData>[] = [
@@ -568,30 +576,41 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             {/* Net Weight Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Net Weight</Text>
-              <FieldRow>
-                <Controller
-                  control={control}
-                  name="netWeight"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <FormInput
-                      label="Net Weight"
-                      value={value || ''}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      placeholder="e.g., 14.5"
-                      keyboardType="decimal-pad"
-                    />
-                  )}
-                />
-                <UnitAutocompleteField
-                  variant="modal"
-                  label="Unit"
-                  value={netWeightUnitDisplay}
-                  onChangeText={setNetWeightUnitDisplay}
-                  onUnitSelected={handleNetWeightUnitSelected}
-                  placeholder="oz, g, ml"
-                />
-              </FieldRow>
+              <View
+                pointerEvents={isWeightLocked ? 'none' : 'auto'}
+                style={isWeightLocked ? styles.lockedSection : undefined}
+              >
+                <FieldRow>
+                  <Controller
+                    control={control}
+                    name="netWeight"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <FormInput
+                        label="Net Weight"
+                        value={value || ''}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="e.g., 14.5"
+                        keyboardType="decimal-pad"
+                        editable={!isWeightLocked}
+                      />
+                    )}
+                  />
+                  <UnitAutocompleteField
+                    variant="modal"
+                    label="Unit"
+                    value={netWeightUnitDisplay}
+                    onChangeText={setNetWeightUnitDisplay}
+                    onUnitSelected={handleNetWeightUnitSelected}
+                    placeholder="oz, g, ml"
+                  />
+                </FieldRow>
+              </View>
+              {isWeightLocked && (
+                <Text style={styles.lockedHint}>
+                  Weight locked after use — correct from item details
+                </Text>
+              )}
             </View>
 
             {/* Storage Details Section */}
@@ -653,5 +672,13 @@ const styles = StyleSheet.create(theme => ({
   errorText: {
     fontSize: theme.fonts.size.lg,
     color: theme.colors.error,
+  },
+  lockedSection: {
+    opacity: 0.5,
+  },
+  lockedHint: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textTertiary,
+    fontStyle: 'italic',
   },
 }));

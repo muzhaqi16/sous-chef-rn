@@ -158,6 +158,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const {
     items: pantryItems,
     allItems,
+    totalCount,
     searchQuery,
     setSearchQuery,
     removeItem,
@@ -289,6 +290,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
     setAddLocationSheetVisible(true);
   }, []);
 
+  // Handle add item from empty state
+  const handleAddItem = useCallback(() => {
+    setAddSheetVisible(true);
+  }, []);
+
   // Track screen view (deferred — telemetry not needed during initial render)
   useEffect(() => {
     if (!isInteractive) return;
@@ -394,6 +400,8 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onAvatarPress={handleAvatarPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
+        totalCount={totalCount}
+        onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
         refreshing={isRefreshing}

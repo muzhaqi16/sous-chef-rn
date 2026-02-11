@@ -131,14 +131,6 @@ const SortableShoppingListComponent = forwardRef<
       [],
     );
 
-    // Provide approximate item height to reduce blank cells during fast scrolling
-    const overrideItemLayout = useCallback(
-      (layout: { size?: number; span?: number }) => {
-        layout.size = 72;
-      },
-      [],
-    );
-
     // Memoize actions for context
     const actions = useMemo<SortableListActions>(
       () => ({
@@ -239,7 +231,6 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              overrideItemLayout={overrideItemLayout}
               drawDistance={500}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true

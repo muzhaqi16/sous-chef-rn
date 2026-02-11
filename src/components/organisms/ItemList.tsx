@@ -105,6 +105,8 @@ export const ItemList: React.FC<ItemListProps> = ({
     [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onItemRestock, onSwipeableWillOpen, testIDPrefix],
   );
 
+  const keyExtractor = useCallback((item: Item) => item.id, []);
+
   if (items.length === 0 && emptyState) {
     return (
       <>
@@ -122,7 +124,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   return (
     <FlashList
       data={items}
-      keyExtractor={(item) => item.id}
+      keyExtractor={keyExtractor}
       contentContainerStyle={contentStyle}
       refreshControl={
         onRefresh ? (

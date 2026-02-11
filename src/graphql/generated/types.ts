@@ -160,6 +160,10 @@ export type AdjustPantryItemQuantityInput = {
   newQuantity: Scalars['Float']['input'];
   /** Why the adjustment was made (required for audit trail) */
   reason: Scalars['String']['input'];
+  /** Explicit remaining net weight override for full recount scenarios (dual-tracked items only) */
+  remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  /** Optimistic concurrency control — must match current version */
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /**
@@ -627,6 +631,7 @@ export enum ChangeType {
   ExpirationUpdated = 'EXPIRATION_UPDATED',
   LocationUpdated = 'LOCATION_UPDATED',
   QuantityUpdated = 'QUANTITY_UPDATED',
+  WeightCorrected = 'WEIGHT_CORRECTED',
 }
 
 /** Response for clearing items from a shopping list */
@@ -812,6 +817,21 @@ export type CookingStats = {
   recentCookingLogs: Array<CookingLog>;
   totalCookingSessions: Scalars['Int']['output'];
   totalRecipesCooked: Scalars['Int']['output'];
+};
+
+/**
+ * Input for correcting the net weight of a dual-tracked pantry item.
+ * Recalculates remainingNetWeight proportionally and derives new quantity.
+ */
+export type CorrectPantryItemWeightInput = {
+  /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
+  netWeight: Scalars['Float']['input'];
+  /** Unit for the net weight (optional — only provide to also change the unit) */
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  /** Why the correction is needed (required for audit trail) */
+  reason: Scalars['String']['input'];
+  /** Optimistic concurrency control */
+  version: Scalars['Int']['input'];
 };
 
 export type CreateBrandInput = {
@@ -3736,6 +3756,12 @@ export type Mutation = {
    * and sets quantity to 0. Use after expiration job marks item as EXPIRED.
    */
   convertExpiredToWaste: PantryItem;
+  /**
+   * Correct the net weight for a dual-tracked pantry item.
+   * Recalculates remainingNetWeight proportionally and derives new quantity.
+   * Use this when the original net weight was entered incorrectly.
+   */
+  correctPantryItemWeight: PantryItem;
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -4207,6 +4233,11 @@ export type MutationConfirmRecipeConsumptionArgs = {
 
 export type MutationConvertExpiredToWasteArgs = {
   pantryItemId: Scalars['ID']['input'];
+};
+
+export type MutationCorrectPantryItemWeightArgs = {
+  id: Scalars['ID']['input'];
+  input: CorrectPantryItemWeightInput;
 };
 
 export type MutationCreateBrandArgs = {
@@ -17660,6 +17691,12 @@ export type GetPantryItemSuggestionsQuery = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
+    };
   }>;
 };
 
@@ -19221,10 +19258,479 @@ export type AdjustPantryItemQuantityMutationVariables = Exact<{
 export type AdjustPantryItemQuantityMutation = {
   __typename?: 'Mutation';
   adjustPantryItemQuantity: {
-    __typename?: 'PantryItem';
+    __typename: 'PantryItem';
+    storageNotes?: string | null | undefined;
+    createdAt: string;
+    restockQuantity?: number | null | undefined;
+    condition: ItemCondition;
+    acquisitionMethod: AcquisitionMethod;
+    costPerUnit?: number | null | undefined;
+    totalCost?: number | null | undefined;
+    tags: Array<string>;
     id: string;
+    pantryId: string;
+    itemId: string;
+    itemName: string;
     quantity: number;
     version?: number | null | undefined;
+    updatedAt?: string | null | undefined;
+    storageState: StorageState;
+    expiresAt?: string | null | undefined;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    lastUsedAt?: string | null | undefined;
+    netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
+    item: {
+      __typename: 'Item';
+      id: string;
+      imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
+      name: string;
+      netWeight?: number | null | undefined;
+      description?: string | null | undefined;
+      dataSource: DataSource;
+      type: ItemType;
+      storageState: StorageState;
+      showInOnboarding: boolean;
+      shelfLifeDays?: number | null | undefined;
+      popularity: number;
+      status: ItemStatus;
+      visibility: Visibility;
+      tags: Array<string>;
+      healthBenefits?: any | null | undefined;
+      allergens?: any | null | undefined;
+      nutritions?: any | null | undefined;
+      metadata?: any | null | undefined;
+      ingredients?: any | null | undefined;
+      createdAt: string;
+      deletedAt?: string | null | undefined;
+      density?: number | null | undefined;
+      preferredTrackingUnitId?: string | null | undefined;
+      baseDimension?: BaseDimension | null | undefined;
+      defaultConsumeUnitId?: string | null | undefined;
+      defaultConsumeIncrement?: number | null | undefined;
+      displayUnit?:
+        | { __typename: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      preferredTrackingUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      defaultConsumeUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      units: Array<{
+        __typename?: 'ItemUnit';
+        id: string;
+        itemId: string;
+        unitId: string;
+        isDefault: boolean;
+        isPreferred: boolean;
+        isCommon: boolean;
+        packageSize?: number | null | undefined;
+        packageDescription?: string | null | undefined;
+        retailUnit: boolean;
+        usageContext: Array<UnitUsageContext>;
+        recommendedFor: Array<UnitRecommendation>;
+        minQuantity?: number | null | undefined;
+        maxQuantity?: number | null | undefined;
+        quantityStep?: number | null | undefined;
+        averagePricePerUnit?: number | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        displayNameSingular?: string | null | undefined;
+        displayNamePlural?: string | null | undefined;
+        contentUnitId?: string | null | undefined;
+        contentUnit?:
+          | { __typename: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+      }>;
+      brands: Array<{
+        __typename?: 'ItemBrand';
+        id: string;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
+      }>;
+      categories?:
+        | Array<{
+            __typename?: 'ItemCategory';
+            id: string;
+            isPrimary: boolean;
+            category: {
+              __typename: 'Category';
+              id: string;
+              name: string;
+              color?: string | null | undefined;
+              icon?: string | null | undefined;
+            };
+          }>
+        | null
+        | undefined;
+    };
+    unit?:
+      | {
+          __typename: 'Unit';
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          isCommon: boolean;
+          displayAsFraction: boolean;
+          minPrecision: number;
+          autoConvertThreshold?: number | null | undefined;
+          id: string;
+          name: string;
+          symbol: string;
+        }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
+      | null
+      | undefined;
+    purchase?:
+      | {
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          unitPrice: number;
+          totalPrice: number;
+          quantity: number;
+        }
+      | null
+      | undefined;
+    usageRecords: Array<{
+      __typename?: 'PantryItemUsage';
+      id: string;
+      quantityUsed: number;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null | undefined;
+      wasteReason?: WasteReason | null | undefined;
+      adjustmentReason?: string | null | undefined;
+      isComposted?: boolean | null | undefined;
+      isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+    }>;
+    netWeightUnit?:
+      | { __typename: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }
+      | null
+      | undefined;
+    brand?:
+      | { __typename: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    packageBreakdown?:
+      | {
+          __typename: 'PackageBreakdown';
+          count: number;
+          perUnitNetWeight?: number | null | undefined;
+          totalNetWeight?: number | null | undefined;
+          contentUnit: {
+            __typename: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+          };
+          perUnitNetWeightUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    quantityBreakdown?:
+      | {
+          __typename: 'QuantityBreakdown';
+          fullPackages: number;
+          looseContentUnits: number;
+          totalContentUnits: number;
+          remainingWeight?: number | null | undefined;
+          contentUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          remainingWeightUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type CorrectPantryItemWeightMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: CorrectPantryItemWeightInput;
+}>;
+
+export type CorrectPantryItemWeightMutation = {
+  __typename?: 'Mutation';
+  correctPantryItemWeight: {
+    __typename: 'PantryItem';
+    storageNotes?: string | null | undefined;
+    createdAt: string;
+    restockQuantity?: number | null | undefined;
+    condition: ItemCondition;
+    acquisitionMethod: AcquisitionMethod;
+    costPerUnit?: number | null | undefined;
+    totalCost?: number | null | undefined;
+    tags: Array<string>;
+    id: string;
+    pantryId: string;
+    itemId: string;
+    itemName: string;
+    quantity: number;
+    version?: number | null | undefined;
+    updatedAt?: string | null | undefined;
+    storageState: StorageState;
+    expiresAt?: string | null | undefined;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    lastUsedAt?: string | null | undefined;
+    netWeight?: number | null | undefined;
+    remainingNetWeight?: number | null | undefined;
+    item: {
+      __typename: 'Item';
+      id: string;
+      imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
+      name: string;
+      netWeight?: number | null | undefined;
+      description?: string | null | undefined;
+      dataSource: DataSource;
+      type: ItemType;
+      storageState: StorageState;
+      showInOnboarding: boolean;
+      shelfLifeDays?: number | null | undefined;
+      popularity: number;
+      status: ItemStatus;
+      visibility: Visibility;
+      tags: Array<string>;
+      healthBenefits?: any | null | undefined;
+      allergens?: any | null | undefined;
+      nutritions?: any | null | undefined;
+      metadata?: any | null | undefined;
+      ingredients?: any | null | undefined;
+      createdAt: string;
+      deletedAt?: string | null | undefined;
+      density?: number | null | undefined;
+      preferredTrackingUnitId?: string | null | undefined;
+      baseDimension?: BaseDimension | null | undefined;
+      defaultConsumeUnitId?: string | null | undefined;
+      defaultConsumeIncrement?: number | null | undefined;
+      displayUnit?:
+        | { __typename: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      preferredTrackingUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      defaultConsumeUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      units: Array<{
+        __typename?: 'ItemUnit';
+        id: string;
+        itemId: string;
+        unitId: string;
+        isDefault: boolean;
+        isPreferred: boolean;
+        isCommon: boolean;
+        packageSize?: number | null | undefined;
+        packageDescription?: string | null | undefined;
+        retailUnit: boolean;
+        usageContext: Array<UnitUsageContext>;
+        recommendedFor: Array<UnitRecommendation>;
+        minQuantity?: number | null | undefined;
+        maxQuantity?: number | null | undefined;
+        quantityStep?: number | null | undefined;
+        averagePricePerUnit?: number | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        displayNameSingular?: string | null | undefined;
+        displayNamePlural?: string | null | undefined;
+        contentUnitId?: string | null | undefined;
+        contentUnit?:
+          | { __typename: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+      }>;
+      brands: Array<{
+        __typename?: 'ItemBrand';
+        id: string;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
+      }>;
+      categories?:
+        | Array<{
+            __typename?: 'ItemCategory';
+            id: string;
+            isPrimary: boolean;
+            category: {
+              __typename: 'Category';
+              id: string;
+              name: string;
+              color?: string | null | undefined;
+              icon?: string | null | undefined;
+            };
+          }>
+        | null
+        | undefined;
+    };
+    unit?:
+      | {
+          __typename: 'Unit';
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          isCommon: boolean;
+          displayAsFraction: boolean;
+          minPrecision: number;
+          autoConvertThreshold?: number | null | undefined;
+          id: string;
+          name: string;
+          symbol: string;
+        }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
+      | null
+      | undefined;
+    purchase?:
+      | {
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          unitPrice: number;
+          totalPrice: number;
+          quantity: number;
+        }
+      | null
+      | undefined;
+    usageRecords: Array<{
+      __typename?: 'PantryItemUsage';
+      id: string;
+      quantityUsed: number;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null | undefined;
+      wasteReason?: WasteReason | null | undefined;
+      adjustmentReason?: string | null | undefined;
+      isComposted?: boolean | null | undefined;
+      isRecycled?: boolean | null | undefined;
+      usageUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      pantryItem?: { __typename?: 'PantryItem'; id: string } | null | undefined;
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+    }>;
+    netWeightUnit?:
+      | { __typename: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }
+      | null
+      | undefined;
+    brand?:
+      | { __typename: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    packageBreakdown?:
+      | {
+          __typename: 'PackageBreakdown';
+          count: number;
+          perUnitNetWeight?: number | null | undefined;
+          totalNetWeight?: number | null | undefined;
+          contentUnit: {
+            __typename: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+          };
+          perUnitNetWeightUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    quantityBreakdown?:
+      | {
+          __typename: 'QuantityBreakdown';
+          fullPackages: number;
+          looseContentUnits: number;
+          totalContentUnits: number;
+          remainingWeight?: number | null | undefined;
+          contentUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          remainingWeightUnit?:
+            | { __typename: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 

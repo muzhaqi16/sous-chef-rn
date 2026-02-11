@@ -8,7 +8,7 @@
  * - Preserve data during failures
  */
 
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -100,11 +100,43 @@ export function usePantryQuery(pantryId: string | undefined) {
     }
   }, [refetch]);
 
+  // Guard to prevent multiple auto-refetches when edges are depleted
+  const isAutoRefetchingRef = useRef(false);
+
+  const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
+
+  // Auto-refetch when edges are depleted but totalCount indicates items remain
+  // (pagination edge depletion scenario — same pattern as usePaginatedShoppingItems)
+  useEffect(() => {
+    if (isAutoRefetchingRef.current || loading || !hasValidPantryId) {
+      return;
+    }
+
+    if (totalCount > 0 && pantryItems.length === 0) {
+      isAutoRefetchingRef.current = true;
+
+      const timeoutId = setTimeout(async () => {
+        try {
+          await refetch();
+        } catch (error) {
+          console.warn('[usePantryQuery] Auto-refetch failed:', error);
+        } finally {
+          isAutoRefetchingRef.current = false;
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timeoutId);
+        isAutoRefetchingRef.current = false;
+      };
+    }
+  }, [totalCount, pantryItems.length, loading, hasValidPantryId, refetch]);
+
   return {
     pantryItems,
     filteredItems,
     normalizedPantry,
-    totalCount: normalizedPantry?.itemsTotalCount ?? 0,
+    totalCount,
     loading,
     isRefreshing,
     error,

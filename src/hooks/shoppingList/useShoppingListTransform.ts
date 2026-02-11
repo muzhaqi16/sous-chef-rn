@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import type {
@@ -47,7 +47,7 @@ function transformItem(
     return null;
   }
 
-  const imageUrl = getItemImageUrl(item.item);
+  const imageUrl = resolveImageUrl(item);
 
   // Use forced state if provided, otherwise read from server data
   const isPurchasedValue = forcePurchasedState ?? item.purchaseInfo?.isPurchased;

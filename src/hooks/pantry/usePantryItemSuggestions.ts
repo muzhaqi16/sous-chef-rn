@@ -5,6 +5,7 @@ import {
   type GetPantryItemSuggestionsQuery,
 } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
+import { resolveImageUrl } from '#utils/imageUtils';
 
 type PantryItemSuggestion =
   GetPantryItemSuggestionsQuery['pantryItemSuggestions'][number];
@@ -37,7 +38,11 @@ export function usePantryItemSuggestions({
   });
 
   const suggestions = useMemo(
-    () => data?.pantryItemSuggestions ?? [],
+    () =>
+      (data?.pantryItemSuggestions ?? []).map(s => ({
+        ...s,
+        imageUrl: resolveImageUrl(s),
+      })),
     [data?.pantryItemSuggestions],
   );
 

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { ItemSuggestion } from '#generated';
 
 interface ItemSuggestionsListProps {
@@ -63,7 +64,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
 
   // Render a single suggestion item
   const renderSuggestion = (item: ItemSuggestion, isLast: boolean) => {
-    const imageUrl = item.imageUrl || null;
+    const imageUrl = resolveImageUrl(item);
     return (
       <View
         key={item.id}

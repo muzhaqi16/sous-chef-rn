@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { StorageState } from '#generated';
@@ -32,6 +32,8 @@ interface PantryItem {
   lowStockAlert?: boolean | null;
   item?: {
     name?: string;
+    imageUrl?: string | null;
+    images?: unknown;
     netWeight?: number | null;
     displayUnit?: {
       symbol?: string;
@@ -396,7 +398,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const urgentTimeInfo = getUrgentTimeInfo(item);
 
       // Get image URL for the item
-      const imageUrl = getItemImageUrl(item.item);
+      const imageUrl = resolveImageUrl(item);
 
       // Format storage state (Fridge/Freezer/Dry pantry) for right element
       const storageStateDisplay = formatStorageState(item.storageState);

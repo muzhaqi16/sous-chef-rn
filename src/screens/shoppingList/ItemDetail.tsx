@@ -10,7 +10,7 @@ import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { commonStyles } from '#/styles/commonStyles';
-import { parseImages, hasImages } from '#utils/imageUtils';
+import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -82,6 +82,8 @@ export const ShoppingListItemDetail: React.FC<{
     );
   }
 
+  const imageUrl = resolveImageUrl(item);
+
   const sections = [
     {
       content: (
@@ -90,12 +92,12 @@ export const ShoppingListItemDetail: React.FC<{
             {showImages ? (
               <ImageGalleryTabs
                 images={itemImages}
-                fallbackImageUrl={item.item?.imageUrl}
+                fallbackImageUrl={imageUrl}
                 imageHeight={160}
               />
-            ) : item.item?.imageUrl ? (
+            ) : imageUrl ? (
               <CachedImage
-                uri={item.item.imageUrl}
+                uri={imageUrl}
                 style={styles.itemImage}
               />
             ) : (

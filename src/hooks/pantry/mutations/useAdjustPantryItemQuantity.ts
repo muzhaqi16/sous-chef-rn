@@ -7,8 +7,15 @@
 
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useAdjustPantryItemQuantityMutation } from '#generated';
+import {
+  useAdjustPantryItemQuantityMutation,
+  PantryItemFragmentDoc,
+} from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -28,23 +35,30 @@ export function useAdjustPantryItemQuantity({
       pantryItemId: string,
       newQuantity: number,
       reason: string,
+      version?: number,
+      remainingNetWeight?: number,
     ): Promise<boolean> => {
       const result = await adjustMutation({
         variables: {
           id: pantryItemId,
-          input: { newQuantity, reason },
+          input: {
+            newQuantity,
+            reason,
+            ...(version != null ? { version } : {}),
+            ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+          },
         },
         update: (cache, { data: mutationData }) => {
           if (!mutationData?.adjustPantryItemQuantity) return;
 
-          const updatedItem = mutationData.adjustPantryItemQuantity;
-
-          cache.modify({
-            id: cache.identify({ __typename: 'PantryItem', id: updatedItem.id }),
-            fields: {
-              quantity: () => updatedItem.quantity,
-              version: () => updatedItem.version,
-            },
+          cache.writeFragment({
+            id: cache.identify({
+              __typename: 'PantryItem',
+              id: mutationData.adjustPantryItemQuantity.id,
+            }),
+            fragment: PantryItemFragmentDoc,
+            fragmentName: 'PantryItemFragment',
+            data: mutationData.adjustPantryItemQuantity,
           });
         },
       });
@@ -55,10 +69,14 @@ export function useAdjustPantryItemQuantity({
       }
 
       if (result.error) {
-        const { message } = handleApolloError(result.error, {
-          operation: 'Adjust Quantity',
-        });
-        Alert.alert('Error', message);
+        if (handleVersionConflict(result.error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(result.error));
+        } else {
+          const { message } = handleApolloError(result.error, {
+            operation: 'Adjust Quantity',
+          });
+          Alert.alert('Error', message);
+        }
       }
 
       return false;

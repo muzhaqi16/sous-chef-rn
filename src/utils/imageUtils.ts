@@ -7,7 +7,39 @@ import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
  * @param item - Item object with imageUrl field
  * @returns Image URL or null if no image is available
  */
-export const getItemImageUrl = (item: any): string | null => {
+/**
+ * Resolves the best available image URL from any common data shape.
+ * Handles: Item (direct), PantryItem/ShoppingListItem (nested .item),
+ * PantryItemSuggestion (own imageUrl + nested .item fallback).
+ */
+export function resolveImageUrl(
+  source: { imageUrl?: string | null; images?: unknown; item?: { imageUrl?: string | null; images?: unknown } | null } | null | undefined,
+): string | null {
+  if (!source) return null;
+
+  // 1. Try own imageUrl (validates it's a full URL)
+  const ownUrl = source.imageUrl;
+  if (ownUrl && (ownUrl.startsWith('http://') || ownUrl.startsWith('https://'))) {
+    return ownUrl;
+  }
+
+  // 2. Try nested .item via getItemImageUrl (handles imageUrl + images fallback)
+  if (source.item) {
+    const fromItem = getItemImageUrl(source.item);
+    if (fromItem) return fromItem;
+  }
+
+  // 3. Try own images array (for direct Item objects)
+  if (source.images) {
+    return getItemImageUrl(source);
+  }
+
+  return null;
+}
+
+export const getItemImageUrl = (
+  item: { imageUrl?: string | null; images?: unknown } | null | undefined,
+): string | null => {
   const imageUrl = item?.imageUrl;
   if (imageUrl) {
     // Only return valid URLs - filenames without full path are invalid

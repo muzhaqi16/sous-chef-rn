@@ -14,12 +14,13 @@ import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomShee
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
+import { formatNetWeightDisplay } from '#hooks/pantry/usePantryItemTransformation';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
   pantryItem: PantryItemFragment | null;
   onClose: () => void;
-  onConfirm: (newQuantity: number, reason: string) => void;
+  onConfirm: (newQuantity: number, reason: string, remainingNetWeight?: number) => void;
 }
 
 export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
@@ -35,12 +36,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   useBottomSheetBackHandler(bottomSheetRef, visible);
   const [quantityInput, setQuantityInput] = useState('');
   const [reason, setReason] = useState('');
+  const [remainingWeightInput, setRemainingWeightInput] = useState('');
 
   useEffect(() => {
     if (visible && pantryItem) {
       bottomSheetRef.current?.present();
       setQuantityInput(pantryItem.quantity.toString());
       setReason('');
+      setRemainingWeightInput('');
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -61,9 +64,14 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       return;
     }
 
-    onConfirm(newQuantity, reason.trim());
+    const parsedWeight = parseFloat(remainingWeightInput);
+    const remainingNetWeight = !isNaN(parsedWeight) && parsedWeight >= 0
+      ? parsedWeight
+      : undefined;
+
+    onConfirm(newQuantity, reason.trim(), remainingNetWeight);
     onClose();
-  }, [pantryItem, quantityInput, reason, onConfirm, onClose]);
+  }, [pantryItem, quantityInput, reason, remainingWeightInput, onConfirm, onClose]);
 
   return (
     <BottomSheetModal
@@ -123,6 +131,15 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               </View>
             </View>
 
+            {pantryItem.lastUsedAt != null &&
+              pantryItem.remainingNetWeight != null && (
+                <View style={commonStyles.bottomSheetItemRow}>
+                  <Text style={commonStyles.bottomSheetItemLabel}>
+                    Remaining: {formatNetWeightDisplay(pantryItem.remainingNetWeight, pantryItem.netWeightUnit)}
+                  </Text>
+                </View>
+              )}
+
             <View style={commonStyles.bottomSheetSection}>
               <FractionInput
                 label="New Quantity"
@@ -145,6 +162,18 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 useBottomSheetInput
               />
             </View>
+
+            {pantryItem.lastUsedAt != null &&
+              pantryItem.remainingNetWeight != null && (
+                  <FormInput
+                    label="Remaining Weight"
+                    value={remainingWeightInput}
+                    onChangeText={setRemainingWeightInput}
+                    placeholder="Leave blank to auto-adjust"
+                    keyboardType="decimal-pad"
+                    useBottomSheetInput
+                  />
+              )}
           </>
         )}
       </BottomSheetKeyboardAwareScrollView>

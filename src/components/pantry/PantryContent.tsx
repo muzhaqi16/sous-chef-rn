@@ -8,7 +8,7 @@ import Animated, {
 import { FlashList, type FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
 import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
@@ -31,6 +31,7 @@ import {
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -138,6 +139,10 @@ interface PantryContentProps {
   onRefresh?: () => void;
   onEndReached?: () => void;
 
+  // Empty state
+  totalCount?: number;
+  onAddItem?: () => void;
+
   // State
   refreshing?: boolean;
   loading?: boolean;
@@ -197,6 +202,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onAvatarPress,
   onHomePress,
   onSettingsPress,
+  totalCount,
+  onAddItem,
   onRefresh,
   onEndReached,
   refreshing = false,
@@ -327,7 +334,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const qtyBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
 
       map.set(item.id, {
-        imageUrl: getItemImageUrl(item.item),
+        imageUrl: resolveImageUrl(item),
         expirationText: hasExpiry ? expStatus.text : null,
         expirationVariant: hasExpiry ? expStatus.type : undefined,
         variant,
@@ -374,7 +381,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
 
       return (
         <PantryItemCard
-          key={item.id}
           id={item.id}
           name={item.itemName || 'Unknown Item'}
           expirationText={display.expirationText}
@@ -393,11 +399,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     },
     [],
   );
-
-  // Categorize items for FlashList recycling pools — items with images are taller
-  const getItemType = useCallback((item: PantryItem) => {
-    return itemDisplayMapRef.current.get(item.id)?.imageUrl ? 'withImage' : 'noImage';
-  }, []);
 
   // Build tabs with optional add button at the end
   const tabsWithAddButton = useMemo((): FilterTabConfig<LocationFilter>[] => {
@@ -432,6 +433,55 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     () => [sortOption, sortDirection, locationFilter],
     [sortOption, sortDirection, locationFilter],
   );
+
+  const isEmpty = !showSkeletons && sortedItems.length === 0;
+
+  // Use flexGrow when empty so ListEmptyComponent can center properly;
+  // drop the large paddingBottom that creates excess space below the empty state
+  const listContentStyle = useMemo(
+    () => (isEmpty ? styles.listContentEmpty : styles.listContent),
+    [isEmpty],
+  );
+
+  // Empty state for FlashList — varies by context
+  const emptyStateContent = useMemo(() => {
+    // Don't show empty state while skeletons are visible
+    if (showSkeletons) return null;
+
+    if (searchQuery) {
+      return (
+        <EmptyState
+          icon="search-off"
+          iconLibrary="MaterialIcons"
+          title="No items found"
+          description="Try a different search term"
+        />
+      );
+    }
+
+    if (totalCount != null && totalCount > 0 && items.length === 0) {
+      const activeTab = tabs.find(tab => tab.id === locationFilter);
+      const tabName = activeTab?.label ?? 'this location';
+      return (
+        <EmptyState
+          icon="kitchen"
+          iconLibrary="MaterialIcons"
+          title={`No items in ${tabName}`}
+          description="Items stored here will appear in this tab"
+        />
+      );
+    }
+
+    return (
+      <EmptyState
+        icon="kitchen"
+        iconLibrary="MaterialIcons"
+        title="Your pantry is empty"
+        description="Start tracking your food to reduce waste"
+        action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}
+      />
+    );
+  }, [showSkeletons, searchQuery, totalCount, items.length, tabs, locationFilter, onAddItem]);
 
   return (
     <PantryActionsProvider actions={itemActions}>
@@ -494,8 +544,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               renderItem={renderItem}
               keyExtractor={keyExtractor}
               extraData={extraData}
-              getItemType={getItemType}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 onRefresh ? (
@@ -505,6 +554,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                   />
                 ) : undefined
               }
+              ListEmptyComponent={emptyStateContent}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
               drawDistance={750}
@@ -565,6 +615,10 @@ const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingHorizontal: 0,
     paddingBottom: theme.spacing['3xl'] * 2,
+  },
+  listContentEmpty: {
+    paddingHorizontal: 0,
+    flexGrow: 1,
   },
   skeletonListContent: {
     paddingHorizontal: 0,
