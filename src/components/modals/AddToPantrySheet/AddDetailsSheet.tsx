@@ -367,42 +367,61 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         }
       }
 
+      // Compute the effective pantry-level net weight
+      const effectivePantryNetWeight = pantryNetWeight
+        ? parseFloat(pantryNetWeight) || undefined
+        : totalPackageNetWeight;
+      const effectiveNetWeightUnitId = pantryNetWeightUnitId
+        || (totalPackageNetWeight ? displayUnitId : undefined);
+
       const mutationInput = {
         pantryId,
-        itemName: itemName.trim(),
         quantity,
-        unitId: unitId || undefined,
-        unitName: !unitId && unit.trim() ? unit.trim() : undefined,
-        storageState,
+        unit: (unitId || unit.trim())
+          ? {
+              unitId: unitId || undefined,
+              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
+            }
+          : undefined,
+        storage: {
+          storageState,
+          storageLocationId: selectedStorageLocationId || undefined,
+          storageLocationName:
+            !selectedStorageLocationId && storageLocation.trim()
+              ? storageLocation.trim()
+              : undefined,
+          storageNotes: storageNotes.trim() || undefined,
+        },
         expiresAt: expirationDate
           ? expirationDate.toISOString().split('T')[0]
           : undefined,
-        // Use storage location ID if selected, otherwise use name for server to create
-        storageLocationId: selectedStorageLocationId || undefined,
-        storageLocationName:
-          !selectedStorageLocationId && storageLocation.trim()
-            ? storageLocation.trim()
-            : undefined,
-        storageNotes: storageNotes.trim() || undefined,
         tags: tags
           ? tags
               .split(',')
               .map(t => t.trim())
               .filter(Boolean)
           : undefined,
-        itemBrand: brand.trim() || undefined,
-        minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
-        restockQuantity: restockQuantity
-          ? parseFloat(restockQuantity)
+        thresholds: (minQuantity || restockQuantity)
+          ? {
+              minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
+              restockQuantity: restockQuantity
+                ? parseFloat(restockQuantity)
+                : undefined,
+            }
           : undefined,
-        itemUnits,
-        itemNetWeight: netWeight,
-        itemDisplayUnitId: displayUnitId,
-        netWeight: pantryNetWeight
-          ? parseFloat(pantryNetWeight) || undefined
-          : totalPackageNetWeight,
-        netWeightUnitId: pantryNetWeightUnitId
-          || (totalPackageNetWeight ? displayUnitId : undefined),
+        netWeight: (effectivePantryNetWeight || effectiveNetWeightUnitId)
+          ? {
+              netWeight: effectivePantryNetWeight,
+              netWeightUnitId: effectiveNetWeightUnitId,
+            }
+          : undefined,
+        item: {
+          name: itemName.trim(),
+          brand: brand.trim() || undefined,
+          units: itemUnits,
+          netWeight: netWeight,
+          displayUnitId: displayUnitId,
+        },
       };
 
       const result = await createPantryItem({

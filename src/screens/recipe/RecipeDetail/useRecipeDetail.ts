@@ -523,12 +523,16 @@ export function useRecipeDetail() {
                   ingredient.originalString ||
                   'Unknown ingredient',
                 quantity: ingredient.amount || 0,
-                unitName:
-                  ingredient.measures?.us?.unitShort ||
-                  ingredient.measures?.metric?.unitShort ||
-                  '',
+                unit: {
+                  unitName:
+                    ingredient.measures?.us?.unitShort ||
+                    ingredient.measures?.metric?.unitShort ||
+                    undefined,
+                },
                 shoppingListId: targetList.id,
-                aisle: ingredient.aisle || '',
+                storePrefs: ingredient.aisle
+                  ? { aisle: ingredient.aisle }
+                  : undefined,
               },
             },
           });

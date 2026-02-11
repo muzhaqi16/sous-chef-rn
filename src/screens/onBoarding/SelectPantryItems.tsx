@@ -35,7 +35,7 @@ export const SelectPantryItems = () => {
   } = useGetOnboardingItemsQuery({
     variables: {
       filters: {
-        showInOnboarding: true,
+        curation: { showInOnboarding: true },
         types: [ItemType.Food, ItemType.Foundation],
       },
       sort: {

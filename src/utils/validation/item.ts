@@ -51,18 +51,6 @@ export const displayPricePerUnitRule = string()
   .max(50, 'Display price per unit cannot exceed 50 characters')
   .optional();
 
-// Net weight validation
-export const netWeightRule = number()
-  .transform((value, originalValue) =>
-    String(originalValue).trim() === '' ? undefined : value
-  )
-  .min(0.001, 'Net weight must be greater than 0')
-  .optional();
-
-// Display unit ID validation
-export const displayUnitIdRule = string()
-  .optional();
-
 // Unit quantity validation
 export const unitQtyRule = number()
   .transform((value, originalValue) =>
@@ -141,9 +129,17 @@ export const createItemSchema = object({
   upc: upcRule,
   sku: skuRule,
 
-  // Weight and Units
-  netWeight: netWeightRule,
-  displayUnitId: displayUnitIdRule,
+  // Net Weights (manufacturer-provided, e.g., dual-label packaging)
+  netWeights: array()
+    .of(
+      object({
+        value: number()
+          .min(0.001, 'Net weight must be greater than 0')
+          .required('Value is required'),
+        unitName: string().required('Unit is required'),
+      }),
+    )
+    .optional(),
 
   // Product Details
   type: string().nullable().optional(),

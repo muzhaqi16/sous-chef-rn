@@ -13,6 +13,7 @@ import { FormSelect } from '#/components/molecules/FormSelect';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 import { MultiImagePicker, type SelectedImage } from '#/components/molecules/MultiImagePicker';
 import { UnitEntryList, type UnitEntry } from '#/components/organisms/UnitEntryList/UnitEntryList';
+import { NetWeightEntryList, type NetWeightEntry } from '#/components/organisms/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields, type FieldDef } from '#/components/molecules/DynamicFormFields';
 
 interface AddItemFormProps {
@@ -45,7 +46,6 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
 
 const getFormSections = (
   setSelectedBrandId: (id: string | null) => void,
-  setSelectedUnitId: (id: string | null) => void,
 ): Array<{
   title: string;
   fields: FieldDef<CreateItemFormData>[];
@@ -135,23 +135,6 @@ const getFormSections = (
           onUnitSelected: (_unitId: string | null) => {},
         },
       },
-      {
-        name: 'netWeight',
-        label: 'Net Weight',
-        placeholder: 'Enter net weight',
-        component: FormNumberInput,
-        props: { componentType: 'number', keyboardType: 'decimal-pad' },
-      },
-      {
-        name: 'displayUnitId',
-        label: 'Display Unit',
-        placeholder: 'kg, lbs, pcs, etc.',
-        component: 'unitAutocomplete',
-        props: {
-          componentType: 'autocomplete',
-          onUnitSelected: (unitId: string | null) => setSelectedUnitId(unitId),
-        },
-      },
     ],
   },
   {
@@ -224,13 +207,13 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   loading = false,
   title = 'Add New Item',
 }) => {
-  // Track selected brand and unit IDs separately from the display names
+  // Track selected brand ID separately from the display name
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
-  // Multi-image and unit entry state (managed outside react-hook-form)
+  // Multi-image, unit entry, and net weight entry state (managed outside react-hook-form)
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [unitEntries, setUnitEntries] = useState<UnitEntry[]>([]);
+  const [netWeightEntries, setNetWeightEntries] = useState<NetWeightEntry[]>([]);
 
   // Determine what to populate based on scanned value
   const getInitialValues = () => {
@@ -239,8 +222,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       description: '',
       sku: '',
       upc: '',
-      netWeight: undefined,
-      displayUnitId: '',
       categoryIds: [],
       units: [],
       imageUrl: '',
@@ -272,8 +253,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  // Get form sections with access to setSelectedBrandId, setSelectedUnitId
-  const FORM_SECTIONS = getFormSections(setSelectedBrandId, setSelectedUnitId);
+  // Get form sections with access to setSelectedBrandId
+  const FORM_SECTIONS = getFormSections(setSelectedBrandId);
 
   const {
     control,
@@ -318,15 +299,13 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       brandName = data.vendor;
     }
 
-    // Process display unit - send both ID and name when available
-    let displayUnitId: string | undefined;
-    let displayUnitName: string | undefined;
-    if (selectedUnitId) {
-      displayUnitId = selectedUnitId;
-      displayUnitName = data.displayUnitId;
-    } else if (data.displayUnitId) {
-      displayUnitName = data.displayUnitId;
-    }
+    // Map net weight entries
+    const netWeights = netWeightEntries
+      .filter(entry => entry.value && entry.unitName)
+      .map(entry => ({
+        value: parseFloat(entry.value!),
+        unitName: entry.unitName!,
+      }));
 
     // Map unit entries to ItemUnitInput[]
     const units: ItemUnitInput[] = unitEntries
@@ -336,12 +315,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         unitName: entry.unitName || undefined,
         isDefault: index === 0,
         packageSize: entry.packageSize ? parseFloat(entry.packageSize) : undefined,
+        contentUnitId: entry.contentUnitId || undefined,
+        contentUnitName: entry.contentUnitName || undefined,
       }));
+
+    const allTags = tags.length > 0 || systemTags.length > 0
+      ? [...tags, ...systemTags]
+      : undefined;
 
     const processedData: Partial<CreateItemInput> & {
       selectedImages: SelectedImage[];
-      brandName?: string;
-      displayUnitName?: string;
       sku?: string;
       baseDimension?: string;
       defaultConsumeIncrement?: number;
@@ -349,29 +332,31 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     } = {
       name: data.name,
       description: data.description || undefined,
-      primaryUpc: data.upc || undefined,
-      sku: data.sku || undefined,
-      netWeight: data.netWeight || undefined,
-      displayUnitId: displayUnitId || undefined,
-      displayUnitName: displayUnitName || undefined,
       type: (data.type as ItemType) || undefined,
-      storageState: (data.storageState as StorageState) || undefined,
-      shelfLifeDays: data.shelfLifeDays || undefined,
+      brand: brandId || brandName
+        ? { brandId: brandId || undefined, brandName: brandName || undefined }
+        : undefined,
+      classification: {
+        storageState: (data.storageState as StorageState) || undefined,
+        categoryIds:
+          data.categoryIds && data.categoryIds.length > 0
+            ? data.categoryIds
+            : undefined,
+        tags: allTags,
+      },
+      productDetails: {
+        primaryUpc: data.upc || undefined,
+        vendor: brandName || undefined,
+        shelfLifeDays: data.shelfLifeDays || undefined,
+      },
+      media: data.imageUrl ? { imageUrl: data.imageUrl } : undefined,
+      netWeights: netWeights.length > 0 ? netWeights : undefined,
+      unitConfig: units.length > 0 ? { units } : undefined,
+      // Pass through for form-level processing
+      sku: data.sku || undefined,
       baseDimension: data.baseDimension || undefined,
       defaultConsumeIncrement: data.defaultConsumeIncrement || undefined,
       defaultConsumeUnitId: data.defaultConsumeUnitId || undefined,
-      imageUrl: data.imageUrl || undefined,
-      brandId: brandId || undefined,
-      brandName: brandName || undefined,
-      categoryIds:
-        data.categoryIds && data.categoryIds.length > 0
-          ? data.categoryIds
-          : undefined,
-      units: units.length > 0 ? units : undefined,
-      tags:
-        tags.length > 0 || systemTags.length > 0
-          ? [...tags, ...systemTags]
-          : undefined,
       selectedImages,
     };
 
@@ -417,6 +402,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             />
           </View>
         ))}
+
+        {/* Dynamic Net Weight Entries */}
+        <View style={styles.section}>
+          <NetWeightEntryList
+            entries={netWeightEntries}
+            onEntriesChanged={setNetWeightEntries}
+            disabled={loading}
+          />
+        </View>
 
         {/* Dynamic Unit Entries */}
         <View style={styles.section}>

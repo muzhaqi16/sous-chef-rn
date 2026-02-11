@@ -173,12 +173,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               itemId: item.id,
               quantity: item.netWeight ?? 1,
               itemName: item.name,
-              unitId: item.displayUnit?.id ?? item.unitId,
-              unitName: item.displayUnit?.name,
-              brandId: item.brandId,
-              brandName: item.brandName,
-              netWeight: item.netWeight,
-              netWeightUnitId: item.displayUnit?.id,
+              unit: {
+                unitId: item.displayUnit?.id ?? item.unitId,
+                unitName: item.displayUnit?.name,
+              },
+              brand: item.brandId || item.brandName
+                ? { brandId: item.brandId, brandName: item.brandName }
+                : undefined,
+              netWeight: item.netWeight
+                ? { netWeight: item.netWeight, netWeightUnitId: item.displayUnit?.id }
+                : undefined,
             },
           },
         });

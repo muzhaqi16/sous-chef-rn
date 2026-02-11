@@ -285,7 +285,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.quantity || 1,
-            unitId: data?.pantryItem?.unit?.id ?? '',
+            unit: data?.pantryItem?.unit?.id
+              ? { unitId: data.pantryItem.unit.id }
+              : undefined,
             itemName: data?.pantryItem?.itemName || '',
           },
         },

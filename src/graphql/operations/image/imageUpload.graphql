@@ -42,7 +42,7 @@ mutation RemoveProfileCover {
 }
 
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
-  updateItem(id: $id, input: { imageUrl: $imageUrl }) {
+  updateItem(id: $id, input: { media: { imageUrl: $imageUrl } }) {
     id
     imageUrl
   }

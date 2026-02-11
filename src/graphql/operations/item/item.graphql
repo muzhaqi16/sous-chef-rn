@@ -74,7 +74,7 @@ query SearchItems($input: SearchItemsInput!) {
 }
 
 query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
-  items(filters: { upc: $upc, upcFormat: $upcFormat }, first: 1) {
+  items(filters: { lookup: { upc: $upc, upcFormat: $upcFormat } }, first: 1) {
     edges {
       cursor
       node {
@@ -124,7 +124,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
 }
 
 query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
-  items(filters: { sku: $sku, skuStoreId: $skuStoreId }, first: 1) {
+  items(filters: { lookup: { sku: $sku, skuStoreId: $skuStoreId } }, first: 1) {
     edges {
       cursor
       node {

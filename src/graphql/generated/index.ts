@@ -232,6 +232,13 @@ export type AnalyticsFilterInput = {
   topItemsLimit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/** Sub-input for API/automation detection */
+export type ApiAutomationInput = {
+  apiClient?: InputMaybe<Scalars['String']['input']>;
+  isApiLogin?: InputMaybe<Scalars['Boolean']['input']>;
+  isAutomated?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export enum AppTheme {
   Dark = 'DARK',
   Light = 'LIGHT',
@@ -245,6 +252,14 @@ export enum AppealStatus {
   UnderReview = 'UNDER_REVIEW',
   Withdrawn = 'WITHDRAWN',
 }
+
+/** Sub-input for attribution data */
+export type AttributionInput = {
+  campaign?: InputMaybe<Scalars['String']['input']>;
+  landingPage?: InputMaybe<Scalars['String']['input']>;
+  referrer?: InputMaybe<Scalars['String']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+};
 
 /** Authentication response containing tokens - NEVER cache */
 export type AuthPayload = {
@@ -303,34 +318,21 @@ export enum BaseDimension {
 
 /** Input for a single item in batch add operation (without shoppingListId) */
 export type BatchAddShoppingListItemInput = {
-  addedContext?: InputMaybe<Scalars['String']['input']>;
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  /** Brand ID for this shopping list item */
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  /** Brand name for find-or-create (alternative to brandId) */
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
   /** Client-provided ID for matching results (optional) */
   clientId?: InputMaybe<Scalars['String']['input']>;
-  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
-  /** User-specified net weight (for package size tracking) */
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  /** Unit ID for the net weight */
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
-  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
+  recipeContext?: InputMaybe<RecipeContextInput>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storeSection?: InputMaybe<Scalars['String']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
+  storePrefs?: InputMaybe<StorePreferencesInput>;
+  unit?: InputMaybe<UnitSpecInput>;
 };
 
 /** Result for a single item in batch add operation */
@@ -397,6 +399,14 @@ export type BatchUpsertItemsResponse = {
   summary: BatchOperationSummary;
 };
 
+/** Sub-input for behavioral signals */
+export type BehavioralSignalsInput = {
+  isNewBrowser?: InputMaybe<Scalars['Boolean']['input']>;
+  isNewDevice?: InputMaybe<Scalars['Boolean']['input']>;
+  isNewLocation?: InputMaybe<Scalars['Boolean']['input']>;
+  timezoneDiff?: InputMaybe<Scalars['Int']['input']>;
+};
+
 /**
  * Brand type for product manufacturers and retailers
  * Cache: 1 hour - brand catalog is relatively stable
@@ -416,6 +426,13 @@ export type Brand = {
   version: Scalars['Int']['output'];
 };
 
+/** Sub-input for brand-related filters */
+export type BrandFilterInput = {
+  brand?: InputMaybe<Scalars['String']['input']>;
+  brandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  brands?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type BrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   logo?: InputMaybe<Scalars['String']['input']>;
@@ -423,10 +440,32 @@ export type BrandInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Update-only: brand operations */
+export type BrandOpsInput = {
+  addBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  removeBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+/** Reusable sub-input for referencing a brand by ID or name (find-or-create) */
+export type BrandReferenceInput = {
+  brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type BrandSuggestion = {
   __typename?: 'BrandSuggestion';
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
+};
+
+/** Reusable sub-input for browser and OS details */
+export type BrowserOsDetailsInput = {
+  browserName?: InputMaybe<Scalars['String']['input']>;
+  browserVersion?: InputMaybe<Scalars['String']['input']>;
+  osName?: InputMaybe<Scalars['String']['input']>;
+  osVersion?: InputMaybe<Scalars['String']['input']>;
+  screenResolution?: InputMaybe<Scalars['String']['input']>;
+  userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type BrowserStat = {
@@ -574,6 +613,13 @@ export type CategoryInput = {
   slug?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Update-only: category operations */
+export type CategoryOpsInput = {
+  addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
+  removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export enum CategorySource {
   Ai = 'AI',
   Auto = 'AUTO',
@@ -717,6 +763,13 @@ export type ConnectionPaginationInput = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Sub-input for connectivity info */
+export type ConnectivityInput = {
+  carrier?: InputMaybe<Scalars['String']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type ConsumptionFailure = {
@@ -876,65 +929,17 @@ export type CreateCurrencyInput = {
 };
 
 export type CreateDeviceInput = {
-  androidId?: InputMaybe<Scalars['String']['input']>;
-  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
-  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
-  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
-  brand?: InputMaybe<Scalars['String']['input']>;
-  browserName?: InputMaybe<Scalars['String']['input']>;
-  browserVersion?: InputMaybe<Scalars['String']['input']>;
-  buildNumber?: InputMaybe<Scalars['String']['input']>;
-  bundleId?: InputMaybe<Scalars['String']['input']>;
-  carrier?: InputMaybe<Scalars['String']['input']>;
-  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
+  details?: InputMaybe<DeviceDetailsInput>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
-  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
-  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
-  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
-  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
-  hostNames?: InputMaybe<Scalars['JSON']['input']>;
-  instanceId?: InputMaybe<Scalars['String']['input']>;
-  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
-  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
-  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
-  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
-  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
-  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  language?: InputMaybe<Scalars['String']['input']>;
-  lastCity?: InputMaybe<Scalars['String']['input']>;
-  lastCountry?: InputMaybe<Scalars['String']['input']>;
-  lastIpAddress?: InputMaybe<Scalars['String']['input']>;
-  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
-  manufacturer?: InputMaybe<Scalars['String']['input']>;
-  maxMemory?: InputMaybe<Scalars['String']['input']>;
-  model?: InputMaybe<Scalars['String']['input']>;
-  osName?: InputMaybe<Scalars['String']['input']>;
-  osVersion?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<NetworkLocationInput>;
   platform?: InputMaybe<MobilePlatform>;
-  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
-  readableVersion?: InputMaybe<Scalars['String']['input']>;
-  screenResolution?: InputMaybe<Scalars['String']['input']>;
-  securityPatch?: InputMaybe<Scalars['String']['input']>;
-  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
-  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
-  systemVersion?: InputMaybe<Scalars['String']['input']>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
-  totalMemory?: InputMaybe<Scalars['String']['input']>;
-  usedMemory?: InputMaybe<Scalars['String']['input']>;
-  userAgent?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
 };
 
@@ -959,40 +964,20 @@ export type CreateHomeInput = {
 };
 
 export type CreateItemInput = {
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
-  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  categories?: InputMaybe<Array<CategoryInput>>;
-  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  defaultUnit?: InputMaybe<Scalars['String']['input']>;
-  density?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayUnitId?: InputMaybe<Scalars['String']['input']>;
-  displayUnitName?: InputMaybe<Scalars['String']['input']>;
-  externalSource?: InputMaybe<ExternalSource>;
-  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
-  externalSourceId?: InputMaybe<Scalars['String']['input']>;
-  externalSourceType?: InputMaybe<Scalars['String']['input']>;
+  externalSource?: InputMaybe<ExternalSourceShorthandInput>;
   externalSources?: InputMaybe<Array<ExternalSourceMappingInput>>;
-  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
-  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+  healthInfo?: InputMaybe<HealthInfoInput>;
+  media?: InputMaybe<MediaAssetsInput>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
-  primaryUpc?: InputMaybe<Scalars['String']['input']>;
-  servingSize?: InputMaybe<Scalars['Float']['input']>;
-  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
-  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
-  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
+  packageInfo?: InputMaybe<PackageInfoInput>;
+  productDetails?: InputMaybe<ProductDetailsInput>;
   type?: InputMaybe<ItemType>;
-  units?: InputMaybe<Array<ItemUnitInput>>;
-  vendor?: InputMaybe<Scalars['String']['input']>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
 };
 
 /** Result of creating an item - either success or specific error */
@@ -1003,47 +988,21 @@ export type CreateItemResult =
   | ValidationError;
 
 export type CreateLoginHistoryInput = {
-  apiClient?: InputMaybe<Scalars['String']['input']>;
-  browserName?: InputMaybe<Scalars['String']['input']>;
-  browserVersion?: InputMaybe<Scalars['String']['input']>;
-  campaign?: InputMaybe<Scalars['String']['input']>;
+  attribution?: InputMaybe<AttributionInput>;
+  automation?: InputMaybe<ApiAutomationInput>;
+  behavioral?: InputMaybe<BehavioralSignalsInput>;
+  browserOs?: InputMaybe<BrowserOsDetailsInput>;
   deviceId?: InputMaybe<Scalars['ID']['input']>;
   deviceType?: InputMaybe<DeviceType>;
   failureDetails?: InputMaybe<Scalars['String']['input']>;
   failureReason?: InputMaybe<LoginFailureReason>;
-  ipAddress?: InputMaybe<Scalars['String']['input']>;
-  ipCity?: InputMaybe<Scalars['String']['input']>;
-  ipCountry?: InputMaybe<Scalars['String']['input']>;
-  ipRegion?: InputMaybe<Scalars['String']['input']>;
-  isApiLogin?: InputMaybe<Scalars['Boolean']['input']>;
-  isAutomated?: InputMaybe<Scalars['Boolean']['input']>;
   isMobileApp?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewBrowser?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewDevice?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewLocation?: InputMaybe<Scalars['Boolean']['input']>;
-  isProxy?: InputMaybe<Scalars['Boolean']['input']>;
-  isRisky?: InputMaybe<Scalars['Boolean']['input']>;
-  isTor?: InputMaybe<Scalars['Boolean']['input']>;
-  isVpn?: InputMaybe<Scalars['Boolean']['input']>;
-  landingPage?: InputMaybe<Scalars['String']['input']>;
-  lastActivityAt?: InputMaybe<Scalars['DateTime']['input']>;
-  loggedOutAt?: InputMaybe<Scalars['DateTime']['input']>;
   method?: InputMaybe<LoginMethod>;
-  mfaCompleted?: InputMaybe<Scalars['Boolean']['input']>;
-  mfaMethod?: InputMaybe<MfaMethod>;
-  osName?: InputMaybe<Scalars['String']['input']>;
-  osVersion?: InputMaybe<Scalars['String']['input']>;
+  network?: InputMaybe<NetworkLocationInput>;
   provider?: InputMaybe<Scalars['String']['input']>;
-  referrer?: InputMaybe<Scalars['String']['input']>;
-  requiresMfa?: InputMaybe<Scalars['Boolean']['input']>;
-  riskFactors?: InputMaybe<Array<RiskFactor>>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  sessionDuration?: InputMaybe<Scalars['Int']['input']>;
-  sessionId?: InputMaybe<Scalars['String']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
+  risk?: InputMaybe<RiskAssessmentInput>;
+  session?: InputMaybe<SessionInfoInput>;
   success: Scalars['Boolean']['input'];
-  timezoneDiff?: InputMaybe<Scalars['Int']['input']>;
-  userAgent?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
 };
 
@@ -1154,41 +1113,20 @@ export type CreatePantryInput = {
 };
 
 export type CreatePantryItemInput = {
-  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  condition?: InputMaybe<ItemCondition>;
-  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBrand?: InputMaybe<Scalars['String']['input']>;
-  itemCategory?: InputMaybe<Scalars['String']['input']>;
-  itemDescription?: InputMaybe<Scalars['String']['input']>;
-  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
+  item?: InputMaybe<InlineItemInput>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  itemImageUrl?: InputMaybe<Scalars['String']['input']>;
-  itemImages?: InputMaybe<Scalars['JSON']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  itemUnits?: InputMaybe<Array<ItemUnitInput>>;
-  itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  minQuantity?: InputMaybe<Scalars['Float']['input']>;
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   pantryId: Scalars['ID']['input'];
-  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  purchase?: InputMaybe<PurchaseInfoInput>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
-  storageLocationId?: InputMaybe<Scalars['String']['input']>;
-  storageLocationName?: InputMaybe<Scalars['String']['input']>;
-  storageNotes?: InputMaybe<Scalars['String']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
+  storage?: InputMaybe<StorageDetailsInput>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  totalCost?: InputMaybe<Scalars['Float']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
-  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+  thresholds?: InputMaybe<InventoryThresholdsInput>;
+  unit?: InputMaybe<UnitSpecInput>;
 };
 
 export type CreatePurchaseInput = {
@@ -1210,13 +1148,16 @@ export type CreatePurchaseInput = {
 };
 
 export type CreateRecipeInput = {
+  attribution?: InputMaybe<RecipeAttributionInput>;
   caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<RecipeCategory>;
   cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  dietary?: InputMaybe<DietaryTagsInput>;
   diets?: InputMaybe<Array<Diet>>;
   difficulty?: InputMaybe<Difficulty>;
+  externalSource?: InputMaybe<ExternalSourceShorthandInput>;
   externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
@@ -1226,19 +1167,19 @@ export type CreateRecipeInput = {
   instructions: Scalars['JSON']['input'];
   intolerances?: InputMaybe<Array<Intolerance>>;
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
+  media?: InputMaybe<MediaAssetsInput>;
+  metadata?: InputMaybe<RecipeMetadataInput>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
+  nutrition?: InputMaybe<NutritionInfoInput>;
   nutritionData?: InputMaybe<Scalars['JSON']['input']>;
-  originalAuthor?: InputMaybe<Scalars['String']['input']>;
   prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
   source?: InputMaybe<Scalars['String']['input']>;
-  sourceUrl?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<RecipeStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  timing?: InputMaybe<TimeEstimatesInput>;
   tips?: InputMaybe<Scalars['String']['input']>;
-  totalTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  videoUrl?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
 };
 
@@ -1252,33 +1193,20 @@ export type CreateShoppingListInput = {
 };
 
 export type CreateShoppingListItemInput = {
-  addedContext?: InputMaybe<Scalars['String']['input']>;
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  /** Brand ID for this shopping list item */
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  /** Brand name for find-or-create (alternative to brandId) */
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
-  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
-  /** User-specified net weight (for package size tracking) */
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  /** Unit ID for the net weight */
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
-  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
+  recipeContext?: InputMaybe<RecipeContextInput>;
   shoppingListId: Scalars['ID']['input'];
   sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storeSection?: InputMaybe<Scalars['String']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
+  storePrefs?: InputMaybe<StorePreferencesInput>;
+  unit?: InputMaybe<UnitSpecInput>;
 };
 
 /** Input for creating a new storage location */
@@ -1403,6 +1331,16 @@ export enum Cuisine {
   Vietnamese = 'VIETNAMESE',
 }
 
+/** Sub-input for curation/trending filters */
+export type CurationFilterInput = {
+  isPopular?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecent?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrending?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
+  timeRange?: InputMaybe<DateRange>;
+};
+
 /**
  * Currency type for price information
  * Cache: 2 hours - currency definitions are static reference data
@@ -1438,6 +1376,14 @@ export enum DateRange {
   Today = 'TODAY',
   Yesterday = 'YESTERDAY',
 }
+
+/** Sub-input for date range filters */
+export type DateRangeFilterInput = {
+  createdAfter?: InputMaybe<Scalars['DateTime']['input']>;
+  createdBefore?: InputMaybe<Scalars['DateTime']['input']>;
+  updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
+  updatedBefore?: InputMaybe<Scalars['DateTime']['input']>;
+};
 
 export type DateRangeInput = {
   end: Scalars['DateTime']['input'];
@@ -1572,6 +1518,14 @@ export type DeviceBreakdown = {
   platforms: Array<PlatformStat>;
 };
 
+/** Sub-input for device characteristics */
+export type DeviceCharacteristicsInput = {
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 /** Input for device cleanup operations */
 export type DeviceCleanupInput = {
   /** Clean up soft-deleted devices older than X days */
@@ -1607,6 +1561,20 @@ export type DeviceCountInput = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+/** Composite sub-input for all device details */
+export type DeviceDetailsInput = {
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  browserOs?: InputMaybe<BrowserOsDetailsInput>;
+  characteristics?: InputMaybe<DeviceCharacteristicsInput>;
+  connectivity?: InputMaybe<ConnectivityInput>;
+  hardware?: InputMaybe<DeviceHardwareInput>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  identification?: InputMaybe<DeviceIdentificationInput>;
+  peripherals?: InputMaybe<DevicePeripheralsDetailsInput>;
+  power?: InputMaybe<PowerStatusInput>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+};
+
 /** Device edge for pagination */
 export type DeviceEdge = {
   __typename?: 'DeviceEdge';
@@ -1633,10 +1601,48 @@ export type DeviceHardwareInfoInput = {
   usedMemory?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Sub-input for device hardware specs */
+export type DeviceHardwareInput = {
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Sub-input for device identification details */
+export type DeviceIdentificationInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
+  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
+  iosVendorId?: InputMaybe<Scalars['String']['input']>;
+  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
+  securityPatch?: InputMaybe<Scalars['String']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type DeviceLocationInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Sub-input for device peripherals (automation detection) */
+export type DevicePeripheralsDetailsInput = {
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type DevicePeripheralsInput = {
@@ -1648,62 +1654,14 @@ export type DevicePeripheralsInput = {
 };
 
 export type DeviceRegistrationInput = {
-  androidId?: InputMaybe<Scalars['String']['input']>;
-  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
-  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
-  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
-  brand?: InputMaybe<Scalars['String']['input']>;
-  browserName?: InputMaybe<Scalars['String']['input']>;
-  browserVersion?: InputMaybe<Scalars['String']['input']>;
-  buildNumber?: InputMaybe<Scalars['String']['input']>;
-  bundleId?: InputMaybe<Scalars['String']['input']>;
-  carrier?: InputMaybe<Scalars['String']['input']>;
-  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
+  details?: InputMaybe<DeviceDetailsInput>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
-  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
-  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
-  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
-  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
-  hostNames?: InputMaybe<Scalars['JSON']['input']>;
-  instanceId?: InputMaybe<Scalars['String']['input']>;
-  iosVendorId?: InputMaybe<Scalars['String']['input']>;
-  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
-  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
-  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
-  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
-  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  language?: InputMaybe<Scalars['String']['input']>;
-  lastCity?: InputMaybe<Scalars['String']['input']>;
-  lastCountry?: InputMaybe<Scalars['String']['input']>;
-  lastIpAddress?: InputMaybe<Scalars['String']['input']>;
-  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
-  manufacturer?: InputMaybe<Scalars['String']['input']>;
-  maxMemory?: InputMaybe<Scalars['String']['input']>;
-  model?: InputMaybe<Scalars['String']['input']>;
-  osName?: InputMaybe<Scalars['String']['input']>;
-  osVersion?: InputMaybe<Scalars['String']['input']>;
+  location?: InputMaybe<NetworkLocationInput>;
   platform?: InputMaybe<MobilePlatform>;
-  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
-  readableVersion?: InputMaybe<Scalars['String']['input']>;
-  screenResolution?: InputMaybe<Scalars['String']['input']>;
-  securityPatch?: InputMaybe<Scalars['String']['input']>;
-  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
-  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
-  systemVersion?: InputMaybe<Scalars['String']['input']>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
-  totalMemory?: InputMaybe<Scalars['String']['input']>;
-  usedMemory?: InputMaybe<Scalars['String']['input']>;
-  userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Sort field options for devices */
@@ -1792,6 +1750,16 @@ export enum Diet {
   Whole30 = 'WHOLE30',
 }
 
+/** Sub-input for dietary filters */
+export type DietaryFilterInput = {
+  hasAllergens?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNutrition?: InputMaybe<Scalars['Boolean']['input']>;
+  isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
+  isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
+  isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
+  isVegan?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type DietaryProfile = {
   __typename?: 'DietaryProfile';
   budgetPerMeal: Maybe<Scalars['Float']['output']>;
@@ -1828,6 +1796,13 @@ export type DietaryRestriction = {
   notes: Maybe<Scalars['String']['output']>;
   severity: RestrictionSeverity;
   updatedAt: Scalars['DateTime']['output'];
+};
+
+/** Reusable sub-input for dietary tags */
+export type DietaryTagsInput = {
+  diets?: InputMaybe<Array<Scalars['String']['input']>>;
+  healthGoals?: InputMaybe<Array<Scalars['String']['input']>>;
+  intolerances?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export enum Difficulty {
@@ -1897,6 +1872,13 @@ export enum ExpirationFrequency {
   RealTime = 'REAL_TIME',
   WeeklyDigest = 'WEEKLY_DIGEST',
 }
+
+/** Sub-input for expiration notification config */
+export type ExpirationNotifConfigInput = {
+  expirationDaysThreshold?: InputMaybe<Scalars['Int']['input']>;
+  expirationNotificationFrequency?: InputMaybe<ExpirationFrequency>;
+  expirationNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+};
 
 export type ExpirationNotification = {
   __typename?: 'ExpirationNotification';
@@ -2035,6 +2017,14 @@ export type ExternalSourceMappingInput = {
   storage?: InputMaybe<Scalars['JSON']['input']>;
 };
 
+/** Reusable shorthand for a single external source mapping */
+export type ExternalSourceShorthandInput = {
+  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
+  externalSourceId?: InputMaybe<Scalars['String']['input']>;
+  externalSourceType?: InputMaybe<Scalars['String']['input']>;
+  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type FacetValue = {
   __typename?: 'FacetValue';
   count: Scalars['Int']['output'];
@@ -2054,6 +2044,27 @@ export type FavoriteRecipeInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId: Scalars['ID']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+/** Sub-input for feature-specific notifications */
+export type FeatureNotificationsInput = {
+  collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  cookingReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  homeInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
+  mealPlanReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  monthlyReport?: InputMaybe<Scalars['Boolean']['input']>;
+  pantryChanges?: InputMaybe<Scalars['Boolean']['input']>;
+  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
+  sharedListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** Sub-input for feature toggles */
+export type FeatureTogglesInput = {
+  betaFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
+  enabledFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type ForgotPasswordResponse = {
@@ -2109,6 +2120,13 @@ export enum HealthGoal {
   LowSodium = 'LOW_SODIUM',
   SugarFree = 'SUGAR_FREE',
 }
+
+/** Sub-input for health info */
+export type HealthInfoInput = {
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+};
 
 /**
  * Home/household for managing pantries and shopping lists
@@ -2455,6 +2473,21 @@ export type IngredientUsageInput = {
   recipeIngredientId: Scalars['ID']['input'];
 };
 
+/** Sub-input for creating a new item inline (when itemId is not provided) */
+export type InlineItemInput = {
+  brand?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  images?: InputMaybe<Scalars['JSON']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
+  units?: InputMaybe<Array<ItemUnitInput>>;
+  upc?: InputMaybe<Scalars['String']['input']>;
+};
+
 export enum Intolerance {
   Dairy = 'DAIRY',
   Egg = 'EGG',
@@ -2470,6 +2503,12 @@ export enum Intolerance {
   TreeNut = 'TREE_NUT',
   Wheat = 'WHEAT',
 }
+
+/** Reusable sub-input for inventory thresholds (low stock alerts) */
+export type InventoryThresholdsInput = {
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
+};
 
 export enum InviteAction {
   InviteAccepted = 'INVITE_ACCEPTED',
@@ -2648,6 +2687,14 @@ export type ItemCategory = {
   source: CategorySource;
 };
 
+/** Sub-input for item classification */
+export type ItemClassificationInput = {
+  categories?: InputMaybe<Array<CategoryInput>>;
+  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storageState?: InputMaybe<StorageState>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export enum ItemCondition {
   Expired = 'EXPIRED',
   Fair = 'FAIR',
@@ -2702,65 +2749,50 @@ export type ItemError = {
 };
 
 export type ItemFilters = {
-  brand?: InputMaybe<Scalars['String']['input']>;
-  brandIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  brands?: InputMaybe<Array<Scalars['String']['input']>>;
+  brandFilter?: InputMaybe<BrandFilterInput>;
   categories?: InputMaybe<Array<Scalars['String']['input']>>;
   category?: InputMaybe<Scalars['String']['input']>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  createdAfter?: InputMaybe<Scalars['DateTime']['input']>;
-  createdBefore?: InputMaybe<Scalars['DateTime']['input']>;
-  /** Filter by creator user ID */
-  createdById?: InputMaybe<Scalars['ID']['input']>;
-  /** Items that have NONE of these tags */
-  excludeTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  /** External ID from a provider (e.g., Kroger product ID) */
-  externalId?: InputMaybe<Scalars['String']['input']>;
-  /** Provider type for external ID lookup */
-  externalProvider?: InputMaybe<ProviderType>;
-  hasAllergens?: InputMaybe<Scalars['Boolean']['input']>;
+  curation?: InputMaybe<CurationFilterInput>;
+  dateRange?: InputMaybe<DateRangeFilterInput>;
+  dietary?: InputMaybe<DietaryFilterInput>;
   /** Filter items that have a default unit assigned */
   hasDefaultUnit?: InputMaybe<Scalars['Boolean']['input']>;
-  hasNutrition?: InputMaybe<Scalars['Boolean']['input']>;
-  hasOffers?: InputMaybe<Scalars['Boolean']['input']>;
-  /** Items that have ALL of these tags */
-  hasTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
-  isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
-  isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
-  isPopular?: InputMaybe<Scalars['Boolean']['input']>;
-  isRecent?: InputMaybe<Scalars['Boolean']['input']>;
-  isTrending?: InputMaybe<Scalars['Boolean']['input']>;
-  /** Filter user-created items */
-  isUserCreated?: InputMaybe<Scalars['Boolean']['input']>;
-  isVegan?: InputMaybe<Scalars['Boolean']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  /** Filter items that need admin approval */
-  needsApproval?: InputMaybe<Scalars['Boolean']['input']>;
+  lookup?: InputMaybe<ItemLookupInput>;
   priceRange?: InputMaybe<PriceRangeInput>;
-  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
-  /** SKU to search for */
-  sku?: InputMaybe<Scalars['String']['input']>;
-  /** Store ID for SKU lookup (optional, searches all stores if not provided) */
-  skuStoreId?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ItemStatus>;
   statuses?: InputMaybe<Array<ItemStatus>>;
   storageState?: InputMaybe<StorageState>;
   storageStates?: InputMaybe<Array<StorageState>>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
-  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  timeRange?: InputMaybe<DateRange>;
+  storeFilter?: InputMaybe<StoreFilterInput>;
+  tagFilter?: InputMaybe<TagFilterInput>;
   type?: InputMaybe<ItemType>;
   types?: InputMaybe<Array<ItemType>>;
+  visibility?: InputMaybe<Visibility>;
+  workflow?: InputMaybe<WorkflowFilterInput>;
+};
+
+/** Sub-input for item lookup by identifier */
+export type ItemLookupInput = {
+  /** External ID from a provider (e.g., Kroger product ID) */
+  externalId?: InputMaybe<Scalars['String']['input']>;
+  /** Provider type for external ID lookup */
+  externalProvider?: InputMaybe<ProviderType>;
+  /** SKU to search for */
+  sku?: InputMaybe<Scalars['String']['input']>;
+  /** Store ID for SKU lookup (optional, searches all stores if not provided) */
+  skuStoreId?: InputMaybe<Scalars['String']['input']>;
   /** UPC/barcode to search for */
   upc?: InputMaybe<Scalars['String']['input']>;
   /** Format hint for UPC validation/normalization (defaults to AUTO) */
   upcFormat?: InputMaybe<UpcFormat>;
-  updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
-  updatedBefore?: InputMaybe<Scalars['DateTime']['input']>;
-  visibility?: InputMaybe<Visibility>;
+};
+
+/** Manufacturer-provided net weight in a specific unit (e.g., 3.4 oz or 96g) */
+export type ItemNetWeightInput = {
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  value: Scalars['Float']['input'];
 };
 
 /** Price history for items - may contain user-specific pricing data */
@@ -2868,6 +2900,14 @@ export type ItemUnit = {
   updatedAt: Scalars['DateTime']['output'];
   usageContext: Array<UnitUsageContext>;
   version: Scalars['Int']['output'];
+};
+
+/** Sub-input for item unit configuration */
+export type ItemUnitConfigInput = {
+  defaultUnit?: InputMaybe<Scalars['String']['input']>;
+  density?: InputMaybe<Scalars['Float']['input']>;
+  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
+  units?: InputMaybe<Array<ItemUnitInput>>;
 };
 
 /**
@@ -3431,6 +3471,13 @@ export type MealTypeNutrition = {
   totalProtein: Scalars['Float']['output'];
 };
 
+/** Reusable sub-input for media assets (images, video) */
+export type MediaAssetsInput = {
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  images?: InputMaybe<Scalars['JSON']['input']>;
+  videoUrl?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Membership = {
   __typename?: 'Membership';
   canAddItems: Scalars['Boolean']['output'];
@@ -3661,6 +3708,14 @@ export type MovedItemInfo = {
   pantryItemId: Scalars['ID']['output'];
   quantity: Scalars['Float']['output'];
   shoppingListItemId: Scalars['ID']['output'];
+};
+
+/** Sub-input for multi-unit measurement */
+export type MultiUnitMeasurementInput = {
+  metricAmount?: InputMaybe<Scalars['Float']['input']>;
+  metricUnit?: InputMaybe<Scalars['String']['input']>;
+  usAmount?: InputMaybe<Scalars['Float']['input']>;
+  usUnit?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type Mutation = {
@@ -5188,6 +5243,25 @@ export enum MutationType {
   Updated = 'UPDATED',
 }
 
+/** Reusable sub-input for net weight with unit */
+export type NetWeightInput = {
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Reusable sub-input for network and location info */
+export type NetworkLocationInput = {
+  ipAddress?: InputMaybe<Scalars['String']['input']>;
+  ipCity?: InputMaybe<Scalars['String']['input']>;
+  ipCountry?: InputMaybe<Scalars['String']['input']>;
+  ipRegion?: InputMaybe<Scalars['String']['input']>;
+  isProxy?: InputMaybe<Scalars['Boolean']['input']>;
+  isTor?: InputMaybe<Scalars['Boolean']['input']>;
+  isVpn?: InputMaybe<Scalars['Boolean']['input']>;
+  language?: InputMaybe<Scalars['String']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Node = {
   id: Scalars['ID']['output'];
 };
@@ -5226,6 +5300,13 @@ export type NotificationCategoryCount = {
   category: Scalars['String']['output'];
   count: Scalars['Int']['output'];
   unreadCount: Scalars['Int']['output'];
+};
+
+/** Sub-input for notification channel toggles */
+export type NotificationChannelsInput = {
+  emailEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  pushEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  smsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type NotificationConnection = Connection & {
@@ -5426,6 +5507,12 @@ export type NutritionGoalProgress = {
   proteinProgress: Maybe<GoalProgress>;
 };
 
+/** Reusable sub-input for nutrition info */
+export type NutritionInfoInput = {
+  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
+  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
+};
+
 /** Source of nutrition data for a meal plan item */
 export enum NutritionSource {
   Auto = 'AUTO',
@@ -5466,6 +5553,17 @@ export type PackageBreakdown = {
   perUnitNetWeight: Maybe<Scalars['Float']['output']>;
   perUnitNetWeightUnit: Maybe<Unit>;
   totalNetWeight: Maybe<Scalars['Float']['output']>;
+};
+
+/** Sub-input for package info */
+export type PackageInfoInput = {
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
+  servingSize?: InputMaybe<Scalars['Float']['input']>;
+  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
+  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /** Page information for cursor-based pagination (Relay spec) */
@@ -5946,6 +6044,13 @@ export type PlatformStat = {
   platform: MobilePlatform;
 };
 
+/** Sub-input for power/battery status */
+export type PowerStatusInput = {
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
+};
+
 export type PresignPayload = {
   __typename?: 'PresignPayload';
   key: Scalars['String']['output'];
@@ -5996,12 +6101,33 @@ export enum PriceSource {
   WebScraping = 'WEB_SCRAPING',
 }
 
+/** Sub-input for pricing estimates */
+export type PricingEstimatesInput = {
+  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
+  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export enum Priority {
   High = 'HIGH',
   Low = 'LOW',
   Normal = 'NORMAL',
   Urgent = 'URGENT',
 }
+
+/** Sub-input for privacy settings */
+export type PrivacySettingsInput = {
+  personalizedAds?: InputMaybe<Scalars['Boolean']['input']>;
+  shareUsageData?: InputMaybe<Scalars['Boolean']['input']>;
+  shareWithPartners?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** Sub-input for product details */
+export type ProductDetailsInput = {
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
+  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
+  vendor?: InputMaybe<Scalars['String']['input']>;
+};
 
 /**
  * Product variation data from ExternalSourceMapping
@@ -6118,6 +6244,15 @@ export type PurchaseHistorySummary = {
   purchaseCount: Scalars['Int']['output'];
 };
 
+/** Reusable sub-input for purchase/acquisition info */
+export type PurchaseInfoInput = {
+  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
 /** Order by options for purchases */
 export type PurchaseOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
@@ -6132,6 +6267,13 @@ export type PurchaseStats = {
   recentPurchases: Array<Purchase>;
   totalAmountSpent: Scalars['Float']['output'];
   totalPurchases: Scalars['Int']['output'];
+};
+
+/** Sub-input for purchase tracking */
+export type PurchaseTrackingInput = {
+  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
+  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
+  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
 };
 
 export type PutUnderReviewInput = {
@@ -7159,9 +7301,14 @@ export type QueryValidateUpcArgs = {
   upc: Scalars['String']['input'];
 };
 
+/** Sub-input for quiet hours config */
 export type QuietHoursInput = {
   enabled: Scalars['Boolean']['input'];
   endTime: Scalars['String']['input'];
+  quietHoursEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHoursEnd?: InputMaybe<Scalars['String']['input']>;
+  quietHoursStart?: InputMaybe<Scalars['String']['input']>;
+  quietHoursTimezone?: InputMaybe<Scalars['String']['input']>;
   startTime: Scalars['String']['input'];
   timezone: Scalars['String']['input'];
 };
@@ -7250,6 +7397,13 @@ export type Recipe = {
   visibility: Visibility;
 };
 
+/** Sub-input for recipe attribution */
+export type RecipeAttributionInput = {
+  originalAuthor?: InputMaybe<Scalars['String']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  sourceUrl?: InputMaybe<Scalars['String']['input']>;
+};
+
 export enum RecipeCategory {
   Appetizer = 'APPETIZER',
   Baking = 'BAKING',
@@ -7282,6 +7436,13 @@ export type RecipeConsumptionResult = {
   totalFailed: Scalars['Int']['output'];
 };
 
+/** Sub-input for recipe context */
+export type RecipeContextInput = {
+  addedContext?: InputMaybe<Scalars['String']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Recipe connection for pagination */
 export type RecipeEdge = {
   __typename?: 'RecipeEdge';
@@ -7310,26 +7471,20 @@ export type RecipeIngredient = {
 };
 
 export type RecipeIngredientInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  consistency?: InputMaybe<Scalars['String']['input']>;
   externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
+  measurements?: InputMaybe<MultiUnitMeasurementInput>;
   meta?: InputMaybe<Array<Scalars['String']['input']>>;
-  metricAmount?: InputMaybe<Scalars['Float']['input']>;
-  metricUnit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
-  originalString?: InputMaybe<Scalars['String']['input']>;
   preparation?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   section?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
-  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
+  spoonacular?: InputMaybe<SpoonacularDataInput>;
   unitId?: InputMaybe<Scalars['String']['input']>;
-  usAmount?: InputMaybe<Scalars['Float']['input']>;
-  usUnit?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RecipeIngredientMatch = {
@@ -7375,6 +7530,14 @@ export type RecipeIngredientSourceMapping = {
   recipeIngredient: RecipeIngredient;
   source: ExternalSource;
   updatedAt: Scalars['DateTime']['output'];
+};
+
+/** Sub-input for recipe metadata */
+export type RecipeMetadataInput = {
+  category?: InputMaybe<RecipeCategory>;
+  cuisine?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Difficulty>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type RecipeReview = {
@@ -7555,6 +7718,16 @@ export type ReviewHelpful = {
   user: User;
 };
 
+/** Sub-input for risk assessment data */
+export type RiskAssessmentInput = {
+  isRisky?: InputMaybe<Scalars['Boolean']['input']>;
+  mfaCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+  mfaMethod?: InputMaybe<MfaMethod>;
+  requiresMfa?: InputMaybe<Scalars['Boolean']['input']>;
+  riskFactors?: InputMaybe<Array<RiskFactor>>;
+  riskScore?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export enum RiskFactor {
   BlacklistedIp = 'BLACKLISTED_IP',
   BotDetected = 'BOT_DETECTED',
@@ -7617,6 +7790,14 @@ export type SearchItemsInput = {
   pagination?: InputMaybe<PaginationInput>;
   query: Scalars['String']['input'];
   sort?: InputMaybe<ItemSortInput>;
+};
+
+/** Sub-input for session info */
+export type SessionInfoInput = {
+  lastActivityAt?: InputMaybe<Scalars['DateTime']['input']>;
+  loggedOutAt?: InputMaybe<Scalars['DateTime']['input']>;
+  sessionDuration?: InputMaybe<Scalars['Int']['input']>;
+  sessionId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type SetDefaultHomePayload = {
@@ -8050,6 +8231,25 @@ export type ShoppingListOwnership = {
   userId: Scalars['String']['output'];
 };
 
+/** Sub-input for shopping list planning details */
+export type ShoppingListPlanningInput = {
+  budgetAmount?: InputMaybe<Scalars['Float']['input']>;
+  currency?: InputMaybe<Scalars['String']['input']>;
+  plannedShopDate?: InputMaybe<Scalars['String']['input']>;
+  reminderDate?: InputMaybe<Scalars['String']['input']>;
+  reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  targetStoreId?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Sub-input for shopping list settings */
+export type ShoppingListSettingsInput = {
+  autoAddSuggestions?: InputMaybe<Scalars['Boolean']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  priceTracking?: InputMaybe<Scalars['Boolean']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  smartSorting?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type ShoppingListStatusChangedPayload = {
   __typename?: 'ShoppingListStatusChangedPayload';
   completedBy: Maybe<User>;
@@ -8157,10 +8357,27 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+/** Sub-input for spoonacular-specific data */
+export type SpoonacularDataInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
+  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
+};
+
 /** Input for stale device cleanup */
 export type StaleDeviceCleanupInput = {
   daysInactive?: InputMaybe<Scalars['Int']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+/** Reusable sub-input for storage details */
+export type StorageDetailsInput = {
+  condition?: InputMaybe<ItemCondition>;
+  storageLocationId?: InputMaybe<Scalars['String']['input']>;
+  storageLocationName?: InputMaybe<Scalars['String']['input']>;
+  storageNotes?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
 };
 
 /**
@@ -8311,6 +8528,13 @@ export type StoreCostBreakdown = {
   totalSpent: Scalars['Float']['output'];
 };
 
+/** Sub-input for store-related filters */
+export type StoreFilterInput = {
+  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 /**
  * Store information and contact details
  * Cache: 30 minutes - store metadata changes rarely
@@ -8324,6 +8548,13 @@ export type StoreInfo = {
   lng: Maybe<Scalars['Float']['output']>;
   phone: Maybe<Scalars['String']['output']>;
   website: Maybe<Scalars['String']['output']>;
+};
+
+/** Sub-input for store preferences */
+export type StorePreferencesInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  storeSection?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type StorePriceComparison = {
@@ -8344,6 +8575,13 @@ export type StoreSkuInput = {
   price?: InputMaybe<Scalars['Float']['input']>;
   sku: Scalars['String']['input'];
   storeId: Scalars['String']['input'];
+};
+
+/** Update-only: store SKU operations */
+export type StoreSkuOpsInput = {
+  addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
+  removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
 };
 
 /**
@@ -8625,44 +8863,24 @@ export enum SyncOperation {
 }
 
 export type SyncPantryItemInput = {
-  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  condition?: InputMaybe<ItemCondition>;
-  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBrand?: InputMaybe<Scalars['String']['input']>;
-  itemCategory?: InputMaybe<Scalars['String']['input']>;
-  itemDescription?: InputMaybe<Scalars['String']['input']>;
-  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
+  item?: InputMaybe<InlineItemInput>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  itemImageUrl?: InputMaybe<Scalars['String']['input']>;
-  itemImages?: InputMaybe<Scalars['JSON']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  itemUnits?: InputMaybe<Array<ItemUnitInput>>;
-  itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  minQuantity?: InputMaybe<Scalars['Float']['input']>;
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   pantryId: Scalars['ID']['input'];
-  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  purchase?: InputMaybe<PurchaseInfoInput>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
-  storageLocationId?: InputMaybe<Scalars['String']['input']>;
-  storageNotes?: InputMaybe<Scalars['String']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
+  storage?: InputMaybe<StorageDetailsInput>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  totalCost?: InputMaybe<Scalars['Float']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
-  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+  thresholds?: InputMaybe<InventoryThresholdsInput>;
+  unit?: InputMaybe<UnitSpecInput>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
 };
@@ -8677,46 +8895,33 @@ export type SyncPantryItemResult = {
   wasCreated: Scalars['Boolean']['output'];
 };
 
+/** Sub-input for sync settings */
+export type SyncSettingsInput = {
+  autoSync?: InputMaybe<Scalars['Boolean']['input']>;
+  offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type SyncShoppingListItemInput = {
-  addedContext?: InputMaybe<Scalars['String']['input']>;
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  /** Brand ID for this shopping list item */
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  /** Brand name for find-or-create (alternative to brandId) */
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
-  /** Price information */
-  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
-  /** Purchase tracking */
-  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
   /** Item reference (if linking to catalog item) */
   itemId?: InputMaybe<Scalars['String']['input']>;
   /** Item details (for items not in catalog) */
   itemName?: InputMaybe<Scalars['String']['input']>;
-  /** User-specified net weight (for package size tracking) */
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  /** Unit ID for the net weight */
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   /** User-provided information */
   notes?: InputMaybe<Scalars['String']['input']>;
-  /** Store preferences */
-  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
-  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
+  purchaseTracking?: InputMaybe<PurchaseTrackingInput>;
   /** Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
   quantity?: InputMaybe<QuantityInput>;
-  /** Recipe references */
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
-  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
+  recipeContext?: InputMaybe<RecipeContextInput>;
   /** Required: ID of the shopping list this item belongs to */
   shoppingListId: Scalars['ID']['input'];
   sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storeSection?: InputMaybe<Scalars['String']['input']>;
-  /** Unit reference (if linking to catalog unit) */
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
+  storePrefs?: InputMaybe<StorePreferencesInput>;
+  unit?: InputMaybe<UnitSpecInput>;
   /** Version for optimistic locking (null if new item) */
   version?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -8738,6 +8943,21 @@ export type SyncShoppingListItemResult = {
   wasCreated: Scalars['Boolean']['output'];
 };
 
+/** Sub-input for tag-based filters */
+export type TagFilterInput = {
+  /** Items that have NONE of these tags */
+  excludeTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Items that have ALL of these tags */
+  hasTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+/** Update-only: tag operations */
+export type TagOpsInput = {
+  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 /** Categories for organizing meal templates */
 export enum TemplateCategory {
   Breakfast = 'BREAKFAST',
@@ -8749,6 +8969,13 @@ export enum TemplateCategory {
   SpecialDiet = 'SPECIAL_DIET',
   Weekly = 'WEEKLY',
 }
+
+/** Sub-input for time estimates */
+export type TimeEstimatesInput = {
+  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  totalTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+};
 
 /** Time series data point for charting usage/waste trends */
 export type TimeSeriesDataPoint = {
@@ -8776,6 +9003,13 @@ export enum TrustLevel {
   Trusted = 'TRUSTED',
   Verified = 'VERIFIED',
 }
+
+/** Sub-input for UI preferences */
+export type UiPreferencesInput = {
+  compactMode?: InputMaybe<Scalars['Boolean']['input']>;
+  showTutorials?: InputMaybe<Scalars['Boolean']['input']>;
+  theme?: InputMaybe<AppTheme>;
+};
 
 /** Error when user lacks permission for the operation */
 export type UnauthorizedError = MutationError & {
@@ -8815,6 +9049,12 @@ export type Unit = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/** Update-only: unit operations */
+export type UnitOpsInput = {
+  addUnits?: InputMaybe<Array<ItemUnitInput>>;
+  removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export enum UnitRecommendation {
   BulkBuying = 'BULK_BUYING',
   CostComparison = 'COST_COMPARISON',
@@ -8824,6 +9064,13 @@ export enum UnitRecommendation {
   RecipeScaling = 'RECIPE_SCALING',
   StoragePlanning = 'STORAGE_PLANNING',
 }
+
+/** Reusable sub-input for specifying a unit by ID, name, or symbol */
+export type UnitSpecInput = {
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+};
 
 export enum UnitSystem {
   Imperial = 'IMPERIAL',
@@ -8927,78 +9174,24 @@ export type UpdateCurrencyInput = {
  * Handles all device updates including status changes, location, hardware info, etc.
  */
 export type UpdateDeviceInput = {
-  androidId?: InputMaybe<Scalars['String']['input']>;
-  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
-  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
-  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
-  brand?: InputMaybe<Scalars['String']['input']>;
-  browserName?: InputMaybe<Scalars['String']['input']>;
-  browserVersion?: InputMaybe<Scalars['String']['input']>;
-  buildNumber?: InputMaybe<Scalars['String']['input']>;
-  bundleId?: InputMaybe<Scalars['String']['input']>;
-  carrier?: InputMaybe<Scalars['String']['input']>;
   /** Clear the push token (replaces removePushToken mutation) */
   clearPushToken?: InputMaybe<Scalars['Boolean']['input']>;
   /** Soft delete the device (replaces deleteDevice mutation) */
   delete?: InputMaybe<Scalars['Boolean']['input']>;
-  deviceFingerprint?: InputMaybe<Scalars['String']['input']>;
+  details?: InputMaybe<DeviceDetailsInput>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
-  firstInstallTime?: InputMaybe<Scalars['DateTime']['input']>;
-  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
-  /** Update hardware info using structured input */
-  hardwareInfo?: InputMaybe<DeviceHardwareInfoInput>;
-  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
-  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
-  hostNames?: InputMaybe<Scalars['JSON']['input']>;
   /** Increment the login count (replaces incrementDeviceLoginCount mutation) */
   incrementLoginCount?: InputMaybe<Scalars['Boolean']['input']>;
-  instanceId?: InputMaybe<Scalars['String']['input']>;
-  iosVendorId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
-  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
-  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
-  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
-  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
-  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  language?: InputMaybe<Scalars['String']['input']>;
-  lastCity?: InputMaybe<Scalars['String']['input']>;
-  lastCountry?: InputMaybe<Scalars['String']['input']>;
-  lastIpAddress?: InputMaybe<Scalars['String']['input']>;
-  lastUpdateTime?: InputMaybe<Scalars['DateTime']['input']>;
-  /** Update location using structured input */
-  location?: InputMaybe<DeviceLocationInput>;
-  manufacturer?: InputMaybe<Scalars['String']['input']>;
-  maxMemory?: InputMaybe<Scalars['String']['input']>;
-  model?: InputMaybe<Scalars['String']['input']>;
-  osName?: InputMaybe<Scalars['String']['input']>;
-  osVersion?: InputMaybe<Scalars['String']['input']>;
-  /** Update peripheral info using structured input */
-  peripherals?: InputMaybe<DevicePeripheralsInput>;
+  location?: InputMaybe<NetworkLocationInput>;
   platform?: InputMaybe<MobilePlatform>;
-  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
-  readableVersion?: InputMaybe<Scalars['String']['input']>;
-  screenResolution?: InputMaybe<Scalars['String']['input']>;
-  securityPatch?: InputMaybe<Scalars['String']['input']>;
-  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
-  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
-  systemVersion?: InputMaybe<Scalars['String']['input']>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
-  totalMemory?: InputMaybe<Scalars['String']['input']>;
   /** Update lastSeenAt to now (replaces updateDeviceLastSeen mutation) */
   touchLastSeen?: InputMaybe<Scalars['Boolean']['input']>;
-  usedMemory?: InputMaybe<Scalars['String']['input']>;
-  userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateDietaryProfileInput = {
@@ -9042,63 +9235,38 @@ export type UpdateHomeInput = {
  * Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
  */
 export type UpdateItemInput = {
-  addBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
-  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  addUnits?: InputMaybe<Array<ItemUnitInput>>;
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
-  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  categories?: InputMaybe<Array<CategoryInput>>;
-  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  defaultUnit?: InputMaybe<Scalars['String']['input']>;
-  density?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
+  brandOps?: InputMaybe<BrandOpsInput>;
+  categoryOps?: InputMaybe<CategoryOpsInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayUnitId?: InputMaybe<Scalars['String']['input']>;
-  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
-  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
-  /** Increment popularity counter (replaces incrementItemPopularity) */
+  healthInfo?: InputMaybe<HealthInfoInput>;
+  /** Increment popularity counter */
   incrementPopularity?: InputMaybe<Scalars['Boolean']['input']>;
-  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+  media?: InputMaybe<MediaAssetsInput>;
   mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
-  popularity?: InputMaybe<Scalars['Int']['input']>;
-  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
-  /** Update item price (replaces updateItemPrice) */
+  packageInfo?: InputMaybe<PackageInfoInput>;
+  /** Update item price */
   price?: InputMaybe<Scalars['Float']['input']>;
   /** Price source for tracking */
   priceSource?: InputMaybe<Scalars['String']['input']>;
   /** Store ID for price update */
   priceStoreId?: InputMaybe<Scalars['String']['input']>;
-  primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
-  primaryUpc?: InputMaybe<Scalars['String']['input']>;
-  removeBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  /** Remove the item image (replaces removeItemImage) */
+  productDetails?: InputMaybe<ProductDetailsInput>;
+  /** Remove the item image */
   removeImage?: InputMaybe<Scalars['Boolean']['input']>;
-  removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  servingSize?: InputMaybe<Scalars['Float']['input']>;
-  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
-  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
-  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
-  storageState?: InputMaybe<StorageState>;
-  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeSkuOps?: InputMaybe<StoreSkuOpsInput>;
+  tagOps?: InputMaybe<TagOpsInput>;
   type?: InputMaybe<ItemType>;
-  units?: InputMaybe<Array<ItemUnitInput>>;
-  vendor?: InputMaybe<Scalars['String']['input']>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
+  unitOps?: InputMaybe<UnitOpsInput>;
   visibility?: InputMaybe<Visibility>;
 };
 
@@ -9119,46 +9287,20 @@ export type UpdateItemResult =
   | VersionMismatchError;
 
 export type UpdateLoginHistoryInput = {
-  apiClient?: InputMaybe<Scalars['String']['input']>;
-  browserName?: InputMaybe<Scalars['String']['input']>;
-  browserVersion?: InputMaybe<Scalars['String']['input']>;
-  campaign?: InputMaybe<Scalars['String']['input']>;
+  attribution?: InputMaybe<AttributionInput>;
+  automation?: InputMaybe<ApiAutomationInput>;
+  behavioral?: InputMaybe<BehavioralSignalsInput>;
+  browserOs?: InputMaybe<BrowserOsDetailsInput>;
   deviceId?: InputMaybe<Scalars['ID']['input']>;
   deviceType?: InputMaybe<DeviceType>;
   failureDetails?: InputMaybe<Scalars['String']['input']>;
   failureReason?: InputMaybe<LoginFailureReason>;
   flaggedReason?: InputMaybe<Scalars['String']['input']>;
-  ipAddress?: InputMaybe<Scalars['String']['input']>;
-  ipCity?: InputMaybe<Scalars['String']['input']>;
-  ipCountry?: InputMaybe<Scalars['String']['input']>;
-  ipRegion?: InputMaybe<Scalars['String']['input']>;
-  isApiLogin?: InputMaybe<Scalars['Boolean']['input']>;
-  isAutomated?: InputMaybe<Scalars['Boolean']['input']>;
   isMobileApp?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewBrowser?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewDevice?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewLocation?: InputMaybe<Scalars['Boolean']['input']>;
-  isProxy?: InputMaybe<Scalars['Boolean']['input']>;
-  isRisky?: InputMaybe<Scalars['Boolean']['input']>;
-  isTor?: InputMaybe<Scalars['Boolean']['input']>;
-  isVpn?: InputMaybe<Scalars['Boolean']['input']>;
-  landingPage?: InputMaybe<Scalars['String']['input']>;
-  lastActivityAt?: InputMaybe<Scalars['DateTime']['input']>;
-  loggedOutAt?: InputMaybe<Scalars['DateTime']['input']>;
-  mfaCompleted?: InputMaybe<Scalars['Boolean']['input']>;
-  mfaMethod?: InputMaybe<MfaMethod>;
-  osName?: InputMaybe<Scalars['String']['input']>;
-  osVersion?: InputMaybe<Scalars['String']['input']>;
-  referrer?: InputMaybe<Scalars['String']['input']>;
-  requiresMfa?: InputMaybe<Scalars['Boolean']['input']>;
+  network?: InputMaybe<NetworkLocationInput>;
   reviewed?: InputMaybe<Scalars['Boolean']['input']>;
-  riskFactors?: InputMaybe<Array<RiskFactor>>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  sessionDuration?: InputMaybe<Scalars['Int']['input']>;
-  sessionId?: InputMaybe<Scalars['String']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
-  timezoneDiff?: InputMaybe<Scalars['Int']['input']>;
-  userAgent?: InputMaybe<Scalars['String']['input']>;
+  risk?: InputMaybe<RiskAssessmentInput>;
+  session?: InputMaybe<SessionInfoInput>;
 };
 
 export type UpdateMealPlanInput = {
@@ -9227,27 +9369,10 @@ export type UpdateNotificationInput = {
 };
 
 export type UpdateNotificationPreferencesInput = {
-  collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
-  cookingReminders?: InputMaybe<Scalars['Boolean']['input']>;
-  emailEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  expirationDaysThreshold?: InputMaybe<Scalars['Int']['input']>;
-  expirationNotificationFrequency?: InputMaybe<ExpirationFrequency>;
-  expirationNotifications?: InputMaybe<Scalars['Boolean']['input']>;
-  homeInvites?: InputMaybe<Scalars['Boolean']['input']>;
-  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
-  mealPlanReminders?: InputMaybe<Scalars['Boolean']['input']>;
-  monthlyReport?: InputMaybe<Scalars['Boolean']['input']>;
-  pantryChanges?: InputMaybe<Scalars['Boolean']['input']>;
-  pushEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  quietHoursEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  quietHoursEnd?: InputMaybe<Scalars['String']['input']>;
-  quietHoursStart?: InputMaybe<Scalars['String']['input']>;
-  quietHoursTimezone?: InputMaybe<Scalars['String']['input']>;
-  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
-  sharedListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
-  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
-  smsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
+  channels?: InputMaybe<NotificationChannelsInput>;
+  expiration?: InputMaybe<ExpirationNotifConfigInput>;
+  features?: InputMaybe<FeatureNotificationsInput>;
+  quietHours?: InputMaybe<QuietHoursInput>;
 };
 
 export type UpdatePantryInput = {
@@ -9260,9 +9385,7 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  condition?: InputMaybe<ItemCondition>;
+  brand?: InputMaybe<BrandReferenceInput>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
@@ -9270,17 +9393,12 @@ export type UpdatePantryItemInput = {
   itemName?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  minQuantity?: InputMaybe<Scalars['Float']['input']>;
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  netWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<NetWeightInput>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
-  storageLocationId?: InputMaybe<Scalars['String']['input']>;
-  storageNotes?: InputMaybe<Scalars['String']['input']>;
-  storageState?: InputMaybe<StorageState>;
+  storage?: InputMaybe<StorageDetailsInput>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
+  thresholds?: InputMaybe<InventoryThresholdsInput>;
+  unit?: InputMaybe<UnitSpecInput>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
 };
@@ -9307,35 +9425,29 @@ export type UpdatePurchaseInput = {
 
 export type UpdateRecipeInput = {
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
+  attribution?: InputMaybe<RecipeAttributionInput>;
   category?: InputMaybe<RecipeCategory>;
   cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  diets?: InputMaybe<Array<Diet>>;
+  dietary?: InputMaybe<DietaryTagsInput>;
   difficulty?: InputMaybe<Difficulty>;
-  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
-  externalSourceId?: InputMaybe<Scalars['String']['input']>;
-  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
-  healthGoals?: InputMaybe<Array<HealthGoal>>;
+  externalSource?: InputMaybe<ExternalSourceShorthandInput>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   instructions?: InputMaybe<Scalars['JSON']['input']>;
-  intolerances?: InputMaybe<Array<Intolerance>>;
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
+  media?: InputMaybe<MediaAssetsInput>;
+  metadata?: InputMaybe<RecipeMetadataInput>;
   name?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
-  originalAuthor?: InputMaybe<Scalars['String']['input']>;
+  nutrition?: InputMaybe<NutritionInfoInput>;
   prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
   servings?: InputMaybe<Scalars['Int']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
-  sourceUrl?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<RecipeStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  timing?: InputMaybe<TimeEstimatesInput>;
   tips?: InputMaybe<Scalars['String']['input']>;
-  totalTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  videoUrl?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
 };
 
@@ -9346,45 +9458,30 @@ export type UpdateRestrictionInput = {
 };
 
 export type UpdateShoppingListInput = {
-  autoAddSuggestions?: InputMaybe<Scalars['Boolean']['input']>;
-  budgetAmount?: InputMaybe<Scalars['Float']['input']>;
-  category?: InputMaybe<Scalars['String']['input']>;
-  currency?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   homeId?: InputMaybe<Scalars['String']['input']>;
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  plannedShopDate?: InputMaybe<Scalars['String']['input']>;
-  priceTracking?: InputMaybe<Scalars['Boolean']['input']>;
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  reminderDate?: InputMaybe<Scalars['String']['input']>;
-  reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-  smartSorting?: InputMaybe<Scalars['Boolean']['input']>;
+  planning?: InputMaybe<ShoppingListPlanningInput>;
+  settings?: InputMaybe<ShoppingListSettingsInput>;
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  targetStoreId?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateShoppingListItemInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
-  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
-  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
-  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
+  purchaseTracking?: InputMaybe<PurchaseTrackingInput>;
   /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storeSection?: InputMaybe<Scalars['String']['input']>;
-  unitId?: InputMaybe<Scalars['ID']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
+  storePrefs?: InputMaybe<StorePreferencesInput>;
+  unit?: InputMaybe<UnitSpecInput>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -9517,25 +9614,12 @@ export type UpdateUserResult =
   | ValidationError;
 
 export type UpdateUserSettingsInput = {
-  autoSync?: InputMaybe<Scalars['Boolean']['input']>;
-  betaFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
-  compactMode?: InputMaybe<Scalars['Boolean']['input']>;
-  emailNotifications?: InputMaybe<Scalars['Boolean']['input']>;
-  enabledFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
-  expiredItemAlerts?: InputMaybe<Scalars['Boolean']['input']>;
-  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
-  offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
-  personalizedAds?: InputMaybe<Scalars['Boolean']['input']>;
+  features?: InputMaybe<FeatureTogglesInput>;
+  notifications?: InputMaybe<UserNotificationSettingsInput>;
   preferredUnitSystem?: InputMaybe<UnitSystem>;
-  pushNotifications?: InputMaybe<Scalars['Boolean']['input']>;
-  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
-  shareUsageData?: InputMaybe<Scalars['Boolean']['input']>;
-  shareWithPartners?: InputMaybe<Scalars['Boolean']['input']>;
-  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
-  showTutorials?: InputMaybe<Scalars['Boolean']['input']>;
-  smsNotifications?: InputMaybe<Scalars['Boolean']['input']>;
-  theme?: InputMaybe<AppTheme>;
-  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
+  privacy?: InputMaybe<PrivacySettingsInput>;
+  sync?: InputMaybe<SyncSettingsInput>;
+  ui?: InputMaybe<UiPreferencesInput>;
 };
 
 /** Result of updating user settings */
@@ -9777,6 +9861,18 @@ export type UserModerationChangedPayload = {
   reason: Maybe<Scalars['String']['output']>;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['String']['output'];
+};
+
+/** Sub-input for notification settings within user settings */
+export type UserNotificationSettingsInput = {
+  emailNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+  expiredItemAlerts?: InputMaybe<Scalars['Boolean']['input']>;
+  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
+  pushNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
+  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  smsNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 /**
@@ -10030,6 +10126,16 @@ export enum WasteReason {
   Taste = 'TASTE',
   UnknownLoss = 'UNKNOWN_LOSS',
 }
+
+/** Sub-input for workflow/approval filters */
+export type WorkflowFilterInput = {
+  /** Filter by creator user ID */
+  createdById?: InputMaybe<Scalars['ID']['input']>;
+  /** Filter user-created items */
+  isUserCreated?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Filter items that need admin approval */
+  needsApproval?: InputMaybe<Scalars['Boolean']['input']>;
+};
 
 export type GetAuthUserQueryVariables = Exact<{ [key: string]: never }>;
 
@@ -36920,10 +37026,19 @@ export const UpdateItemImageDocument = {
                   fields: [
                     {
                       kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'imageUrl' },
+                      name: { kind: 'Name', value: 'media' },
                       value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'imageUrl' },
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'imageUrl' },
+                            value: {
+                              kind: 'Variable',
+                              name: { kind: 'Name', value: 'imageUrl' },
+                            },
+                          },
+                        ],
                       },
                     },
                   ],
@@ -39654,18 +39769,27 @@ export const ItemByUpcFilterDocument = {
                   fields: [
                     {
                       kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'upc' },
+                      name: { kind: 'Name', value: 'lookup' },
                       value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'upc' },
-                      },
-                    },
-                    {
-                      kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'upcFormat' },
-                      value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'upcFormat' },
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'upc' },
+                            value: {
+                              kind: 'Variable',
+                              name: { kind: 'Name', value: 'upc' },
+                            },
+                          },
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'upcFormat' },
+                            value: {
+                              kind: 'Variable',
+                              name: { kind: 'Name', value: 'upcFormat' },
+                            },
+                          },
+                        ],
                       },
                     },
                   ],
@@ -40026,18 +40150,27 @@ export const ItemBySkuFilterDocument = {
                   fields: [
                     {
                       kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'sku' },
+                      name: { kind: 'Name', value: 'lookup' },
                       value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'sku' },
-                      },
-                    },
-                    {
-                      kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'skuStoreId' },
-                      value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'skuStoreId' },
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'sku' },
+                            value: {
+                              kind: 'Variable',
+                              name: { kind: 'Name', value: 'sku' },
+                            },
+                          },
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'skuStoreId' },
+                            value: {
+                              kind: 'Variable',
+                              name: { kind: 'Name', value: 'skuStoreId' },
+                            },
+                          },
+                        ],
                       },
                     },
                   ],

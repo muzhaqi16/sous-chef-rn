@@ -359,7 +359,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
   const handleAddItem = async (formData: any) => {
     try {
       // Store brand name for use in mutation callback
-      pendingBrandNameRef.current = formData.brandName;
+      pendingBrandNameRef.current = formData.brand?.brandName;
 
       // Store the selected images in MMKV for post-creation upload
       if (formData.selectedImages && formData.selectedImages.length > 0) {
@@ -375,63 +375,29 @@ export const useSearchResults = (barcode: string, format?: string) => {
         );
       }
 
-      // Process the form data to match the CreateItemInput type
+      // Process the form data to match the new nested CreateItemInput structure
       const processedInput = {
         name: formData.name,
         description: formData.description || undefined,
-        primaryUpc: formData.upc || barcode,
-        sku: formData.sku || undefined,
-
-        // Classification
         type: formData.type || undefined,
-        storageState: formData.storageState || undefined,
 
-        // Product Details
-        shelfLifeDays: formData.shelfLifeDays || undefined,
-        displayItemSize: formData.displayItemSize || undefined,
+        // Brand reference
+        brand: formData.brand || undefined,
 
-        // Images
-        imageUrl: formData.imageUrl || undefined,
+        // Classification (storageState, categories, tags)
+        classification: formData.classification || undefined,
 
-        // Brand Information
-        brandId: formData.brandId || undefined,
-        vendor: formData.vendor || undefined,
+        // Product details (primaryUpc, vendor, shelfLifeDays)
+        productDetails: formData.productDetails || undefined,
 
-        // Weight and Units
-        netWeight: formData.netWeight || undefined,
-        displayUnitId: formData.displayUnitId || undefined,
-        displayUnitName: formData.displayUnitName || undefined,
+        // Media (imageUrl)
+        media: formData.media || undefined,
 
-        // Categories
-        categoryIds: formData.categoryIds || undefined,
+        // Net weights (manufacturer-provided dual-label values)
+        netWeights: formData.netWeights || undefined,
 
-        // Units array
-        units: formData.units || undefined,
-
-        // Metadata
-        tags: (() => {
-          let tags: string[] = [];
-
-          // Include existing tags
-          if (formData.tags && Array.isArray(formData.tags)) {
-            tags = [...formData.tags];
-          } else if (formData.tags && typeof formData.tags === 'string') {
-            tags = formData.tags
-              .split(',')
-              .map((tag: string) => tag.trim())
-              .filter(Boolean);
-          }
-
-          // Add tags based on boolean flags
-          if (formData.isFoodStampItem) {
-            tags.push('food-stamp-eligible');
-          }
-          if (formData.isFsaEligible) {
-            tags.push('fsa-eligible');
-          }
-
-          return tags.length > 0 ? tags : undefined;
-        })(),
+        // Unit configuration
+        unitConfig: formData.unitConfig || undefined,
       };
 
       await addNewItem({
