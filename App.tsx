@@ -31,6 +31,7 @@ import {
 } from '#store/slices/authSlice';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { initializeDeviceId } from '#/utils/deviceId';
+import { LaunchArguments } from 'react-native-launch-arguments';
 
 // Enable native screens for better performance
 enableScreens();
@@ -66,6 +67,26 @@ const App = () => {
   useEffect(() => {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
+
+      // DEV-ONLY: Inject auth tokens from Detox launchArgs to bypass login UI
+      if (__DEV__) {
+        try {
+          const args = LaunchArguments.value<{
+            detoxUserToken?: string;
+            detoxRefreshToken?: string;
+            detoxUser?: string;
+          }>();
+          if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
+            const user = JSON.parse(args.detoxUser);
+            useStore
+              .getState()
+              .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
+            console.log('[Detox] Auth injected via launchArgs');
+          }
+        } catch {
+          // No launch args or parse error — normal app startup
+        }
+      }
 
       // Initialize device ID early - needed for WebSocket subscription self-echo filtering
       initializeDeviceId();

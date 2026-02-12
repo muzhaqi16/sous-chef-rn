@@ -25,6 +25,7 @@ import {
 import { typeIntoField, tapByID } from './actions';
 import { TEST_USER } from '../fixtures/testData';
 import { launchAppWithFabricWorkaround } from '../init';
+import { getAuthTokens } from './tokenProvider';
 
 /**
  * ⭐ ENHANCED: Login with test user credentials
@@ -99,10 +100,8 @@ export async function loginWithCredentials(email: string, password: string) {
 export async function dismissBiometricPromptIfPresent() {
   console.log('🔍 Checking for post-login prompts...');
 
-  // NOTE: Emulators don't support biometrics, so use very short timeouts (500ms)
-  // to avoid wasting test time on elements that won't appear.
-
   // Try to dismiss post-login biometric modal (only on real devices)
+  // Use 3s timeout to allow for animation/network delay on real devices
   await waitIfPresent(
     element(by.id('post-login-biometric-prompt')),
     async () => {
@@ -113,7 +112,7 @@ export async function dismissBiometricPromptIfPresent() {
       ]);
       console.log('✅ Biometric prompt dismissed');
     },
-    500, // Very short timeout - emulators don't have biometrics
+    3000,
   );
 
   // Try to dismiss onboarding biometric setup screen (only on real devices)
@@ -124,7 +123,7 @@ export async function dismissBiometricPromptIfPresent() {
       await tapByID('biometric-setup-skip');
       console.log('✅ Biometric setup skipped');
     },
-    500, // Very short timeout - emulators don't have biometrics
+    3000,
   );
 
   // Try to dismiss feature hint overlay (appears with 2s delay in PantryMain)
@@ -322,31 +321,55 @@ export async function resetAppState() {
 }
 
 /**
- * ⭐ NEW: Bootstrap authenticated session for tests
- * Combines login + post-login flow handling for test setup
+ * ⭐ ENHANCED: Bootstrap authenticated session for tests
+ * Uses token injection via launchArgs for speed (~1s vs ~5-8s UI login).
+ * Falls back to UI login if token injection fails.
  */
 export async function bootstrapAuthenticatedSession() {
   console.log('🚀 Bootstrapping authenticated session...');
 
-  // Launch the app first (required before any UI interactions)
-  // Use newInstance: true to ensure clean app state and proper Detox connection
-  await launchAppWithFabricWorkaround({
-    newInstance: true,
-    permissions: { notifications: 'YES', camera: 'YES' },
-  });
+  // Try token injection first (fast path)
+  try {
+    const tokens = await getAuthTokens();
+    console.log('🔑 Launching app with injected auth tokens...');
 
-  // Ensure we start from logged out state
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      permissions: { notifications: 'YES', camera: 'YES' },
+      launchArgs: {
+        detoxUserToken: tokens.accessToken,
+        detoxRefreshToken: tokens.refreshToken,
+        detoxUser: JSON.stringify(tokens.user),
+      },
+    });
+
+    // Check if token injection worked (should land on home screen)
+    const loggedIn = await isLoggedIn();
+    if (loggedIn) {
+      console.log('✅ Token injection successful');
+      await dismissBiometricPromptIfPresent();
+      return;
+    }
+
+    console.log('⚠️ Token injection did not result in logged-in state, falling back to UI login...');
+  } catch (error) {
+    console.log(`⚠️ Token injection failed: ${error}, falling back to UI login...`);
+
+    // Launch without tokens
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      permissions: { notifications: 'YES', camera: 'YES' },
+    });
+  }
+
+  // Fallback: UI login
   const loggedIn = await isLoggedIn();
 
   if (loggedIn) {
     console.log('Already logged in, keeping session...');
   } else {
     console.log('Not logged in, creating new session...');
-
-    // Handle landing screen if present
     await skipToLogin();
-
-    // Login
     await loginAsTestUser();
   }
 

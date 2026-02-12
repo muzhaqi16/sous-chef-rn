@@ -7,7 +7,7 @@
  * - Delete account (with safeguards)
  */
 
-import { element, by, waitFor, expect } from 'detox';
+import { element, by, waitFor } from 'detox';
 import { ProfileScreen, LoginScreen, LandingAuthScreen } from '../../screens';
 import {
   bootstrapAuthenticatedSession,
@@ -145,7 +145,9 @@ describe('Profile Account', () => {
         loggedOut = true;
       }
 
-      expect(loggedOut).toBe(true);
+      if (!loggedOut) {
+        throw new Error('Logout did not navigate to landing or login screen');
+      }
 
       // Log back in for subsequent tests
       try {
@@ -189,7 +191,9 @@ describe('Profile Account', () => {
         foundDeleteOption = true;
       }
 
-      expect(foundDeleteOption).toBe(true);
+      if (!foundDeleteOption) {
+        throw new Error('Delete account option not found in more menu or main list');
+      }
     });
 
     it('should require confirmation for delete', async () => {
@@ -219,7 +223,8 @@ describe('Profile Account', () => {
     // NOTE: We don't actually test deleting the account as it would be destructive
     it('should NOT delete account without proper confirmation', async () => {
       // This is intentionally a no-op test as a reminder
-      expect(true).toBe(true);
+      // Verify we're still on a valid screen
+      await profileScreen.waitForScreen();
     });
   });
 

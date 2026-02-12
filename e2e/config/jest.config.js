@@ -2,6 +2,7 @@
 module.exports = {
   rootDir: '../..',
   testMatch: ['<rootDir>/e2e/tests/**/*.e2e.{js,ts}'],
+  testSequencer: '<rootDir>/e2e/config/testSequencer.js',
 
   // ⭐ OPTIMIZED TIMEOUTS FOR ANDROID DEVICE
   testTimeout: 300000, // 5 minutes per test (device is slower than emulator)

@@ -110,7 +110,6 @@ export const PostLoginBiometricPrompt = ({
               disabled={isEnabling}
               testID="biometric-prompt-enable"
               accessibilityLabel="Enable Now"
-              accessible={false}
             >
               <Text style={[styles.buttonText, styles.primaryButtonText]}>
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
@@ -123,7 +122,6 @@ export const PostLoginBiometricPrompt = ({
               disabled={isEnabling}
               testID="biometric-prompt-decline"
               accessibilityLabel="Not now"
-              accessible={false}
             >
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Not now

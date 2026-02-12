@@ -5,6 +5,9 @@
  * - Happy path login
  * - Error handling (invalid credentials, empty fields)
  * - Edge cases (rapid taps, special characters)
+ *
+ * Performance: Launches app once; navigates back to login between tests
+ * instead of relaunching with delete:true for each test.
  */
 
 import { element, by, waitFor, expect } from 'detox';
@@ -18,9 +21,73 @@ import {
 import {
   waitForScreen,
   waitForNetworkIdle,
+  dismissBiometricPromptIfPresent,
   TIMEOUTS,
 } from '../../helpers';
 import { TEST_USER } from '../../fixtures/testData';
+
+/**
+ * Ensure we're on the login screen, navigating there if needed.
+ * Avoids full app relaunches between tests (~1-2s vs ~10-15s).
+ */
+async function ensureOnLoginScreen(
+  landingScreen: LandingAuthScreen,
+  loginScreen: LoginScreen,
+): Promise<void> {
+  // 1. Already on login screen → clear fields and return
+  try {
+    await loginScreen.waitForScreen(2000);
+    // Clear any existing input by replacing with empty text
+    try {
+      await element(by.id('login-email-input')).clearText();
+      await element(by.id('login-password-input')).clearText();
+    } catch {
+      // Fields might not be accessible, that's fine
+    }
+    return;
+  } catch {
+    // Not on login screen
+  }
+
+  // 2. On landing screen → tap login
+  try {
+    await landingScreen.waitForScreen(2000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen();
+    return;
+  } catch {
+    // Not on landing screen
+  }
+
+  // 3. On a sub-auth screen (forgot-password, signup) → press back
+  try {
+    await device.pressBack();
+    // Check if we landed on login screen
+    await loginScreen.waitForScreen(2000);
+    return;
+  } catch {
+    // pressBack didn't get us to login
+  }
+
+  // 4. Try landing screen after pressBack (might have gone back to landing)
+  try {
+    await landingScreen.waitForScreen(2000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen();
+    return;
+  } catch {
+    // Not on landing either
+  }
+
+  // 5. Last resort: relaunch (e.g., we're logged in from Happy Path)
+  await launchAppWithFabricWorkaround({
+    newInstance: true,
+    delete: true,
+  });
+  await landingScreen.waitForScreen(5000);
+  await landingScreen.tapLogin();
+  await loginScreen.waitForScreen();
+}
 
 describe('Login', () => {
   const landingScreen = new LandingAuthScreen();
@@ -36,16 +103,16 @@ describe('Login', () => {
     });
   });
 
-  beforeEach(async () => {
-    // Ensure we start from landing or login screen
-    try {
-      await landingScreen.waitForScreen(3000);
-    } catch {
-      // Might already be on login screen
-    }
-  });
-
   describe('Happy Path', () => {
+    beforeEach(async () => {
+      // Ensure we start from landing or login screen
+      try {
+        await landingScreen.waitForScreen(3000);
+      } catch {
+        // Might already be on login screen
+      }
+    });
+
     it('should navigate from landing to login screen', async () => {
       await landingScreen.waitForScreen();
       await landingScreen.expectLoginButtonVisible();
@@ -67,6 +134,9 @@ describe('Login', () => {
 
       // Should navigate to home screen (pantry or shopping list)
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
+
+      // Dismiss biometric prompt if shown (only on real devices with biometric support)
+      await dismissBiometricPromptIfPresent();
 
       try {
         await pantryScreen.waitForScreen(5000);
@@ -93,14 +163,7 @@ describe('Login', () => {
 
   describe('Error Cases', () => {
     beforeEach(async () => {
-      // Ensure we're logged out for error tests
-      await device.launchApp({
-        newInstance: true,
-        delete: true,
-      });
-      await landingScreen.waitForScreen(5000);
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen();
+      await ensureOnLoginScreen(landingScreen, loginScreen);
     });
 
     it('should show error for empty email', async () => {
@@ -147,13 +210,7 @@ describe('Login', () => {
 
   describe('Edge Cases', () => {
     beforeEach(async () => {
-      await device.launchApp({
-        newInstance: true,
-        delete: true,
-      });
-      await landingScreen.waitForScreen(5000);
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen();
+      await ensureOnLoginScreen(landingScreen, loginScreen);
     });
 
     it('should handle special characters in password', async () => {
@@ -187,6 +244,9 @@ describe('Login', () => {
       // Should not crash, should complete login
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
+      // Dismiss biometric prompt if shown (only on real devices with biometric support)
+      await dismissBiometricPromptIfPresent();
+
       // Verify we either logged in or are still on login screen (no crash)
       try {
         await loginScreen.waitForScreen(2000);
@@ -214,13 +274,7 @@ describe('Login', () => {
 
   describe('Navigation', () => {
     beforeEach(async () => {
-      await device.launchApp({
-        newInstance: true,
-        delete: true,
-      });
-      await landingScreen.waitForScreen(5000);
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen();
+      await ensureOnLoginScreen(landingScreen, loginScreen);
     });
 
     it('should navigate to forgot password', async () => {

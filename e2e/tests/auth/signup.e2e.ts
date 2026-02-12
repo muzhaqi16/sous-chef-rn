@@ -13,6 +13,7 @@ import { LandingAuthScreen, LoginScreen, SignUpScreen } from '../../screens';
 import {
   waitForScreen,
   waitForNetworkIdle,
+  dismissBiometricPromptIfPresent,
   TIMEOUTS,
 } from '../../helpers';
 import { generateTestEmail } from '../../helpers/data';
@@ -135,6 +136,9 @@ describe('Sign Up', () => {
       );
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
+
+      // Dismiss biometric prompt if shown (only on real devices with biometric support)
+      await dismissBiometricPromptIfPresent();
 
       // Should navigate to onboarding or home screen
       let navigatedSuccessfully = false;
