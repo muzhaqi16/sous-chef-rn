@@ -10,11 +10,11 @@ on:
 
 jobs:
   build_with_signing:
-    runs-on: souschef-runner
+    runs-on: [self-hosted, macOS]
     environment: prod
     steps:
-      - name: Select Xcode 16.4
-        run: sudo /usr/bin/xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - name: Select Xcode 15.5
+        run: sudo /usr/bin/xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version

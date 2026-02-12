@@ -59,7 +59,7 @@ export async function goBack() {
  */
 export async function openSettings() {
   await navigateToProfile();
-  await tapByID('settings-button');
+  await tapByID('profile-menu-appSettings');
   await waitForScreen('settings-screen');
 }
 

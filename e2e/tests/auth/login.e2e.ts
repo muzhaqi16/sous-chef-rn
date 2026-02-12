@@ -18,7 +18,6 @@ import {
 import {
   waitForScreen,
   waitForNetworkIdle,
-  delay,
   TIMEOUTS,
 } from '../../helpers';
 import { TEST_USER } from '../../fixtures/testData';
@@ -108,17 +107,18 @@ describe('Login', () => {
       await loginScreen.enterPassword('somepassword');
       await loginScreen.submit();
 
-      // Should stay on login screen with error
+      // Should stay on login screen with validation error
       await loginScreen.waitForScreen();
-      // App should show validation error
+      await loginScreen.expectEmailFieldError();
     });
 
     it('should show error for empty password', async () => {
       await loginScreen.enterEmail(TEST_USER.email);
       await loginScreen.submit();
 
-      // Should stay on login screen with error
+      // Should stay on login screen with validation error
       await loginScreen.waitForScreen();
+      await loginScreen.expectPasswordFieldError();
     });
 
     it('should show error for invalid email format', async () => {
@@ -126,8 +126,9 @@ describe('Login', () => {
       await loginScreen.enterPassword('somepassword');
       await loginScreen.submit();
 
-      // Should stay on login screen
+      // Should stay on login screen with validation error
       await loginScreen.waitForScreen();
+      await loginScreen.expectEmailFieldError();
     });
 
     it('should show error for incorrect password', async () => {
@@ -140,6 +141,7 @@ describe('Login', () => {
 
       // Should stay on login screen (login failed)
       await loginScreen.waitForScreen();
+      await loginScreen.expectErrorMessage();
     });
   });
 
@@ -159,16 +161,16 @@ describe('Login', () => {
       await loginScreen.enterPassword('P@$$w0rd!#$%^&*()');
       await loginScreen.submit();
 
-      // Should attempt login (not crash)
-      await delay(2000);
-      // Just verify we're still on a known screen
+      // Should attempt login (not crash) - verify we're on a known screen
+      await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
+
       try {
-        await loginScreen.waitForScreen(1000);
+        await loginScreen.waitForScreen(2000);
       } catch {
-        // Might have succeeded
+        // Might have succeeded - tab bar should be visible
         await waitFor(element(by.id('tab-bar')))
           .toBeVisible()
-          .withTimeout(3000);
+          .withTimeout(TIMEOUTS.DEFAULT);
       }
     });
 
@@ -186,20 +188,27 @@ describe('Login', () => {
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
       // Verify we either logged in or are still on login screen (no crash)
-      await delay(1000);
+      try {
+        await loginScreen.waitForScreen(2000);
+      } catch {
+        await waitFor(element(by.id('tab-bar')))
+          .toBeVisible()
+          .withTimeout(TIMEOUTS.DEFAULT);
+      }
     });
 
     it('should clear error when user starts typing', async () => {
       // Trigger an error
       await loginScreen.submit(); // Submit with empty fields
 
-      await delay(500);
+      // Wait for validation to show
+      await loginScreen.waitForScreen();
 
       // Start typing in email field
       await loginScreen.enterEmail('test');
 
-      // Error should be cleared or not visible
-      await delay(500);
+      // Verify we're still on login screen (didn't crash)
+      await loginScreen.waitForScreen();
     });
   });
 

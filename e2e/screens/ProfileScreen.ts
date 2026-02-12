@@ -12,7 +12,7 @@ export class ProfileScreen extends BaseScreen {
   protected screenID = 'profile-screen';
 
   // Element IDs
-  private readonly settingsButton = 'profile-settings-button';
+  private readonly settingsButton = 'profile-menu-appSettings';
   private readonly editProfileButton = 'profile-edit-button';
   private readonly userNameText = 'profile-user-name';
   private readonly userEmailText = 'profile-user-email';
@@ -119,9 +119,8 @@ export class ProfileScreen extends BaseScreen {
    * Logout from the app
    */
   async logout() {
-    // Scroll down to logout button using scroll method (works better on Android)
-    await element(by.id(this.scrollView)).scroll(500, 'down', 0.7, 0.2);
-    await element(by.id(this.scrollView)).scroll(500, 'down', 0.7, 0.2);
+    // Scroll down to logout button
+    await element(by.id(this.scrollView)).scrollTo('bottom');
 
     await this.tapByID(this.logoutButton);
 
@@ -135,8 +134,16 @@ export class ProfileScreen extends BaseScreen {
       // No confirmation dialog
     }
 
-    // Wait for navigation to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for navigation to landing or login screen
+    try {
+      await waitFor(element(by.id('login-screen')))
+        .toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      await waitFor(element(by.id('landing-auth-screen')))
+        .toBeVisible()
+        .withTimeout(5000);
+    }
   }
 
   /**

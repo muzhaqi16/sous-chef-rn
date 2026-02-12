@@ -9,12 +9,10 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
 import { ShoppingListScreen } from '../../screens';
 import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
 import { generateItemName } from '../../helpers/data';
-import { delay, TIMEOUTS } from '../../helpers/waitFor';
-import { tapByID } from '../../helpers/actions';
+import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Shopping List Purchase', () => {
   const shoppingListScreen = new ShoppingListScreen();
@@ -37,84 +35,63 @@ describe('Shopping List Purchase', () => {
       // Add a test item
       const itemName = generateItemName('Purchase');
       await shoppingListScreen.addItem(itemName);
-      await delay(1000);
 
       // Verify item was added
-      await shoppingListScreen.expectTextVisible(itemName);
-      console.log('✓ Item added to shopping list');
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-      // Find the item row and tap the checkbox
-      // The checkbox is to the left of the item text
-      // Use a point tap relative to the text element
-      try {
-        const itemRow = element(by.text(itemName)).atIndex(0);
-        // Tap to the left of the text to hit the checkbox area
-        await itemRow.tap({ x: -50, y: 0 });
-        await delay(1500);
+      // Find the checkbox by testID pattern and tap it
+      const checkbox = element(by.id(/shopping-item-checkbox-.*/)).atIndex(0);
+      await waitFor(checkbox).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await checkbox.tap();
 
-        // Navigate to Purchased tab to verify item moved
-        const purchasedTab = element(by.text('Purchased'));
-        await purchasedTab.tap();
-        await delay(500);
+      // Navigate to Purchased tab to verify item moved
+      const purchasedTab = element(by.text('Purchased'));
+      await waitFor(purchasedTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await purchasedTab.tap();
 
-        // Verify item is in purchased list
-        await expect(element(by.text(itemName))).toBeVisible();
-        console.log('✓ Item marked as purchased and visible in Purchased tab');
+      // Verify item is in purchased list
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Go back to Shopping tab
-        const shoppingTab = element(by.text('Shopping'));
-        await shoppingTab.tap();
-        await delay(500);
-      } catch (e) {
-        console.log('Checkbox tap via offset failed:', e);
-        // Fallback: try finding any checkbox element
-        try {
-          const checkbox = element(by.id(/shopping-item-checkbox-.*/)).atIndex(0);
-          await checkbox.tap();
-          await delay(1500);
-          console.log('✓ Tapped checkbox via testID pattern');
-        } catch {
-          console.log('⚠️ Could not find checkbox to tap');
-        }
-      }
+      // Go back to Shopping tab
+      const shoppingTab = element(by.text('Shopping'));
+      await shoppingTab.tap();
+      await shoppingListScreen.waitForScreen();
     });
   });
 
   describe('Shopping List Basic', () => {
     it('should verify shopping list is visible', async () => {
       // Verify we're on the shopping list screen
-      await shoppingListScreen.waitForScreen(5000);
-      console.log('✓ Shopping list screen visible');
+      await shoppingListScreen.waitForScreen(TIMEOUTS.DEFAULT);
     });
 
     it('should be able to add an item', async () => {
-      // Add a simple item
-      try {
-        await shoppingListScreen.addItem('Bread');
-        await delay(1000);
-        await shoppingListScreen.expectTextVisible('Bread');
-        console.log('✓ Item added successfully');
-      } catch (e) {
-        console.log('Add item test:', e);
-      }
+      await shoppingListScreen.addItem('Bread');
+      await waitFor(element(by.text('Bread')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should be able to navigate between tabs', async () => {
-      // Try to tap Purchased tab
-      try {
-        const purchasedTab = element(by.text('Purchased'));
-        await purchasedTab.tap();
-        await delay(500);
-        console.log('✓ Navigated to Purchased tab');
+      const purchasedTab = element(by.text('Purchased'));
+      await waitFor(purchasedTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await purchasedTab.tap();
 
-        // Go back to Shopping tab
-        const shoppingTab = element(by.text('Shopping'));
-        await shoppingTab.tap();
-        await delay(500);
-        console.log('✓ Navigated back to Shopping tab');
-      } catch {
-        console.log('Tab navigation test skipped');
-      }
+      // Verify we navigated (Purchased tab should be active)
+      await waitFor(element(by.text('Purchased')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+
+      // Go back to Shopping tab
+      const shoppingTab = element(by.text('Shopping'));
+      await waitFor(shoppingTab).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await shoppingTab.tap();
+
+      await shoppingListScreen.waitForScreen();
     });
   });
 });

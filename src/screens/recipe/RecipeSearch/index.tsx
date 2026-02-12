@@ -155,6 +155,7 @@ export const RecipeSearch: React.FC = () => {
           onPress: handleTextSearch,
           color: theme.colors.primary,
           backgroundColor: theme.colors.surface,
+          testID: 'recipe-search-submit',
         },
       ] as SearchBarAction[],
     [handleTextSearch, openIngredientSelector, openFilterSheet, selectedIngredients.size, activeFilterCount, theme],
@@ -190,6 +191,7 @@ export const RecipeSearch: React.FC = () => {
             onChangeText={setSearchQuery}
             placeholder="Search recipes..."
             rightActions={searchBarRightActions}
+            testID="recipe-search-input"
           />
         </View>
         <ListTemplate

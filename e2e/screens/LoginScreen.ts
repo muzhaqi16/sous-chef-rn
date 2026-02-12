@@ -68,10 +68,24 @@ export class LoginScreen extends BaseScreen {
   }
 
   /**
+   * Tap sign up link (alias for navigateToSignup)
+   */
+  async tapSignUp() {
+    await this.navigateToSignup();
+  }
+
+  /**
    * Navigate to forgot password screen
    */
   async navigateToForgotPassword() {
     await this.tapByID(this.forgotPasswordLink);
+  }
+
+  /**
+   * Tap forgot password link (alias for navigateToForgotPassword)
+   */
+  async tapForgotPassword() {
+    await this.navigateToForgotPassword();
   }
 
   /**

@@ -7,6 +7,8 @@
 // Import detox - globals are already declared in detox/globals.d.ts
 import 'detox';
 import { execSync } from 'child_process';
+// Import custom matchers and global error handlers
+import './config/setup';
 
 // Global test timeout
 jest.setTimeout(120000);

@@ -74,7 +74,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
   };
 
   return (
-    <Animated.View style={animatedSlideStyle}>
+    <Animated.View style={animatedSlideStyle} testID={`shopping-item-${id}`}>
       <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
         <View style={styles.container}>
         <TouchableOpacity

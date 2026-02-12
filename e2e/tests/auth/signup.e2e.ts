@@ -13,7 +13,6 @@ import { LandingAuthScreen, LoginScreen, SignUpScreen } from '../../screens';
 import {
   waitForScreen,
   waitForNetworkIdle,
-  delay,
   TIMEOUTS,
 } from '../../helpers';
 import { generateTestEmail } from '../../helpers/data';
@@ -57,6 +56,7 @@ describe('Sign Up', () => {
 
       // Should stay on signup screen with validation error
       await signUpScreen.waitForScreen();
+      await signUpScreen.expectNameFieldError();
     });
 
     it('should show error for empty email', async () => {
@@ -66,6 +66,7 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
+      await signUpScreen.expectEmailFieldError();
     });
 
     it('should show error for invalid email format', async () => {
@@ -76,6 +77,7 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
+      await signUpScreen.expectEmailFieldError();
     });
 
     it('should show error for weak password', async () => {
@@ -86,6 +88,7 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
+      await signUpScreen.expectPasswordFieldError();
     });
 
     it('should show error for password mismatch', async () => {
@@ -96,6 +99,7 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
+      await signUpScreen.expectConfirmPasswordFieldError();
     });
 
     it('should show error for existing email', async () => {
@@ -133,20 +137,34 @@ describe('Sign Up', () => {
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
       // Should navigate to onboarding or home screen
+      let navigatedSuccessfully = false;
+
       try {
-        await waitForScreen('onboarding-screen', 5000);
-        console.log('✓ Navigated to onboarding screen');
+        await waitForScreen('onboarding-screen', TIMEOUTS.DEFAULT);
+        navigatedSuccessfully = true;
       } catch {
+        // Not onboarding
+      }
+
+      if (!navigatedSuccessfully) {
         try {
           await waitFor(element(by.id('tab-bar')))
             .toBeVisible()
-            .withTimeout(5000);
-          console.log('✓ Navigated to home screen');
+            .withTimeout(TIMEOUTS.DEFAULT);
+          navigatedSuccessfully = true;
         } catch {
-          // Check for create home screen (part of onboarding flow)
-          await waitForScreen('create-home-screen', 5000);
-          console.log('✓ Navigated to create home screen');
+          // Not home
         }
+      }
+
+      if (!navigatedSuccessfully) {
+        // Check for create home screen (part of onboarding flow)
+        await waitForScreen('create-home-screen', TIMEOUTS.DEFAULT);
+        navigatedSuccessfully = true;
+      }
+
+      if (!navigatedSuccessfully) {
+        throw new Error('Signup did not navigate to onboarding, home, or create-home screen');
       }
     });
   });
@@ -159,8 +177,8 @@ describe('Sign Up', () => {
       await signUpScreen.enterPassword('TestPass123!');
       await signUpScreen.enterConfirmPassword('TestPass123!');
 
-      // Should not crash
-      await delay(500);
+      // Should not crash - verify we're still on signup screen
+      await signUpScreen.waitForScreen();
     });
 
     it('should handle special characters in name', async () => {
@@ -171,7 +189,8 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      // Should handle gracefully
+      // Should handle gracefully - verify we navigated or stayed on signup
+      await signUpScreen.waitForScreen();
     });
 
     it('should handle unicode characters in name', async () => {
@@ -182,7 +201,8 @@ describe('Sign Up', () => {
       await signUpScreen.submit();
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
-      // Should handle gracefully
+      // Should handle gracefully - verify we navigated or stayed on signup
+      await signUpScreen.waitForScreen();
     });
   });
 });

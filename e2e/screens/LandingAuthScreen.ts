@@ -29,6 +29,13 @@ export class LandingAuthScreen extends BaseScreen {
   }
 
   /**
+   * Tap the "Sign Up" button (alias with camelCase)
+   */
+  async tapSignUp() {
+    await this.tapSignup();
+  }
+
+  /**
    * Expect login button to be visible
    */
   async expectLoginButtonVisible() {

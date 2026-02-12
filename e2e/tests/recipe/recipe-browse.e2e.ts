@@ -8,10 +8,9 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
 import { RecipesScreen, RecipeDetailScreen } from '../../screens';
 import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
-import { delay, TIMEOUTS } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';
 
 describe('Recipe Browse', () => {
@@ -34,204 +33,165 @@ describe('Recipe Browse', () => {
     });
 
     it('should show saved recipes or suggestions', async () => {
-      // Screen should show either saved recipes or suggestions
-      await delay(2000);
+      // Screen should show either saved recipes, suggestions, or empty state
+      // Use waitForAnyElement pattern: check for the first visible element
+      let foundContent = false;
 
       try {
-        // Look for recipe list
         await waitFor(element(by.id('recipe-list')))
           .toBeVisible()
-          .withTimeout(3000);
-        console.log('✓ Recipe list visible');
+          .withTimeout(TIMEOUTS.DEFAULT);
+        foundContent = true;
       } catch {
-        // Might show suggestions instead
+        // Not a recipe list
+      }
+
+      if (!foundContent) {
         try {
           await waitFor(element(by.text('Need inspiration?')))
             .toBeVisible()
-            .withTimeout(3000);
-          console.log('✓ Recipe suggestions visible');
+            .withTimeout(TIMEOUTS.QUICK);
+          foundContent = true;
         } catch {
-          // Might show empty state
-          await waitFor(element(by.id('recipe-empty-state')))
-            .toBeVisible()
-            .withTimeout(3000);
-          console.log('✓ Empty state visible');
+          // Not suggestions
         }
+      }
+
+      if (!foundContent) {
+        await waitFor(element(by.id('recipe-empty-state')))
+          .toBeVisible()
+          .withTimeout(TIMEOUTS.DEFAULT);
+        foundContent = true;
+      }
+
+      if (!foundContent) {
+        throw new Error('No content found - expected recipe list, suggestions, or empty state');
       }
     });
 
     it('should show search functionality', async () => {
+      // Check for search button or search input
+      let foundSearch = false;
+
       try {
         await waitFor(element(by.id('recipe-search-button')))
           .toBeVisible()
-          .withTimeout(2000);
-        console.log('✓ Search button visible');
+          .withTimeout(TIMEOUTS.QUICK);
+        foundSearch = true;
       } catch {
-        // Might have search input instead
-        try {
-          await waitFor(element(by.id('recipe-search-input')))
-            .toBeVisible()
-            .withTimeout(2000);
-          console.log('✓ Search input visible');
-        } catch {
-          console.log('Search UI not found');
-        }
+        // No search button
+      }
+
+      if (!foundSearch) {
+        await waitFor(element(by.id('recipe-search-input')))
+          .toBeVisible()
+          .withTimeout(TIMEOUTS.DEFAULT);
+        foundSearch = true;
+      }
+
+      if (!foundSearch) {
+        throw new Error('No search UI found - expected search button or search input');
       }
     });
   });
 
   describe('Recipe Navigation', () => {
     it('should navigate to recipe detail', async () => {
-      await delay(1000);
+      // Find first recipe item by card testID pattern
+      const firstRecipe = element(by.id('recipe-card-0'));
+      await waitFor(firstRecipe).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await firstRecipe.tap();
 
-      try {
-        // Find first recipe item
-        const firstRecipe = element(by.id('recipe-item-0'));
-        await waitFor(firstRecipe).toBeVisible().withTimeout(3000);
-        await firstRecipe.tap();
+      // Should navigate to detail screen
+      await recipeDetailScreen.waitForScreen(TIMEOUTS.DEFAULT);
 
-        // Should navigate to detail screen
-        await recipeDetailScreen.waitForScreen(5000);
-        console.log('✓ Navigated to recipe detail');
-
-        // Go back
-        await recipeDetailScreen.goBack();
-        await recipesScreen.waitForScreen();
-      } catch {
-        // Try tapping by text
-        try {
-          const recipeCard = element(by.type('RCTView')).atIndex(5);
-          await recipeCard.tap();
-          await delay(1000);
-          await recipesScreen.goBack();
-        } catch {
-          console.log('Could not navigate to recipe - might be empty list');
-        }
-      }
+      // Go back
+      await recipeDetailScreen.goBack();
+      await recipesScreen.waitForScreen();
     });
 
     it('should navigate to recipe search', async () => {
-      try {
-        await tapByID('recipe-search-button');
-        await waitFor(element(by.id('recipe-search-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
-        console.log('✓ Navigated to recipe search');
+      await tapByID('recipe-search-button');
+      await waitFor(element(by.id('recipe-search-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        await recipesScreen.goBack();
-      } catch {
-        console.log('Recipe search navigation not found');
-      }
+      await recipesScreen.goBack();
+      await recipesScreen.waitForScreen();
     });
   });
 
   describe('Filter Recipes', () => {
     it('should filter by folder', async () => {
-      try {
-        // Look for folder filter button
-        const folderFilter = element(by.id('folder-filter-button'));
-        await waitFor(folderFilter).toBeVisible().withTimeout(2000);
-        await folderFilter.tap();
+      const folderFilter = element(by.id('folder-filter-button'));
+      await waitFor(folderFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await folderFilter.tap();
 
-        await delay(500);
+      // Select a folder
+      const folderOption = element(by.id('folder-option-0'));
+      await waitFor(folderOption).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await folderOption.tap();
 
-        // Select a folder
-        const folderOption = element(by.id('folder-option-0'));
-        await waitFor(folderOption).toBeVisible().withTimeout(2000);
-        await folderOption.tap();
-
-        await delay(500);
-        console.log('✓ Filter by folder applied');
-      } catch {
-        console.log('Folder filter not found - might not have folders');
-      }
+      await recipesScreen.waitForListToLoad();
     });
 
     it('should filter by tags', async () => {
-      try {
-        // Look for tag filter button
-        const tagFilter = element(by.id('tag-filter-button'));
-        await waitFor(tagFilter).toBeVisible().withTimeout(2000);
-        await tagFilter.tap();
+      const tagFilter = element(by.id('tag-filter-button'));
+      await waitFor(tagFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await tagFilter.tap();
 
-        await delay(500);
+      // Select a tag
+      const tagOption = element(by.id('tag-option-0'));
+      await waitFor(tagOption).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await tagOption.tap();
 
-        // Select a tag
-        const tagOption = element(by.id('tag-option-0'));
-        await waitFor(tagOption).toBeVisible().withTimeout(2000);
-        await tagOption.tap();
-
-        await delay(500);
-        console.log('✓ Filter by tag applied');
-      } catch {
-        console.log('Tag filter not found - might not have tags');
-      }
+      await recipesScreen.waitForListToLoad();
     });
 
     it('should clear filters', async () => {
-      try {
-        const clearButton = element(by.text('Clear'));
-        await waitFor(clearButton).toBeVisible().withTimeout(2000);
-        await clearButton.tap();
+      const clearButton = element(by.text('Clear'));
+      await waitFor(clearButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await clearButton.tap();
 
-        await delay(500);
-        console.log('✓ Filters cleared');
-      } catch {
-        console.log('Clear filters button not visible');
-      }
+      await recipesScreen.waitForListToLoad();
     });
   });
 
   describe('Suggested Recipes', () => {
     it('should show suggested recipes for new users', async () => {
-      try {
-        await waitFor(element(by.text('Need inspiration?')))
-          .toBeVisible()
-          .withTimeout(3000);
+      await waitFor(element(by.text('Need inspiration?')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Try refreshing suggestions
-        const refreshButton = element(by.id('refresh-suggestions-button'));
-        await waitFor(refreshButton).toBeVisible().withTimeout(2000);
-        await refreshButton.tap();
+      // Try refreshing suggestions
+      const refreshButton = element(by.id('refresh-suggestions-button'));
+      await waitFor(refreshButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await refreshButton.tap();
 
-        await delay(2000);
-        console.log('✓ Suggestions refreshed');
-      } catch {
-        console.log('Suggestions not visible - user might have saved recipes');
-      }
+      // Wait for suggestions to reload
+      await recipesScreen.waitForListToLoad();
     });
 
     it('should navigate to suggested recipe detail', async () => {
-      try {
-        // Find a suggested recipe
-        const suggestion = element(by.id('suggested-recipe-0'));
-        await waitFor(suggestion).toBeVisible().withTimeout(2000);
-        await suggestion.tap();
+      const suggestion = element(by.id('suggested-recipe-0'));
+      await waitFor(suggestion).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await suggestion.tap();
 
-        await recipeDetailScreen.waitForScreen(5000);
-        console.log('✓ Opened suggested recipe');
+      await recipeDetailScreen.waitForScreen(TIMEOUTS.DEFAULT);
 
-        await recipeDetailScreen.goBack();
-      } catch {
-        console.log('Suggested recipes not available');
-      }
+      await recipeDetailScreen.goBack();
+      await recipesScreen.waitForScreen();
     });
   });
 
   describe('Pull to Refresh', () => {
     it('should refresh recipes on pull down', async () => {
-      try {
-        const recipeList = element(by.id('recipe-list'));
-        await recipeList.swipe('down', 'fast', 0.5);
+      const recipeList = element(by.id('recipe-list'));
+      await waitFor(recipeList).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await recipeList.swipe('down', 'fast', 0.5);
 
-        await delay(2000);
-
-        // Recipes should reload
-        await recipesScreen.waitForScreen();
-        console.log('✓ Pull to refresh completed');
-      } catch {
-        console.log('Pull to refresh not available');
-      }
+      // Recipes should reload
+      await recipesScreen.waitForScreen();
     });
   });
 });

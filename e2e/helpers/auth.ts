@@ -151,18 +151,14 @@ export async function logout() {
   await tapByID('tab-profile');
   await waitForScreen('profile-screen', TIMEOUTS.DEFAULT);
 
-  // Open settings
-  await tapByID('settings-button');
-  await waitForScreen('settings-screen', TIMEOUTS.DEFAULT);
-
-  // Scroll to bottom to find logout button
-  const settingsScroll = element(by.id('settings-scroll-view'));
-  await waitFor(settingsScroll).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await settingsScroll.scrollTo('bottom');
+  // Scroll to find logout button (it's directly on the profile screen)
+  const profileScroll = element(by.id('profile-scroll-view'));
+  await waitFor(profileScroll).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+  await profileScroll.scrollTo('bottom');
   await delay(300); // Wait for scroll animation
 
   // Tap logout
-  await tapByID('logout-button');
+  await tapByID('profile-logout-button');
 
   // Confirm logout if confirmation dialog appears
   await waitIfPresent(
@@ -174,8 +170,12 @@ export async function logout() {
     2000,
   );
 
-  // Wait for login screen
-  await waitForScreen('login-screen', TIMEOUTS.NETWORK);
+  // Wait for login screen or landing screen
+  try {
+    await waitForScreen('login-screen', TIMEOUTS.NETWORK);
+  } catch {
+    await waitForScreen('landing-auth-screen', TIMEOUTS.NETWORK);
+  }
 
   console.log('✅ Logged out successfully');
 }
@@ -196,7 +196,7 @@ export async function signUpWithCredentials(
   // Enter user details with keyboard handling
   await typeIntoField('signup-email-input', email, true);
   await typeIntoField('signup-password-input', password, true);
-  await typeIntoField('signup-display-name-input', displayName, true);
+  await typeIntoField('signup-name-input', displayName, true);
 
   // Tap signup button
   await tapByID('signup-submit-button');
@@ -242,7 +242,7 @@ export async function skipToLogin() {
  */
 export async function navigateToSignup() {
   console.log('Navigating to signup...');
-  await tapByID('go-to-signup-button');
+  await tapByID('login-signup-link');
   await waitForScreen('signup-screen', TIMEOUTS.DEFAULT);
 }
 
@@ -251,7 +251,7 @@ export async function navigateToSignup() {
  */
 export async function navigateToForgotPassword() {
   console.log('Navigating to forgot password...');
-  await tapByID('forgot-password-button');
+  await tapByID('login-forgot-password-link');
   await waitForScreen('forgot-password-screen', TIMEOUTS.DEFAULT);
 }
 

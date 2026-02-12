@@ -451,6 +451,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     if (searchQuery) {
       return (
         <EmptyState
+          testID="pantry-empty-state"
           icon="search-off"
           iconLibrary="MaterialIcons"
           title="No items found"
@@ -464,6 +465,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const tabName = activeTab?.label ?? 'this location';
       return (
         <EmptyState
+          testID="pantry-empty-state"
           icon="kitchen"
           iconLibrary="MaterialIcons"
           title={`No items in ${tabName}`}
@@ -474,6 +476,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
 
     return (
       <EmptyState
+        testID="pantry-empty-state"
         icon="kitchen"
         iconLibrary="MaterialIcons"
         title="Your pantry is empty"
@@ -503,6 +506,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             onChangeText={onSearchChange}
             placeholder="Search your pantry..."
             showSearchIcon={true}
+            testID="pantry-search-input"
             innerRightIcon={
               <Pressable onPress={onSettingsPress} hitSlop={8}>
                 <Icon
@@ -529,6 +533,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           variant="default"
           actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
           onActionPress={openSortModal}
+          testID="pantry-sort-button"
         />
 
         {/* Content List - Crossfade between skeleton and content */}
@@ -540,6 +545,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           >
             <FlashList<PantryItem>
               ref={flashListRef}
+              testID="pantry-list"
               data={showSkeletons ? EMPTY_ARRAY : sortedItems}
               renderItem={renderItem}
               keyExtractor={keyExtractor}
@@ -549,6 +555,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               refreshControl={
                 onRefresh ? (
                   <RefreshControl
+                    testID="pantry-refresh-control"
                     refreshing={refreshing}
                     onRefresh={onRefresh}
                   />
@@ -564,6 +571,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           {/* Skeleton layer (absolute on top, fades out) */}
           {showSkeletons && (
             <Animated.View
+              testID="pantry-loading"
               style={[styles.absoluteFill, skeletonAnimatedStyle]}
               pointerEvents="none"
             >

@@ -14,6 +14,9 @@ module.exports = {
   globalTeardown: 'detox/runners/jest/globalTeardown',
   testEnvironment: 'detox/runners/jest/testEnvironment',
 
+  // Note: init.ts (which imports config/setup.ts) is loaded transitively
+  // by all test files via helpers/auth.ts and helpers/flows.ts
+
   // ⭐ ENHANCED REPORTING FOR BETTER DEBUGGING
   reporters: ['detox/runners/jest/reporter'],
 
