@@ -26,16 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          bundle exec pod install --repo-update
 
       - name: Setup Detox
         run: |

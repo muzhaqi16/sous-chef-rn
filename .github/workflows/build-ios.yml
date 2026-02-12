@@ -77,11 +77,16 @@ jobs:
           EOF
           echo "Generated .env file"
 
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
+
       - name: install Cocoapod dependencies
         run: |
           cd ios
-          pod repo update
-          pod install
+          bundle exec pod repo update
+          bundle exec pod install
 
       - name: Set version from git tag
         run: |

@@ -27,59 +27,61 @@ import {
 import { TEST_USER } from '../../fixtures/testData';
 
 /**
- * Ensure we're on the login screen, navigating there if needed.
- * Avoids full app relaunches between tests (~1-2s vs ~10-15s).
+ * Ensure we're on a clean login screen, navigating there if needed.
+ * Uses reloadReactNative() to reset form state (fast, ~2s) when
+ * already on login/landing. Falls back to full relaunch if logged in.
  */
 async function ensureOnLoginScreen(
   landingScreen: LandingAuthScreen,
   loginScreen: LoginScreen,
 ): Promise<void> {
-  // 1. Already on login screen → clear fields and return
+  // 1. On login or landing screen → reload JS for clean form state
   try {
-    await loginScreen.waitForScreen(2000);
-    // Clear any existing input by replacing with empty text
+    // Check if we're on login, landing, or a sub-auth screen
+    let onAuthFlow = false;
     try {
-      await element(by.id('login-email-input')).clearText();
-      await element(by.id('login-password-input')).clearText();
+      await loginScreen.waitForScreen(1500);
+      onAuthFlow = true;
     } catch {
-      // Fields might not be accessible, that's fine
+      try {
+        await landingScreen.waitForScreen(1500);
+        onAuthFlow = true;
+      } catch {
+        // Check for sub-auth screens (forgot-password, signup)
+        try {
+          await waitFor(element(by.id('forgot-password-screen')))
+            .toBeVisible()
+            .withTimeout(1000);
+          onAuthFlow = true;
+        } catch {
+          try {
+            await waitFor(element(by.id('signup-screen')))
+              .toBeVisible()
+              .withTimeout(1000);
+            onAuthFlow = true;
+          } catch {
+            // Not on any auth screen
+          }
+        }
+      }
     }
-    return;
+
+    if (onAuthFlow) {
+      // Reload JS bundle to get a fresh landing screen (no stored session)
+      await device.reloadReactNative();
+      await waitFor(element(by.id('splash-screen')))
+        .not.toBeVisible()
+        .withTimeout(10000);
+      await landingScreen.waitForScreen(5000);
+      await landingScreen.tapLogin();
+      await loginScreen.waitForScreen();
+      return;
+    }
   } catch {
-    // Not on login screen
+    // Reload or navigation failed
   }
 
-  // 2. On landing screen → tap login
-  try {
-    await landingScreen.waitForScreen(2000);
-    await landingScreen.tapLogin();
-    await loginScreen.waitForScreen();
-    return;
-  } catch {
-    // Not on landing screen
-  }
-
-  // 3. On a sub-auth screen (forgot-password, signup) → press back
-  try {
-    await device.pressBack();
-    // Check if we landed on login screen
-    await loginScreen.waitForScreen(2000);
-    return;
-  } catch {
-    // pressBack didn't get us to login
-  }
-
-  // 4. Try landing screen after pressBack (might have gone back to landing)
-  try {
-    await landingScreen.waitForScreen(2000);
-    await landingScreen.tapLogin();
-    await loginScreen.waitForScreen();
-    return;
-  } catch {
-    // Not on landing either
-  }
-
-  // 5. Last resort: relaunch (e.g., we're logged in from Happy Path)
+  // 2. Last resort: full relaunch (e.g., we're logged in from Happy Path)
   await launchAppWithFabricWorkaround({
     newInstance: true,
     delete: true,
