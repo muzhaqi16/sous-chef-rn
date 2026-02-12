@@ -88,4 +88,5 @@ output.js.map
 # react-native-config codegen
 ios/tmp.xcconfig
 .claude
-e2e/artifacts
+artifacts/
+e2e/artifacts/

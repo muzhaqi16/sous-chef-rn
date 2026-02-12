@@ -6,6 +6,7 @@
 
 // Import detox - globals are already declared in detox/globals.d.ts
 import 'detox';
+import { element, by, waitFor } from 'detox';
 import { execSync } from 'child_process';
 // Import custom matchers and global error handlers
 import './config/setup';
@@ -52,18 +53,46 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
     launchArgs: {
       ...options.launchArgs,
       detoxEnableSynchronization: 0, // Disable sync during launch
+      detoxDisableBackgroundServices: 1, // Disable timers that block Detox idle detection
     },
   });
 
-  // Wait for app to initialize (5s to account for slower emulators and bundle loading)
-  await new Promise(resolve => setTimeout(resolve, 5000));
-
-  // Re-enable synchronization for test interactions
+  // Wait for an actual UI element instead of a fixed delay.
+  // The app shows either the landing auth screen (logged out) or the tab bar (logged in).
   try {
-    await device.enableSynchronization();
-  } catch (error) {
-    console.log('Warning: Could not enable synchronization, continuing without it');
+    await waitFor(element(by.id('landing-auth-screen')))
+      .toBeVisible()
+      .withTimeout(10000);
+  } catch {
+    try {
+      await waitFor(element(by.id('tab-bar')))
+        .toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      // Fallback: short delay if neither element appears yet
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
   }
+
+  // Blacklist URLs that cause sync issues (WebSocket connections, long-polling).
+  // The app uses ws://localhost:4000/graphql for subscriptions which keeps a
+  // persistent connection open, preventing Detox sync from completing.
+  try {
+    await device.setURLBlacklist([
+      '.*localhost.*graphql.*',
+      '.*souschef\\.dev.*graphql.*',
+      '.*ws://.*',
+      '.*wss://.*',
+    ]);
+  } catch {
+    // setURLBlacklist may not be supported on all platforms
+  }
+
+  // Keep synchronization DISABLED. Even with JS background services disabled
+  // (via detoxDisableBackgroundServices), Fabric's native UIManager keeps the
+  // main run loop and dispatch queue busy, preventing Detox from ever reaching
+  // idle. With sync off, waitFor() polls for elements which works reliably.
+  // Element interactions (tap, typeText, etc.) still work without sync.
 }
 
 // Configure Detox to handle React Native Fabric compatibility
@@ -73,6 +102,25 @@ beforeAll(async () => {
 
   // Setup ADB reverse for local API testing (Android only)
   setupAdbReverseForLocalTesting();
+});
+
+// Take a screenshot after every test for tracking and debugging
+let screenshotCounter = 0;
+afterEach(async () => {
+  try {
+    screenshotCounter++;
+    const testName = expect.getState().currentTestName || 'unknown';
+    const status = expect.getState().numPassingAsserts > 0 ? 'PASS' : 'FAIL';
+    const sanitized = testName
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .substring(0, 100);
+    const name = `${screenshotCounter}_${status}_${sanitized}`;
+    await device.takeScreenshot(name);
+    console.log(`Screenshot: ${name}`);
+  } catch {
+    // Don't let screenshot failures break tests
+  }
 });
 
 // Global teardown runs once after all tests

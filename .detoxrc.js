@@ -17,14 +17,14 @@ module.exports = {
     'ios.debug': {
       type: 'ios.app',
       binaryPath:
-        'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
+        'ios/build/Build/Products/Debug-iphonesimulator/SousChef.app',
       build:
         'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath:
-        'ios/build/Build/Products/Release-iphonesimulator/SousChefRN.app',
+        'ios/build/Build/Products/Release-iphonesimulator/SousChef.app',
       build:
         'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
     },
@@ -50,7 +50,7 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 15',
+        type: 'iPhone 17',
       },
     },
     attached: {
@@ -72,10 +72,84 @@ module.exports = {
     'ios.sim.debug': {
       device: 'simulator',
       app: 'ios.debug',
+      behavior: {
+        init: {
+          reinstallApp: false,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/ios-simulator',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: false,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+            keepOnlyFailedTestsArtifacts: false,
+          },
+          video: {
+            enabled: false,
+          },
+        },
+      },
+      session: {
+        autoStart: true,
+        debugSynchronization: 10000,
+        server: 'ws://localhost:8099',
+        sessionId: 'sous-chef-e2e-ios',
+      },
     },
     'ios.sim.release': {
       device: 'simulator',
       app: 'ios.release',
+      behavior: {
+        init: {
+          reinstallApp: false,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/ios-simulator-release',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: true,
+            takeWhen: {
+              testStart: false,
+              testDone: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: false,
+          },
+        },
+      },
+      session: {
+        autoStart: true,
+        debugSynchronization: 10000,
+        server: 'ws://localhost:8099',
+        sessionId: 'sous-chef-e2e-ios-release',
+      },
     },
     'android.att.debug': {
       device: 'attached',

@@ -6,6 +6,7 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
+import { LaunchArguments } from 'react-native-launch-arguments';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -70,12 +71,32 @@ const scheduleReconnect = () => {
   }, delay);
 };
 
+/**
+ * Get the keepAlive interval. In Detox E2E mode, use a long interval (5 min)
+ * to prevent frequent pings from blocking Detox idle detection.
+ */
+const getKeepAliveInterval = (): number => {
+  if (__DEV__) {
+    try {
+      const args = LaunchArguments.value<{
+        detoxDisableBackgroundServices?: string;
+      }>();
+      if (args.detoxDisableBackgroundServices) {
+        return 300_000; // 5 minutes — effectively disables pings during tests
+      }
+    } catch {
+      // No launch args available
+    }
+  }
+  return 12_000; // 12 seconds — normal operation
+};
+
 const createWsClient = () => {
   return createClient({
     url: WS_URL,
     webSocketImpl, // ← critical for RN
     lazy: true, // only connect on first subscribe
-    keepAlive: 12_000, // send ping every 12s to keep alive
+    keepAlive: getKeepAliveInterval(),
     connectionParams: () => {
       const token = useStore.getState().accessToken;
       const apiKey = Config.API_KEY;

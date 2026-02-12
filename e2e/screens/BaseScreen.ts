@@ -175,11 +175,19 @@ export abstract class BaseScreen {
    */
   async dismissKeyboard() {
     if (device.getPlatform() === 'ios') {
+      // Best-effort keyboard dismissal on iOS.
+      // First try tapping the Return key, then fall back to tapping the
+      // screen container. The fallback is necessary because Return key
+      // label varies (Return, Done, Go) and may not match 'return'.
       try {
-        await element(by.id('keyboard-dismiss-button')).tap();
+        await element(by.label('return')).atIndex(0).tap();
       } catch {
-        // Fallback: tap outside keyboard area
-        await this.screen.tap();
+        // Return key label didn't match — tap the screen to blur input
+        try {
+          await this.screen.tap({ x: 10, y: 10 });
+        } catch {
+          // Keyboard may not be visible — safe to continue
+        }
       }
     } else {
       // On Android, tap outside the input field to dismiss keyboard
@@ -205,13 +213,21 @@ export abstract class BaseScreen {
   }
 
   /**
-   * Take screenshot with screen name
+   * Take screenshot with screen name, timestamp, and optional description
    */
-  async takeScreenshot(suffix?: string) {
-    const screenshotName = suffix
-      ? `${this.screenID}-${suffix}`
-      : this.screenID;
-    await device.takeScreenshot(screenshotName);
+  async takeScreenshot(suffix?: string, description?: string) {
+    try {
+      const timestamp = Date.now();
+      const parts = [this.screenID];
+      if (suffix) parts.push(suffix);
+      if (description) parts.push(description.replace(/[^a-zA-Z0-9]/g, '_'));
+      parts.push(String(timestamp));
+      const screenshotName = parts.join('-');
+      await device.takeScreenshot(screenshotName);
+      console.log(`Screenshot: ${screenshotName}`);
+    } catch (error) {
+      console.warn(`Failed to take screenshot: ${error}`);
+    }
   }
 
   /**

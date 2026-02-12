@@ -49,6 +49,8 @@ const App = () => {
 
   // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
   const hydrationInitializedRef = useRef(false);
+  // Track if Detox requested background services to be disabled
+  const detoxBackgroundServicesDisabledRef = useRef(false);
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -75,6 +77,7 @@ const App = () => {
             detoxUserToken?: string;
             detoxRefreshToken?: string;
             detoxUser?: string;
+            detoxDisableBackgroundServices?: string;
           }>();
           if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
             const user = JSON.parse(args.detoxUser);
@@ -82,6 +85,10 @@ const App = () => {
               .getState()
               .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
             console.log('[Detox] Auth injected via launchArgs');
+          }
+          if (args.detoxDisableBackgroundServices) {
+            detoxBackgroundServicesDisabledRef.current = true;
+            console.log('[Detox] Background services disabled for E2E tests');
           }
         } catch {
           // No launch args or parse error — normal app startup
@@ -97,7 +104,13 @@ const App = () => {
       });
 
       // Initialize telemetry service
-      Telemetry.updateConfig(getTelemetryConfig());
+      const telemetryConfig = getTelemetryConfig();
+      if (detoxBackgroundServicesDisabledRef.current) {
+        // Disable flush timers that create setInterval background tasks
+        telemetryConfig.enableLogs = false;
+        telemetryConfig.enableMetrics = false;
+      }
+      Telemetry.updateConfig(telemetryConfig);
       Telemetry.initialize();
 
       // Report JS startup duration (time from index.js entry to store hydration)
@@ -121,8 +134,8 @@ const App = () => {
         timestamp: new Date().toISOString(),
       });
 
-      // Start memory monitoring (only in dev or if enabled in settings)
-      if (__DEV__) {
+      // Start memory monitoring (only in dev, skip when Detox disables background services)
+      if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
       }
 
@@ -133,7 +146,7 @@ const App = () => {
 
     return () => {
       // Cleanup memory monitor on unmount
-      if (__DEV__) {
+      if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
         MemoryMonitor.stop();
       }
       // Cleanup AppState token refresh listener

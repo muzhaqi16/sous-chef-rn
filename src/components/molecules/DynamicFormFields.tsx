@@ -326,7 +326,14 @@ export function DynamicFormFields<T extends FieldValues>({
               Input !== 'brandAutocomplete' &&
               Input !== 'unitAutocomplete' &&
               Input !== 'categoryAutocomplete' && (
-                <Text style={styles.errorText}>
+                <Text
+                  style={styles.errorText}
+                  testID={
+                    (props?.testID || testID)
+                      ? `${props?.testID || testID}-error`
+                      : undefined
+                  }
+                >
                   {errors[name]?.message?.toString()}
                 </Text>
               )}
