@@ -27,65 +27,29 @@ import {
 import { TEST_USER } from '../../fixtures/testData';
 
 /**
- * Ensure we're on a clean login screen, navigating there if needed.
- * Uses reloadReactNative() to reset form state (fast, ~2s) when
- * already on login/landing. Falls back to full relaunch if logged in.
+ * Track whether app data has been wiped since Happy Path logged in.
+ * Once wiped, subsequent relaunches can skip delete: true (faster).
+ */
+let appDataClean = false;
+
+/**
+ * Ensure we're on a clean login screen.
+ * Uses bare device.launchApp (matching original test behavior).
+ * Skips delete: true after first wipe since error tests don't log in.
  */
 async function ensureOnLoginScreen(
   landingScreen: LandingAuthScreen,
   loginScreen: LoginScreen,
 ): Promise<void> {
-  // 1. On login or landing screen → reload JS for clean form state
-  try {
-    // Check if we're on login, landing, or a sub-auth screen
-    let onAuthFlow = false;
-    try {
-      await loginScreen.waitForScreen(1500);
-      onAuthFlow = true;
-    } catch {
-      try {
-        await landingScreen.waitForScreen(1500);
-        onAuthFlow = true;
-      } catch {
-        // Check for sub-auth screens (forgot-password, signup)
-        try {
-          await waitFor(element(by.id('forgot-password-screen')))
-            .toBeVisible()
-            .withTimeout(1000);
-          onAuthFlow = true;
-        } catch {
-          try {
-            await waitFor(element(by.id('signup-screen')))
-              .toBeVisible()
-              .withTimeout(1000);
-            onAuthFlow = true;
-          } catch {
-            // Not on any auth screen
-          }
-        }
-      }
-    }
-
-    if (onAuthFlow) {
-      // Reload JS bundle to get a fresh landing screen (no stored session)
-      await device.reloadReactNative();
-      await waitFor(element(by.id('splash-screen')))
-        .not.toBeVisible()
-        .withTimeout(10000);
-      await landingScreen.waitForScreen(5000);
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen();
-      return;
-    }
-  } catch {
-    // Reload or navigation failed
+  if (appDataClean) {
+    // App data already clean — relaunch without delete (no reinstall)
+    await device.launchApp({ newInstance: true });
+  } else {
+    // First call after Happy Path — wipe stored session
+    await device.launchApp({ newInstance: true, delete: true });
+    appDataClean = true;
   }
 
-  // 2. Last resort: full relaunch (e.g., we're logged in from Happy Path)
-  await launchAppWithFabricWorkaround({
-    newInstance: true,
-    delete: true,
-  });
   await landingScreen.waitForScreen(5000);
   await landingScreen.tapLogin();
   await loginScreen.waitForScreen();

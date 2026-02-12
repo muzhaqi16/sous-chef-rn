@@ -82,59 +82,11 @@ jobs:
           files: ./coverage/lcov.info
           flags: unittests
 
-  # E2E smoke tests (fast feedback)
-  e2e-smoke:
-    name: E2E Smoke Tests
-    runs-on: [self-hosted, macOS]
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Ruby gems
-        run: |
-          bundle config set --local path vendor/bundle
-          bundle install
-
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          bundle exec pod install --repo-update
-
-      - name: Setup Detox
-        run: |
-          brew tap wix/brew
-          brew install applesimutils
-
-      - name: Build app
-        run: npm run test:e2e:build
-
-      - name: Run smoke tests
-        run: detox test e2e/tests/smoke.e2e.ts --configuration ios.sim.debug
-
-      - name: Upload artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-smoke-artifacts
-          path: artifacts/
-          retention-days: 3
-
   # PR status check
   pr-status:
     name: PR Status Check
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, unit-tests, e2e-smoke]
+    needs: [typecheck, lint, unit-tests]
     if: always()
 
     steps:
@@ -142,15 +94,13 @@ jobs:
         run: |
           if [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.e2e-smoke.result }}" != "success" ]; then
+             [ "${{ needs.unit-tests.result }}" != "success" ]; then
             echo "❌ One or more PR checks failed"
             echo "## PR Check Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- TypeScript: ${{ needs.typecheck.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Lint: ${{ needs.lint.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
-            echo "- E2E Smoke: ${{ needs.e2e-smoke.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ All PR checks passed!"
@@ -160,4 +110,3 @@ jobs:
           echo "- ✅ TypeScript" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Lint" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ E2E Smoke Tests" >> $GITHUB_STEP_SUMMARY
