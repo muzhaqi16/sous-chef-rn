@@ -58,8 +58,7 @@ jobs:
 
       - name: Clean workspace
         run: |
-          git clean -ffdx
-          npm cache clean --force
+          git clean -ffd -e ios/Pods -e vendor/bundle
 
       - name: install npm dependencies
         run: npm install
@@ -85,8 +84,7 @@ jobs:
       - name: install Cocoapod dependencies
         run: |
           cd ios
-          bundle exec pod repo update
-          bundle exec pod install
+          bundle exec pod install --repo-update
 
       - name: Set version from git tag
         run: |
@@ -97,6 +95,14 @@ jobs:
           cd ios
           agvtool new-marketing-version "$VERSION"
           agvtool new-version -all "${{ github.run_number }}"
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-derived-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-derived-
 
       - name: build archive
         run: |

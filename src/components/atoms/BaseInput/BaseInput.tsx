@@ -88,7 +88,14 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </View>
         )}
       </View>
-      {hasError && <Text style={styles.errorText}>{errorMessage}</Text>}
+      {hasError && (
+        <Text
+          testID={textInputProps.testID ? `${textInputProps.testID}-error` : undefined}
+          style={styles.errorText}
+        >
+          {errorMessage}
+        </Text>
+      )}
     </View>
   );
 };
