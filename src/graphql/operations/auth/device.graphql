@@ -62,74 +62,104 @@ query GetDeviceByDeviceId($deviceId: String!) {
 
 mutation RegisterDevice($input: DeviceRegistrationInput!) {
   registerDevice(input: $input) {
-    id
-    deviceId
-    deviceName
-    deviceType
-    platform
-    osName
-    osVersion
-    appVersion
-    userAgent
-    browserName
-    browserVersion
-    screenResolution
-    timezone
-    language
-    isActive
-    isTrusted
-    isVerified
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      deviceName
+      deviceType
+      platform
+      osName
+      osVersion
+      appVersion
+      userAgent
+      browserName
+      browserVersion
+      screenResolution
+      timezone
+      language
+      isActive
+      isTrusted
+      isVerified
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation UpdateDeviceLastSeen($id: ID!) {
   updateDevice(id: $id, input: { touchLastSeen: true }) {
-    id
-    deviceId
-    lastSeenAt
-    updatedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      lastSeenAt
+      updatedAt
+    }
   }
 }
 
 mutation TrustDevice($id: ID!) {
   updateDevice(id: $id, input: { isTrusted: true }) {
-    id
-    deviceId
-    deviceName
-    isTrusted
-    updatedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      deviceName
+      isTrusted
+      updatedAt
+    }
   }
 }
 
 mutation UntrustDevice($id: ID!) {
   updateDevice(id: $id, input: { isTrusted: false }) {
-    id
-    deviceId
-    deviceName
-    isTrusted
-    updatedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      deviceName
+      isTrusted
+      updatedAt
+    }
   }
 }
 
 mutation VerifyDevice($id: ID!) {
   updateDevice(id: $id, input: { isVerified: true }) {
-    id
-    deviceId
-    deviceName
-    isVerified
-    verifiedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      deviceName
+      isVerified
+      verifiedAt
+    }
   }
 }
 
 mutation DeactivateDevice($id: ID!) {
   updateDevice(id: $id, input: { isActive: false }) {
-    id
-    deviceId
-    deviceName
-    isActive
-    updatedAt
+    success
+    message
+    code
+    device {
+      id
+      deviceId
+      deviceName
+      isActive
+      updatedAt
+    }
   }
 }
 

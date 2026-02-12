@@ -85,7 +85,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Add shopping list item mutation (NOW OPTIMIZED: fire-and-forget pattern)
   const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
     update: (cache, { data }) => {
-      if (!data?.addItemToShoppingList || !shoppingListId) return;
+      const newItem = data?.addItemToShoppingList?.shoppingListItem;
+      if (!newItem || !shoppingListId) return;
 
       try {
         const addToShoppingListCache = createAddToParentConnectionUpdater(
@@ -96,7 +97,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         addToShoppingListCache(
           cache,
           shoppingListId,
-          data.addItemToShoppingList,
+          newItem,
         );
       } catch (error) {
         console.error('Cache update failed:', error);

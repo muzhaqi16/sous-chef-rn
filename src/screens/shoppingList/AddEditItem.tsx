@@ -69,9 +69,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
   const [addItem] = useAddItemToShoppingListMutation({
     // Update cache immediately for optimistic UI
     update: (cache, { data: mutationData }) => {
-      if (!mutationData?.addItemToShoppingList) return;
+      const newItem = mutationData?.addItemToShoppingList?.shoppingListItem;
+      if (!newItem) return;
 
-      addToShoppingListCache(cache, listId, mutationData.addItemToShoppingList);
+      addToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
       console.error('Add item error:', error);
@@ -82,8 +83,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
     errorPolicy: 'all',
     // Update cache to ensure UI reflects changes immediately
     update(cache, { data }) {
-      if (data?.updateShoppingListItem) {
-        const updatedItem = data.updateShoppingListItem;
+      const updatedItem = data?.updateShoppingListItem?.shoppingListItem;
+      if (updatedItem) {
         cache.writeFragment({
           id: cache.identify({ __typename: 'ShoppingListItem', id: updatedItem.id }),
           fragment: ShoppingListItemFragmentDoc,
@@ -189,10 +190,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       if (result.data) {
         const mutationData = isEdit
           ? 'updateShoppingListItem' in result.data
-            ? result.data.updateShoppingListItem
+            ? result.data.updateShoppingListItem?.shoppingListItem
             : null
           : 'addItemToShoppingList' in result.data
-          ? result.data.addItemToShoppingList
+          ? result.data.addItemToShoppingList?.shoppingListItem
           : null;
 
         if (mutationData) {

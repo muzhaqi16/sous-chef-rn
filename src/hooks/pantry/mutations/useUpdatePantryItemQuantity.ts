@@ -64,13 +64,14 @@ export function useUpdatePantryItemQuantity({
     errorPolicy: 'all',
     // Ensure full fragment including nested item.nutritions is written to cache
     update: (cache, { data }) => {
-      if (!data?.updatePantryItemQuantity) return;
+      const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
+      if (!pantryItem) return;
 
       cache.writeFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: data.updatePantryItemQuantity.id }),
+        id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
         fragment: PantryItemFragmentDoc,
         fragmentName: 'PantryItemFragment',
-        data: data.updatePantryItemQuantity,
+        data: pantryItem,
       });
     },
     onError: error => {
@@ -113,11 +114,17 @@ export function useUpdatePantryItemQuantity({
       },
       optimisticResponse: {
         __typename: 'Mutation',
-        updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
-          quantity: newQuantity,
-          unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-          unitId: unitId || currentItem.unit?.id,
-        }),
+        updatePantryItemQuantity: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: enhanceWithVersion(currentItem as any, {
+            quantity: newQuantity,
+            unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
+            unitId: unitId || currentItem.unit?.id,
+          }),
+        },
       },
     }).catch(error => {
       console.error('Quantity update failed:', error);

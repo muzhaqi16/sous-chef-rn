@@ -155,7 +155,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     update: (cache, { data: mutationData }) => {
-      if (!mutationData?.addItemToShoppingList || !selectedShoppingListId)
+      const shoppingListItem = mutationData?.addItemToShoppingList?.shoppingListItem;
+      if (!shoppingListItem || !selectedShoppingListId)
         return;
 
       try {
@@ -167,7 +168,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         addToShoppingListItemsCache(
           cache,
           selectedShoppingListId,
-          mutationData.addItemToShoppingList,
+          shoppingListItem,
         );
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);

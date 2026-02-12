@@ -29,16 +29,17 @@ export function useCorrectPantryItemWeight({
   const [correctMutation, { loading }] = useCorrectPantryItemWeightMutation({
     errorPolicy: 'all',
     update: (cache, { data }) => {
-      if (!data?.correctPantryItemWeight) return;
+      const pantryItem = data?.correctPantryItemWeight?.pantryItem;
+      if (!pantryItem) return;
 
       cache.writeFragment({
         id: cache.identify({
           __typename: 'PantryItem',
-          id: data.correctPantryItemWeight.id,
+          id: pantryItem.id,
         }),
         fragment: PantryItemFragmentDoc,
         fragmentName: 'PantryItemFragment',
-        data: data.correctPantryItemWeight,
+        data: pantryItem,
       });
     },
   });
@@ -63,7 +64,7 @@ export function useCorrectPantryItemWeight({
         },
       });
 
-      if (result.data?.correctPantryItemWeight) {
+      if (result.data?.correctPantryItemWeight?.pantryItem) {
         onSuccess?.();
         return true;
       }

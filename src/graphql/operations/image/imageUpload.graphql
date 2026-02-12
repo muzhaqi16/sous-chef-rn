@@ -15,42 +15,72 @@ mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
 
 mutation UpdateProfileAvatar($avatarUrl: String!) {
   updateProfileAvatar(avatarUrl: $avatarUrl) {
-    id
-    avatar
+    success
+    message
+    code
+    userProfile {
+      id
+      avatar
+    }
   }
 }
 
 mutation UpdateProfileCover($coverImageUrl: String!) {
   updateProfileCover(coverImageUrl: $coverImageUrl) {
-    id
-    coverImage
+    success
+    message
+    code
+    userProfile {
+      id
+      coverImage
+    }
   }
 }
 
 mutation RemoveProfileAvatar {
   removeProfileAvatar {
-    id
-    avatar
+    success
+    message
+    code
+    userProfile {
+      id
+      avatar
+    }
   }
 }
 
 mutation RemoveProfileCover {
   removeProfileCover {
-    id
-    coverImage
+    success
+    message
+    code
+    userProfile {
+      id
+      coverImage
+    }
   }
 }
 
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
-  updateItem(id: $id, input: { media: { imageUrl: $imageUrl } }) {
-    id
-    imageUrl
+  updateItem(id: $id, input: { imageUrl: $imageUrl }) {
+    success
+    message
+    code
+    item {
+      id
+      imageUrl
+    }
   }
 }
 
 mutation RemoveItemImage($id: ID!) {
   updateItem(id: $id, input: { removeImage: true }) {
-    id
-    imageUrl
+    success
+    message
+    code
+    item {
+      id
+      imageUrl
+    }
   }
 }

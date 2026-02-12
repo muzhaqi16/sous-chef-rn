@@ -106,7 +106,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data }) => {
-      if (!data?.createPantryItem || !pantryId) return;
+      const pantryItem = data?.createPantryItem?.pantryItem;
+      if (!pantryItem || !pantryId) return;
 
       try {
         const addToPantryCache = createAddToParentConnectionUpdater(
@@ -114,7 +115,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           'itemsConnection',
           'PantryItem',
         );
-        addToPantryCache(cache, pantryId, data.createPantryItem);
+        addToPantryCache(cache, pantryId, pantryItem);
       } catch (error) {
         console.warn('Cache update failed for createPantryItem:', error);
       }

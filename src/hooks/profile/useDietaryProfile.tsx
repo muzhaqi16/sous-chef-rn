@@ -71,10 +71,16 @@ export const useDietaryProfile = () => {
 
       return {
         __typename: 'Mutation',
-        updateDietaryProfile: enhanceWithVersion(
-          profile as any,
-          variables.input,
-        ),
+        updateDietaryProfile: {
+          __typename: 'DietaryProfilePayload',
+          success: true,
+          message: 'Dietary profile updated',
+          code: 'DIETARY_PROFILE_UPDATED',
+          dietaryProfile: enhanceWithVersion(
+            profile as any,
+            variables.input,
+          ),
+        },
       };
     },
     onError: error => {
@@ -91,18 +97,20 @@ export const useDietaryProfile = () => {
     // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
     // cache.modify() handles instant UI update when server responds (~100-200ms)
     update: (cache, { data }) => {
-      if (!data?.addRestriction || !profile?.id) return;
+      if (!data?.addRestriction?.dietaryRestriction || !profile?.id) return;
+
+      const newRestriction = data.addRestriction.dietaryRestriction;
 
       // Add restriction to DietaryProfile.restrictions array (Pattern 1)
       cache.modify({
         id: cache.identify({ __typename: 'DietaryProfile', id: profile.id }),
         fields: {
           restrictions(existingRestrictions = [], { toReference, readField }) {
-            const newRestrictionRef = toReference(data.addRestriction);
+            const newRestrictionRef = toReference(newRestriction);
 
             // Check if restriction already exists (prevent duplicates)
             const exists = existingRestrictions.some(
-              (ref: any) => readField('id', ref) === data.addRestriction.id,
+              (ref: any) => readField('id', ref) === newRestriction.id,
             );
 
             if (exists) return existingRestrictions;
@@ -134,10 +142,16 @@ export const useDietaryProfile = () => {
 
       return {
         __typename: 'Mutation',
-        updateRestriction: enhanceWithVersion(
-          currentRestriction as any,
-          variables.input,
-        ),
+        updateRestriction: {
+          __typename: 'DietaryRestrictionPayload',
+          success: true,
+          message: 'Dietary restriction updated',
+          code: 'DIETARY_RESTRICTION_UPDATED',
+          dietaryRestriction: enhanceWithVersion(
+            currentRestriction as any,
+            variables.input,
+          ),
+        },
       };
     },
     onError: error => {
@@ -153,7 +167,7 @@ export const useDietaryProfile = () => {
     errorPolicy: 'all',
     // No optimistic response for deletes (following Pattern 4 recommendation)
     update: (cache, { data }, { variables }) => {
-      if (!data?.removeRestriction || !variables?.input?.id || !profile?.id)
+      if (!data?.removeRestriction?.success || !variables?.input?.id || !profile?.id)
         return;
 
       const restrictionId = variables.input.id;

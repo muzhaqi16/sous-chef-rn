@@ -3,7 +3,7 @@
 # ============================================
 
 query GetMyNotifications(
-  $filter: NotificationFilterInput
+  $filter: NotificationFilters
   $first: Int
   $after: String
   $last: Int
@@ -41,12 +41,21 @@ query GetMyNotifications(
 
 mutation MarkNotificationAsRead($id: ID!) {
   markNotificationAsRead(id: $id) {
-    ...NotificationFragment
+    success
+    message
+    code
+    notification {
+      ...NotificationFragment
+    }
   }
 }
 
 mutation DeleteNotification($id: ID!) {
-  deleteNotification(id: $id)
+  deleteNotification(id: $id) {
+    success
+    message
+    code
+  }
 }
 
 # ============================================

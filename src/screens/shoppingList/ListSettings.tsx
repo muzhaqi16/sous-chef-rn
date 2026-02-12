@@ -86,7 +86,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteShoppingList || !variables) return;
+      if (!data?.deleteShoppingList?.shoppingList || !variables) return;
 
       try {
         const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
@@ -107,13 +107,15 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const [createList] = useCreateShoppingListMutation({
     errorPolicy: 'all',
     update(cache, { data }) {
-      if (data?.createShoppingList) {
-        addToShoppingListsCache(cache, data.createShoppingList);
+      const newList = data?.createShoppingList?.shoppingList;
+      if (newList) {
+        addToShoppingListsCache(cache, newList);
       }
     },
     onCompleted: data => {
-      if (data?.createShoppingList) {
-        setSelectedShoppingListId(data.createShoppingList.id);
+      const newList = data?.createShoppingList?.shoppingList;
+      if (newList) {
+        setSelectedShoppingListId(newList.id);
         goBack();
       }
     },

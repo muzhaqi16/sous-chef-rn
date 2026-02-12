@@ -9,7 +9,7 @@ import {
   useGetPantryEffectiveUsageRateQuery,
   PeriodGranularity,
   DateRange,
-  type AnalyticsFilterInput,
+  type AnalyticsFilters,
   type GetPantryUsageAnalyticsQuery,
   type GetPantryWasteAnalyticsQuery,
   type GetPantryConsumptionRateQuery,
@@ -154,7 +154,7 @@ export function usePantryAnalytics({
 
   const hasValidPantryId = !!pantryId?.trim();
 
-  const filter: AnalyticsFilterInput = {
+  const filter: AnalyticsFilters = {
     dateRange,
     topItemsLimit: 10,
   };

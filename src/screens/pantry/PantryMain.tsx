@@ -273,7 +273,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     ];
 
     // Add custom storage locations as tabs
-    type StorageLocation = GetStorageLocationsQuery['storageLocations'][number];
+    type StorageLocation = GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
     const customTabs: FilterTabConfig<LocationFilter>[] = storageLocations.map(
       (location: StorageLocation) => ({
         id: location.id,

@@ -225,21 +225,26 @@ mutation UpsertItemUnitConversion(
     conversionRatio: $conversionRatio
     notes: $notes
   ) {
-    id
-    fromUnit {
+    success
+    message
+    code
+    unitConversion {
       id
-      name
-      symbol
+      fromUnit {
+        id
+        name
+        symbol
+      }
+      toUnit {
+        id
+        name
+        symbol
+      }
+      conversionRatio
+      source
+      confidence
+      notes
+      createdAt
     }
-    toUnit {
-      id
-      name
-      symbol
-    }
-    conversionRatio
-    source
-    confidence
-    notes
-    createdAt
   }
 }

@@ -90,7 +90,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     },
     // Update cache directly instead of refetching
     update: (cache, { data }, { variables }) => {
-      if (!data?.deletePantry || !variables?.id || !selectedHomeId) return;
+      if (!data?.deletePantry?.pantry || !variables?.id || !selectedHomeId) return;
 
       try {
         const deletedPantryId = variables.id;
@@ -153,10 +153,10 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   const [createPantry] = useCreatePantryMutation({
     // Update cache directly instead of refetching
     update: (cache, { data }) => {
-      if (!data?.createPantry || !selectedHomeId) return;
+      const newPantry = data?.createPantry?.pantry;
+      if (!newPantry || !selectedHomeId) return;
 
       try {
-        const newPantry = data.createPantry;
 
         // Add new pantry to home's pantries array
         const homeCacheId = cache.identify({
@@ -213,10 +213,11 @@ export const PantrySettings: React.FC<StaticScreenProps<{
       }
     },
     onCompleted: data => {
-      if (data?.createPantry) {
+      const newPantryResult = data?.createPantry?.pantry;
+      if (newPantryResult) {
         // Set the newly created pantry as selected if it's marked as default
         if (isDefault) {
-          setSelectedPantryId(data.createPantry.id);
+          setSelectedPantryId(newPantryResult.id);
         }
       }
       goBack();

@@ -73,76 +73,102 @@ query CanDeleteAccount {
 
 mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   updateUser(id: $id, input: $input) {
-    id
-    email
-    emailVerified
-    role
-    onBoarded
-    timezone
-    preferredCurrency
-    language
-    defaultShoppingListId
-    defaultHomeId
-    createdAt
-    updatedAt
-    lastActiveAt
+    success
+    message
+    code
+    user {
+      id
+      email
+      emailVerified
+      role
+      onBoarded
+      timezone
+      preferredCurrency
+      language
+      defaultShoppingListId
+      defaultHomeId
+      createdAt
+      updatedAt
+      lastActiveAt
+    }
   }
 }
 
 mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
   updateProfile(input: $input) {
-    id
-    userId
-    firstName
-    lastName
-    displayName
-    bio
-    avatar
-    coverImage
-    phone
-    website
-    dateOfBirth
-    gender
-    profileVisibility
-    showEmail
-    showPhone
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    userProfile {
+      id
+      userId
+      firstName
+      lastName
+      displayName
+      bio
+      avatar
+      coverImage
+      phone
+      website
+      dateOfBirth
+      gender
+      profileVisibility
+      showEmail
+      showPhone
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   updateSettings(input: $input) {
-    id
-    user {
+    success
+    message
+    code
+    userSettings {
       id
-      email
+      user {
+        id
+        email
+      }
+      theme
+      compactMode
+      showTutorials
+      autoSync
+      offlineMode
+      shareUsageData
+      shareWithPartners
+      personalizedAds
+      preferredUnitSystem
+      language
+      timezone
+      preferredCurrency
+      enabledFeatures
+      betaFeatures
+      createdAt
+      updatedAt
     }
-    theme
-    compactMode
-    showTutorials
-    autoSync
-    offlineMode
-    shareUsageData
-    shareWithPartners
-    personalizedAds
-    preferredUnitSystem
-    language
-    timezone
-    preferredCurrency
-    enabledFeatures
-    betaFeatures
-    createdAt
-    updatedAt
   }
 }
 
 mutation DeleteAccount {
-  deleteAccount
+  deleteAccount {
+    success
+    message
+    code
+  }
 }
 
 mutation CompleteOnboarding {
-  completeOnboarding
+  completeOnboarding {
+    success
+    message
+    code
+    user {
+      ...AuthUser
+    }
+  }
 }
 
 # ============================================

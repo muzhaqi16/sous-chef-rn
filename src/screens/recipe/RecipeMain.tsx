@@ -190,18 +190,22 @@ export const RecipeMain: React.FC = React.memo(() => {
   const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
     // Use cache updates instead of refetchQueries for better performance and offline support
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe || !variables?.recipeId) return;
+      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 
-      // Remove from mySavedRecipes array
+      // Remove from mySavedRecipes connection
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
           if (!existing) return existing;
           return {
             ...existing,
-            mySavedRecipes: existing.mySavedRecipes.filter(
-              sr => sr.recipe.id !== variables.recipeId,
-            ),
+            mySavedRecipes: {
+              ...existing.mySavedRecipes,
+              edges: existing.mySavedRecipes.edges.filter(
+                edge => edge.node.recipe.id !== variables.recipeId,
+              ),
+              totalCount: existing.mySavedRecipes.totalCount - 1,
+            },
           };
         },
       );

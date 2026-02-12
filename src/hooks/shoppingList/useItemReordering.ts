@@ -235,7 +235,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         }
 
         // Check if a real move happened by comparing versions
-        const serverItem = result.data?.moveShoppingListItem;
+        const serverItem = result.data?.moveShoppingListItem?.shoppingListItem;
         const serverVersion = serverItem?.version;
         const serverSortOrder = serverItem?.sortOrder;
         const originalVersion = currentItem.version;

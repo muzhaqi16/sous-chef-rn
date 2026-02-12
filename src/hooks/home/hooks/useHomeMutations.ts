@@ -66,18 +66,18 @@ export function useHomeMutations({
       errorPolicy: 'all',
       // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict
       update: (cache, { data }) => {
-        if (!data?.createHome) return;
+        if (!data?.createHome?.home) return;
 
         try {
-          addToHomesCache(cache, data.createHome, { position: 'end' });
+          addToHomesCache(cache, data.createHome.home, { position: 'end' });
         } catch (error) {
           console.warn('Cache update failed for createHome:', error);
           refetch();
         }
       },
       onCompleted: async data => {
-        if (data?.createHome) {
-          const newHome = data.createHome;
+        if (data?.createHome?.home) {
+          const newHome = data.createHome.home;
 
           // Read fresh data from Apollo cache (no refetch needed!)
           const cachedData = client.cache.readQuery({
@@ -121,11 +121,17 @@ export function useHomeMutations({
 
       return {
         __typename: 'Mutation',
-        updateHome: enhanceWithVersion(currentHome as any, variables.input),
+        updateHome: {
+          __typename: 'HomePayload',
+          success: true,
+          message: 'Home updated successfully',
+          code: 'HOME_UPDATED',
+          home: enhanceWithVersion(currentHome as any, variables.input),
+        },
       };
     },
     onCompleted: data => {
-      if (data?.updateHome) {
+      if (data?.updateHome?.home) {
         Alert.alert('Success', 'Home updated successfully');
       }
     },
@@ -148,7 +154,7 @@ export function useHomeMutations({
   const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
     useDeleteHomeMutation({
       update: (cache, { data }, { variables }) => {
-        if (!data?.deleteHome || !variables) return;
+        if (!data?.deleteHome?.success || !variables) return;
 
         try {
           const deletedHomeId = variables.id;
@@ -159,9 +165,9 @@ export function useHomeMutations({
         }
       },
       onCompleted: async data => {
-        if (data?.deleteHome) {
+        if (data?.deleteHome?.success) {
           // If deleted home was the default, clear it or set another
-          if (data.deleteHome.id === selectedHomeId) {
+          if (data.deleteHome.home?.id === selectedHomeId) {
             // Read fresh data from Apollo cache (no refetch needed!)
             const cachedData = deleteClient.cache.readQuery({
               query: GetHomesDocument,
@@ -211,7 +217,7 @@ export function useHomeMutations({
       }
       return true;
     },
-    onSuccess: (data: any) => data?.createHome,
+    onSuccess: (data: any) => data?.createHome?.home,
     operationName: 'Create Home',
   });
 
@@ -251,7 +257,7 @@ export function useHomeMutations({
           },
         });
 
-        return result.data?.updateHome || false;
+        return result.data?.updateHome?.home || false;
       }
 
       return true;

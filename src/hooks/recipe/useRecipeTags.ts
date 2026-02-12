@@ -10,12 +10,17 @@ export function useRecipeTags() {
     fetchPolicy: 'cache-first',
   });
 
+  const savedRecipes = useMemo(
+    () => data?.mySavedRecipes?.edges?.map(e => e.node) ?? [],
+    [data?.mySavedRecipes],
+  );
+
   const tags = useMemo<string[]>(() => {
-    if (!data?.mySavedRecipes) return [];
+    if (savedRecipes.length === 0) return [];
 
     // Extract unique tags from all saved recipes
     const tagSet = new Set<string>();
-    data.mySavedRecipes.forEach(savedRecipe => {
+    savedRecipes.forEach(savedRecipe => {
       if (savedRecipe.tags && savedRecipe.tags.length > 0) {
         savedRecipe.tags.forEach(tag => {
           tagSet.add(tag);
@@ -27,14 +32,14 @@ export function useRecipeTags() {
     return Array.from(tagSet).sort((a, b) =>
       a.toLowerCase().localeCompare(b.toLowerCase()),
     );
-  }, [data?.mySavedRecipes]);
+  }, [savedRecipes]);
 
   // Count recipes per tag for potential display
   const tagCounts = useMemo<Record<string, number>>(() => {
-    if (!data?.mySavedRecipes) return {};
+    if (savedRecipes.length === 0) return {};
 
     const counts: Record<string, number> = {};
-    data.mySavedRecipes.forEach(savedRecipe => {
+    savedRecipes.forEach(savedRecipe => {
       if (savedRecipe.tags && savedRecipe.tags.length > 0) {
         savedRecipe.tags.forEach(tag => {
           counts[tag] = (counts[tag] || 0) + 1;
@@ -43,7 +48,7 @@ export function useRecipeTags() {
     });
 
     return counts;
-  }, [data?.mySavedRecipes]);
+  }, [savedRecipes]);
 
   return {
     tags,

@@ -177,7 +177,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [createPantryItem, { loading }] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data }) => {
-      if (!data?.createPantryItem || !pantryId) return;
+      const pantryItem = data?.createPantryItem?.pantryItem;
+      if (!pantryItem || !pantryId) return;
 
       try {
         const addToPantryCache = createAddToParentConnectionUpdater(
@@ -185,7 +186,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           'itemsConnection',
           'PantryItem',
         );
-        addToPantryCache(cache, pantryId, data.createPantryItem);
+        addToPantryCache(cache, pantryId, pantryItem);
       } catch (error) {
         console.warn('Cache update failed for createPantryItem:', error);
       }
@@ -462,7 +463,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                         input: { ...mutationInput, forceAdd: true } as any,
                       },
                     });
-                    if (retryResult.data?.createPantryItem) {
+                    if (retryResult.data?.createPantryItem?.pantryItem) {
                       onSuccess();
                     } else {
                       Alert.alert('Error', 'Failed to add item. Please try again.');
@@ -478,7 +479,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         }
       }
 
-      if (result.data?.createPantryItem) {
+      if (result.data?.createPantryItem?.pantryItem) {
         onSuccess();
       } else if (result.error) {
         Alert.alert('Error', 'Failed to add item. Please try again.');

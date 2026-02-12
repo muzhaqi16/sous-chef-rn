@@ -55,11 +55,11 @@ export const InvitationAcceptanceModal: React.FC<
   });
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
     update: (cache, { data }) => {
-      if (!data?.acceptShoppingListInvite) return;
+      if (!data?.acceptShoppingListInvite?.collaborator) return;
 
       try {
         const addToShoppingListsCache = createAddToQueryFieldUpdater('shoppingLists');
-        addToShoppingListsCache(cache, data.acceptShoppingListInvite, { position: 'end' });
+        addToShoppingListsCache(cache, data.acceptShoppingListInvite.collaborator, { position: 'end' });
       } catch (error) {
         console.warn('Cache update failed for acceptShoppingListInvite:', error);
       }
@@ -116,8 +116,8 @@ export const InvitationAcceptanceModal: React.FC<
           return;
         }
 
-        if (result.data?.acceptHomeInvite) {
-          const newHomeId = result.data.acceptHomeInvite.homeId;
+        if (result.data?.acceptHomeInvite?.membership) {
+          const newHomeId = result.data.acceptHomeInvite.membership.homeId;
 
           // Pass the homeId to the handler so it can update the store
           const invitationWithHomeId = {
@@ -146,7 +146,7 @@ export const InvitationAcceptanceModal: React.FC<
           return;
         }
 
-        if (result.data?.acceptShoppingListInvite) {
+        if (result.data?.acceptShoppingListInvite?.success) {
           onAccept?.(invitation);
           onClose();
         }

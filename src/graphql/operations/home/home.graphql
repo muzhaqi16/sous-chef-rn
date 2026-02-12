@@ -48,107 +48,158 @@ query GetHomeByJoinCode($joinCode: String!) {
 
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
-    ...HomeFragment
+    success
+    message
+    code
+    home {
+      ...HomeFragment
+    }
   }
 }
 
 mutation UpdateHome($id: ID!, $input: UpdateHomeInput!) {
   updateHome(id: $id, input: $input) {
-    ...HomeFragment
+    success
+    message
+    code
+    home {
+      ...HomeFragment
+    }
   }
 }
 
 mutation DeleteHome($id: ID!) {
   deleteHome(id: $id) {
-    id
-    name
+    success
+    message
+    code
+    home {
+      id
+      name
+    }
   }
 }
 
 mutation InviteToHome($input: InviteToHomeInput!) {
   inviteToHome(input: $input) {
-    ...HomeInviteFragment
+    success
+    message
+    code
+    homeInvite {
+      ...HomeInviteFragment
+    }
   }
 }
 
 mutation AcceptHomeInvite($token: String!) {
   acceptHomeInvite(token: $token) {
-    id
-    homeId
-    userId
-    role
-    status
-    displayName
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    canManageHome
-    lastActiveAt
-    joinedAt
-    leftAt
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    membership {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      lastActiveAt
+      joinedAt
+      leftAt
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation DeclineHomeInvite($token: String!) {
-  declineHomeInvite(token: $token)
+  declineHomeInvite(token: $token) {
+    success
+    message
+    code
+  }
 }
 
 mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
   updateMembership(id: $id, input: $input) {
-    id
-    homeId
-    userId
-    role
-    status
-    displayName
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    canManageHome
-    lastActiveAt
-    joinedAt
-    leftAt
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    membership {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      lastActiveAt
+      joinedAt
+      leftAt
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation RemoveMember($id: ID!) {
-  removeMember(membershipId: $id)
+  removeMember(membershipId: $id) {
+    success
+    message
+    code
+  }
 }
 
 mutation RevokeHomeInvite($id: ID!) {
-  revokeHomeInvite(id: $id)
+  revokeHomeInvite(id: $id) {
+    success
+    message
+    code
+  }
 }
 
 mutation JoinHomeByCode($joinCode: String!) {
   joinHomeByCode(joinCode: $joinCode) {
-    id
-    homeId
-    userId
-    role
-    status
-    displayName
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    canManageHome
-    lastActiveAt
-    joinedAt
-    leftAt
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    membership {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      lastActiveAt
+      joinedAt
+      leftAt
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation LeaveHome($homeId: ID!) {
-  leaveHome(homeId: $homeId)
+  leaveHome(homeId: $homeId) {
+    success
+    message
+    code
+  }
 }

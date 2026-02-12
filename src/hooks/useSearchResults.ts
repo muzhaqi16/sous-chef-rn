@@ -151,8 +151,8 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {
-      if (data.createItem) {
-        const createdItem = data.createItem;
+      if (data.createItem?.item) {
+        const createdItem = data.createItem.item;
         let finalItem = createdItem;
 
         // If there were images selected, upload them after item creation

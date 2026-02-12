@@ -4,19 +4,29 @@
 
 query GetStorageLocations($homeId: ID!) {
   storageLocations(homeId: $homeId) {
-    id
-    name
-    type
-    icon
-    color
-    temperature
-    sortOrder
-    isDefault
-    currentItemCount
-    parentLocation {
-      id
-      name
+    edges {
+      node {
+        id
+        name
+        type
+        icon
+        color
+        temperature
+        sortOrder
+        isDefault
+        currentItemCount
+        parentLocation {
+          id
+          name
+        }
+      }
+      cursor
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -78,43 +88,62 @@ query GetStorageLocation($id: ID!) {
 
 mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
   createStorageLocation(input: $input) {
-    id
-    name
-    type
-    icon
-    color
-    temperature
-    sortOrder
-    isDefault
-    currentItemCount
-    homeId
-    parentLocation {
+    success
+    message
+    code
+    storageLocation {
       id
       name
+      type
+      icon
+      color
+      temperature
+      sortOrder
+      isDefault
+      currentItemCount
+      homeId
+      parentLocation {
+        id
+        name
+      }
     }
   }
 }
 
 mutation UpdateStorageLocation($id: ID!, $input: UpdateStorageLocationInput!) {
   updateStorageLocation(id: $id, input: $input) {
-    id
-    name
-    type
-    icon
-    color
-    sortOrder
-    parentLocationId
+    success
+    message
+    code
+    storageLocation {
+      id
+      name
+      type
+      icon
+      color
+      sortOrder
+      parentLocationId
+    }
   }
 }
 
 mutation DeleteStorageLocation($id: ID!) {
-  deleteStorageLocation(id: $id)
+  deleteStorageLocation(id: $id) {
+    success
+    message
+    code
+  }
 }
 
 mutation SetDefaultStorageLocation($id: ID!) {
   setDefaultStorageLocation(id: $id) {
-    id
-    name
-    isDefault
+    success
+    message
+    code
+    storageLocation {
+      id
+      name
+      isDefault
+    }
   }
 }

@@ -68,34 +68,41 @@ export function usePantryItemMutations({
       return {
         __typename: 'Mutation' as const,
         createPantryItem: {
-          ...createOptimisticEntity('PantryItem', tempId, {
-            itemName: variables.input.itemName,
-            quantity: variables.input.quantity || variables.input.initialQuantity,
-            storageState: variables.input.storageState,
-            storageLocation: variables.input.storageLocation || null,
-            storageNotes: variables.input.storageNotes || null,
-            expiresAt: variables.input.expiresAt || null,
-            autoReorderPoint: variables.input.autoReorderPoint || null,
-            pantry: {
-              __typename: 'Pantry',
-              id: pantryId || '',
-            },
-            unit: variables.input.unitId
-              ? {
-                  __typename: 'Unit',
-                  id: variables.input.unitId,
-                }
-              : null,
-          }),
-          __typename: 'PantryItem' as const,
+          __typename: 'PantryItemPayload' as const,
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: {
+            ...createOptimisticEntity('PantryItem', tempId, {
+              itemName: variables.input.itemName,
+              quantity: variables.input.quantity || variables.input.initialQuantity,
+              storageState: variables.input.storageState,
+              storageLocation: variables.input.storageLocation || null,
+              storageNotes: variables.input.storageNotes || null,
+              expiresAt: variables.input.expiresAt || null,
+              autoReorderPoint: variables.input.autoReorderPoint || null,
+              pantry: {
+                __typename: 'Pantry',
+                id: pantryId || '',
+              },
+              unit: variables.input.unitId
+                ? {
+                    __typename: 'Unit',
+                    id: variables.input.unitId,
+                  }
+                : null,
+            }),
+            __typename: 'PantryItem' as const,
+          },
         } as any,
       };
     },
     update: (cache: any, { data }: any) => {
-      if (!data?.createPantryItem || !pantryId) return;
+      const pantryItem = data?.createPantryItem?.pantryItem;
+      if (!pantryItem || !pantryId) return;
 
       try {
-        addToPantryItemsCache(cache, pantryId, data.createPantryItem);
+        addToPantryItemsCache(cache, pantryId, pantryItem);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         refetch();
@@ -127,11 +134,17 @@ export function usePantryItemMutations({
         return {
           __typename: 'Mutation',
           updatePantryItem: {
-            __typename: 'PantryItem',
-            id: variables.id,
-            version: 1,
-            updatedAt: new Date().toISOString(),
-            ...variables.input,
+            __typename: 'PantryItemPayload',
+            success: true,
+            message: '',
+            code: 'SUCCESS',
+            pantryItem: {
+              __typename: 'PantryItem',
+              id: variables.id,
+              version: 1,
+              updatedAt: new Date().toISOString(),
+              ...variables.input,
+            },
           } as any,
         };
       }
@@ -148,7 +161,13 @@ export function usePantryItemMutations({
 
       return {
         __typename: 'Mutation',
-        updatePantryItem: optimisticUpdate as any,
+        updatePantryItem: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: optimisticUpdate,
+        } as any,
       };
     },
   });
@@ -159,10 +178,16 @@ export function usePantryItemMutations({
     optimisticResponse: variables => ({
       __typename: 'Mutation',
       deletePantryItem: {
-        __typename: 'PantryItem',
-        id: variables.id,
+        __typename: 'PantryItemPayload',
+        success: true,
+        message: '',
+        code: 'SUCCESS',
+        pantryItem: {
+          __typename: 'PantryItem',
+          id: variables.id,
+        },
       },
-    }),
+    } as any),
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
@@ -171,7 +196,7 @@ export function usePantryItemMutations({
       refetch(); // Restore state on error
     },
     update: (cache: any, { data }: any, { variables }: any) => {
-      if (!data?.deletePantryItem || !pantryId || !variables) {
+      if (!data?.deletePantryItem?.pantryItem || !pantryId || !variables) {
         return;
       }
 
@@ -198,7 +223,7 @@ export function usePantryItemMutations({
       ...(input.category && { itemCategory: input.category }),
       ...(input.barcode && { itemUpc: input.barcode }),
     }),
-    onSuccess: (data: any) => data?.createPantryItem,
+    onSuccess: (data: any) => data?.createPantryItem?.pantryItem,
     operationName: 'Add Pantry Item',
   });
 
@@ -207,7 +232,7 @@ export function usePantryItemMutations({
       mutation: updateItemMutation,
       parentId: () => pantryId,
       itemId,
-      onSuccess: (data: any) => data?.updatePantryItem,
+      onSuccess: (data: any) => data?.updatePantryItem?.pantryItem,
       onVersionConflict: refetch,
       operationName: 'Update Pantry Item',
     });

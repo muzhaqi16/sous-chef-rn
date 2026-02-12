@@ -49,21 +49,22 @@ export function useAdjustPantryItemQuantity({
           },
         },
         update: (cache, { data: mutationData }) => {
-          if (!mutationData?.adjustPantryItemQuantity) return;
+          const pantryItem = mutationData?.adjustPantryItemQuantity?.pantryItem;
+          if (!pantryItem) return;
 
           cache.writeFragment({
             id: cache.identify({
               __typename: 'PantryItem',
-              id: mutationData.adjustPantryItemQuantity.id,
+              id: pantryItem.id,
             }),
             fragment: PantryItemFragmentDoc,
             fragmentName: 'PantryItemFragment',
-            data: mutationData.adjustPantryItemQuantity,
+            data: pantryItem,
           });
         },
       });
 
-      if (result.data?.adjustPantryItemQuantity) {
+      if (result.data?.adjustPantryItemQuantity?.pantryItem) {
         onSuccess?.();
         return true;
       }

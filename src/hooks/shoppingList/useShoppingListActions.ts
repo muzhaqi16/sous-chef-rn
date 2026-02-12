@@ -112,10 +112,11 @@ export function useShoppingListActions({
           },
           // NO optimisticResponse - cache.modify handles instant UI
           onCompleted: data => {
-            if (data?.updateShoppingListItemQuantity) {
+            const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
+            if (updatedItem) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                data.updateShoppingListItemQuantity.id,
+                updatedItem.id,
                 'quantity',
               );
             }
@@ -199,10 +200,11 @@ export function useShoppingListActions({
           },
           // NO optimisticResponse - cache.modify handles instant UI
           onCompleted: data => {
-            if (data?.updateShoppingListItemQuantity) {
+            const updatedItem = data?.updateShoppingListItemQuantity?.shoppingListItem;
+            if (updatedItem) {
               optimisticDataPersistence.clear(
                 'ShoppingListItem',
-                data.updateShoppingListItemQuantity.id,
+                updatedItem.id,
                 'quantity',
               );
             }

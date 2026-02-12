@@ -49,13 +49,13 @@ export function useHomeInvitations({
     // 1. Invites don't immediately add members (requires acceptance)
     // 2. Real-time subscription handles all updates when invite is sent/accepted
     update: (cache, { data }, { variables }) => {
-      if (!data?.inviteToHome || !variables) return;
+      if (!data?.inviteToHome?.homeInvite || !variables) return;
 
       try {
         const homeId = variables.input.homeId;
 
         // Empty cache.modify - subscription handles the actual update
-        if (data.inviteToHome) {
+        if (data.inviteToHome.homeInvite) {
           cache.modify({
             id: cache.identify({ __typename: 'Home', id: homeId }),
             fields: {
@@ -87,7 +87,7 @@ export function useHomeInvitations({
       // The mutation returns only Membership data (not the full Home object)
       // We refetch GetHomesQuery to get the complete home with all fields
       update: (_cache, { data }) => {
-        if (!data?.joinHomeByCode) return;
+        if (!data?.joinHomeByCode?.membership) return;
 
         try {
           // Refetch homes list to get the newly joined home with all fields
@@ -97,8 +97,8 @@ export function useHomeInvitations({
         }
       },
       onCompleted: data => {
-        if (data?.joinHomeByCode) {
-          const homeId = data.joinHomeByCode.homeId;
+        if (data?.joinHomeByCode?.membership) {
+          const homeId = data.joinHomeByCode.membership.homeId;
 
           // Set as default if this is the first home
           const freshHomes = homes || [];
@@ -155,7 +155,7 @@ export function useHomeInvitations({
         variables: { joinCode: joinCode.trim() },
       });
 
-      return result.data?.joinHomeByCode || false;
+      return result.data?.joinHomeByCode?.membership || false;
     } catch {
       return false;
     }

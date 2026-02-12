@@ -333,25 +333,20 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       name: data.name,
       description: data.description || undefined,
       type: (data.type as ItemType) || undefined,
-      brand: brandId || brandName
-        ? { brandId: brandId || undefined, brandName: brandName || undefined }
-        : undefined,
-      classification: {
-        storageState: (data.storageState as StorageState) || undefined,
-        categoryIds:
-          data.categoryIds && data.categoryIds.length > 0
-            ? data.categoryIds
-            : undefined,
-        tags: allTags,
-      },
-      productDetails: {
-        primaryUpc: data.upc || undefined,
-        vendor: brandName || undefined,
-        shelfLifeDays: data.shelfLifeDays || undefined,
-      },
-      media: data.imageUrl ? { imageUrl: data.imageUrl } : undefined,
+      brandId: brandId || undefined,
+      brandName: brandName || undefined,
+      storageState: (data.storageState as StorageState) || undefined,
+      categoryIds:
+        data.categoryIds && data.categoryIds.length > 0
+          ? data.categoryIds
+          : undefined,
+      tags: allTags,
+      primaryUpc: data.upc || undefined,
+      vendor: brandName || undefined,
+      shelfLifeDays: data.shelfLifeDays || undefined,
+      imageUrl: data.imageUrl || undefined,
       netWeights: netWeights.length > 0 ? netWeights : undefined,
-      unitConfig: units.length > 0 ? { units } : undefined,
+      units: units.length > 0 ? units : undefined,
       // Pass through for form-level processing
       sku: data.sku || undefined,
       baseDimension: data.baseDimension || undefined,

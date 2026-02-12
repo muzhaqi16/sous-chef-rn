@@ -30,9 +30,8 @@ export function useConvertExpiredToWaste({
       const result = await convertMutation({
         variables: { pantryItemId },
         update: (cache, { data: mutationData }) => {
-          if (!mutationData?.convertExpiredToWaste) return;
-
-          const updatedItem = mutationData.convertExpiredToWaste;
+          const updatedItem = mutationData?.convertExpiredToWaste?.pantryItem;
+          if (!updatedItem) return;
 
           // Update the pantry item in cache
           cache.modify({
@@ -45,7 +44,7 @@ export function useConvertExpiredToWaste({
         },
       });
 
-      if (result.data?.convertExpiredToWaste) {
+      if (result.data?.convertExpiredToWaste?.pantryItem) {
         onSuccess?.();
         return true;
       }

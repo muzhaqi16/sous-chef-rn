@@ -93,7 +93,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
 
   // Fetch tree data after initial locations load (deferred, non-blocking)
   useEffect(() => {
-    if (!shouldSkip && homeId && data?.storageLocations && !hasTreeFetchedRef.current) {
+    if (!shouldSkip && homeId && data?.storageLocations?.edges && !hasTreeFetchedRef.current) {
       hasTreeFetchedRef.current = true;
       // Defer tree fetch to avoid competing with screen-critical queries
       const timeoutId = setTimeout(() => {
@@ -101,7 +101,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [shouldSkip, homeId, data?.storageLocations, fetchTree]);
+  }, [shouldSkip, homeId, data?.storageLocations?.edges, fetchTree]);
 
   // Reset fetch flag when homeId changes
   useEffect(() => {
@@ -118,11 +118,11 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     useCreateStorageLocationMutation({
       errorPolicy: 'all',
       update: (cache, { data }) => {
-        if (!data?.createStorageLocation || !homeId) return;
+        if (!data?.createStorageLocation?.storageLocation || !homeId) return;
 
         try {
           const addToStorageLocationsCache = createAddToQueryFieldUpdater('storageLocations');
-          addToStorageLocationsCache(cache, data.createStorageLocation, { position: 'end' });
+          addToStorageLocationsCache(cache, data.createStorageLocation.storageLocation, { position: 'end' });
         } catch (error) {
           console.warn('Cache update failed for createStorageLocation:', error);
           refetch();
@@ -143,7 +143,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   const [deleteMutation] = useDeleteStorageLocationMutation({
     errorPolicy: 'all',
     update: (cache, { data }, { variables }) => {
-      if (!data?.deleteStorageLocation || !variables || !homeId) return;
+      if (!data?.deleteStorageLocation?.success || !variables || !homeId) return;
 
       try {
         const removeFromStorageLocationsCache = createRemoveFromQueryFieldUpdater(
@@ -180,7 +180,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
       ...input,
       homeId,
     }),
-    onSuccess: (data: any) => data?.createStorageLocation,
+    onSuccess: (data: any) => data?.createStorageLocation?.storageLocation,
     operationName: 'Create Storage Location',
   });
 
@@ -191,7 +191,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
           variables: { id, input },
         });
 
-        return result.data?.updateStorageLocation ?? false;
+        return result.data?.updateStorageLocation?.storageLocation ?? false;
       } catch (error) {
         console.error('Update storage location error:', error);
         return false;
@@ -207,7 +207,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
           variables: { id },
         });
 
-        return result.data?.deleteStorageLocation ?? false;
+        return result.data?.deleteStorageLocation?.success ?? false;
       } catch (error) {
         console.error('Delete storage location error:', error);
         return false;
@@ -223,7 +223,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
           variables: { id },
         });
 
-        return result.data?.setDefaultStorageLocation ?? false;
+        return result.data?.setDefaultStorageLocation?.storageLocation ?? false;
       } catch (error) {
         console.error('Set default storage location error:', error);
         return false;
@@ -233,7 +233,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   );
 
   // Preserve data even when query fails to prevent cascade failures
-  const locations = usePreservedArrayData(data?.storageLocations);
+  const locations = usePreservedArrayData(data?.storageLocations?.edges?.map(e => e.node));
   const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
 
   // Build tree from flat list if tree query returns empty
