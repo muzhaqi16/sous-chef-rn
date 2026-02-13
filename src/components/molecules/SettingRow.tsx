@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, Pressable, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -142,15 +142,15 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
   return (
     <>
-      <TouchableOpacity
+      <Pressable
         testID={item.testID || `profile-${item.key}-button`}
-        activeOpacity={item.type === 'info' ? 1 : 0.7}
         onPress={item.type === 'info' ? undefined : handlePress}
         disabled={item.type === 'info'}
-        style={[
+        style={({pressed}) => [
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
+          pressed && styles.pressed,
         ]}
         accessibilityRole={item.type === 'info' ? 'text' : 'button'}
         accessibilityLabel={getAccessibilityLabel()}
@@ -239,7 +239,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             />
           )}
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       {/* Text Edit Bottom Sheet */}
       <TextEditBottomSheet
@@ -275,9 +275,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <Text style={styles.sheetTitle}>{item.label}</Text>
             <View style={styles.sheetDivider} />
             {item.options.map((opt: any) => (
-              <TouchableOpacity
+              <Pressable
                 key={opt.value}
-                style={styles.sheetOption}
+                style={({pressed}) => [styles.sheetOption, pressed && styles.pressed]}
                 onPress={handleModalOptionPress(opt.value)}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}
@@ -293,7 +293,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                     color={theme.colors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </BottomSheetView>
         </BottomSheetModal>
@@ -360,5 +360,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     flex: 1,
     color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

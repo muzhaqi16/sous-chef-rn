@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
 
@@ -27,9 +27,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     <View style={styles.header}>
       <View style={styles.backButton}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+          <Pressable onPress={onBack} style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}>
             <Icon name="arrow-back" size={theme.sizes.icon.md} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 
@@ -37,10 +37,10 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 
       <View style={styles.actions}>
         {actions.map((action, index) => (
-          <TouchableOpacity
+          <Pressable
             key={index}
             onPress={action.onPress}
-            style={styles.iconButton}
+            style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}
           >
             <Icon
               library={action.library}
@@ -48,7 +48,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
               size={theme.sizes.icon.md}
               color={action.color || theme.colors.textPrimary}
             />
-          </TouchableOpacity>
+          </Pressable>
         ))}
         {actions.length === 0 && <View style={styles.placeholder} />}
       </View>
@@ -91,5 +91,8 @@ const styles = StyleSheet.create(theme => ({
   placeholder: {
     width: 40,
     height: 40,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

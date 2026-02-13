@@ -14,6 +14,7 @@ import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#hooks/settings/useSettings';
+import { HapticService } from '#services/haptic/HapticService';
 
 export const TAB_BAR_HEIGHT = 65;
 
@@ -121,6 +122,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       ) => {
         // Set shared value immediately for instant UI-thread icon feedback
         activeTabIndex.value = targetIndex;
+        HapticService.selection();
 
         const event = navigation.emit({
           type: 'tabPress',

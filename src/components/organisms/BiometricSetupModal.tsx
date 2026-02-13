@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   Modal,
   Alert,
   ScrollView,
@@ -266,25 +266,25 @@ export const BiometricSetupModal = ({
               )}
 
               <View style={styles.buttons}>
-                <TouchableOpacity
-                  style={[styles.button, styles.primaryButton]}
+                <Pressable
+                  style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
                   onPress={handleEnableBiometric}
                   disabled={isEnabling}
                 >
                   <Text style={[styles.buttonText, styles.primaryButtonText]}>
                     {isEnabling ? 'Setting up...' : 'Enable Now'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity
-                  style={[styles.button, styles.secondaryButton]}
+                <Pressable
+                  style={({pressed}) => [styles.button, styles.secondaryButton, pressed && styles.pressed]}
                   onPress={handleSkip}
                   disabled={isEnabling}
                 >
                   <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                     Set up later
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -415,5 +415,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

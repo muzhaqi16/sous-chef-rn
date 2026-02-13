@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -107,10 +107,9 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           style={[styles.highlightOverlay, animatedHighlightStyle]}
         />
 
-        <TouchableOpacity
-          style={styles.homeHeader}
+        <Pressable
+          style={({pressed}) => [styles.homeHeader, pressed && onPress && styles.pressed]}
           onPress={() => onPress?.(home.id)}
-          activeOpacity={onPress ? 0.7 : 1}
           accessibilityRole="button"
           accessibilityLabel={`${home.name}, ${home.members?.length || 0} ${
             (home.members?.length || 0) === 1 ? 'member' : 'members'
@@ -143,7 +142,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               library="Ionicons"
             />
           )}
-        </TouchableOpacity>
+        </Pressable>
 
         <HomeActions
           homeId={home.id}
@@ -221,5 +220,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

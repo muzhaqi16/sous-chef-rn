@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, Pressable, Text, ActivityIndicator } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -222,8 +222,8 @@ export function LoginScreen() {
       {shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
           {/* Main Biometric Login Button */}
-          <TouchableOpacity
-            style={styles.biometricButton}
+          <Pressable
+            style={({pressed}) => [styles.biometricButton, pressed && styles.pressed]}
             onPress={() => handleBiometricLogin()}
             disabled={isBiometricLoading || isLoggingIn}
             accessibilityRole="button"
@@ -252,7 +252,7 @@ export function LoginScreen() {
             >
               {getBiometricButtonText()}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
@@ -290,5 +290,8 @@ const styles = StyleSheet.create(theme => ({
   },
   biometricTextDisabled: {
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

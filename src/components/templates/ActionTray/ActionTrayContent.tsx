@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -29,9 +29,9 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
           {title && <Text style={styles.title}>{title}</Text>}
           <View style={styles.fill} />
           {showCloseButton && onClose && (
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>
               <Icon name="close" size={16} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       )}
@@ -72,5 +72,8 @@ const styles = StyleSheet.create(theme => ({
   },
   childrenContainer: {
     flex: 1,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { ScrollView, TouchableOpacity, Text } from 'react-native';
+import { ScrollView, Pressable, Text } from 'react-native';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -19,9 +19,8 @@ import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-
-// Tab bar height constant (65px from FloatingTabBar)
-const TAB_BAR_HEIGHT = 65;
+import { getTabBarBottomPadding } from '#constants/layout';
+import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
@@ -91,7 +90,7 @@ export const ProfileScreen = () => {
   // Show cached profile data immediately while loading fresh data in background
   // Only show loading state if we have NO data at all OR biometric data is still loading
   if ((loading && !profile) || biometricLoading) {
-    return null; // or loading component
+    return <ProfileSkeleton />;
   }
   return (
     <SafeAreaView
@@ -112,7 +111,7 @@ export const ProfileScreen = () => {
         testID="profile-scroll-view"
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16 },
+          { paddingBottom: getTabBarBottomPadding(safeBottom) },
         ]}
       >
         {sections
@@ -173,7 +172,7 @@ export const ProfileScreen = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       >
-        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+        <Pressable style={({pressed}) => [styles.menuItem, pressed && styles.pressed]} onPress={handleDeleteAccount}>
           <Icon
             library="Feather"
             name="trash-2"
@@ -181,7 +180,7 @@ export const ProfileScreen = () => {
             color={theme.colors.error}
           />
           <Text style={styles.menuItemTextDestructive}>Delete Account</Text>
-        </TouchableOpacity>
+        </Pressable>
       </ActionTray>
     </SafeAreaView>
   );
@@ -210,5 +209,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
     color: theme.colors.error,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

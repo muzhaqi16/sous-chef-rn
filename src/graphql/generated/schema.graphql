@@ -870,6 +870,11 @@ input BrandFilters {
   search: String
 }
 
+input BrandOpsInput {
+  addBrandIds: [String!]
+  removeBrandIds: [String!]
+}
+
 """
 Order by options for brands
 """
@@ -1042,6 +1047,12 @@ Category connection for pagination (Relay spec)
 type CategoryEdge {
   cursor: String!
   node: Category!
+}
+
+input CategoryOpsInput {
+  addCategoryIds: [String!]
+  primaryCategoryId: String
+  removeCategoryIds: [String!]
 }
 
 type CategoryPayload implements MutationPayload {
@@ -1453,37 +1464,19 @@ input CreateHomeInput {
 }
 
 input CreateItemInput {
-  allergens: JSON
-  alternateUpcs: [String!]
-  brandId: String
-  brandName: String
-  categoryIds: [String!]
-  defaultUnit: String
-  density: Float
+  brand: BrandReferenceInput
+  classification: ItemClassificationInput
   description: String
-  displayUnitId: String
-  displayUnitName: String
   externalSource: ExternalSourceShorthandInput
   externalSources: [ExternalSourceMappingInput!]
-  healthBenefits: JSON
-  imageUrl: String
-  images: JSON
-  ingredients: JSON
+  healthInfo: HealthInfoInput
+  media: MediaAssetsInput
   metadata: JSON
   name: String!
-  netWeight: Float
-  netWeights: [ItemNetWeightInput!]
-  preferredTrackingUnitId: String
-  primaryUpc: String
-  servingSize: Float
-  servingSizeUnit: String
-  servingsPerPackage: Int
-  shelfLifeDays: Int
-  storageState: StorageState
-  tags: [String!]
+  packageInfo: PackageInfoInput
+  productDetails: ProductDetailsInput
   type: ItemType
-  units: [ItemUnitInput!]
-  vendor: String
+  unitConfig: ItemUnitConfigInput
 }
 
 """
@@ -2796,6 +2789,12 @@ enum HealthGoal {
   SUGAR_FREE
 }
 
+input HealthInfoInput {
+  allergens: JSON
+  healthBenefits: JSON
+  ingredients: JSON
+}
+
 """
 Home/household for managing pantries and shopping lists
 Cache: 5 minutes - metadata changes occasionally
@@ -3425,6 +3424,12 @@ type ItemCategoryPayload implements MutationPayload {
   success: Boolean!
 }
 
+input ItemClassificationInput {
+  categoryIds: [String!]
+  storageState: StorageState
+  tags: [String!]
+}
+
 enum ItemCondition {
   EXPIRED
   FAIR
@@ -3657,6 +3662,13 @@ type ItemUnit {
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
   version: Int!
+}
+
+input ItemUnitConfigInput {
+  defaultUnit: String
+  density: Float
+  preferredTrackingUnitId: String
+  units: [ItemUnitInput!]
 }
 
 """
@@ -5670,6 +5682,16 @@ type PackageBreakdown {
   totalNetWeight: Float
 }
 
+input PackageInfoInput {
+  displayUnitId: String
+  displayUnitName: String
+  netWeight: Float
+  netWeights: [ItemNetWeightInput!]
+  servingSize: Float
+  servingSizeUnit: String
+  servingsPerPackage: Int
+}
+
 type PageInfo {
   endCursor: String
   hasNextPage: Boolean!
@@ -6319,6 +6341,13 @@ input PrivacySettingsInput {
   personalizedAds: Boolean
   shareUsageData: Boolean
   shareWithPartners: Boolean
+}
+
+input ProductDetailsInput {
+  alternateUpcs: [String!]
+  primaryUpc: String
+  shelfLifeDays: Int
+  vendor: String
 }
 
 """
@@ -8637,6 +8666,12 @@ input StoreSkuInput {
   storeId: String!
 }
 
+input StoreSkuOpsInput {
+  addStoreSkus: [StoreSkuInput!]
+  removeStoreSkuIds: [String!]
+  storeSkus: [StoreSkuInput!]
+}
+
 """
 Store statistics and analytics
 Cache: 10 minutes - stats aggregate over time
@@ -8900,7 +8935,7 @@ type SyncShoppingListItemResult {
   """
   operation: SyncOperation!
   """
-  The server-assigned MongoDB ObjectID (null if item was deleted before reaching server)
+  The server-assigned database ID (null if item was deleted before reaching server)
   """
   serverId: ID
   """
@@ -8922,6 +8957,11 @@ input TagFilterInput {
   """
   hasTags: [String!]
   tags: [String!]
+}
+
+input TagOpsInput {
+  addTags: [String!]
+  removeTags: [String!]
 }
 
 """
@@ -9026,6 +9066,11 @@ type Unit {
   symbol: String!
   type: UnitType!
   updatedAt: DateTime!
+}
+
+input UnitOpsInput {
+  addUnits: [ItemUnitInput!]
+  removeUnitIds: [String!]
 }
 
 type UnitPayload implements MutationPayload {
@@ -9246,38 +9291,24 @@ Consolidated input for updating items.
 Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
 """
 input UpdateItemInput {
-  addBrandIds: [String!]
-  addCategoryIds: [String!]
-  addStoreSkus: [StoreSkuInput!]
-  addTags: [String!]
-  addUnits: [ItemUnitInput!]
-  allergens: JSON
-  alternateUpcs: [String!]
-  brandId: String
-  brandName: String
-  categoryIds: [String!]
-  defaultUnit: String
-  density: Float
+  brand: BrandReferenceInput
+  brandOps: BrandOpsInput
+  categoryOps: CategoryOpsInput
+  classification: ItemClassificationInput
   description: String
-  displayUnitId: String
-  displayUnitName: String
   editReason: String
-  healthBenefits: JSON
-  imageUrl: String
-  images: JSON
+  healthInfo: HealthInfoInput
   """
   Increment popularity counter
   """
   incrementPopularity: Boolean
-  ingredients: JSON
+  media: MediaAssetsInput
   mergeMetadata: Boolean
   metadata: JSON
   name: String
-  netWeight: Float
-  netWeights: [ItemNetWeightInput!]
   nutritionFacts: [NutritionFactInput!]
+  packageInfo: PackageInfoInput
   popularity: Int
-  preferredTrackingUnitId: String
   """
   Update item price
   """
@@ -9290,28 +9321,18 @@ input UpdateItemInput {
   Store ID for price update
   """
   priceStoreId: String
-  primaryCategoryId: String
-  primaryUpc: String
-  removeBrandIds: [String!]
-  removeCategoryIds: [String!]
+  productDetails: ProductDetailsInput
   """
   Remove the item image
   """
   removeImage: Boolean
-  removeStoreSkuIds: [String!]
-  removeTags: [String!]
-  removeUnitIds: [String!]
-  servingSize: Float
-  servingSizeUnit: String
-  servingsPerPackage: Int
-  shelfLifeDays: Int
   showInOnboarding: Boolean
   status: ItemStatus
-  storeSkus: [StoreSkuInput!]
-  tags: [String!]
+  storeSkuOps: StoreSkuOpsInput
+  tagOps: TagOpsInput
   type: ItemType
-  units: [ItemUnitInput!]
-  vendor: String
+  unitConfig: ItemUnitConfigInput
+  unitOps: UnitOpsInput
   visibility: Visibility
 }
 

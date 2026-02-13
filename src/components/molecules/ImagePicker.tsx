@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Text, TouchableOpacity, Alert } from 'react-native';
+import { Text, Pressable, Alert } from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
@@ -173,9 +173,9 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   if (children) {
     return (
       <>
-        <TouchableOpacity onPress={showImagePicker} disabled={disabled}>
+        <Pressable onPress={showImagePicker} disabled={disabled} style={({pressed}) => pressed && styles.pressed}>
           {children}
-        </TouchableOpacity>
+        </Pressable>
         {renderSheet()}
       </>
     );
@@ -183,14 +183,14 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={[styles.pickerButton, disabled && styles.pickerButtonDisabled]}
+      <Pressable
+        style={({pressed}) => [styles.pickerButton, disabled && styles.pickerButtonDisabled, pressed && styles.pressed]}
         onPress={showImagePicker}
         disabled={disabled}
       >
         <Icon name="add-a-photo" size={24} color={theme.colors.primary} />
         <Text style={styles.pickerButtonText}>Add Photo</Text>
-      </TouchableOpacity>
+      </Pressable>
       {renderSheet()}
     </>
   );
@@ -218,5 +218,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.primary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

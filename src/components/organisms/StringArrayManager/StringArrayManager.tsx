@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   Modal,
   TextInput,
   ActivityIndicator,
@@ -212,14 +212,14 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
         {showAddButton && (
-          <TouchableOpacity onPress={handleAddPress} style={styles.addButton}>
+          <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
             <Icon
               library="Feather"
               name="plus"
               size={20}
               color={theme.colors.primary}
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 
@@ -230,8 +230,8 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             <View style={styles.displayChip}>
               <Text style={styles.displayChipText}>{item}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.removeButton}
+            <Pressable
+              style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
               onPress={() => handleRemove(item)}
             >
               <Icon
@@ -240,7 +240,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
                 size={18}
                 color={theme.colors.error}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ))}
 
@@ -276,20 +276,21 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             {error && <Text style={styles.errorText}>{error}</Text>}
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[commonStyles.button, styles.modalButton]}
+              <Pressable
+                style={({pressed}) => [commonStyles.button, styles.modalButton, pressed && styles.pressed]}
                 onPress={handleCancel}
                 disabled={loading}
               >
                 <Text style={commonStyles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({pressed}) => [
                   commonStyles.button,
                   commonStyles.buttonPrimary,
                   styles.modalButton,
                   loading && styles.buttonDisabled,
+                  pressed && styles.pressed,
                 ]}
                 onPress={handleAdd}
                 disabled={loading}
@@ -306,7 +307,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
                     Add
                   </Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -395,5 +396,8 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

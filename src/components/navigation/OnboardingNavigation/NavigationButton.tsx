@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   LinearTransition,
@@ -7,7 +7,7 @@ import Animated, {
 import type { NavigationButtonProps } from './types';
 
 const AnimatedText = Animated.createAnimatedComponent(Text);
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const LayoutTransitionDefault = LinearTransition.duration(250);
 
@@ -19,16 +19,17 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
   const { theme } = useUnistyles();
 
   return (
-    <AnimatedTouchableOpacity
+    <AnimatedPressable
       onPress={action.onPress}
       disabled={action.disabled}
-      style={[
+      style={({pressed}) => [
         styles.button,
         {
           backgroundColor: action.backgroundColor,
           opacity: action.disabled ? 0.6 : 1,
         },
         style,
+        pressed && styles.pressed,
       ]}
       layout={LayoutTransitionDefault}
     >
@@ -46,7 +47,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
         {action.iconVisible && action.icon}
         {action.label}
       </AnimatedText>
-    </AnimatedTouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
@@ -65,5 +66,8 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     letterSpacing: 0.5,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

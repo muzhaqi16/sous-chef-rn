@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, forwardRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#/components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,11 +85,10 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
           <Text style={styles.title}>Add Photo</Text>
           <View style={styles.optionsContainer}>
             {options.map(option => (
-              <TouchableOpacity
+              <Pressable
                 key={option.key}
-                style={styles.option}
+                style={({pressed}) => [styles.option, pressed && styles.pressed]}
                 onPress={option.onPress}
-                activeOpacity={0.7}
               >
                 <View style={styles.iconContainer}>
                   <Icon
@@ -100,16 +99,15 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
                   />
                 </View>
                 <Text style={styles.optionLabel}>{option.label}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <Pressable
+            style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
             onPress={handleDismiss}
-            activeOpacity={0.7}
           >
             <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
         </BottomSheetView>
       </BottomSheetModal>
     );
@@ -164,5 +162,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

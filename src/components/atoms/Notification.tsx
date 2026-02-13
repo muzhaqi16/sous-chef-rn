@@ -1,5 +1,5 @@
 import React, {useState, useRef, useEffect} from 'react';
-import {View, Text, Animated, TouchableOpacity} from 'react-native';
+import {View, Text, Animated, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 interface NotificationBannerProps {
@@ -48,7 +48,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
       <View style={styles.bannerInner}>
         {title ? <Text style={styles.bannerTitle}>{title}</Text> : null}
         <Text style={styles.bannerMessage}>{message}</Text>
-        <TouchableOpacity
+        <Pressable
           onPress={() => {
             Animated.timing(slide, {
               toValue: -100,
@@ -58,9 +58,10 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
               setShow(false);
               onClose?.();
             });
-          }}>
+          }}
+          style={({pressed}) => pressed && styles.pressed}>
           <Text style={styles.bannerClose}>×</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </Animated.View>
   );
@@ -97,5 +98,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.lg,
     paddingHorizontal: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

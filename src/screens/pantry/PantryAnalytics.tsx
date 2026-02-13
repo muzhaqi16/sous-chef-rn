@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -417,10 +417,10 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <Text style={styles.granularityLabel}>Period:</Text>
           <View style={styles.granularityButtons}>
             {granularityOptions.map(option => (
-              <TouchableOpacity
+              <Pressable
                 key={option.value}
                 onPress={() => setLedgerGranularity(option.value)}
-                style={[
+                style={({pressed}) => [
                   styles.granularityButton,
                   {
                     backgroundColor:
@@ -428,6 +428,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                         ? theme.colors.primary
                         : theme.colors.surface,
                   },
+                  pressed && styles.pressed,
                 ]}
               >
                 <Text
@@ -443,7 +444,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                 >
                   {option.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -937,9 +938,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     <View style={commonStyles.container}>
       {/* Header */}
       <View style={[commonStyles.rowSpaceBetween, styles.header]}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
+        <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[commonStyles.title, styles.headerTitle]}>Pantry Analytics</Text>
         <View style={styles.placeholder} />
       </View>
@@ -1070,5 +1071,8 @@ const styles = StyleSheet.create(theme => ({
   unitBreakdownCount: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

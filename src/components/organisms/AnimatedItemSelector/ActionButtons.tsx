@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   FadeIn,
@@ -13,8 +13,8 @@ interface ActionButtonsProps {
   actions: ActionButtonConfig[];
 }
 
-const AnimatedTouchableOpacity =
-  Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable =
+  Animated.createAnimatedComponent(Pressable);
 
 const ActionButton: React.FC<{
   action: ActionButtonConfig;
@@ -24,13 +24,14 @@ const ActionButton: React.FC<{
   const variant = action.variant || 'secondary';
 
   return (
-    <AnimatedTouchableOpacity
+    <AnimatedPressable
       entering={FadeInUp.delay(index * 15).duration(150)}
       layout={LinearTransition}
-      style={[
+      style={({pressed}) => [
         styles.actionButton,
         variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
         action.disabled && styles.disabledButton,
+        pressed && styles.pressed,
       ]}
       onPress={action.onPress}
       disabled={action.disabled}
@@ -55,7 +56,7 @@ const ActionButton: React.FC<{
       >
         {action.label}
       </Text>
-    </AnimatedTouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
@@ -116,5 +117,8 @@ const styles = StyleSheet.create(theme => ({
   },
   disabledButtonText: {
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, Image} from 'react-native';
+import {View, Text, Pressable, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useProfileData} from '#hooks/profile/useProfileData';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
@@ -23,10 +23,11 @@ export const UserHeader: React.FC = () => {
       </Text>
 
       <View style={styles.headerActions}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => {
             navigateTo.notificationList();
-          }}>
+          }}
+          style={({pressed}) => pressed && styles.pressed}>
           <View style={styles.avatar}>
             {profile?.avatar ? (
               <Image
@@ -47,7 +48,7 @@ export const UserHeader: React.FC = () => {
 
             {unreadCount > 0 && <View style={styles.avatarNotification} />}
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -119,5 +120,8 @@ const styles = StyleSheet.create(theme => ({
     width: 14,
     height: 14,
     backgroundColor: theme.colors.error,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

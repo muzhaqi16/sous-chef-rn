@@ -1,5 +1,5 @@
 import React, {useCallback, useMemo} from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {formatDistanceToNow} from 'date-fns/formatDistanceToNow';
@@ -36,10 +36,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   }, [notification.sentAt]);
 
   return (
-    <TouchableOpacity
-      style={[styles.container, !notification.isRead && styles.unreadContainer]}
-      onPress={handlePress}
-      activeOpacity={0.7}>
+    <Pressable
+      style={({pressed}) => [styles.container, !notification.isRead && styles.unreadContainer, pressed && styles.pressed]}
+      onPress={handlePress}>
       <View
         style={[
           styles.iconContainer,
@@ -70,8 +69,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       </View>
 
       {onDismiss && (
-        <TouchableOpacity
-          style={styles.dismissButton}
+        <Pressable
+          style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
           onPress={handleDismiss}
           hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon
@@ -79,9 +78,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             size={20}
             color={theme.colors.textTertiary}
           />
-        </TouchableOpacity>
+        </Pressable>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -134,5 +133,8 @@ const styles = StyleSheet.create(theme => ({
   dismissButton: {
     padding: theme.spacing.xs,
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

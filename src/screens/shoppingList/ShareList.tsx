@@ -4,7 +4,7 @@ import {
   Text,
   FlatList,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -197,10 +197,9 @@ export const ShareList: React.FC = () => {
       const statusText = formatStatus(member.status);
 
       return (
-        <TouchableOpacity
-          style={styles.memberCard}
+        <Pressable
+          style={({pressed}) => [styles.memberCard, pressed && styles.pressed]}
           onPress={() => permissionsBottomSheetRef.current?.open(member)}
-          activeOpacity={0.7}
         >
           <View style={styles.memberInfo}>
             <View style={styles.avatar}>
@@ -233,17 +232,18 @@ export const ShareList: React.FC = () => {
               </View>
             </View>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={e => {
               e?.stopPropagation?.();
               if (member.email) {
                 handleRemoveMember(member.email);
               }
             }}
+            style={({pressed}) => pressed && styles.pressed}
           >
             <Icon name="close" size={20} color={theme.colors.error} />
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       );
     },
     [handleRemoveMember, theme.colors.error],
@@ -260,9 +260,9 @@ export const ShareList: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={styles.title}>Share List</Text>
         <View style={styles.placeholder} />
       </View>
@@ -282,8 +282,8 @@ export const ShareList: React.FC = () => {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <TouchableOpacity
-              style={styles.sendButton}
+            <Pressable
+              style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
               onPress={handleShare}
               disabled={sharing}
             >
@@ -292,7 +292,7 @@ export const ShareList: React.FC = () => {
               ) : (
                 <Icon name="send" size={20} color="white" />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
         {/* Only show if there are any members */}
@@ -475,5 +475,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     lineHeight: theme.typography.fontSize.sm * 1.5,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

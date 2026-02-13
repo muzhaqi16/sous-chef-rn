@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -300,9 +300,9 @@ export const InvitationAcceptanceModal: React.FC<
               />
             </View>
             <Text style={styles.title}>{invitation.title}</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <Pressable style={({pressed}) => [styles.closeButton, pressed && styles.pressed]} onPress={onClose}>
               <Icon name="close" size={24} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Content */}
@@ -332,8 +332,8 @@ export const InvitationAcceptanceModal: React.FC<
 
           {/* Actions */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, styles.rejectButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.rejectButton, pressed && styles.pressed]}
               onPress={handleReject}
               disabled={accepting || rejecting}
             >
@@ -347,10 +347,10 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.button, styles.acceptButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.acceptButton, pressed && styles.pressed]}
               onPress={handleAccept}
               disabled={accepting || rejecting}
             >
@@ -364,7 +364,7 @@ export const InvitationAcceptanceModal: React.FC<
                   </Text>
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -480,5 +480,8 @@ const styles = StyleSheet.create(theme => ({
   },
   acceptText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

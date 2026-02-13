@@ -3,7 +3,7 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -102,16 +102,16 @@ export const LowStockItems: React.FC = () => {
                   {item.quantity} {item.unit?.symbol} remaining
                 </Text>
               </View>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => handleAddToList(item.id)}
-                style={styles.actionButton}
+                style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
               >
                 <Icon
                   name="add-shopping-cart"
                   size={20}
                   color={theme.colors.primary}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </SwipeableItem>
         )}
@@ -158,5 +158,8 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButton: {
     padding: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

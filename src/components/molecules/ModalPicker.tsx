@@ -1,5 +1,5 @@
 import React from 'react';
-import {Modal, View, Text, TouchableOpacity, ScrollView} from 'react-native';
+import {Modal, View, Text, Pressable, ScrollView} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#/utils/iconUtils';
 
@@ -28,20 +28,20 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>{label}</Text>
-            <TouchableOpacity onPress={onCancel}>
+            <Pressable onPress={onCancel} style={({pressed}) => pressed && styles.pressed}>
               <Icon
                 library="Feather"
                 name="x"
                 size={24}
                 color={theme.colors.textPrimary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <ScrollView>
             {options.map(opt => (
-              <TouchableOpacity
+              <Pressable
                 key={opt.value}
-                style={styles.option}
+                style={({pressed}) => [styles.option, pressed && styles.pressed]}
                 onPress={() => onSelect(opt.value)}>
                 <Text style={styles.optionText}>{opt.label}</Text>
                 {selected === opt.value && (
@@ -52,7 +52,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
                     color={theme.colors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
         </View>
@@ -97,5 +97,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

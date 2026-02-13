@@ -279,6 +279,42 @@ fragment AuthUser on User {
   timezone
 }
 
+# Bootstrap fragment for login/register responses
+# Extends AuthUser with IDs needed to skip the GetHomes waterfall
+# and fire all post-login queries in parallel
+fragment LoginUser on User {
+  ...AuthUser
+  defaultHomeId
+  defaultShoppingListId
+  preferredCurrency
+  language
+  defaultHome {
+    id
+    name
+    isDefault
+    pantriesConnection {
+      edges {
+        node {
+          id
+          homeId
+          isDefault
+        }
+      }
+    }
+  }
+  profile {
+    id
+    firstName
+    lastName
+    displayName
+    avatar
+  }
+  settings {
+    id
+    theme
+  }
+}
+
 fragment PartialUser on User {
   id
   email

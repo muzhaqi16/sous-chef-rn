@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -188,27 +188,29 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
             )}
           </View>
           <View style={styles.headerButtons}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleRemove}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               disabled={updating}
+              style={({pressed}) => pressed && styles.pressed}
             >
               <Ionicons
                 name="trash-outline"
                 size={22}
                 color={theme.colors.error}
               />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({pressed}) => pressed && styles.pressed}
             >
               <Ionicons
                 name="close"
                 size={24}
                 color={theme.colors.textPrimary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -224,11 +226,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         <Text style={styles.sectionLabel}>Your Rating</Text>
         <View style={styles.ratingContainer}>
           {[1, 2, 3, 4, 5].map(star => (
-            <TouchableOpacity
+            <Pressable
               key={star}
               onPress={() => handleRatingPress(star)}
               hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
               disabled={updating}
+              style={({pressed}) => pressed && styles.pressed}
             >
               <Ionicons
                 name={
@@ -241,7 +244,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                     : theme.colors.textSecondary
                 }
               />
-            </TouchableOpacity>
+            </Pressable>
           ))}
           {rating !== null && <Text style={styles.ratingText}>{rating}/5</Text>}
         </View>
@@ -254,11 +257,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               folder === null ? !selectedFolder : selectedFolder === folder;
             const isNoFolder = folder === null;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={folder ?? 'no-folder'}
-                style={[
+                style={({pressed}) => [
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => handleSelectFolder(folder)}
                 disabled={updating}
@@ -287,7 +291,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                     color={theme.colors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -305,10 +309,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               autoCapitalize="words"
               onSubmitEditing={handleCreateFolder}
             />
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.createButton,
                 !newFolderName.trim() && styles.createButtonDisabled,
+                pressed && styles.pressed,
               ]}
               onPress={handleCreateFolder}
               disabled={!newFolderName.trim() || updating}
@@ -321,17 +326,17 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
               >
                 Create
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.newFolderButton}
+          <Pressable
+            style={({pressed}) => [styles.newFolderButton, pressed && styles.pressed]}
             onPress={() => setShowNewFolder(true)}
             disabled={updating}
           >
             <Ionicons name="add" size={18} color={theme.colors.primary} />
             <Text style={styles.newFolderButtonText}>Create New Folder</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Tags */}
@@ -508,5 +513,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 80,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

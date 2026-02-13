@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -69,10 +69,9 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       {label && <Label required={required}>{label}</Label>}
-      <TouchableOpacity
-        style={[styles.input, error && styles.inputError]}
+      <Pressable
+        style={({pressed}) => [styles.input, error && styles.inputError, pressed && styles.pressed]}
         onPress={handlePress}
-        activeOpacity={0.7}
       >
         <Icon
           name="event"
@@ -83,7 +82,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         <Text style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
       {error && <Text style={styles.errorText}>{error}</Text>}
 
       {showPicker && (
@@ -143,5 +142,8 @@ const styles = StyleSheet.create(theme => ({
   },
   calendarPicker: {
     alignSelf: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

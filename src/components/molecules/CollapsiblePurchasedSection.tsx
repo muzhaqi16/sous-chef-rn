@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -124,19 +124,19 @@ export const CollapsiblePurchasedSection: React.FC<
   return (
     <View key="collapsible-purchased-section" style={styles.container}>
       {/* Header */}
-      <TouchableOpacity
-        style={[
+      <Pressable
+        style={({pressed}) => [
           styles.header,
           {
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border,
           },
+          pressed && styles.pressed,
         ]}
         onPress={() => {
           console.log('Toggling purchased section:', !expanded);
           setExpanded(!expanded);
         }}
-        activeOpacity={0.7}
       >
         <View style={styles.headerLeft}>
           <Icon name="check-circle" size={20} color={theme.colors.success} />
@@ -149,23 +149,23 @@ export const CollapsiblePurchasedSection: React.FC<
 
         <View style={styles.headerRight}>
           {onClearAll && (
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.clearButton,
                 { backgroundColor: theme.colors.error + '20' },
+                pressed && styles.pressed,
               ]}
               onPress={e => {
                 e.stopPropagation();
                 handleClearAll();
               }}
-              activeOpacity={0.7}
             >
               <Text
                 style={[styles.clearButtonText, { color: theme.colors.error }]}
               >
                 Clear All
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
           <Animated.View style={animatedChevronStyle}>
             <Icon
@@ -175,7 +175,7 @@ export const CollapsiblePurchasedSection: React.FC<
             />
           </Animated.View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       {/* Expanded List */}
       {expanded && (
@@ -239,5 +239,8 @@ const styles = StyleSheet.create(theme => ({
   clearButtonText: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -337,13 +337,10 @@ export const useImageUpload = () => {
   );
 
   const updateItemImageUrl = useCallback(
-    async (itemId: string, imageUrl: string) => {
+    async (id: string, imageUrl: string) => {
       try {
         const { data } = await updateItemImage({
-          variables: {
-            id: itemId,
-            imageUrl,
-          },
+          variables: { id, imageUrl },
         });
         const result = data?.updateItem;
         return result || null;

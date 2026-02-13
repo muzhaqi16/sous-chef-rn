@@ -13,6 +13,7 @@ import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
+import { useStore } from '#store';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -162,6 +163,27 @@ export const useAuthOperations = ({
       // This will clear the previous user's queue if it's a different user
       queueManager.onUserChange(user.id, previousUserId);
 
+      // Pre-populate Zustand store with bootstrap IDs from login response.
+      // This eliminates the GetHomes → GetPantry waterfall by letting
+      // pantry and shopping list queries fire immediately in parallel.
+      const storeState = useStore.getState();
+      if (user.defaultHomeId) {
+        // Derive default pantry ID from the defaultHome's pantries
+        const pantries = user.defaultHome?.pantriesConnection?.edges;
+        const defaultPantry =
+          pantries?.find((e: any) => e.node.isDefault)?.node ??
+          pantries?.[0]?.node;
+        const pantryId = defaultPantry?.id ?? null;
+
+        storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
+        if (pantryId) {
+          storeState.setIsHomeSelectionReady(true);
+        }
+      }
+      if (user.defaultShoppingListId) {
+        storeState.setSelectedShoppingListId(user.defaultShoppingListId);
+      }
+
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);
       }
@@ -232,6 +254,24 @@ export const useAuthOperations = ({
 
       // Set auth state first
       authState.onSetAuth(user, accessToken, refreshToken);
+
+      // Pre-populate bootstrap IDs if available (same as handleLogin)
+      const regStoreState = useStore.getState();
+      if (user.defaultHomeId) {
+        const pantries = user.defaultHome?.pantriesConnection?.edges;
+        const defaultPantry =
+          pantries?.find((e: any) => e.node.isDefault)?.node ??
+          pantries?.[0]?.node;
+        const pantryId = defaultPantry?.id ?? null;
+
+        regStoreState.setHomeAndPantry(user.defaultHomeId, pantryId);
+        if (pantryId) {
+          regStoreState.setIsHomeSelectionReady(true);
+        }
+      }
+      if (user.defaultShoppingListId) {
+        regStoreState.setSelectedShoppingListId(user.defaultShoppingListId);
+      }
 
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);

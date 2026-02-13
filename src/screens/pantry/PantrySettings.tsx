@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Switch,
   Alert,
   TextInput,
@@ -356,13 +356,13 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => goBack()}>
+          <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
             <Icon
               name="arrow-back"
               size={24}
               color={theme.colors.textPrimary}
             />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.title}>Loading...</Text>
           <View style={{ width: 50 }} />
         </View>
@@ -381,17 +381,17 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBack()}>
+        <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={styles.title}>
           {!pantryId ? 'Create New Pantry' : 'Pantry Settings'}
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving}>
+        <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
           <Text style={styles.saveButton}>
             {saving ? 'Saving...' : !pantryId ? 'Create' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView style={styles.content}>
@@ -462,13 +462,13 @@ export const PantrySettings: React.FC<StaticScreenProps<{
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
-            <TouchableOpacity
-              style={styles.deleteButton}
+            <Pressable
+              style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete Pantry</Text>
-            </TouchableOpacity>
+            </Pressable>
 
             <Text style={styles.dangerWarning}>
               Deleting this pantry will permanently remove all items stored in
@@ -593,5 +593,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     lineHeight: theme.typography.lineHeight.normal,
     fontStyle: 'italic',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

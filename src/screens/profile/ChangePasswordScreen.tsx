@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -148,10 +148,11 @@ export const ChangePasswordScreen: React.FC = () => {
               />
             </View>
 
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.submitButton,
                 (!isFormValid || isSubmitting) && styles.submitButtonDisabled,
+                pressed && styles.pressed,
               ]}
               onPress={form.handleSubmit(onSubmit)}
               disabled={!isFormValid || isSubmitting}
@@ -161,7 +162,7 @@ export const ChangePasswordScreen: React.FC = () => {
               ) : (
                 <Text style={styles.submitButtonText}>Change Password</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -237,6 +238,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

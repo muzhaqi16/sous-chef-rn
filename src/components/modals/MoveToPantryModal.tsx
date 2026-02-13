@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, Switch } from 'react-native';
+import { View, Text, Pressable, Alert, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -228,11 +228,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 </Text>
                 <View style={styles.pantryList}>
                   {pantries.map(pantry => (
-                    <TouchableOpacity
+                    <Pressable
                       key={pantry.id}
-                      style={[
+                      style={({pressed}) => [
                         styles.pantryOption,
                         pantryId === pantry.id && styles.pantryOptionActive,
+                        pressed && styles.pressed,
                       ]}
                       onPress={() => setPantryId(pantry.id)}
                     >
@@ -274,7 +275,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                           </Text>
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -314,11 +315,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               <Text style={styles.sectionLabel}>Storage Type</Text>
               <View style={styles.segmentedControl}>
                 {STORAGE_STATES.map(state => (
-                  <TouchableOpacity
+                  <Pressable
                     key={state}
-                    style={[
+                    style={({pressed}) => [
                       styles.segment,
                       storageState === state && styles.segmentActive,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setStorageState(state)}
                   >
@@ -331,7 +333,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                     >
                       {state}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -340,8 +342,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Expiration Date</Text>
               <View style={styles.dateRow}>
-                <TouchableOpacity
-                  style={styles.dateInput}
+                <Pressable
+                  style={({pressed}) => [styles.dateInput, pressed && styles.pressed]}
                   onPress={() => setShowDatePicker(true)}
                 >
                   <Icon
@@ -354,10 +356,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       ? expirationDate.toLocaleDateString()
                       : 'Select date'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
                 {expirationDate && (
-                  <TouchableOpacity
-                    style={styles.clearDateButton}
+                  <Pressable
+                    style={({pressed}) => [styles.clearDateButton, pressed && styles.pressed]}
                     onPress={clearExpirationDate}
                   >
                     <Icon
@@ -365,7 +367,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       size={20}
                       color={theme.colors.textSecondary}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
               {showDatePicker && (
@@ -591,5 +593,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

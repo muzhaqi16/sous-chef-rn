@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ActivityIndicator,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -139,9 +139,9 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoBack}>
+        <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
           <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -178,11 +178,11 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <Text style={styles.subtitle}>{errorMessage}</Text>
 
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.retryButton]}
+              <Pressable
+                style={({pressed}) => [styles.button, styles.retryButton, pressed && styles.pressed]}
                 onPress={handleRetry}>
                 <Text style={styles.retryButtonText}>Try Again</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </>
         )}
@@ -244,5 +244,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

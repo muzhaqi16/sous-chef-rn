@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
+import { View, Image, Pressable } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -107,9 +107,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             themeColors={themeColors}
           />
           {item.isPurchased && onMoveToPantry && (
-            <TouchableOpacity
+            <Pressable
               onPress={() => onMoveToPantry(item.id)}
-              style={styles.moveToPantryButton}
+              style={({pressed}) => [styles.moveToPantryButton, pressed && styles.pressed]}
               hitSlop={HIT_SLOP}
             >
               <Icon
@@ -118,7 +118,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
                 color={themeColors?.primary}
                 library="MaterialDesignIcons"
               />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       );
@@ -256,6 +256,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

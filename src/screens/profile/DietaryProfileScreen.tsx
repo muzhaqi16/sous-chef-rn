@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -266,16 +266,16 @@ export const DietaryProfileScreen: React.FC = () => {
       >
         <Text style={commonStyles.subtitle}>Nutrition Goals</Text>
         <View style={styles.sectionCard}>
-          <TouchableOpacity onPress={handleOpenMeals}>
+          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleOpenMeals}>
             <InfoRow label="Meals per day" value={profile.mealsPerDay} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleOpenSnacks}>
+          </Pressable>
+          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleOpenSnacks}>
             <InfoRow
               label="Snacks per day"
               value={profile.snacksPerDay}
               showBorder={false}
             />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </Animated.View>
 
@@ -288,9 +288,9 @@ export const DietaryProfileScreen: React.FC = () => {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={commonStyles.subtitle}>Cooking Preferences</Text>
-            <TouchableOpacity
+            <Pressable
               onPress={handleOpenCookingPrefs}
-              style={styles.editButton}
+              style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
             >
               <Icon
                 library="Feather"
@@ -298,7 +298,7 @@ export const DietaryProfileScreen: React.FC = () => {
                 size={20}
                 color={theme.colors.primary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           {profile.cookingSkillLevel && (
             <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
@@ -341,9 +341,9 @@ export const DietaryProfileScreen: React.FC = () => {
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
               <Text style={commonStyles.subtitle}>Macro Targets (Advanced)</Text>
-              <TouchableOpacity
+              <Pressable
                 onPress={handleOpenMacros}
-                style={styles.editButton}
+                style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
               >
                 <Icon
                   library="Feather"
@@ -351,7 +351,7 @@ export const DietaryProfileScreen: React.FC = () => {
                   size={20}
                   color={theme.colors.primary}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
             {profile.calorieTarget && (
               <InfoRow
@@ -452,6 +452,9 @@ const styles = StyleSheet.create(theme => ({
   },
   editButton: {
     padding: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

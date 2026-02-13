@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
@@ -151,12 +151,12 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                   </View>
                 </ImagePicker>
 
-                <TouchableOpacity
-                  style={styles.actionButton}
+                <Pressable
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                   onPress={handleRemoveImage}
                   disabled={disabled || uploading}>
                   <Icon name="delete" size={16} color={theme.colors.white} />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </View>
@@ -262,5 +262,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.white,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

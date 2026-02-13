@@ -444,6 +444,11 @@ export type BrandFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type BrandOpsInput = {
+  addBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  removeBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 /** Order by options for brands */
 export type BrandOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
@@ -616,6 +621,12 @@ export type CategoryEdge = {
   __typename?: 'CategoryEdge';
   cursor: Scalars['String']['output'];
   node: Category;
+};
+
+export type CategoryOpsInput = {
+  addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
+  removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type CategoryPayload = MutationPayload & {
@@ -998,37 +1009,19 @@ export type CreateHomeInput = {
 };
 
 export type CreateItemInput = {
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
-  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  defaultUnit?: InputMaybe<Scalars['String']['input']>;
-  density?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayUnitId?: InputMaybe<Scalars['String']['input']>;
-  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   externalSource?: InputMaybe<ExternalSourceShorthandInput>;
   externalSources?: InputMaybe<Array<ExternalSourceMappingInput>>;
-  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
-  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+  healthInfo?: InputMaybe<HealthInfoInput>;
+  media?: InputMaybe<MediaAssetsInput>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
-  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
-  primaryUpc?: InputMaybe<Scalars['String']['input']>;
-  servingSize?: InputMaybe<Scalars['Float']['input']>;
-  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
-  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
-  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  packageInfo?: InputMaybe<PackageInfoInput>;
+  productDetails?: InputMaybe<ProductDetailsInput>;
   type?: InputMaybe<ItemType>;
-  units?: InputMaybe<Array<ItemUnitInput>>;
-  vendor?: InputMaybe<Scalars['String']['input']>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
 };
 
 /** Result of creating an item - either success or specific error */
@@ -2239,6 +2232,12 @@ export enum HealthGoal {
   SugarFree = 'SUGAR_FREE',
 }
 
+export type HealthInfoInput = {
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+};
+
 /**
  * Home/household for managing pantries and shopping lists
  * Cache: 5 minutes - metadata changes occasionally
@@ -2861,6 +2860,12 @@ export type ItemCategoryPayload = MutationPayload & {
   success: Scalars['Boolean']['output'];
 };
 
+export type ItemClassificationInput = {
+  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storageState?: InputMaybe<StorageState>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export enum ItemCondition {
   Expired = 'EXPIRED',
   Fair = 'FAIR',
@@ -3082,6 +3087,13 @@ export type ItemUnit = {
   updatedAt: Scalars['DateTime']['output'];
   usageContext: Array<UnitUsageContext>;
   version: Scalars['Int']['output'];
+};
+
+export type ItemUnitConfigInput = {
+  defaultUnit?: InputMaybe<Scalars['String']['input']>;
+  density?: InputMaybe<Scalars['Float']['input']>;
+  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
+  units?: InputMaybe<Array<ItemUnitInput>>;
 };
 
 /**
@@ -5819,6 +5831,16 @@ export type PackageBreakdown = {
   totalNetWeight?: Maybe<Scalars['Float']['output']>;
 };
 
+export type PackageInfoInput = {
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
+  servingSize?: InputMaybe<Scalars['Float']['input']>;
+  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
+  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type PageInfo = {
   __typename?: 'PageInfo';
   endCursor?: Maybe<Scalars['String']['output']>;
@@ -6397,6 +6419,13 @@ export type PrivacySettingsInput = {
   personalizedAds?: InputMaybe<Scalars['Boolean']['input']>;
   shareUsageData?: InputMaybe<Scalars['Boolean']['input']>;
   shareWithPartners?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type ProductDetailsInput = {
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
+  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
+  vendor?: InputMaybe<Scalars['String']['input']>;
 };
 
 /**
@@ -8964,6 +8993,12 @@ export type StoreSkuInput = {
   storeId: Scalars['String']['input'];
 };
 
+export type StoreSkuOpsInput = {
+  addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
+  removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
+};
+
 /**
  * Store statistics and analytics
  * Cache: 10 minutes - stats aggregate over time
@@ -9323,7 +9358,7 @@ export type SyncShoppingListItemResult = {
   item?: Maybe<ShoppingListItem>;
   /** The operation that was performed */
   operation: SyncOperation;
-  /** The server-assigned MongoDB ObjectID (null if item was deleted before reaching server) */
+  /** The server-assigned database ID (null if item was deleted before reaching server) */
   serverId?: Maybe<Scalars['ID']['output']>;
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];
@@ -9336,6 +9371,11 @@ export type TagFilterInput = {
   /** Items that have ALL of these tags */
   hasTags?: InputMaybe<Array<Scalars['String']['input']>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type TagOpsInput = {
+  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 /** Categories for organizing meal templates */
@@ -9427,6 +9467,11 @@ export type Unit = {
   symbol: Scalars['String']['output'];
   type: UnitType;
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type UnitOpsInput = {
+  addUnits?: InputMaybe<Array<ItemUnitInput>>;
+  removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type UnitPayload = MutationPayload & {
@@ -9627,62 +9672,38 @@ export type UpdateHomeInput = {
  * Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
  */
 export type UpdateItemInput = {
-  addBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
-  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  addUnits?: InputMaybe<Array<ItemUnitInput>>;
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
-  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
-  brandId?: InputMaybe<Scalars['String']['input']>;
-  brandName?: InputMaybe<Scalars['String']['input']>;
-  categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  defaultUnit?: InputMaybe<Scalars['String']['input']>;
-  density?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<BrandReferenceInput>;
+  brandOps?: InputMaybe<BrandOpsInput>;
+  categoryOps?: InputMaybe<CategoryOpsInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayUnitId?: InputMaybe<Scalars['String']['input']>;
-  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
-  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
+  healthInfo?: InputMaybe<HealthInfoInput>;
   /** Increment popularity counter */
   incrementPopularity?: InputMaybe<Scalars['Boolean']['input']>;
-  ingredients?: InputMaybe<Scalars['JSON']['input']>;
+  media?: InputMaybe<MediaAssetsInput>;
   mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  netWeight?: InputMaybe<Scalars['Float']['input']>;
-  netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
+  packageInfo?: InputMaybe<PackageInfoInput>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
-  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
   /** Update item price */
   price?: InputMaybe<Scalars['Float']['input']>;
   /** Price source for tracking */
   priceSource?: InputMaybe<Scalars['String']['input']>;
   /** Store ID for price update */
   priceStoreId?: InputMaybe<Scalars['String']['input']>;
-  primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
-  primaryUpc?: InputMaybe<Scalars['String']['input']>;
-  removeBrandIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  productDetails?: InputMaybe<ProductDetailsInput>;
   /** Remove the item image */
   removeImage?: InputMaybe<Scalars['Boolean']['input']>;
-  removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
-  removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  servingSize?: InputMaybe<Scalars['Float']['input']>;
-  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
-  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
-  shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
-  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  storeSkuOps?: InputMaybe<StoreSkuOpsInput>;
+  tagOps?: InputMaybe<TagOpsInput>;
   type?: InputMaybe<ItemType>;
-  units?: InputMaybe<Array<ItemUnitInput>>;
-  vendor?: InputMaybe<Scalars['String']['input']>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
+  unitOps?: InputMaybe<UnitOpsInput>;
   visibility?: InputMaybe<Visibility>;
 };
 
@@ -10709,6 +10730,10 @@ export type LoginMutation = {
     refreshToken: string;
     user: {
       __typename?: 'User';
+      defaultHomeId?: string | null | undefined;
+      defaultShoppingListId?: string | null | undefined;
+      preferredCurrency?: string | null | undefined;
+      language?: string | null | undefined;
       id: string;
       email: string;
       emailVerified: boolean;
@@ -10717,6 +10742,42 @@ export type LoginMutation = {
       createdAt: string;
       updatedAt: string;
       timezone?: string | null | undefined;
+      defaultHome?:
+        | {
+            __typename?: 'Home';
+            id: string;
+            name: string;
+            isDefault: boolean;
+            pantriesConnection: {
+              __typename?: 'PantryConnection';
+              edges: Array<{
+                __typename?: 'PantryEdge';
+                node: {
+                  __typename?: 'Pantry';
+                  id: string;
+                  homeId: string;
+                  isDefault: boolean;
+                };
+              }>;
+            };
+          }
+        | null
+        | undefined;
+      profile?:
+        | {
+            __typename?: 'UserProfile';
+            id: string;
+            firstName?: string | null | undefined;
+            lastName?: string | null | undefined;
+            displayName?: string | null | undefined;
+            avatar?: string | null | undefined;
+          }
+        | null
+        | undefined;
+      settings?:
+        | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+        | null
+        | undefined;
     };
   };
 };
@@ -10733,6 +10794,10 @@ export type RegisterMutation = {
     refreshToken: string;
     user: {
       __typename?: 'User';
+      defaultHomeId?: string | null | undefined;
+      defaultShoppingListId?: string | null | undefined;
+      preferredCurrency?: string | null | undefined;
+      language?: string | null | undefined;
       id: string;
       email: string;
       emailVerified: boolean;
@@ -10741,6 +10806,42 @@ export type RegisterMutation = {
       createdAt: string;
       updatedAt: string;
       timezone?: string | null | undefined;
+      defaultHome?:
+        | {
+            __typename?: 'Home';
+            id: string;
+            name: string;
+            isDefault: boolean;
+            pantriesConnection: {
+              __typename?: 'PantryConnection';
+              edges: Array<{
+                __typename?: 'PantryEdge';
+                node: {
+                  __typename?: 'Pantry';
+                  id: string;
+                  homeId: string;
+                  isDefault: boolean;
+                };
+              }>;
+            };
+          }
+        | null
+        | undefined;
+      profile?:
+        | {
+            __typename?: 'UserProfile';
+            id: string;
+            firstName?: string | null | undefined;
+            lastName?: string | null | undefined;
+            displayName?: string | null | undefined;
+            avatar?: string | null | undefined;
+          }
+        | null
+        | undefined;
+      settings?:
+        | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+        | null
+        | undefined;
     };
   };
 };
@@ -10772,6 +10873,10 @@ export type VerifyEmailMutation = {
     user?:
       | {
           __typename?: 'User';
+          defaultHomeId?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
           id: string;
           email: string;
           emailVerified: boolean;
@@ -10780,6 +10885,42 @@ export type VerifyEmailMutation = {
           createdAt: string;
           updatedAt: string;
           timezone?: string | null | undefined;
+          defaultHome?:
+            | {
+                __typename?: 'Home';
+                id: string;
+                name: string;
+                isDefault: boolean;
+                pantriesConnection: {
+                  __typename?: 'PantryConnection';
+                  edges: Array<{
+                    __typename?: 'PantryEdge';
+                    node: {
+                      __typename?: 'Pantry';
+                      id: string;
+                      homeId: string;
+                      isDefault: boolean;
+                    };
+                  }>;
+                };
+              }
+            | null
+            | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                avatar?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -12078,6 +12219,58 @@ export type AuthUserFragment = {
   createdAt: string;
   updatedAt: string;
   timezone?: string | null | undefined;
+};
+
+export type LoginUserFragment = {
+  __typename?: 'User';
+  defaultHomeId?: string | null | undefined;
+  defaultShoppingListId?: string | null | undefined;
+  preferredCurrency?: string | null | undefined;
+  language?: string | null | undefined;
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  role: UserRole;
+  onBoarded: boolean;
+  createdAt: string;
+  updatedAt: string;
+  timezone?: string | null | undefined;
+  defaultHome?:
+    | {
+        __typename?: 'Home';
+        id: string;
+        name: string;
+        isDefault: boolean;
+        pantriesConnection: {
+          __typename?: 'PantryConnection';
+          edges: Array<{
+            __typename?: 'PantryEdge';
+            node: {
+              __typename?: 'Pantry';
+              id: string;
+              homeId: string;
+              isDefault: boolean;
+            };
+          }>;
+        };
+      }
+    | null
+    | undefined;
+  profile?:
+    | {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null | undefined;
+        lastName?: string | null | undefined;
+        displayName?: string | null | undefined;
+        avatar?: string | null | undefined;
+      }
+    | null
+    | undefined;
+  settings?:
+    | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+    | null
+    | undefined;
 };
 
 export type PartialUserFragment = {

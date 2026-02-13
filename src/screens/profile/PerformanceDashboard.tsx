@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
@@ -275,12 +275,12 @@ export const PerformanceDashboard: React.FC = () => {
         {(slowestComponents.length > 0 ||
           slowestScreens.length > 0 ||
           recentMemorySnapshots.length > 0) && (
-          <TouchableOpacity
-            style={styles.clearButton}
+          <Pressable
+            style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}
             onPress={handleClearData}
           >
             <Text style={styles.clearButtonText}>Clear Performance Data</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </ScrollView>
     </ProfileScreenWrapper>
@@ -433,6 +433,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

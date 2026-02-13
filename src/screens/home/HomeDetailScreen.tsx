@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ActivityIndicator, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -148,8 +148,8 @@ export const HomeDetailScreen: React.FC<{
                 <Text style={styles.joinCodeLabel}>Join Code</Text>
                 <Text style={styles.joinCodeValue}>{home.joinCode}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.copyButton}
+              <Pressable
+                style={({pressed}) => [styles.copyButton, pressed && styles.pressed]}
                 onPress={handleCopyJoinCode}
               >
                 <Icon
@@ -160,7 +160,7 @@ export const HomeDetailScreen: React.FC<{
                   }
                   library="Ionicons"
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </>
@@ -267,5 +267,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     lineHeight: theme.fonts.size.sm * 1.5,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

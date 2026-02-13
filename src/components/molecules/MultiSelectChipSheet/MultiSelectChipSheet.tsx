@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -141,9 +141,9 @@ export function MultiSelectChipSheet<T extends string = string>({
               : `${selectedItems.length} selected`}
           </Text>
           {selectedItems.length > 0 && (
-            <TouchableOpacity onPress={handleClearAll}>
+            <Pressable onPress={handleClearAll} style={({pressed}) => pressed && styles.pressed}>
               <Text style={styles.clearText}>Clear all</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
@@ -243,5 +243,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

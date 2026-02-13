@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   FlatList,
   Linking,
@@ -204,16 +204,16 @@ const RecipeDetailScreen: React.FC = () => {
               style={[styles.recipeImage, imageAnimatedStyle]}
               sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
-            <TouchableOpacity onPress={goBack} style={styles.backButton}>
+            <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
               <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
+            </Pressable>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
               {showFolderIcon && (
-                <TouchableOpacity
+                <Pressable
                   onPress={handleFolderPress}
-                  style={styles.actionButton}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                   disabled={saving || updatingFolderTags}
                 >
                   <Ionicons
@@ -221,13 +221,13 @@ const RecipeDetailScreen: React.FC = () => {
                     size={22}
                     color={theme.colors.primary}
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
               {/* Heart button - shown when not saved or saved to Favorites */}
               {showHeartIcon && (
-                <TouchableOpacity
+                <Pressable
                   onPress={handleHeartPress}
-                  style={styles.actionButton}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                   disabled={saving || updatingFolderTags}
                 >
                   {saving || updatingFolderTags ? (
@@ -239,7 +239,7 @@ const RecipeDetailScreen: React.FC = () => {
                       color={theme.colors.favorite}
                     />
                   )}
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </View>
@@ -268,8 +268,8 @@ const RecipeDetailScreen: React.FC = () => {
               )}
             {/* Cooked count - inline with metadata */}
             {isBackendRecipe && recipeId && isSaved && (
-              <TouchableOpacity
-                style={styles.cookedMetadata}
+              <Pressable
+                style={({pressed}) => [styles.cookedMetadata, pressed && styles.pressed]}
                 onPress={() => setCookedModalVisible(true)}
                 disabled={markingAsCooked}
               >
@@ -305,7 +305,7 @@ const RecipeDetailScreen: React.FC = () => {
                     </Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
 
@@ -424,14 +424,15 @@ const RecipeDetailScreen: React.FC = () => {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
-                <TouchableOpacity
+                <Pressable
                   onPress={handleAddAllIngredientsToList}
                   disabled={addingToList}
+                  style={({pressed}) => pressed && styles.pressed}
                 >
                   <Text style={styles.addAllButton}>
                     {addingToList ? 'Adding...' : 'Add All'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <FlatList
                 horizontal
@@ -511,13 +512,12 @@ const RecipeDetailScreen: React.FC = () => {
 
           {/* Source Attribution */}
           {(displayData.sourceName || displayData.sourceUrl) && (
-            <TouchableOpacity
-              style={styles.attribution}
+            <Pressable
+              style={({pressed}) => [styles.attribution, displayData.sourceUrl && pressed && styles.pressed]}
               onPress={() =>
                 displayData.sourceUrl && Linking.openURL(displayData.sourceUrl)
               }
               disabled={!displayData.sourceUrl}
-              activeOpacity={displayData.sourceUrl ? 0.7 : 1}
             >
               <Text style={styles.attributionText}>
                 Recipe from {displayData.sourceName || 'External Source'}
@@ -534,7 +534,7 @@ const RecipeDetailScreen: React.FC = () => {
                   />
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </Animated.ScrollView>
@@ -546,10 +546,11 @@ const RecipeDetailScreen: React.FC = () => {
         snapPoints={['30%']}
       >
         <View style={styles.shoppingListOptions}>
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({pressed}) => [
               styles.optionButton,
               { borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+              pressed && styles.pressed,
             ]}
             onPress={handleAddAllIngredients}
           >
@@ -560,9 +561,9 @@ const RecipeDetailScreen: React.FC = () => {
                 Add all recipe ingredients to your shopping list
               </Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.optionButton}
+          </Pressable>
+          <Pressable
+            style={({pressed}) => [styles.optionButton, pressed && styles.pressed]}
             onPress={openIngredientSelector}
           >
             <Ionicons
@@ -576,7 +577,7 @@ const RecipeDetailScreen: React.FC = () => {
                 Choose specific ingredients to add
               </Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </BottomSheetAction>
 
@@ -592,8 +593,8 @@ const RecipeDetailScreen: React.FC = () => {
           renderItem={({ item }) => {
             const isSelected = selectedIngredients.has(item.id);
             return (
-              <TouchableOpacity
-                style={styles.ingredientItem}
+              <Pressable
+                style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
                 onPress={() => toggleIngredient(item.id)}
               >
                 <Ionicons
@@ -611,17 +612,18 @@ const RecipeDetailScreen: React.FC = () => {
                     {item.quantity ?? ''} {item.unit?.symbol || ''}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             );
           }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>No ingredients available</Text>
           }
         />
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({pressed}) => [
             styles.addSelectedButton,
             { backgroundColor: theme.colors.primary },
+            pressed && styles.pressed,
           ]}
           onPress={handleAddSelectedIngredients}
           disabled={selectedIngredients.size === 0 || addingToList}
@@ -634,7 +636,7 @@ const RecipeDetailScreen: React.FC = () => {
               {selectedIngredients.size !== 1 ? 's' : ''}
             </Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </BottomSheetAction>
 
       {/* Shopping List Picker Bottom Sheet */}
@@ -648,10 +650,10 @@ const RecipeDetailScreen: React.FC = () => {
           data={shoppingLists}
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing['2xl'] }}
           renderItem={({ item }: { item: (typeof shoppingLists)[number] }) => (
-            <TouchableOpacity
-              style={styles.listPickerItem}
+            <Pressable
+              style={({pressed}) => [styles.listPickerItem, pressed && styles.pressed]}
               onPress={() => handleListSelected(item.id)}
             >
               <View style={styles.listPickerInfo}>
@@ -682,7 +684,7 @@ const RecipeDetailScreen: React.FC = () => {
                 size={20}
                 color={theme.colors.textSecondary}
               />
-            </TouchableOpacity>
+            </Pressable>
           )}
           ListEmptyComponent={
             <View style={styles.emptyListPicker}>
@@ -1116,5 +1118,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

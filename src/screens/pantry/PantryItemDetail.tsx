@@ -4,7 +4,7 @@ import {
   Text,
   Alert,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
@@ -553,10 +553,10 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
               {item.lastUsedAt && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setCorrectWeightVisible(true)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={styles.correctWeightButton}
+                  style={({pressed}) => [styles.correctWeightButton, pressed && styles.pressed]}
                 >
                   <Icon
                     name="create-outline"
@@ -564,7 +564,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                     color={theme.colors.primary}
                     library="Ionicons"
                   />
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </View>
@@ -904,12 +904,11 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {/* Usage Records Section - only show if there are usage records */}
         {item.usageRecords && item.usageRecords.length > 0 && (
           <>
-            <TouchableOpacity
-              style={styles.sectionHeader}
+            <Pressable
+              style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
               onPress={() =>
                 setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
               }
-              activeOpacity={0.7}
             >
               <Text style={styles.sectionTitle}>
                 Usage History ({item.usageRecords.length})
@@ -920,7 +919,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 color={theme.colors.textSecondary}
                 library="Ionicons"
               />
-            </TouchableOpacity>
+            </Pressable>
 
             {purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
@@ -988,10 +987,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recipesList}
               renderItem={({ item: recipe }) => (
-                <TouchableOpacity
-                  style={styles.recipeCard}
+                <Pressable
+                  style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
                   onPress={() => handleRecipePress(recipe.id)}
-                  activeOpacity={0.8}
                 >
                   <Animated.Image
                     source={{ uri: recipe.image }}
@@ -1002,7 +1000,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   <Text style={styles.recipeTitle} numberOfLines={2}>
                     {recipe.title}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             />
           ) : (
@@ -1324,5 +1322,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

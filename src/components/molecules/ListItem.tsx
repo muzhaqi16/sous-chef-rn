@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, TextStyle } from 'react-native';
+import { View, Text, Pressable, TextStyle } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Badge } from '../base/Badge';
@@ -100,8 +100,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
     return (
       <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.contentContainer}
+        <Pressable
+          style={({pressed}) => [styles.contentContainer, pressed && styles.pressed]}
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
@@ -109,7 +109,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           accessibilityState={{ disabled: isPurchased }}
         >
           {content}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -184,5 +184,8 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

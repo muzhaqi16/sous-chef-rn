@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -84,16 +84,17 @@ export const TagInput: React.FC<TagInputProps> = ({
           <View key={`${tag}-${index}`} style={styles.tagChip}>
             <Text style={styles.tagText}>{tag}</Text>
             {editable && (
-              <TouchableOpacity
+              <Pressable
                 onPress={() => handleRemoveTag(tag)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={({pressed}) => pressed && styles.pressed}>
                 <Icon
                   library="Feather"
                   name="x"
                   size={14}
                   color={theme.colors.primary}
                 />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         ))}
@@ -144,15 +145,15 @@ export const TagInput: React.FC<TagInputProps> = ({
             showsHorizontalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
             {filteredSuggestions.map((suggestion, index) => (
-              <TouchableOpacity
+              <Pressable
                 key={`${suggestion}-${index}`}
-                style={styles.suggestionChip}
+                style={({pressed}) => [styles.suggestionChip, pressed && styles.pressed]}
                 onPress={() => {
                   handleAddTag(suggestion);
                   Keyboard.dismiss();
                 }}>
                 <Text style={styles.suggestionText}>{suggestion}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
         </View>
@@ -220,5 +221,8 @@ const styles = StyleSheet.create(theme => ({
   suggestionText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

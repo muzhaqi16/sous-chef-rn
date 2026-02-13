@@ -1,6 +1,6 @@
 import React, {useCallback, useMemo, memo} from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   FlatList,
   ActivityIndicator,
@@ -64,8 +64,8 @@ export function ItemSelector<T extends SelectableItem>({
     const itemName = String(item[displayProperty]);
 
     return (
-      <TouchableOpacity
-        style={[styles.item, isSelected && styles.selectedItem]}
+      <Pressable
+        style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
         onPress={() => handleItemSelect(item)}
         accessibilityRole="button"
         accessibilityLabel={itemName}
@@ -74,7 +74,7 @@ export function ItemSelector<T extends SelectableItem>({
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
           {itemName}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     );
   }, [selectedId, renderCustomItem, displayProperty, handleItemSelect]);
 
@@ -153,6 +153,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

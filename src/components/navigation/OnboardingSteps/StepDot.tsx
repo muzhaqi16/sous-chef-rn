@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withTiming,
@@ -9,7 +9,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 import type { StepDotProps } from './types';
 
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const StepDot: React.FC<StepDotProps> = ({
   index,
@@ -85,16 +85,15 @@ export const StepDot: React.FC<StepDotProps> = ({
 
   // Use single static style + animatedStyle to avoid "2 unistyles styles" warning
   return (
-    <AnimatedTouchableOpacity
+    <AnimatedPressable
       style={[styles.stepDot, animatedStyle]}
       onPress={handlePress}
       disabled={!allowNavigation}
-      activeOpacity={allowNavigation ? 0.7 : 1}
     >
       <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
         <Icon name="check" size={stepSize * 0.5} color={theme.colors.white} />
       </Animated.View>
-    </AnimatedTouchableOpacity>
+    </AnimatedPressable>
   );
 };
 

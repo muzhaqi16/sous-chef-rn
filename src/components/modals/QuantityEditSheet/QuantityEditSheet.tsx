@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Keyboard } from 'react-native';
+import { View, Text, Pressable, Keyboard } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
@@ -315,19 +315,19 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 </Text>
               )}
             </View>
-            <TouchableOpacity
+            <Pressable
               onPress={handleSave}
               disabled={!hasChanges || loading}
-              style={[
+              style={({pressed}) => [
                 styles.saveLink,
                 (!hasChanges || loading) && styles.saveLinkDisabled,
+                pressed && styles.pressed,
               ]}
-              activeOpacity={0.7}
             >
               <Text style={[styles.saveLinkText, { color: theme.colors.primary }]}>
                 {loading ? 'Saving...' : 'Save'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
 
@@ -345,17 +345,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           </Text>
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.counterButton,
                 {
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,
                 },
+                pressed && styles.pressed,
               ]}
               onPress={handleDecrement}
               disabled={(parseFractionInput(quantityInput) ?? 0) <= 0}
-              activeOpacity={0.7}
             >
               <Icon
                 name="remove"
@@ -367,17 +367,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 }
                 library="MaterialIcons"
               />
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Quantity Display - Tappable for direct input */}
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.quantityDisplay,
                 isEditing && styles.quantityDisplayEditing,
                 isEditing && { borderColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               onPress={handleQuantityPress}
-              activeOpacity={0.8}
             >
               {isEditing ? (
                 <BottomSheetTextInput
@@ -403,17 +403,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                   {quantityInput || '0'}
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Increment Button */}
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.counterButton,
                 styles.incrementButton,
                 { backgroundColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               onPress={handleIncrement}
-              activeOpacity={0.7}
             >
               <Icon
                 name="add"
@@ -421,7 +421,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 color={theme.colors.white}
                 library="MaterialIcons"
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -572,5 +572,8 @@ const styles = StyleSheet.create(theme => ({
   saveLinkText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

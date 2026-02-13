@@ -89,4 +89,8 @@ export default StyleSheet.create(theme => ({
       },
     },
   },
+
+  pressed: {
+    opacity: 0.7,
+  },
 }));

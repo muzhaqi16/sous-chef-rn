@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Label } from '#components/atoms/Label';
 
@@ -31,11 +31,10 @@ export const SegmentedControl = <T extends string>({
       {label && <Label required={required}>{label}</Label>}
       <View style={styles.segmentedControl}>
         {options.map(option => (
-          <TouchableOpacity
+          <Pressable
             key={option}
-            style={[styles.segment, value === option && styles.segmentActive]}
+            style={({pressed}) => [styles.segment, value === option && styles.segmentActive, pressed && styles.pressed]}
             onPress={() => onChange(option)}
-            activeOpacity={0.7}
           >
             <Text
               style={[
@@ -46,7 +45,7 @@ export const SegmentedControl = <T extends string>({
             >
               {formatLabel(option)}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
     </View>
@@ -82,5 +81,8 @@ const styles = StyleSheet.create(theme => ({
   },
   segmentTextActive: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,11 +1,17 @@
-import React from 'react';
-import {TouchableOpacity, View} from 'react-native';
+import React, { useCallback } from 'react';
+import {Pressable, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
+import {HapticService} from '#services/haptic/HapticService';
+import {getTabBarBottomPadding} from '#constants/layout';
 
-// Tab bar height constant (65px from FloatingTabBar)
-const TAB_BAR_HEIGHT = 65;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface FABProps {
   onPress?: () => void;
@@ -26,26 +32,46 @@ export const FAB: React.FC<FABProps> = ({
 }) => {
   const {bottom: safeBottom} = useSafeAreaInsets();
   const {theme} = useUnistyles();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{scale: scale.value}],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.9, {damping: 15, stiffness: 300});
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, {damping: 15, stiffness: 300});
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    HapticService.medium();
+    onPress();
+  }, [onPress]);
 
   // Calculate position above tab bar
   const fabPosition = React.useMemo(
     () => ({
       ...position,
-      bottom: TAB_BAR_HEIGHT + safeBottom + (position.bottom || 20),
+      bottom: getTabBarBottomPadding(safeBottom) + (position.bottom || 4),
     }),
     [position, safeBottom],
   );
 
   return (
     <View style={[styles.fab, fabPosition]}>
-      <TouchableOpacity
-        style={styles.fabButton}
-        onPress={onPress}
+      <AnimatedPressable
+        style={[styles.fabButton, animatedStyle]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}>
         <Icon name={icon} size={24} color={theme.colors.white} library={library} />
-      </TouchableOpacity>
+      </AnimatedPressable>
     </View>
   );
 };

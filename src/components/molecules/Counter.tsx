@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Text, View, Pressable} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {HapticService} from '#services/haptic/HapticService';
 
 export const Counter = ({
   count,
@@ -17,20 +24,41 @@ export const Counter = ({
   label?: string;
 }) => {
   const {theme} = useUnistyles();
+  const countScale = useSharedValue(1);
 
-  const handleDecrement = (e: any) => {
-    e.stopPropagation();
-    if (!disabled) {
-      onDecrement();
-    }
-  };
+  // Bounce animation when count changes
+  useEffect(() => {
+    countScale.value = withSequence(
+      withSpring(1.15, {damping: 10, stiffness: 400}),
+      withSpring(1, {damping: 10, stiffness: 400}),
+    );
+  }, [count, countScale]);
 
-  const handleIncrement = (e: any) => {
-    e.stopPropagation();
-    if (!disabled) {
-      onIncrement();
-    }
-  };
+  const countAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{scale: countScale.value}],
+  }));
+
+  const handleDecrement = useCallback(
+    (e: any) => {
+      e.stopPropagation();
+      if (!disabled) {
+        HapticService.selection();
+        onDecrement();
+      }
+    },
+    [disabled, onDecrement],
+  );
+
+  const handleIncrement = useCallback(
+    (e: any) => {
+      e.stopPropagation();
+      if (!disabled) {
+        HapticService.selection();
+        onIncrement();
+      }
+    },
+    [disabled, onIncrement],
+  );
 
   const iconColor = disabled ? theme.colors.textTertiary : theme.colors.textPrimary;
 
@@ -73,11 +101,13 @@ export const Counter = ({
         accessibilityState={{disabled}}>
         <Icon color={iconColor} name="remove" size={11} />
       </Pressable>
-      <Text
-        style={[styles.counterActionText, disabled && styles.textDisabled]}
-        accessibilityLabel={`${label} count: ${count}`}>
-        {count}
-      </Text>
+      <Animated.View style={countAnimatedStyle}>
+        <Text
+          style={[styles.counterActionText, disabled && styles.textDisabled]}
+          accessibilityLabel={`${label} count: ${count}`}>
+          {count}
+        </Text>
+      </Animated.View>
       <Pressable
         onPress={handleIncrement}
         disabled={disabled}
@@ -111,8 +141,8 @@ const styles = StyleSheet.create(theme => ({
   counterButton: {
     zIndex: theme.zIndex.base,
     backgroundColor: theme.colors.surface,
-    width: 30,
-    height: 30,
+    width: theme.sizes.button.sm,
+    height: theme.sizes.button.sm,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.full,
@@ -127,6 +157,7 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: 0.7,
+    transform: [{scale: 0.92}],
   },
   containerDisabled: {
     borderColor: theme.colors.border,

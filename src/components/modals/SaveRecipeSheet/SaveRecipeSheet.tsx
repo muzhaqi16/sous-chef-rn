@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -147,20 +147,25 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             )}
           </View>
           <View style={styles.headerButtons}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleSave}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               disabled={saving}
+              style={({pressed}) => pressed && styles.pressed}
             >
               {saving ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
                 <Icon name="checkmark" size={24} color={theme.colors.primary} library="Ionicons" />
               )}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({pressed}) => pressed && styles.pressed}
+            >
               <Icon name="close" size={24} color={theme.colors.textPrimary} library="Ionicons" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -172,11 +177,12 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               folder === null ? !selectedFolder : selectedFolder === folder;
             const isNoFolder = folder === null;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={folder ?? 'no-folder'}
-                style={[
+                style={({pressed}) => [
                   styles.folderOption,
                   isSelected && styles.folderOptionSelected,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => handleSelectFolder(folder)}
               >
@@ -206,7 +212,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                     library="Ionicons"
                   />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -224,10 +230,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               autoCapitalize="words"
               onSubmitEditing={handleCreateFolder}
             />
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.createButton,
                 !newFolderName.trim() && styles.createButtonDisabled,
+                pressed && styles.pressed,
               ]}
               onPress={handleCreateFolder}
               disabled={!newFolderName.trim()}
@@ -240,16 +247,16 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               >
                 Create
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.newFolderButton}
+          <Pressable
+            style={({pressed}) => [styles.newFolderButton, pressed && styles.pressed]}
             onPress={() => setShowNewFolder(true)}
           >
             <Icon name="add" size={18} color={theme.colors.primary} library="Ionicons" />
             <Text style={styles.newFolderButtonText}>Create New Folder</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Tags */}
@@ -398,5 +405,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 60,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

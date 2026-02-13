@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -103,13 +103,13 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
               }
             />
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={() => handleRemoveEntry(index)}
             disabled={disabled}
-            style={styles.deleteButton}
+            style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
           >
             <Icon name="delete" size={20} color={theme.colors.error} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       ))}
 
@@ -153,5 +153,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.1,
     alignItems: 'center',
     paddingTop: theme.spacing.xl,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

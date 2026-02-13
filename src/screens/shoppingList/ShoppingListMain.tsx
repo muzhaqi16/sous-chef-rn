@@ -10,7 +10,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 // Components
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { ListTemplate } from '#components/templates/ListTemplate';
-import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
@@ -385,8 +385,9 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
       return (
         <View style={styles.container} testID="shopping-list-screen">
-          <ShoppingListHeader
-            listName="Shopping List"
+          <TabScreenHeader
+            label="Shopping list"
+            title="Shopping List"
             avatarUrl={profile?.avatar}
             notificationCount={unreadCount}
             onAvatarPress={() => navigateTo.notificationList()}
@@ -411,8 +412,9 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     return (
       <View style={styles.container} testID="shopping-list-screen">
-        <ShoppingListHeader
-          listName={currentList?.name || 'Shopping List'}
+        <TabScreenHeader
+          label="Shopping list"
+          title={currentList?.name || 'Shopping List'}
           avatarUrl={profile?.avatar}
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}

@@ -1,6 +1,6 @@
 import {Icon} from '#/utils/iconUtils';
 import React, {useState} from 'react';
-import {TouchableOpacity, View, Text, TextInput} from 'react-native';
+import {Pressable, View, Text, TextInput} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export interface RowProps {
@@ -55,34 +55,34 @@ export const Row: React.FC<RowProps> = ({
           onChangeText={setText}
           autoFocus
         />
-        <TouchableOpacity onPress={handleSave} style={styles.editIcon}>
+        <Pressable onPress={handleSave} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
           <Icon
             library="Feather"
             name="check"
             size={20}
             color={theme.colors.primary}
           />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleCancel} style={styles.editIcon}>
+        </Pressable>
+        <Pressable onPress={handleCancel} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
           <Icon
             library="Feather"
             name="x"
             size={20}
             color={theme.colors.error}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={startEdit}
-      activeOpacity={onSave || onPress ? 0.7 : 1}
-      style={[
+      style={({pressed}) => [
         styles.rowWrapper,
         isFirst && styles.rowFirst,
         isLast && styles.rowLast,
+        pressed && (onSave || onPress) && styles.pressed,
       ]}>
       <View style={styles.row}>
         {leadingIcon && <View style={styles.iconContainer}>{leadingIcon}</View>}
@@ -116,7 +116,7 @@ export const Row: React.FC<RowProps> = ({
           />
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -176,5 +176,8 @@ const styles = StyleSheet.create(theme => ({
   },
   editIcon: {
     marginLeft: 12,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

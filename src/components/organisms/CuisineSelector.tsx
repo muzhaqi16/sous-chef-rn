@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { POPULAR_CUISINES, getAllCuisineOptions } from '#/constants/cuisines';
@@ -61,8 +61,8 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
         {/* Show More/Less Button */}
         {!showAllCuisines && (
-          <TouchableOpacity
-            style={styles.showMoreButton}
+          <Pressable
+            style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
             onPress={() => setShowAllCuisines(true)}
             disabled={isAdding}
           >
@@ -73,12 +73,12 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
               color={theme.colors.primary}
             />
             <Text style={styles.showMoreText}>Show All Cuisines</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {showAllCuisines && (
-          <TouchableOpacity
-            style={styles.showMoreButton}
+          <Pressable
+            style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
             onPress={() => setShowAllCuisines(false)}
             disabled={isAdding}
           >
@@ -89,7 +89,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
               color={theme.colors.textSecondary}
             />
             <Text style={styles.showMoreText}>Show Less</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     </View>
@@ -126,5 +126,8 @@ const styles = StyleSheet.create((theme) => ({
     fontWeight: '600',
     color: theme.colors.primary,
     marginLeft: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Switch,
   Alert,
   TextInput,
@@ -222,9 +222,9 @@ export const ListSettings: React.FC<StaticScreenProps<{
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBack()}>
+        <Pressable onPress={() => goBack()} style={({pressed}) => pressed && styles.pressed}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={styles.title}>
           {!listId
             ? 'Create New List'
@@ -233,11 +233,11 @@ export const ListSettings: React.FC<StaticScreenProps<{
             : 'List Info'}
         </Text>
         {isOwner && (
-          <TouchableOpacity onPress={handleSave} disabled={saving}>
+          <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
             <Text style={styles.saveButton}>
               {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
         {!isOwner && <View style={{ width: 60 }} />}
       </View>
@@ -302,8 +302,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
             {!listId && (
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Link to Home (Optional)</Text>
-                <TouchableOpacity
-                  style={styles.pickerButton}
+                <Pressable
+                  style={({pressed}) => [styles.pickerButton, pressed && styles.pressed]}
                   onPress={handleOpenHomePicker}
                 >
                   <Text style={styles.pickerText}>
@@ -316,7 +316,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
                     size={20}
                     color={theme.colors.textSecondary}
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
 
@@ -341,8 +341,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sharing</Text>
 
-            <TouchableOpacity
-              style={styles.actionRow}
+            <Pressable
+              style={({pressed}) => [styles.actionRow, pressed && styles.pressed]}
               onPress={() => navigate('ShareList', { listId: listId! })}
             >
               <Icon name="person-add" size={20} color={theme.colors.primary} />
@@ -352,7 +352,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
                 size={20}
                 color={theme.colors.textSecondary}
               />
-            </TouchableOpacity>
+            </Pressable>
 
             {isShared && (
               <Text style={styles.sharedInfo}>
@@ -367,13 +367,13 @@ export const ListSettings: React.FC<StaticScreenProps<{
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
-            <TouchableOpacity
-              style={styles.deleteButton}
+            <Pressable
+              style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete List</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -554,5 +554,8 @@ const styles = StyleSheet.create(theme => ({
   pickerText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

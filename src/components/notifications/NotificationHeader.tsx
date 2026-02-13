@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet} from 'react-native-unistyles';
 
@@ -18,15 +18,15 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={onMarkAllRead}>
+      <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onMarkAllRead}>
         <Icon name="done-all" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Mark all read</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity style={styles.button} onPress={onClearAll}>
+      <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onClearAll}>
         <Icon name="clear-all" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Clear all</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -50,5 +50,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

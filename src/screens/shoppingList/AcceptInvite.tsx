@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -203,12 +203,12 @@ export const AcceptInvite: React.FC = () => {
             ? 'Invitation not found or expired'
             : 'Loading invitation details...'}
         </Text>
-        <TouchableOpacity
-          style={[styles.button, styles.declineButton]}
+        <Pressable
+          style={({pressed}) => [styles.button, styles.declineButton, pressed && styles.pressed]}
           onPress={() => navigation.goBack()}
         >
           <Text style={styles.declineButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -216,9 +216,9 @@ export const AcceptInvite: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
           <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -281,16 +281,16 @@ export const AcceptInvite: React.FC = () => {
         )}
 
         <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.button, styles.declineButton]}
+          <Pressable
+            style={({pressed}) => [styles.button, styles.declineButton, pressed && styles.pressed]}
             onPress={handleDecline}
             disabled={processing}
           >
             <Text style={styles.declineButtonText}>Decline</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            style={[styles.button, styles.acceptButton]}
+          <Pressable
+            style={({pressed}) => [styles.button, styles.acceptButton, pressed && styles.pressed]}
             onPress={handleAccept}
             disabled={processing}
           >
@@ -299,7 +299,7 @@ export const AcceptInvite: React.FC = () => {
             ) : (
               <Text style={styles.acceptButtonText}>Accept</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -417,5 +417,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -5,7 +5,7 @@ import {
   Platform,
   ScrollView,
   View,
-  TouchableOpacity,
+  Pressable,
   Text,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -62,9 +62,9 @@ export const OnBoardingWrapper = ({
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack ? (
-          <TouchableOpacity
+          <Pressable
             onPress={onBack}
-            style={styles.iconButton}
+            style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}
             testID={testID ? `${testID}-back-button` : undefined}
           >
             <Icon
@@ -73,7 +73,7 @@ export const OnBoardingWrapper = ({
               size={24}
               color={theme.colors.primary}
             />
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <View style={styles.iconButton} />
         )}
@@ -142,13 +142,13 @@ export const OnBoardingWrapper = ({
       ) : (
         <View style={styles.bottomNavigation}>
           {onSkip && (
-            <TouchableOpacity
+            <Pressable
               onPress={onSkip}
-              style={styles.skipButton}
+              style={({pressed}) => [styles.skipButton, pressed && styles.pressed]}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
               <Text style={styles.skipText}>Skip</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
           {step != null && totalSteps != null && (
             <View style={styles.progressBarBackground}>
@@ -240,5 +240,8 @@ const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
     justifyContent: 'space-around',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

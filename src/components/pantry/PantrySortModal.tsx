@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
+  Pressable,
   TouchableWithoutFeedback,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -79,11 +79,12 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = React.memo(
               <View style={styles.sortModal}>
                 <Text style={styles.sortModalTitle}>Sort by</Text>
                 {SORT_OPTIONS.map(option => (
-                  <TouchableOpacity
+                  <Pressable
                     key={option.key}
-                    style={[
+                    style={({pressed}) => [
                       styles.sortOption,
                       sortOption === option.key && styles.sortOptionActive,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => onSelect(option.key)}
                   >
@@ -113,7 +114,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = React.memo(
                         color={theme.colors.primary}
                       />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </TouchableWithoutFeedback>
@@ -172,5 +173,8 @@ const styles = StyleSheet.create(theme => ({
   sortOptionLabelActive: {
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -4,7 +4,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -132,20 +132,21 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           ) : null}
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
               onPress={handleClose}
               disabled={isSubmitting}
             >
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.button,
                 styles.submitButton,
                 { backgroundColor: resolvedPrimaryColor },
                 isSubmitting && styles.disabledButton,
+                pressed && styles.pressed,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || loading}
@@ -158,7 +159,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               ) : (
                 <Text style={styles.submitButtonText}>{submitText}</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -249,5 +250,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.base,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

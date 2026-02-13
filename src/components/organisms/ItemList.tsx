@@ -5,9 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
-
-// Tab bar height constant (65px from FloatingTabBar)
-const TAB_BAR_HEIGHT = 65;
+import { getTabBarBottomPadding } from '#constants/layout';
 interface Item {
   id: string;
   title: string;
@@ -69,7 +67,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = useMemo(
     () => ({
-      paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16, // Tab bar height + safe area + extra padding
+      paddingBottom: getTabBarBottomPadding(safeBottom),
     }),
     [safeBottom],
   );

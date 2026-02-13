@@ -3,7 +3,7 @@ import {
   View,
   ViewStyle,
   ActivityIndicator,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -143,11 +143,10 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
       {showTabs && (
         <View style={styles.dotsContainer}>
           {tabOptions.map(key => (
-            <TouchableOpacity
+            <Pressable
               key={key}
               onPress={() => setSelectedTab(key)}
-              style={styles.dotTouchable}
-              activeOpacity={0.7}
+              style={({pressed}) => [styles.dotTouchable, pressed && styles.pressed]}
             >
               <View
                 style={[
@@ -155,7 +154,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
                   selectedTab === key && styles.dotActive,
                 ]}
               />
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
       )}
@@ -225,5 +224,8 @@ const styles = StyleSheet.create(theme => ({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

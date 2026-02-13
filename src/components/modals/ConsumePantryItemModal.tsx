@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -250,10 +250,11 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                   Consume by
                 </Text>
                 <View style={commonStyles.bottomSheetOptionContainer}>
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('tracking')}
                   >
@@ -268,12 +269,13 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                     {selectedUnit === 'tracking' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                   {hasContentUnit && (
-                    <TouchableOpacity
-                      style={[
+                    <Pressable
+                      style={({pressed}) => [
                         commonStyles.bottomSheetOption,
                         selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                        pressed && styles.pressed,
                       ]}
                       onPress={() => setSelectedUnit('content')}
                     >
@@ -288,12 +290,13 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                       {selectedUnit === 'content' && (
                         <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('weight')}
                   >
@@ -308,7 +311,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                     {selectedUnit === 'weight' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -344,12 +347,13 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
               </Text>
               <View style={commonStyles.bottomSheetOptionContainer}>
                 {PURPOSE_OPTIONS.map(option => (
-                  <TouchableOpacity
+                  <Pressable
                     key={option.value}
-                    style={[
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       purpose === option.value &&
                         commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setPurpose(option.value)}
                   >
@@ -370,7 +374,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                         color={theme.colors.primary}
                       />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -393,3 +397,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     </BottomSheetModal>
   );
 };
+
+const styles = StyleSheet.create(() => ({
+  pressed: {
+    opacity: 0.7,
+  },
+}));

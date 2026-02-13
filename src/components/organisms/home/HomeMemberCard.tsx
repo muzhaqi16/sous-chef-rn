@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatRole } from '#/utils/formatters/roleFormatters';
@@ -50,14 +50,14 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 
       {canManageMember && (
         <View style={styles.memberActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={onChangeRole}>
+          <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} library="Ionicons" />
             <Text style={styles.actionButtonText}>Change Role</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={onRemove}>
+          </Pressable>
+          <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
             <Text style={styles.removeButtonText}>Remove</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>
@@ -128,5 +128,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.error,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

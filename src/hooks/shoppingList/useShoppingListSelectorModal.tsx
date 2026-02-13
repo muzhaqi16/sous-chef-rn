@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarActions } from '#/context/TabBarActionsContext';
@@ -127,10 +127,11 @@ export function useShoppingListSelectorModal({
       // Render normal list item
       const list = item;
       return (
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({pressed}) => [
             styles.selectorItemContainer,
             isSelected && styles.selectorItemSelected,
+            pressed && styles.pressed,
           ]}
           onPress={onPress}
         >
@@ -155,7 +156,7 @@ export function useShoppingListSelectorModal({
               library="MaterialIcons"
             />
           )}
-        </TouchableOpacity>
+        </Pressable>
       );
     },
     [colors],
@@ -285,5 +286,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

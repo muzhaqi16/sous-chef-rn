@@ -23,7 +23,7 @@ mutation Login($input: LoginInput!) {
     accessToken
     refreshToken
     user {
-      ...AuthUser
+      ...LoginUser
     }
   }
 }
@@ -33,7 +33,7 @@ mutation Register($input: RegisterInput!) {
     accessToken
     refreshToken
     user {
-      ...AuthUser
+      ...LoginUser
     }
   }
 }
@@ -51,7 +51,7 @@ mutation VerifyEmail($code: String!) {
     message
     code
     user {
-      ...AuthUser
+      ...LoginUser
     }
   }
 }

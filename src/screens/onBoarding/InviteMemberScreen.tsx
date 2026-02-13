@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, TextInput, Pressable, Alert } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { StyleSheet } from 'react-native-unistyles';
@@ -261,13 +261,13 @@ export const InviteMemberScreen = () => {
             autoCorrect={false}
             onSubmitEditing={addInvite}
           />
-          <TouchableOpacity
-            style={styles.addButton}
+          <Pressable
+            style={({pressed}) => [styles.addButton, pressed && styles.pressed]}
             onPress={addInvite}
             disabled={!currentEmail.trim()}
           >
             <Text style={styles.addButtonText}>Add</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.invitesList}>
@@ -290,9 +290,9 @@ export const InviteMemberScreen = () => {
                 <View key={invite.id} style={styles.inviteItem}>
                   <View style={styles.inviteInfo}>
                     <Text style={styles.inviteEmail}>{invite.email}</Text>
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => toggleInviteType(invite.id)}
-                      style={styles.typeButton}
+                      style={({pressed}) => [styles.typeButton, pressed && styles.pressed]}
                       disabled={!hasBoth}
                     >
                       <Text style={styles.typeText}>
@@ -301,14 +301,14 @@ export const InviteMemberScreen = () => {
                           <Text style={styles.typeHint}> (tap to change)</Text>
                         )}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => removeInvite(invite.id)}
-                    style={styles.removeButton}
+                    style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
                   >
                     <Text style={styles.removeButtonText}>✕</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               ))}
             </>
@@ -443,5 +443,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     lineHeight: theme.typography.lineHeight.tight,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

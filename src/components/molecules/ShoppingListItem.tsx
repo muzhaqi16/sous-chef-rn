@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, TextStyle, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TextStyle, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
@@ -77,8 +77,8 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
     <Animated.View style={animatedSlideStyle} testID={`shopping-item-${id}`}>
       <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
         <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.checkboxContainer}
+        <Pressable
+          style={({pressed}) => [styles.checkboxContainer, pressed && styles.pressed]}
           onPress={() => onToggle(id)}
           accessibilityRole="checkbox"
           accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
@@ -89,7 +89,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
           <View style={styles.checkbox}>
             {isPurchased && <Icon name="check" size={16} color="white" />}
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         {imageUrl && (
           <CachedImage uri={imageUrl} style={styles.itemImage} />
@@ -108,15 +108,16 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
                 disabled={isPurchased}
               />
-              <TouchableOpacity
+              <Pressable
                 onPress={handleQuantityUpdate}
                 disabled={isPurchased}
                 accessibilityRole="button"
                 accessibilityLabel="Confirm quantity"
                 accessibilityHint={`Save new quantity of ${localQuantity}`}
+                style={({pressed}) => pressed && styles.pressed}
               >
                 <Icon name="check" size={20} color={theme.colors.primary} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : isPurchased ? (
             <View style={styles.quantityContainer}>
@@ -130,8 +131,8 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
               />
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.quantityContainer}
+            <Pressable
+              style={({pressed}) => [styles.quantityContainer, pressed && styles.pressed]}
               onPress={() => setIsEditingQuantity(true)}
               accessibilityRole="button"
               accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
@@ -146,7 +147,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 style={styles.quantityText}
               />
               <Icon name="edit" size={14} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
         </View>
@@ -236,5 +237,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

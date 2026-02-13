@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -27,11 +27,10 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
     : ingredient.item?.imageUrl;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
+    <Pressable
+      style={({pressed}) => [styles.card, pressed && styles.pressed]}
       onPress={onPress}
       disabled={isAdded}
-      activeOpacity={0.7}
     >
       {imageUrl ? (
         <CachedImage uri={imageUrl} style={styles.image} />
@@ -55,7 +54,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
           <Ionicons name="add" size={16} color={theme.colors.primary} />
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -120,5 +119,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

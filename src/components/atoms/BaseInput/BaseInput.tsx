@@ -6,7 +6,7 @@ import {
   TextInputProps,
   StyleProp,
   ViewStyle,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import styles from './BaseInput.styles';
@@ -72,13 +72,13 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           {...textInputProps}
         />
         {showClear && (
-          <TouchableOpacity
-            style={styles.iconWrapper}
+          <Pressable
+            style={({pressed}) => [styles.iconWrapper, pressed && styles.pressed]}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Icon name="close" size={18} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          </Pressable>
         )}
         {rightIcon != null && (
           <View

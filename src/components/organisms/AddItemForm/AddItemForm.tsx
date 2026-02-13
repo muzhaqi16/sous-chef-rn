@@ -5,7 +5,7 @@ import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
-import { StorageState, ItemType, BaseDimension, type CreateItemInput, type ItemUnitInput } from '#generated';
+import { StorageState, ItemType, BaseDimension, type ItemUnitInput } from '#generated';
 import { FormInput } from '#/components/molecules/FormInput';
 import { FormTextArea } from '#/components/molecules/FormTextArea';
 import { FormNumberInput } from '#/components/molecules/FormNumberInput';
@@ -323,12 +323,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       ? [...tags, ...systemTags]
       : undefined;
 
-    const processedData: Partial<CreateItemInput> & {
+    // Fields are mapped to the form schema, not directly to CreateItemInput
+    // (the API input type uses nested objects like brand, productDetails, etc.)
+    const processedData: Record<string, unknown> & {
       selectedImages: SelectedImage[];
-      sku?: string;
-      baseDimension?: string;
-      defaultConsumeIncrement?: number;
-      defaultConsumeUnitId?: string;
     } = {
       name: data.name,
       description: data.description || undefined,

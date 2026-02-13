@@ -4,7 +4,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -128,20 +128,21 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
           ) : null}
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
               onPress={handleClose}
               disabled={isSubmitting}
             >
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.button,
                 styles.submitButton,
                 { backgroundColor: theme.colors.primary },
                 isSubmitting && styles.disabledButton,
+                pressed && styles.pressed,
               ]}
               onPress={handleSubmit}
               disabled={isSubmitting || loading}
@@ -151,7 +152,7 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
               ) : (
                 <Text style={styles.submitButtonText}>{submitText}</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -228,5 +229,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

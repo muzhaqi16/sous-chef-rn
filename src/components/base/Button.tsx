@@ -1,7 +1,13 @@
-import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import React, { useCallback } from 'react';
+import { Pressable, Text, ActivityIndicator } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { HapticService } from '#services/haptic/HapticService';
 
 interface ButtonProps {
   onPress: () => void;
@@ -21,6 +27,11 @@ interface ButtonProps {
   accessibilityHint?: string;
 }
 
+const RIPPLE_PRIMARY = { color: 'rgba(255,255,255,0.2)', borderless: false };
+const RIPPLE_DEFAULT = { color: 'rgba(0,0,0,0.1)', borderless: false };
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export const Button: React.FC<ButtonProps> = ({
   onPress,
   variant = 'primary',
@@ -38,11 +49,32 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    HapticService.light();
+    onPress();
+  }, [onPress]);
+
   // Use title/children as fallback for accessibility label
   const buttonLabel = accessibilityLabel || title || (typeof children === 'string' ? children : undefined);
 
+  const useWhiteRipple = variant === 'primary' || variant === 'danger';
+
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       testID={testID}
       style={[
         styles.button,
@@ -50,11 +82,15 @@ export const Button: React.FC<ButtonProps> = ({
         styles[size],
         fullWidth && styles.fullWidth,
         disabled && styles.disabled,
+        animatedStyle,
         style,
         btnStyle,
       ]}
-      onPress={onPress}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled || loading}
+      android_ripple={useWhiteRipple ? RIPPLE_PRIMARY : RIPPLE_DEFAULT}
       accessibilityRole="button"
       accessibilityLabel={buttonLabel}
       accessibilityHint={accessibilityHint}
@@ -63,9 +99,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={
-            variant === 'primary' || variant === 'danger' ? 'white' : undefined
-          }
+          color={useWhiteRipple ? 'white' : undefined}
         />
       ) : (
         <>
@@ -76,8 +110,6 @@ export const Button: React.FC<ButtonProps> = ({
               color={
                 variant === 'primary' || variant === 'danger'
                   ? 'white'
-                  : variant === 'ghost'
-                  ? undefined
                   : undefined
               }
             />
@@ -87,7 +119,7 @@ export const Button: React.FC<ButtonProps> = ({
           </Text>
         </>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
@@ -98,7 +130,8 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
-    minHeight: 50,
+    minHeight: theme.sizes.button.lg,
+    overflow: 'hidden',
   },
   primary: {
     backgroundColor: theme.colors.primary,

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, Pressable, Image, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { getPerspectiveLabel } from '#utils/imageUtils';
@@ -159,16 +159,16 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 style={styles.thumbnail}
                 resizeMode="cover"
               />
-              <TouchableOpacity
-                style={styles.removeButton}
+              <Pressable
+                style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
                 onPress={() => handleRemoveImage(index)}
                 disabled={disabled}
               >
                 <Icon name="close" size={14} color={theme.colors.white} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
-            <TouchableOpacity
-              style={styles.perspectiveButton}
+            <Pressable
+              style={({pressed}) => [styles.perspectiveButton, pressed && styles.pressed]}
               onPress={() => setPickerIndex(index)}
               disabled={disabled}
             >
@@ -181,7 +181,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 size={14}
                 color={theme.colors.textSecondary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ))}
 
@@ -318,5 +318,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.primary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

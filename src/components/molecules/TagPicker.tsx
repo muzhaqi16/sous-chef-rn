@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -65,8 +65,8 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   const renderTagItem = ({ item }: { item: string }) => {
     const isSelected = selectedTags.includes(item);
     return (
-      <TouchableOpacity
-        style={[styles.tagItem, isSelected && styles.tagItemSelected]}
+      <Pressable
+        style={({pressed}) => [styles.tagItem, isSelected && styles.tagItemSelected, pressed && styles.pressed]}
         onPress={() => handleToggleTag(item)}>
         <Icon
           library="Feather"
@@ -87,7 +87,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             color={theme.colors.primary}
           />
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -152,9 +152,9 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               : `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected`}
           </Text>
           {selectedTags.length > 0 && (
-            <TouchableOpacity onPress={handleClearAll}>
+            <Pressable onPress={handleClearAll} style={({pressed}) => pressed && styles.pressed}>
               <Text style={styles.clearText}>Clear all</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
@@ -285,5 +285,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

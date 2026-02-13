@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {TouchableOpacity} from 'react-native';
+import {Pressable} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 import Feather from '@react-native-vector-icons/feather';
 import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
@@ -32,15 +33,23 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       autoCapitalize="none"
       placeholder="••••••••"
       rightIcon={
-        <TouchableOpacity onPress={() => setVisible(v => !v)}>
+        <Pressable
+          onPress={() => setVisible(v => !v)}
+          style={({pressed}) => pressed && pressedStyles.pressed}>
           <Feather
             name={visible ? 'eye' : 'eye-off'}
             size={20}
             color={visible ? '#333' : '#999'}
           />
-        </TouchableOpacity>
+        </Pressable>
       }
       {...props}
     />
   );
 };
+
+const pressedStyles = StyleSheet.create(() => ({
+  pressed: {
+    opacity: 0.7,
+  },
+}));

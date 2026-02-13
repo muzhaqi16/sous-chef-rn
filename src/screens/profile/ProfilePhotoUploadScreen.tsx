@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  TouchableOpacity,
+  Pressable,
   Text,
   Alert,
   Image,
@@ -192,9 +192,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <TouchableOpacity
+          <Pressable
             onPress={goBack}
-            style={styles.headerBack}
+            style={({pressed}) => [styles.headerBack, pressed && styles.pressed]}
             disabled={isUploading}
           >
             <Icon
@@ -203,7 +203,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               size={30}
               library="Feather"
             />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.title}>Upload Your Photo</Text>
         </View>
 
@@ -243,11 +243,12 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 
           {/* Show crop icon below image if not cropped yet */}
           {selectedImage && !croppedImage && (
-            <TouchableOpacity
+            <Pressable
               onPress={handleCropImage}
-              style={[
+              style={({pressed}) => [
                 styles.cropIconButton,
                 { backgroundColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
@@ -257,15 +258,15 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 size={20}
                 library="Feather"
               />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
         {selectedImage ? (
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleUpload}
-              style={[styles.btn, { backgroundColor: theme.colors.primary }]}
+              style={({pressed}) => [styles.btn, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <Text
@@ -273,13 +274,14 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 {isUploading ? 'Uploading...' : 'Upload Photo'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={handleRetake}
-              style={[
+              style={({pressed}) => [
                 styles.btnSecondary,
                 { borderColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
@@ -291,13 +293,13 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 Choose Different Photo
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : (
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleTakePhoto}
-              style={[styles.btn, { backgroundColor: theme.colors.primary }]}
+              style={({pressed}) => [styles.btn, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <Text
@@ -305,18 +307,19 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               >
                 Take Photo
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={handleSelectPhoto}
-              style={[
+              style={({pressed}) => [
                 styles.btnSecondary,
                 { borderColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
               <Text style={styles.btnSecondaryText}>Select Photo</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
       </View>
@@ -426,6 +429,9 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.relaxed,
     fontWeight: '600',
     color: theme.colors.secondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useRef, useMemo } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import {
   createStaticNavigation,
   DefaultTheme,
@@ -86,7 +86,7 @@ const RootStack = createNativeStackNavigator({
   screenOptions: {
     headerShown: false,
     animation: 'slide_from_right',
-    animationDuration: 250,
+    animationDuration: 200,
   },
   groups: {
     Auth: {
@@ -157,13 +157,34 @@ const RootStack = createNativeStackNavigator({
           screen: DeleteAccountScreen,
           linking: 'delete-account',
         },
-        NotificationSettings: NotificationSettingsScreen,
-        DietaryProfile: DietaryProfileScreen,
-        PersonalInformation: PersonalInformationScreen,
-        AppSettings: AppSettingsScreen,
-        PerformanceDashboard: PerformanceDashboard,
-        DebugInfo: DebugInfo,
-        ChangePassword: ChangePasswordScreen,
+        NotificationSettings: {
+          screen: NotificationSettingsScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        DietaryProfile: {
+          screen: DietaryProfileScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        PersonalInformation: {
+          screen: PersonalInformationScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        AppSettings: {
+          screen: AppSettingsScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        PerformanceDashboard: {
+          screen: PerformanceDashboard,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        DebugInfo: {
+          screen: DebugInfo,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
+        ChangePassword: {
+          screen: ChangePasswordScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
       },
     },
     // Always-available deep link screens — placed last so the active
@@ -288,7 +309,11 @@ export function Navigation() {
 
   return (
     <NavigationErrorBoundary>
-      <Suspense fallback={<View style={{ flex: 1 }} />}>
+      <Suspense fallback={
+        <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      }>
         <StaticNavigation
           ref={navigationRef}
           theme={navigationTheme}

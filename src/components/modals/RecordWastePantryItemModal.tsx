@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -254,10 +254,11 @@ export const RecordWastePantryItemModal: React.FC<
                   Waste by
                 </Text>
                 <View style={commonStyles.bottomSheetOptionContainer}>
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('tracking')}
                   >
@@ -272,12 +273,13 @@ export const RecordWastePantryItemModal: React.FC<
                     {selectedUnit === 'tracking' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                   {hasContentUnit && (
-                    <TouchableOpacity
-                      style={[
+                    <Pressable
+                      style={({pressed}) => [
                         commonStyles.bottomSheetOption,
                         selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                        pressed && styles.pressed,
                       ]}
                       onPress={() => setSelectedUnit('content')}
                     >
@@ -292,12 +294,13 @@ export const RecordWastePantryItemModal: React.FC<
                       {selectedUnit === 'content' && (
                         <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('weight')}
                   >
@@ -312,7 +315,7 @@ export const RecordWastePantryItemModal: React.FC<
                     {selectedUnit === 'weight' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -348,12 +351,13 @@ export const RecordWastePantryItemModal: React.FC<
               </Text>
               <View style={commonStyles.bottomSheetOptionContainer}>
                 {WASTE_REASON_OPTIONS.map(option => (
-                  <TouchableOpacity
+                  <Pressable
                     key={option.value}
-                    style={[
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       wasteReason === option.value &&
                         commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setWasteReason(option.value)}
                   >
@@ -374,7 +378,7 @@ export const RecordWastePantryItemModal: React.FC<
                         color={theme.colors.primary}
                       />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -422,5 +426,8 @@ export const RecordWastePantryItemModal: React.FC<
 const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
     marginBottom: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

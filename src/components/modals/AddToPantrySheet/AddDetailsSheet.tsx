@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
@@ -52,10 +52,10 @@ const PageIndicator: React.FC<{
   return (
     <View style={indicatorStyles.container}>
       {pages.map((label, index) => (
-        <TouchableOpacity
+        <Pressable
           key={label}
           onPress={() => onPagePress(index)}
-          style={indicatorStyles.item}
+          style={({pressed}) => [indicatorStyles.item, pressed && indicatorStyles.pressed]}
         >
           <View
             style={[
@@ -82,7 +82,7 @@ const PageIndicator: React.FC<{
           >
             {label}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
@@ -109,6 +109,9 @@ const indicatorStyles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.fonts.size.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 
@@ -545,12 +548,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       <View style={styles.container} testID="add-pantry-item-details-modal">
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+          <Pressable
+            onPress={onClose}
+            style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
+          >
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.title}>Add Item Details</Text>
-          <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          <Pressable
+            style={({pressed}) => [styles.saveButton, loading && styles.saveButtonDisabled, pressed && styles.pressed]}
             onPress={handleConfirm}
             disabled={loading}
             testID="add-pantry-item-submit-button"
@@ -558,7 +564,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             <Text style={styles.saveButtonText}>
               {loading ? 'Adding...' : 'Add'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Page Indicators */}
@@ -690,14 +696,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
             {/* Package Details - Progressive Disclosure */}
             <View style={styles.section}>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setShowPackageDetails(!showPackageDetails)}
-                style={styles.toggleButton}
+                style={({pressed}) => [styles.toggleButton, pressed && styles.pressed]}
               >
                 <Text style={styles.toggleButtonText}>
                   {showPackageDetails ? 'Hide Package Details' : 'Add Package Details'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {showPackageDetails && (
                 <View style={styles.packageDetailsContainer}>
@@ -928,5 +934,8 @@ const styles = StyleSheet.create(theme => ({
   },
   packageDetailsContainer: {
     marginTop: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

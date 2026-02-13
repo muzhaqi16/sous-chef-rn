@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ListRenderItem,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import Animated, {
   LinearTransition,
@@ -300,10 +300,11 @@ export const HomeManagement: React.FC = () => {
           >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({pressed}) => [
                   styles.modeButton,
                   mode === 'create' && styles.modeButtonActive,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setMode('create')}
               >
@@ -315,11 +316,12 @@ export const HomeManagement: React.FC = () => {
                 >
                   Create Home
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
+              </Pressable>
+              <Pressable
+                style={({pressed}) => [
                   styles.modeButton,
                   mode === 'join' && styles.modeButtonActive,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setMode('join')}
               >
@@ -331,7 +333,7 @@ export const HomeManagement: React.FC = () => {
                 >
                   Join with Code
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {mode === 'create' ? (
@@ -506,5 +508,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

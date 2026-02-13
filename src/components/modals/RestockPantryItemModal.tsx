@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -238,10 +238,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                   Restock by
                 </Text>
                 <View style={commonStyles.bottomSheetOptionContainer}>
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('tracking')}
                   >
@@ -256,12 +257,13 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                     {selectedUnit === 'tracking' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                   {hasContentUnit && (
-                    <TouchableOpacity
-                      style={[
+                    <Pressable
+                      style={({pressed}) => [
                         commonStyles.bottomSheetOption,
                         selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                        pressed && styles.pressed,
                       ]}
                       onPress={() => setSelectedUnit('content')}
                     >
@@ -276,12 +278,13 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                       {selectedUnit === 'content' && (
                         <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
-                  <TouchableOpacity
-                    style={[
+                  <Pressable
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setSelectedUnit('weight')}
                   >
@@ -296,7 +299,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                     {selectedUnit === 'weight' && (
                       <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -389,5 +392,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     marginTop: theme.spacing.xs,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

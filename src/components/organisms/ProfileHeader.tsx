@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
 import { Icon } from '#/utils/iconUtils';
@@ -29,7 +29,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         color={theme.colors.textPrimary}
         accessibilityLabel="Go back"
       />
-      <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
+      <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
         {avatarUrl ? (
           <CachedImage
             uri={avatarUrl}
@@ -56,7 +56,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             size={15}
           />
         </View>
-      </TouchableOpacity>
+      </Pressable>
       <IconButton
         name="more-vertical"
         library="Feather"
@@ -82,7 +82,6 @@ const styles = StyleSheet.create(theme => ({
     height: 80,
     borderRadius: theme.sizes.avatar.md,
     backgroundColor: theme.colors.surface,
-    overflow: 'hidden',
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },
@@ -100,5 +99,8 @@ const styles = StyleSheet.create(theme => ({
     height: 28,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

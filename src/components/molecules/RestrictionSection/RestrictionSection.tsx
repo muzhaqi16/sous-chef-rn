@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -31,14 +31,14 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        <TouchableOpacity onPress={onAddPress} style={styles.addButton}>
+        <Pressable onPress={onAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
           <Icon
             library="Feather"
             name="plus"
             size={18}
             color={theme.colors.primary}
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Chip grid showing existing items */}
@@ -49,8 +49,8 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
               <View style={styles.displayChip}>
                 <Text style={styles.displayChipText}>{item.label}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.removeButton}
+              <Pressable
+                style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
                 onPress={() => onRemove(item.id)}
               >
                 <Icon
@@ -59,7 +59,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
                   size={18}
                   color={theme.colors.error}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ))}
         </View>
@@ -123,5 +123,8 @@ const styles = StyleSheet.create(theme => ({
   emptyText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

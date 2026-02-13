@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
 
@@ -29,12 +29,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   const { theme } = useUnistyles();
 
   return (
-    <TouchableOpacity
-      style={[styles.container, disabled && styles.disabled]}
+    <Pressable
+      style={({pressed}) => [styles.container, disabled && styles.disabled, pressed && styles.pressed]}
       onPress={onPress}
       disabled={disabled}
       testID={testID}
-      activeOpacity={0.7}
     >
       <View style={styles.iconContainer}>
         <Icon
@@ -50,7 +49,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       >
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -82,5 +81,8 @@ const styles = StyleSheet.create(theme => ({
   },
   labelDisabled: {
     color: theme.colors.textTertiary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -120,13 +120,13 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 }
               />
             </View>
-            <TouchableOpacity
+            <Pressable
               onPress={() => handleRemoveEntry(index)}
               disabled={disabled}
-              style={styles.deleteButton}
+              style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
             >
               <Icon name="delete" size={20} color={theme.colors.error} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
           {entry.packageSize && parseFloat(entry.packageSize) > 0 && (
             <View style={styles.contentUnitRow}>
@@ -195,5 +195,8 @@ const styles = StyleSheet.create(theme => ({
     paddingLeft: theme.spacing.md,
     borderLeftWidth: 2,
     borderLeftColor: theme.colors.borderLight,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

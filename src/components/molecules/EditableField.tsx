@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
@@ -75,15 +75,15 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           error={error ?? undefined}
         />
         <View style={styles.editActions}>
-          <TouchableOpacity
-            style={[styles.editButton, styles.cancelButton]}
+          <Pressable
+            style={({pressed}) => [styles.editButton, styles.cancelButton, pressed && styles.pressed]}
             onPress={handleCancel}
             disabled={saving}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.editButton, styles.saveButton]}
+          </Pressable>
+          <Pressable
+            style={({pressed}) => [styles.editButton, styles.saveButton, pressed && styles.pressed]}
             onPress={handleSave}
             disabled={saving}
           >
@@ -92,7 +92,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -104,9 +104,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Text style={styles.nameLabel}>{label}</Text>
         <Text style={styles.nameValue}>{value}</Text>
       </View>
-      <TouchableOpacity style={styles.editIconButton} onPress={handleStartEdit}>
+      <Pressable style={({pressed}) => [styles.editIconButton, pressed && styles.pressed]} onPress={handleStartEdit}>
         <Icon name="edit" size={20} />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -162,5 +162,8 @@ const styles = StyleSheet.create(theme => ({
   saveButtonText: {
     color: theme.colors.neutral[0],
     fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
