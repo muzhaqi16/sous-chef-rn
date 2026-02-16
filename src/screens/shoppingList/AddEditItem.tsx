@@ -5,7 +5,7 @@ import {
   useUpdateShoppingListItemMutation,
   useGetShoppingListItemQuery,
   ItemSuggestion,
-  ShoppingListItemFragmentDoc,
+  ShoppingListItemDisplayFragmentDoc,
   CategoryType,
 } from '#generated';
 import { FormModal } from '#components/organisms/FormModal';
@@ -87,8 +87,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       if (updatedItem) {
         cache.writeFragment({
           id: cache.identify({ __typename: 'ShoppingListItem', id: updatedItem.id }),
-          fragment: ShoppingListItemFragmentDoc,
-          fragmentName: 'ShoppingListItemFragment',
+          fragment: ShoppingListItemDisplayFragmentDoc,
+          fragmentName: 'ShoppingListItemDisplayFragment',
           data: updatedItem,
         });
       }

@@ -35,7 +35,7 @@ import {
   CacheStrategy,
   LogLevel,
 } from './types';
-import { MutationType } from '#/graphql/generated/types';
+import { MutationType } from '#generated';
 import { serializeError, isCircularStructureError, isTimerCircularStructureError } from '#/utils/errorSerialization';
 
 export class SubscriptionService {

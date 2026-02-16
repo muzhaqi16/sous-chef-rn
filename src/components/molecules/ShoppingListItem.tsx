@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Pressable, TextStyle, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TextStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem/SwipeableItem';
@@ -26,6 +26,7 @@ interface ShoppingListItemProps {
   onUpdateQuantity: (id: string, quantity: number) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  screenWidth?: number;
 }
 
 export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
@@ -42,10 +43,10 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
   onUpdateQuantity,
   onDelete,
   onEdit,
+  screenWidth = 375,
 }) => {
   useRenderTime('ShoppingListItem');
   const { theme } = useUnistyles();
-  const { width: screenWidth } = useWindowDimensions();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(quantity);
 

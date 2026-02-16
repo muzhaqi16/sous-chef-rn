@@ -142,12 +142,9 @@ const CreateHomeScreenComponent = () => {
             }
 
             const newEdge = {
-              __typename: 'PantryEdge',
+              __typename: 'PantryEdge' as const,
               cursor: newPantry.id,
-              node: {
-                __typename: 'Pantry',
-                ...newPantry,
-              },
+              node: newPantry,
             };
 
             const edges = [...(existingConnection.edges || []), newEdge];

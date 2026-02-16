@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTabBarActions } from '#context/TabBarActionsContext';
+import { useTabBarState, useTabBarSetters } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
@@ -26,9 +26,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       addButtonConfig,
       isAddButtonDisabled,
       addButtonDisabledMessage,
-      setActiveTab,
       isOverlayOpen,
-    } = useTabBarActions();
+    } = useTabBarState();
+    const { setActiveTab } = useTabBarSetters();
 
     // Navigation labels preference
     const showNavigationLabels = useShowNavigationLabels();

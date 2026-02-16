@@ -251,13 +251,13 @@ export const RecipeMain: React.FC = React.memo(() => {
     navigate('RecipeSearch', { initialQuery: searchQuery });
   }, [navigate, searchQuery]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (showRandomRecipes) {
       await handleRefreshRandom();
     } else {
       await refetch();
     }
-  };
+  }, [showRandomRecipes, handleRefreshRandom, refetch]);
 
   const handleRemoveRecipe = useCallback(
     async (recipeId: string) => {
@@ -330,6 +330,8 @@ export const RecipeMain: React.FC = React.memo(() => {
           style={({pressed}) => [styles.refreshButton, pressed && styles.pressed]}
           onPress={handleRefreshRandom}
           disabled={loadingRandom}
+          accessibilityRole="button"
+          accessibilityLabel="Refresh recipe suggestions"
         >
           <Icon
             name="refresh"
@@ -466,7 +468,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         notificationCount={unreadCount}
         onAvatarPress={() => navigate('Notifications')}
       />
-      <View style={{ paddingHorizontal: theme.spacing.md }}>
+      <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -528,6 +530,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  searchBarContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
   suggestedHeader: {
     flexDirection: 'row',

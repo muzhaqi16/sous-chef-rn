@@ -297,35 +297,6 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
         id
         name
       }
-      itemsConnection(first: 25) {
-        edges {
-          node {
-            id
-            purchaseInfo {
-              isPurchased
-            }
-          }
-          cursor
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
-      collaboratorsConnection(first: 20) {
-        edges {
-          cursor
-          node {
-            ...ShoppingListCollaboratorFragment
-          }
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
       ownerships {
         ...ShoppingListOwnershipFragment
       }
@@ -476,7 +447,7 @@ mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -490,7 +461,7 @@ mutation UpdateShoppingListItem(
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -506,13 +477,13 @@ mutation RemoveItemFromShoppingList($id: ID!) {
   }
 }
 
-mutation markItemPurchased($id: ID!, $status: Boolean!) {
+mutation MarkItemPurchased($id: ID!, $status: Boolean!) {
   markItemPurchased(id: $id, status: $status) {
     success
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -523,7 +494,7 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -588,7 +559,7 @@ mutation UpdateShoppingListItemQuantity(
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -599,7 +570,7 @@ mutation UpdateShoppingListItemNotes($id: ID!, $notes: String, $version: Int) {
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -618,7 +589,7 @@ mutation UpdateShoppingListItemPriority(
     message
     code
     shoppingListItem {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
   }
 }
@@ -641,7 +612,7 @@ mutation UpdateCollaboratorRole(
 
 mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   moveShoppingItemToPantry(input: $input) {
-    ...PantryItemFragment
+    ...PantryItemDisplay
   }
 }
 
@@ -668,7 +639,7 @@ mutation AddItemsToShoppingList(
       clientId
       success
       item {
-        ...ShoppingListItemFragment
+        ...ShoppingListItemDisplayFragment
       }
       quantityIncremented
       error
@@ -693,7 +664,7 @@ mutation SyncShoppingListItem(
     operation
     wasCreated
     item {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
     conflict {
       clientVersion
@@ -743,7 +714,7 @@ mutation SyncMoveShoppingListItem(
     operation
     wasCreated
     item {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
     conflict {
       clientVersion
@@ -776,27 +747,6 @@ subscription ShoppingListUpdated($listId: ID!) {
       completedAt
       budgetAmount
       totalCost
-      itemsConnection(first: 25) {
-        edges {
-          node {
-            id
-            itemName
-            quantity
-            purchaseInfo {
-              isPurchased
-            }
-            priceEstimate {
-              estimated
-            }
-          }
-          cursor
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
     }
     updatedFields
     userId
@@ -827,7 +777,7 @@ subscription ShoppingListItemsChanged($listId: ID!) {
     mutation
     listId
     item {
-      ...ShoppingListItemFragment
+      ...ShoppingListItemDisplayFragment
     }
     updatedFields
     userId
@@ -841,7 +791,6 @@ subscription ShoppingListCollaboratorsChanged($listId: ID!) {
     listId
     collaborator {
       id
-      token
       collaboratorId
       email
       role

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useCreatePantryItemUsageMutation,
@@ -280,23 +280,29 @@ export function usePantryItemActions({
     [removeItem],
   );
 
+  const consumeModal = useMemo<ModalState>(() => ({
+    visible: consumeModalVisible,
+    item: selectedItemForConsume,
+    close: handleCloseConsumeModal,
+  }), [consumeModalVisible, selectedItemForConsume, handleCloseConsumeModal]);
+
+  const wasteModal = useMemo<ModalState>(() => ({
+    visible: wasteModalVisible,
+    item: selectedItemForWaste,
+    close: handleCloseWasteModal,
+  }), [wasteModalVisible, selectedItemForWaste, handleCloseWasteModal]);
+
+  const restockModal = useMemo<ModalState>(() => ({
+    visible: restockModalVisible,
+    item: selectedItemForRestock,
+    close: handleCloseRestockModal,
+  }), [restockModalVisible, selectedItemForRestock, handleCloseRestockModal]);
+
   return {
     // Modal states with close handlers
-    consumeModal: {
-      visible: consumeModalVisible,
-      item: selectedItemForConsume,
-      close: handleCloseConsumeModal,
-    } as ModalState,
-    wasteModal: {
-      visible: wasteModalVisible,
-      item: selectedItemForWaste,
-      close: handleCloseWasteModal,
-    } as ModalState,
-    restockModal: {
-      visible: restockModalVisible,
-      item: selectedItemForRestock,
-      close: handleCloseRestockModal,
-    } as ModalState,
+    consumeModal,
+    wasteModal,
+    restockModal,
 
     // Confirmation handlers (for modal submit)
     handleConfirmConsume,

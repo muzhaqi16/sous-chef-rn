@@ -10,7 +10,7 @@
 import { Alert } from 'react-native';
 import {
   useAddItemToShoppingListMutation,
-  DisplayFormat,
+  type AddItemToShoppingListMutation,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
@@ -39,119 +39,63 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
+    // Type assertion needed: createOptimisticEntity returns VersionedEntity base type
+    // but the spread properties match ShoppingListItemDisplayFragment at runtime
     optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
       return {
         __typename: 'Mutation',
         addItemToShoppingList: {
-          ...createOptimisticEntity('ShoppingListItem', tempId, {
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          shoppingListItem: createOptimisticEntity('ShoppingListItem', tempId, {
             itemName: variables.input.itemName,
             quantity: variables.input.quantity ?? 1,
             quantityInput: variables.input.quantityInput || null,
-            displayFormat: DisplayFormat.Auto,
             unitName: variables.input.unitName || null,
-            notes: variables.input.notes || null,
             category: variables.input.category || null,
-            shoppingList: {
-              __typename: 'ShoppingList',
-              id: listId || '',
-              totalItems: null,
-              completedItems: null,
-              estimatedTotal: null,
-            },
+            sortOrder: '',
+            priority: null,
+            brandId: null,
+            netWeight: null,
+            netWeightUnitId: null,
             item: variables.input.itemId
               ? {
-                  __typename: 'Item',
+                  __typename: 'Item' as const,
                   id: variables.input.itemId,
-                  name: null,
-                  description: null,
                   imageUrl: null,
-                  netWeight: null,
-                  displayUnit: null,
                   categories: [],
+                  units: [],
                 }
               : null,
             unit: variables.input.unitId
               ? {
-                  __typename: 'Unit',
+                  __typename: 'Unit' as const,
                   id: variables.input.unitId,
-                  name: null,
-                  symbol: null,
-                  type: null,
-                  isMetric: null,
-                  baseUnitId: null,
-                  conversionFactor: null,
-                  notes: null,
-                  isCommon: null,
-                  sortOrder: null,
-                  createdAt: null,
-                  updatedAt: null,
+                  name: '',
+                  symbol: '',
                 }
               : null,
+            brand: null,
+            netWeightUnit: null,
             purchaseInfo: {
-              __typename: 'PurchaseInfo',
+              __typename: 'ShoppingListItemPurchaseInfo',
               isPurchased: false,
-              purchasedQuantity: null,
-              purchasedPrice: null,
-              purchaseDate: null,
-              purchasedBy: null,
-            },
-            priceEstimate: {
-              __typename: 'PriceEstimate',
-              estimated: null,
-              budget: null,
-              lastKnown: null,
-              lowest: null,
-              highest: null,
-              lastUpdated: null,
-            },
-            storeInfo: {
-              __typename: 'StoreInfo',
-              aisle: null,
-              storeSection: null,
-              preferredStore: null,
-            },
-            purchaseHistory: {
-              __typename: 'PurchaseHistory',
-              previouslyPurchased: false,
-              lastPurchaseDate: null,
-              purchaseCount: 0,
-            },
-            source: {
-              __typename: 'Source',
-              isAutoAdded: false,
-              autoAddReason: null,
-              isFromMealPlan: false,
-              mealPlan: null,
-            },
-            priority: null,
-            sortOrder: null,
-            createdAt: null,
-            deletedAt: null,
-            addedBy: null,
-            purchasesConnection: {
-              __typename: 'PurchaseConnection',
-              totalCount: 0,
-              edges: [],
-              pageInfo: {
-                __typename: 'PageInfo',
-                hasNextPage: false,
-                endCursor: null,
-              },
             },
           }),
-          __typename: 'ShoppingListItem',
-        } as any,
-      };
+        },
+      } as unknown as AddItemToShoppingListMutation;
     },
     update(cache, { data }) {
-      if (!data?.addItemToShoppingList || !listId) return;
+      if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;
 
       try {
         addToShoppingListItemsCache(
           cache,
           listId,
-          data.addItemToShoppingList,
+          data.addItemToShoppingList.shoppingListItem,
         );
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);

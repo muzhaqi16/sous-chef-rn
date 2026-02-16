@@ -11,13 +11,17 @@ import React, {
 import type { IconLibrary } from '#/utils/iconUtils';
 
 /**
- * TabBarActionsContext
+ * TabBarActionsContext - Split into State and Setters contexts
  *
  * Manages the floating action buttons in the tab bar:
  * - Scanner button: Opens barcode scanner (Pantry, ShoppingList tabs)
  * - Add button: Opens add flow (Pantry, ShoppingList, Recipe tabs)
  *
- * Also tracks active tab and overlay state for coordinating UI visibility.
+ * Split into two contexts to prevent unnecessary re-renders:
+ * - TabBarSettersContext: Stable setter functions (rarely changes)
+ * - TabBarStateContext: Derived state (changes on tab switches, button presses)
+ *
+ * Most consumers only need setters and won't re-render on tab switches.
  */
 
 interface AddButtonConfig {
@@ -25,18 +29,8 @@ interface AddButtonConfig {
   iconLibrary: IconLibrary;
 }
 
-interface TabBarActionsContextType {
-  // Scanner button props
-  onScanPress?: () => void;
-  showScannerButton: boolean;
+interface TabBarSettersContextType {
   setScannerProps: (onScanPress?: () => void, showButton?: boolean) => void;
-
-  // Add button props
-  onAddPress?: () => void;
-  showAddButton: boolean;
-  addButtonConfig: AddButtonConfig;
-  isAddButtonDisabled: boolean;
-  addButtonDisabledMessage?: string;
   /**
    * Register add button handler for the current screen.
    * Button visibility is now automatic based on active tab - always shows on allowed tabs.
@@ -49,17 +43,38 @@ interface TabBarActionsContextType {
     disabled?: boolean,
     disabledMessage?: string,
   ) => void;
-
-  // Shared state
-  activeTab: string;
   setActiveTab: (tabName: string) => void;
-  isOverlayOpen: boolean;
   setOverlayOpen: (isOpen: boolean) => void;
 }
 
-const TabBarActionsContext = createContext<
-  TabBarActionsContextType | undefined
->(undefined);
+interface TabBarStateContextType {
+  // Scanner button props
+  onScanPress?: () => void;
+  showScannerButton: boolean;
+
+  // Add button props
+  onAddPress?: () => void;
+  showAddButton: boolean;
+  addButtonConfig: AddButtonConfig;
+  isAddButtonDisabled: boolean;
+  addButtonDisabledMessage?: string;
+
+  // Shared state
+  activeTab: string;
+  isOverlayOpen: boolean;
+}
+
+// Combined type for backwards compatibility
+type TabBarActionsContextType = TabBarSettersContextType &
+  TabBarStateContextType;
+
+const TabBarSettersContext = createContext<TabBarSettersContextType | undefined>(
+  undefined,
+);
+
+const TabBarStateContext = createContext<TabBarStateContextType | undefined>(
+  undefined,
+);
 
 interface TabBarActionsProviderProps {
   children: ReactNode;
@@ -156,7 +171,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     [],
   );
 
-  const setOverlayOpen = useCallback((isOpen: boolean) => {
+  const setOverlayOpenCb = useCallback((isOpen: boolean) => {
     setIsOverlayOpen(isOpen);
   }, []);
 
@@ -164,6 +179,17 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     activeTabRef.current = tabName; // Sync update before state change to prevent race condition
     setActiveTab(tabName);
   }, []);
+
+  // Memoize setters context - very stable, only changes if callbacks change (they don't)
+  const settersValue = useMemo<TabBarSettersContextType>(
+    () => ({
+      setScannerProps,
+      setAddProps,
+      setActiveTab: handleSetActiveTab,
+      setOverlayOpen: setOverlayOpenCb,
+    }),
+    [setScannerProps, setAddProps, handleSetActiveTab, setOverlayOpenCb],
+  );
 
   // Only show buttons if the current tab is in the allowed list and button is enabled
   const shouldShowScanner =
@@ -190,59 +216,76 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     }
   }, [activeTab]);
 
-  // Memoize context value to prevent unnecessary re-renders of consumers
-  const contextValue = useMemo(
+  // Memoize state context - changes when tab/button state changes
+  const stateValue = useMemo<TabBarStateContextType>(
     () => ({
-      // Scanner props
       onScanPress,
       showScannerButton: shouldShowScanner,
-      setScannerProps,
-      // Add button props - use effectiveAddPress to maintain handler during transitions
       onAddPress: effectiveAddPress,
       showAddButton: shouldShowAdd,
       addButtonConfig,
       isAddButtonDisabled,
       addButtonDisabledMessage,
-      setAddProps,
-      // Shared
       activeTab,
-      setActiveTab: handleSetActiveTab,
       isOverlayOpen,
-      setOverlayOpen,
     }),
     [
       onScanPress,
       shouldShowScanner,
-      setScannerProps,
       effectiveAddPress,
       shouldShowAdd,
       addButtonConfig,
       isAddButtonDisabled,
       addButtonDisabledMessage,
-      setAddProps,
       activeTab,
-      handleSetActiveTab,
       isOverlayOpen,
-      setOverlayOpen,
     ],
   );
 
   return (
-    <TabBarActionsContext.Provider value={contextValue}>
-      {children}
-    </TabBarActionsContext.Provider>
+    <TabBarSettersContext.Provider value={settersValue}>
+      <TabBarStateContext.Provider value={stateValue}>
+        {children}
+      </TabBarStateContext.Provider>
+    </TabBarSettersContext.Provider>
   );
 };
 
 /**
- * Hook to access tab bar action buttons state and setters
+ * Hook to access only tab bar setter functions.
+ * Consumers using only setters won't re-render on tab switches or state changes.
  */
-export const useTabBarActions = (): TabBarActionsContextType => {
-  const context = useContext(TabBarActionsContext);
+export const useTabBarSetters = (): TabBarSettersContextType => {
+  const context = useContext(TabBarSettersContext);
   if (context === undefined) {
     throw new Error(
-      'useTabBarActions must be used within a TabBarActionsProvider',
+      'useTabBarSetters must be used within a TabBarActionsProvider',
     );
   }
   return context;
+};
+
+/**
+ * Hook to access tab bar UI state (buttons, active tab, overlay).
+ * Re-renders when any state changes.
+ */
+export const useTabBarState = (): TabBarStateContextType => {
+  const context = useContext(TabBarStateContext);
+  if (context === undefined) {
+    throw new Error(
+      'useTabBarState must be used within a TabBarActionsProvider',
+    );
+  }
+  return context;
+};
+
+/**
+ * Hook to access tab bar action buttons state and setters.
+ * Backwards-compatible: combines both contexts.
+ * Prefer useTabBarSetters or useTabBarState for better performance.
+ */
+export const useTabBarActions = (): TabBarActionsContextType => {
+  const setters = useTabBarSetters();
+  const state = useTabBarState();
+  return { ...setters, ...state };
 };

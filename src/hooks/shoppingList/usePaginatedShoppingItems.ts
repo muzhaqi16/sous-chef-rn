@@ -179,27 +179,6 @@ export function usePaginatedShoppingItems({
         variables: {
           unpurchasedAfter: unpurchasedEndCursor,
         },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult?.shoppingList?.unpurchasedItems) {
-            return prev;
-          }
-
-          const prevEdges =
-            prev.shoppingList?.unpurchasedItems?.edges ?? [];
-          const newEdges =
-            fetchMoreResult.shoppingList.unpurchasedItems.edges ?? [];
-
-          return {
-            ...prev,
-            shoppingList: {
-              ...prev.shoppingList!,
-              unpurchasedItems: {
-                ...fetchMoreResult.shoppingList.unpurchasedItems,
-                edges: [...prevEdges, ...newEdges],
-              },
-            },
-          };
-        },
       });
     } finally {
       isLoadingMoreUnpurchasedRef.current = false;
@@ -222,26 +201,6 @@ export function usePaginatedShoppingItems({
       await fetchMore({
         variables: {
           purchasedAfter: purchasedEndCursor,
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult?.shoppingList?.purchasedItems) {
-            return prev;
-          }
-
-          const prevEdges = prev.shoppingList?.purchasedItems?.edges ?? [];
-          const newEdges =
-            fetchMoreResult.shoppingList.purchasedItems.edges ?? [];
-
-          return {
-            ...prev,
-            shoppingList: {
-              ...prev.shoppingList!,
-              purchasedItems: {
-                ...fetchMoreResult.shoppingList.purchasedItems,
-                edges: [...prevEdges, ...newEdges],
-              },
-            },
-          };
         },
       });
     } finally {
@@ -304,21 +263,25 @@ export function usePaginatedShoppingItems({
     refetch,
   ]);
 
+  const unpurchased = useMemo<ConnectionData>(() => ({
+    items: unpurchasedItems,
+    totalCount: unpurchasedTotalCount,
+    hasMore: unpurchasedHasMore,
+    isLoadingMore: isLoadingMoreUnpurchased,
+    loadMore: loadMoreUnpurchased,
+  }), [unpurchasedItems, unpurchasedTotalCount, unpurchasedHasMore, isLoadingMoreUnpurchased, loadMoreUnpurchased]);
+
+  const purchased = useMemo<ConnectionData>(() => ({
+    items: purchasedItems,
+    totalCount: purchasedTotalCount,
+    hasMore: purchasedHasMore,
+    isLoadingMore: isLoadingMorePurchased,
+    loadMore: loadMorePurchased,
+  }), [purchasedItems, purchasedTotalCount, purchasedHasMore, isLoadingMorePurchased, loadMorePurchased]);
+
   return {
-    unpurchased: {
-      items: unpurchasedItems,
-      totalCount: unpurchasedTotalCount,
-      hasMore: unpurchasedHasMore,
-      isLoadingMore: isLoadingMoreUnpurchased,
-      loadMore: loadMoreUnpurchased,
-    },
-    purchased: {
-      items: purchasedItems,
-      totalCount: purchasedTotalCount,
-      hasMore: purchasedHasMore,
-      isLoadingMore: isLoadingMorePurchased,
-      loadMore: loadMorePurchased,
-    },
+    unpurchased,
+    purchased,
     loading: loading && unpurchasedItems.length === 0 && purchasedItems.length === 0,
     error: error as Error | undefined,
     refetch: handleRefetch,

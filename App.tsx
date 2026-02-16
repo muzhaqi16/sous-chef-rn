@@ -171,7 +171,10 @@ const App = () => {
     const handleAppStateChange = (nextAppState: string) => {
       Telemetry.trackEvent('app_state_change', { state: nextAppState });
 
-      if (nextAppState === 'background') {
+      if (nextAppState === 'active') {
+        // Process any queued offline mutations when resuming from background
+        queueManager.processQueue();
+      } else if (nextAppState === 'background') {
         Telemetry.flush();
       }
     };

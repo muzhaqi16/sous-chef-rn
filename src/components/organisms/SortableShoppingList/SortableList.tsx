@@ -229,7 +229,7 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              drawDistance={500}
+              drawDistance={400}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }

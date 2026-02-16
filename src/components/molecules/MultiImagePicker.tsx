@@ -163,6 +163,9 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
                 onPress={() => handleRemoveImage(index)}
                 disabled={disabled}
+                hitSlop={11}
+                accessibilityRole="button"
+                accessibilityLabel="Remove image"
               >
                 <Icon name="close" size={14} color={theme.colors.white} />
               </Pressable>
@@ -171,6 +174,8 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               style={({pressed}) => [styles.perspectiveButton, pressed && styles.pressed]}
               onPress={() => setPickerIndex(index)}
               disabled={disabled}
+              accessibilityRole="button"
+              accessibilityLabel="Change image perspective"
             >
               <Text style={styles.perspectiveText} numberOfLines={1}>
                 {getPerspectiveLabel(image.perspective)}

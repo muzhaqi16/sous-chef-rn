@@ -13,7 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { ActionTray } from '#/components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#/components/templates/ActionTray/types';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
@@ -29,7 +29,7 @@ export const ProfileScreen = () => {
   const { sections, BiometricModal, biometricLoading } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { setOverlayOpen } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarSetters();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
 

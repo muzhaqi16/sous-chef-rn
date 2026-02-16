@@ -20,7 +20,7 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
@@ -43,7 +43,7 @@ import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 const PantryMainScreen: React.FC = React.memo(() => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   useUnistyles();
-  const { setOverlayOpen } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarSetters();
 
   // PERF: Defer non-critical features until after React paints the initial render.
   // React 19's useDeferredValue returns `false` on first render (initial value),

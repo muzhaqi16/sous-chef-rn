@@ -536,7 +536,7 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
       pantryItem {
         id
         quantity
-        ...PantryItemFragment
+        ...PantryItemDisplay
       }
       usedBy {
         id
@@ -558,7 +558,7 @@ mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
       costPerUnit
       totalCost
       pantryItem {
-        ...PantryItemFragment
+        ...PantryItemDisplay
       }
     }
   }
@@ -580,7 +580,7 @@ mutation UpdatePantryItemQuantity(
     message
     code
     pantryItem {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
   }
 }
@@ -591,7 +591,7 @@ mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInpu
     message
     code
     pantryItem {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
   }
 }
@@ -602,7 +602,7 @@ mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!
     message
     code
     pantryItem {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
   }
 }
@@ -632,7 +632,7 @@ mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
     operation
     wasCreated
     item {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
     conflict {
       clientVersion

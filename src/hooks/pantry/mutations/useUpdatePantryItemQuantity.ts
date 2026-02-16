@@ -10,7 +10,7 @@
 import { Alert } from 'react-native';
 import {
   useUpdatePantryItemQuantityMutation,
-  PantryItemFragmentDoc,
+  PantryItemDisplayFragmentDoc,
   PantryItemFragment,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
@@ -62,15 +62,14 @@ export function useUpdatePantryItemQuantity({
 
   const [updateQuantityMutation] = useUpdatePantryItemQuantityMutation({
     errorPolicy: 'all',
-    // Ensure full fragment including nested item.nutritions is written to cache
     update: (cache, { data }) => {
       const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
       if (!pantryItem) return;
 
       cache.writeFragment({
         id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
+        fragment: PantryItemDisplayFragmentDoc,
+        fragmentName: 'PantryItemDisplay',
         data: pantryItem,
       });
     },

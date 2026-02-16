@@ -938,7 +938,12 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     <View style={commonStyles.container}>
       {/* Header */}
       <View style={[commonStyles.rowSpaceBetween, styles.header]}>
-        <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
+        <Pressable
+          onPress={goBack}
+          style={({pressed}) => [styles.backButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </Pressable>
         <Text style={[commonStyles.title, styles.headerTitle]}>Pantry Analytics</Text>

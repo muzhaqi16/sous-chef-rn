@@ -6,7 +6,7 @@
  * all domains (shopping lists, pantry, home, notifications).
  */
 
-import { type MutationType } from '#/graphql/generated/types';
+import { type MutationType } from '#generated';
 
 /**
  * Cache update strategies for handling subscription data

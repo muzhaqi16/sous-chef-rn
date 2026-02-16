@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "2.6.8",
+  "version": "2.6.9",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -41,6 +41,7 @@
     "start": "react-native start",
     "reset:cache": "npx react-native start --reset-cache",
     "npm:clean": "rm -rf node_modules/ && npm cache clean --force",
+    "schema:pull": "graphql-codegen --config codegen.ts --watch=false && echo 'Schema pulled to src/graphql/generated/schema.graphql'",
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit",

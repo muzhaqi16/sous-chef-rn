@@ -428,6 +428,16 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     [],
   );
 
+  // Item type function for better FlashList cell recycling
+  // Items with different variants have different visual layouts
+  const getItemType = useCallback(
+    (item: PantryItem) => {
+      const display = itemDisplayMapRef.current.get(item.id);
+      return display?.variant ?? 'normal';
+    },
+    [],
+  );
+
   // Memoize extraData to avoid new array reference every render
   const extraData = useMemo(
     () => [sortOption, sortDirection, locationFilter],
@@ -508,7 +518,12 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             showSearchIcon={true}
             testID="pantry-search-input"
             innerRightIcon={
-              <Pressable onPress={onSettingsPress} hitSlop={8}>
+              <Pressable
+                onPress={onSettingsPress}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Pantry settings"
+              >
                 <Icon
                   name="settings"
                   size={18}
@@ -562,9 +577,10 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                 ) : undefined
               }
               ListEmptyComponent={emptyStateContent}
+              getItemType={getItemType}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
-              drawDistance={750}
+              drawDistance={400}
             />
           </Animated.View>
 

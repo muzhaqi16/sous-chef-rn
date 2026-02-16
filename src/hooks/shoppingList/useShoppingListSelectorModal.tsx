@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
 import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
@@ -45,7 +45,7 @@ export function useShoppingListSelectorModal({
   setSelectedShoppingListId: _setSelectedShoppingListId,
 }: UseShoppingListSelectorOptions) {
   const { navigate } = useAppNavigation();
-  const { setOverlayOpen } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarSetters();
   const {
     theme: { colors },
   } = useUnistyles();

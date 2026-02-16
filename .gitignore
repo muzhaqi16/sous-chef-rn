@@ -87,6 +87,7 @@ output.js.map
 .env.development
 # react-native-config codegen
 ios/tmp.xcconfig
-.claude
+.claude/
+.agents/
 artifacts/
 e2e/artifacts/

@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useAdjustPantryItemQuantityMutation,
-  PantryItemFragmentDoc,
+  PantryItemDisplayFragmentDoc,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
@@ -57,8 +57,8 @@ export function useAdjustPantryItemQuantity({
               __typename: 'PantryItem',
               id: pantryItem.id,
             }),
-            fragment: PantryItemFragmentDoc,
-            fragmentName: 'PantryItemFragment',
+            fragment: PantryItemDisplayFragmentDoc,
+            fragmentName: 'PantryItemDisplay',
             data: pantryItem,
           });
         },

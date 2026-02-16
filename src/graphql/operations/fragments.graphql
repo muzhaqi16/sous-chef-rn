@@ -22,9 +22,6 @@ fragment ShoppingListItemCore on ShoppingListItem {
     id
     name
     symbol
-    displayAsFraction
-    minPrecision
-    autoConvertThreshold
   }
 }
 
@@ -165,7 +162,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     purchasedPrice
     purchaseDate
     purchasedBy {
-      ...PartialUser
+      ...UserSummary
     }
   }
   # NEW: Source fields in nested object
@@ -200,7 +197,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   deletedAt
   # User reference
   addedBy {
-    ...PartialUser
+    ...UserSummary
   }
   # Purchase history (paginated connection for performance)
   purchasesConnection(first: 10) {
@@ -266,6 +263,17 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
 fragment BasicUser on User {
   id
   email
+}
+
+# Lightweight user reference for nested display (addedBy, purchasedBy)
+# Only includes fields actually rendered in list item UIs
+fragment UserSummary on User {
+  id
+  email
+  profile {
+    displayName
+    avatar
+  }
 }
 
 fragment AuthUser on User {
@@ -418,17 +426,6 @@ fragment CompleteUser on User {
   }
 }
 
-# DISPLAY: Lightweight unit info for nested display (4 fields)
-# Contains only essential unit fields for rendering in lists
-# Used in: Nested in ShoppingListItemDisplay, PantryItemDisplay
-fragment UnitDisplay on Unit {
-  id
-  name
-  symbol
-  displayAsFraction
-  __typename
-}
-
 fragment UnitFragment on ItemUnit {
   id
   itemId
@@ -465,32 +462,8 @@ fragment BrandFragment on ItemBrand {
   brand {
     id
     name
-    description
-    createdAt
-    updatedAt
-    version
   }
 }
-fragment CategoryFragment on Category {
-  id
-  name
-  slug
-  description
-  icon
-  color
-  sortOrder
-  type
-  isActive
-  isSystem
-  visibility
-  itemCount
-  usageCount
-  createdAt
-  updatedAt
-  deletedAt
-  version
-}
-
 # ============================================
 # ITEM FRAGMENTS (3-tier pattern)
 # ============================================
@@ -855,7 +828,7 @@ fragment PantryFragment on Pantry {
   itemsConnection(first: 50) {
     edges {
       node {
-        ...PantryItemFragment
+        ...PantryItemDisplay
       }
       cursor
     }
@@ -953,6 +926,7 @@ fragment HomeDisplay on Home {
   id
   name
   type
+  description
   currency
   timezone
   version
@@ -1074,7 +1048,7 @@ fragment HomeFragment on Home {
   pantriesConnection(first: 50) {
     edges {
       node {
-        ...PantryFragment
+        ...BasicPantryFragment
       }
       cursor
     }

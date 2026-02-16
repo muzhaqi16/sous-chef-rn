@@ -189,12 +189,9 @@ export const PantrySettings: React.FC<StaticScreenProps<{
               }
 
               const newEdge = {
-                __typename: 'PantryEdge',
+                __typename: 'PantryEdge' as const,
                 cursor: newPantry.id,
-                node: {
-                  __typename: 'Pantry',
-                  ...newPantry,
-                },
+                node: newPantry,
               };
 
               return {

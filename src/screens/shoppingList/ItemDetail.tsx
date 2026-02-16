@@ -115,7 +115,6 @@ export const ShoppingListItemDetail: React.FC<{
                 quantity={item.quantity}
                 quantityInput={item.quantityInput}
                 displayFormat={item.displayFormat}
-                displayAsFraction={item.unit?.displayAsFraction}
                 unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
               />
             </View>
@@ -143,7 +142,6 @@ export const ShoppingListItemDetail: React.FC<{
                 quantity={item.quantity}
                 quantityInput={item.quantityInput}
                 displayFormat={item.displayFormat}
-                displayAsFraction={item.unit?.displayAsFraction}
                 unitSymbol={item.unitName || item.item?.displayUnit?.symbol}
               />
             </View>

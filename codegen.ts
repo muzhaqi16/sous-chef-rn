@@ -1,23 +1,8 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
-const getEndpoint = () => {
-  return process.env.API_URL || 'http://localhost:4000/graphql';
-};
-const endpoint = getEndpoint();
-
 const config: CodegenConfig = {
   overwrite: true, // Add this for v6
-  schema: [
-    {
-      [endpoint]: {
-        headers: {
-          'x-api-key':
-            process.env.API_KEY || 'mobile_ck_your_secure_random_key_here',
-          'Content-Type': 'application/json',
-        },
-      },
-    },
-  ],
+  schema: 'src/graphql/generated/schema.graphql',
 
   documents: [
     'src/graphql/operations/fragments.graphql',
@@ -50,6 +35,10 @@ const config: CodegenConfig = {
         withComponent: false,
         withHOC: false,
 
+        // Disable unused generated code
+        withRefetchFn: false,
+        withMutationFn: false,
+
         // Apollo Client v4 configuration - React hooks from separate export
         apolloReactHooksImportFrom: '@apollo/client/react',
         apolloReactCommonImportFrom: '@apollo/client',
@@ -66,20 +55,23 @@ const config: CodegenConfig = {
 
         // Scalars - match your server config
         scalars: {
-          DateTime: 'string', // or 'Date' to match server
-          Date: 'string', // or 'Date' to match server
+          DateTime: 'string',
+          Date: 'string',
           JSON: 'any',
-          Upload: 'File',
-          BigInt: 'string', // Handle large integers as strings to avoid precision loss
-          IPv4: 'string', // IP addresses as strings
-          FlexibleQuantity: 'string | number', // Accepts decimals, fractions (1/4), or mixed (1 1/4)
+          Upload: '{ uri: string; type: string; name: string }',
+          BigInt: 'string',
+          IPv4: 'string',
+          FlexibleQuantity: {
+            input: 'string | number',
+            output: 'string',
+          },
         },
 
         // Modern TypeScript
         useTypeImports: true,
 
-        // Nullable handling - match server style
-        maybeValue: 'T | null | undefined',
+        // Nullable handling - GraphQL returns null, never undefined
+        maybeValue: 'T | null',
         inputMaybeValue: 'T | null | undefined', // Allows explicit null to clear fields
 
         // Error handling
@@ -91,17 +83,13 @@ const config: CodegenConfig = {
 
         // Fragment handling
         inlineFragmentTypes: 'combine',
-        nonOptionalTypename: false,
+        nonOptionalTypename: true,
 
         // Immutable types
         immutableTypes: false,
 
         // Enum handling
         enumsAsTypes: false,
-
-        // Subscription hooks
-        withRefetchFn: true,
-        withMutationFn: true,
 
         // NEW for v6 - strict scalars
         strictScalars: true,
@@ -116,55 +104,12 @@ const config: CodegenConfig = {
       },
     },
 
-    // Introspection
-    'src/graphql/generated/introspection.json': {
-      plugins: ['introspection'],
-      config: {
-        minify: true,
-      },
-    },
-
     // Schema file
     'src/graphql/generated/schema.graphql': {
       plugins: ['schema-ast'],
       config: {
         includeDirectives: true,
-        includeIntrospectionTypes: true,
-        // Remove 'sort' if causing issues
-      },
-    },
-
-    // Types only file
-    'src/graphql/generated/types.ts': {
-      plugins: [
-        {
-          add: {
-            content: [
-              '/* eslint-disable @typescript-eslint/no-unused-vars */',
-              '/* eslint-disable @typescript-eslint/no-shadow */',
-              '// Shared GraphQL types - no hooks',
-            ].join('\n'),
-          },
-        },
-        'typescript',
-        'typescript-operations',
-      ],
-      config: {
-        onlyOperationTypes: false,
-        skipTypename: false,
-        useTypeImports: true,
-        strictScalars: true, // Add for v6
-        scalars: {
-          DateTime: 'string',
-          Date: 'string',
-          JSON: 'any',
-          Upload: 'File',
-          BigInt: 'string', // Handle large integers as strings to avoid precision loss
-          IPv4: 'string', // IP addresses as strings
-          FlexibleQuantity: 'string | number', // Accepts decimals, fractions (1/4), or mixed (1 1/4)
-        },
-        maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | null | undefined',
+        includeIntrospectionTypes: false,
       },
     },
   },
@@ -181,9 +126,8 @@ const config: CodegenConfig = {
 
   // Hooks
   hooks: {
-    afterOneFileWrite: ['prettier --write'],
     afterAllFileWrite: [
-      'echo "✅ Mobile GraphQL types generated successfully!"',
+      'echo "GraphQL types generated successfully"',
     ],
   },
 };

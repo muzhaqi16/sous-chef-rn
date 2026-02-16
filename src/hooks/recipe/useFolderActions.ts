@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   useDeleteRecipeFolderMutation,
   SavedRecipeFoldersDocument,
+  SavedRecipeFoldersQuery,
 } from '#generated';
 import { toastService } from '#/services/toastService';
 
@@ -15,8 +16,6 @@ export function useFolderActions() {
   const [loading, setLoading] = useState(false);
 
   const [deleteRecipeFolderMutation] = useDeleteRecipeFolderMutation({
-    // Refetch folder list after mutation for instant UI update
-    refetchQueries: [{ query: SavedRecipeFoldersDocument }],
     onError: err => {
       console.error('Folder action error:', err);
     },
@@ -35,6 +34,22 @@ export function useFolderActions() {
       try {
         const result = await deleteRecipeFolderMutation({
           variables: { folder: oldName, moveTo: newName },
+          update(cache) {
+            const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+              query: SavedRecipeFoldersDocument,
+            });
+            if (existing?.savedRecipeFolders) {
+              cache.writeQuery<SavedRecipeFoldersQuery>({
+                query: SavedRecipeFoldersDocument,
+                data: {
+                  __typename: 'Query',
+                  savedRecipeFolders: existing.savedRecipeFolders.map(f =>
+                    f === oldName ? newName : f,
+                  ),
+                },
+              });
+            }
+          },
         });
         const count = result.data?.deleteRecipeFolder ?? 0;
         toastService.success(`Renamed "${oldName}" to "${newName}" (${count} recipes)`);
@@ -62,6 +77,22 @@ export function useFolderActions() {
       try {
         const result = await deleteRecipeFolderMutation({
           variables: { folder: folderName },
+          update(cache) {
+            const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+              query: SavedRecipeFoldersDocument,
+            });
+            if (existing?.savedRecipeFolders) {
+              cache.writeQuery<SavedRecipeFoldersQuery>({
+                query: SavedRecipeFoldersDocument,
+                data: {
+                  __typename: 'Query',
+                  savedRecipeFolders: existing.savedRecipeFolders.filter(
+                    f => f !== folderName,
+                  ),
+                },
+              });
+            }
+          },
         });
         const count = result.data?.deleteRecipeFolder ?? 0;
         if (count > 0) {

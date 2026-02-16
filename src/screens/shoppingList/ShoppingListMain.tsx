@@ -28,7 +28,7 @@ import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActio
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -93,7 +93,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     });
 
     const { navigate, navigateTo } = useAppNavigation();
-    const { setScannerProps } = useTabBarActions();
+    const { setScannerProps } = useTabBarSetters();
     const { theme } = useUnistyles();
 
     // Get profile data for header
@@ -419,7 +419,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}
         />
-        <View style={{ paddingHorizontal: theme.spacing.md }}>
+        <View style={styles.searchBarContainer}>
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -503,5 +503,8 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  searchBarContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
 }));

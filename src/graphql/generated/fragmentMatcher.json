@@ -13,15 +13,23 @@
       "UnauthorizedError",
       "ValidationError"
     ],
-    "Connection": ["NotificationConnection"],
+    "Connection": [
+      "NotificationConnection"
+    ],
     "CreateItemResult": [
       "DuplicateError",
       "Item",
       "UnauthorizedError",
       "ValidationError"
     ],
-    "DeleteItemResult": ["DeleteSuccess", "NotFoundError", "UnauthorizedError"],
-    "Edge": ["NotificationEdge"],
+    "DeleteItemResult": [
+      "DeleteSuccess",
+      "NotFoundError",
+      "UnauthorizedError"
+    ],
+    "Edge": [
+      "NotificationEdge"
+    ],
     "MutationError": [
       "ConflictError",
       "DuplicateError",
@@ -72,8 +80,12 @@
       "UserProfilePayload",
       "UserSettingsPayload"
     ],
-    "Node": ["Notification"],
-    "Timestamped": ["Notification"],
+    "Node": [
+      "Notification"
+    ],
+    "Timestamped": [
+      "Notification"
+    ],
     "TogglePurchasedResult": [
       "NotFoundError",
       "ShoppingListItem",

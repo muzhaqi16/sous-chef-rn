@@ -283,6 +283,17 @@ export function Navigation() {
     }
   }, [user, isHydrated, setNavigationState]);
 
+  // Stable style object for Suspense fallback
+  const suspenseFallbackStyle = useMemo(
+    () => ({
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    }),
+    [theme.colors.background],
+  );
+
   // Create navigation theme based on current Unistyles theme
   const navigationTheme: Theme = useMemo(
     () => ({
@@ -310,7 +321,7 @@ export function Navigation() {
   return (
     <NavigationErrorBoundary>
       <Suspense fallback={
-        <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={suspenseFallbackStyle}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       }>

@@ -2,57 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetItems(
-  $filters: ItemFilters
-  $sort: ItemSortInput
-  $first: Int
-  $after: String
-) {
-  items(filters: $filters, sort: $sort, first: $first, after: $after) {
-    edges {
-      cursor
-      node {
-        id
-        name
-        description
-        type
-        storageState
-        imageUrl
-        shelfLifeDays
-        tags
-        status
-        visibility
-        showInOnboarding
-        popularity
-        units {
-          id
-          isDefault
-        }
-        brands {
-          id
-        }
-        categories {
-          id
-        }
-        nutritions
-        healthBenefits
-        metadata
-        createdAt
-        updatedAt
-        deletedAt
-        version
-      }
-    }
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query SearchItems($input: SearchItemsInput!) {
   searchItems(input: $input) {
     edges {

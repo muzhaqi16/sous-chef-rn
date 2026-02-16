@@ -38,7 +38,7 @@ query GetMyPendingInvites {
 
 query GetHomeByJoinCode($joinCode: String!) {
   homeByJoinCode(joinCode: $joinCode) {
-    ...HomeFragment
+    ...HomeDisplay
   }
 }
 
@@ -63,7 +63,7 @@ mutation UpdateHome($id: ID!, $input: UpdateHomeInput!) {
     message
     code
     home {
-      ...HomeFragment
+      ...HomeDisplay
     }
   }
 }

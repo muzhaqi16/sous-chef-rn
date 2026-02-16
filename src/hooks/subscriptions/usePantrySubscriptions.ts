@@ -22,7 +22,7 @@ import {
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
-import { MutationType } from '#/graphql/generated/types';
+import { MutationType } from '#generated';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -76,8 +76,18 @@ export function usePantrySubscriptions(userId?: string) {
 
       const mutation = payload.mutation;
       const item = payload.item;
+      const payloadUserId = payload.userId;
 
       if (!item) return;
+
+      // Skip self-echo: if this subscription is from our own mutation, skip processing
+      // The mutation's cache update already handled it
+      if (payloadUserId && userId && payloadUserId === userId) {
+        if (__DEV__) {
+          console.log('⏭️ [Subscription] Skipping pantry self-echo', item.id);
+        }
+        return;
+      }
 
       if (mutation === MutationType.ItemAdded) {
         // Add new item to Pantry.itemsConnection
