@@ -6,6 +6,7 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
+import { LaunchArguments } from 'react-native-launch-arguments';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -70,12 +71,32 @@ const scheduleReconnect = () => {
   }, delay);
 };
 
+/**
+ * Get the keepAlive interval. In Detox E2E mode, use a long interval (5 min)
+ * to prevent frequent pings from blocking Detox idle detection.
+ */
+const getKeepAliveInterval = (): number => {
+  if (__DEV__) {
+    try {
+      const args = LaunchArguments.value<{
+        detoxDisableBackgroundServices?: string;
+      }>();
+      if (args.detoxDisableBackgroundServices) {
+        return 300_000; // 5 minutes — effectively disables pings during tests
+      }
+    } catch {
+      // No launch args available
+    }
+  }
+  return 12_000; // 12 seconds — normal operation
+};
+
 const createWsClient = () => {
   return createClient({
     url: WS_URL,
     webSocketImpl, // ← critical for RN
     lazy: true, // only connect on first subscribe
-    keepAlive: 12_000, // send ping every 12s to keep alive
+    keepAlive: getKeepAliveInterval(),
     connectionParams: () => {
       const token = useStore.getState().accessToken;
       const apiKey = Config.API_KEY;
@@ -190,6 +211,10 @@ wsClient = createWsClient();
 export const wsLink = new GraphQLWsLink(wsClient);
 
 // Function to reconnect WebSocket with new token
+// Uses terminate() to force-close the connection, which triggers the `closed`
+// handler in createWsClient. The `closed` handler calls scheduleReconnect(),
+// which creates a new client via createWsClient() that picks up the latest
+// token via the connectionParams function.
 export const reconnectWebSocket = () => {
   const now = Date.now();
 
@@ -205,30 +230,12 @@ export const reconnectWebSocket = () => {
   try {
     logger.info('🔄 WebSocket reconnecting with new token...');
 
-    // Dispose the old client
+    // Terminate forces an immediate close (unlike dispose which is graceful)
+    // This triggers the `closed` handler which will call scheduleReconnect()
+    // The new client created by scheduleReconnect gets the latest token
+    // via the connectionParams function (already a function, so no hack needed)
     if (wsClient) {
-      wsClient.dispose();
-    }
-
-    // Create a new client (this will call connectionParams with the new token)
-    wsClient = createWsClient();
-
-    // Update the wsLink to use the new client
-    // Note: GraphQLWsLink doesn't have a public method to update the client.
-    // This is a known limitation of the library. The workaround is to access
-    // the internal client property. This is safe as long as we handle errors.
-    // Alternative: Recreate the entire Apollo Client (too expensive).
-    if (wsLink && typeof (wsLink as any).client !== 'undefined') {
-      (wsLink as any).client = wsClient;
-      logger.info('✅ WebSocket reconnection successful');
-      // Reset reconnect attempts on success
-      reconnectAttempts = 0;
-      if (reconnectTimeoutId !== null) {
-        clearTimeout(reconnectTimeoutId);
-        reconnectTimeoutId = null;
-      }
-    } else {
-      throw new Error('Unable to update GraphQLWsLink client - missing client property');
+      wsClient.terminate();
     }
 
     isReconnecting = false;

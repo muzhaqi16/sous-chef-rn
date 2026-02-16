@@ -43,9 +43,11 @@ subscription MemberJoined($homeId: ID!) {
   memberJoined(homeId: $homeId) {
     mutation
     node {
+      id
       homeId
       userId
       user {
+        id
         profile {
           displayName
         }

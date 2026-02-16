@@ -12,15 +12,12 @@ export const Title: React.FC<TitleProps> = ({children, style}) => {
 };
 const styles = StyleSheet.create(theme => ({
   title: {
-    fontFamily: 'DM Sans',
     fontWeight: '700',
-    // fontStyle: 'normal', // React Native defaults to normal
     fontSize: theme.fonts.size['2xl'],
-    lineHeight: theme.fonts.size['2xl'] * 1.2, // Adjust line height as needed
+    lineHeight: theme.fonts.size['2xl'] * 1.2,
     letterSpacing: 0,
     color: theme.colors.textPrimary,
-    marginBottom: 16,
-    // leading-trim is not supported in React Native
+    marginBottom: theme.spacing.md,
   },
 }));
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { Icon as IconType } from '#utils/iconUtils';
@@ -26,8 +26,8 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
   const accessibilityLabel = subtitle ? `${title}, ${subtitle}` : title;
 
   return (
-    <TouchableOpacity
-      style={styles.navigationRow}
+    <Pressable
+      style={({pressed}) => [styles.navigationRow, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
@@ -43,7 +43,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
         </View>
       </View>
       <Icon library="Ionicons" name="chevron-forward" size={20} />
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -72,5 +72,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

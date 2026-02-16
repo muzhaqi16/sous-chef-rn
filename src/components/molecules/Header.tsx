@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -108,9 +108,9 @@ export const Header: React.FC<HeaderProps> = ({
     const iconColor = action.color || getVariantColor(action.variant);
 
     return (
-      <TouchableOpacity
+      <Pressable
         key={index}
-        style={styles.action}
+        style={({pressed}) => [styles.action, pressed && styles.pressed]}
         onPress={action.onPress}
         disabled={action.disabled || action.loading}
         testID={action.testID}
@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Text style={commonStyles.badgeText}>{action.badge}</Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -146,24 +146,24 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left side */}
       <View style={styles.actions}>
         {showCloseButton && (
-          <TouchableOpacity
-            style={styles.action}
+          <Pressable
+            style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
           >
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          </Pressable>
         )}
         {showBackButton && (
-          <TouchableOpacity
-            style={styles.action}
+          <Pressable
+            style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >
             <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          </Pressable>
         )}
         {leftActions.map(renderAction)}
       </View>
@@ -236,5 +236,9 @@ const styles = StyleSheet.create(theme => ({
 
   borderless: {
     borderBottomWidth: 0,
+  },
+
+  pressed: {
+    opacity: 0.7,
   },
 }));

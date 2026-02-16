@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem';
 import type { SwipeableItemProps } from './types';
@@ -91,19 +91,18 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
           style={styles.container}
           testID={testIDPrefix ? `${testIDPrefix}-container` : undefined}
         >
-          <TouchableOpacity
+          <Pressable
             onPressIn={handlePressIn}
             onPress={onPress}
             onLongPress={onLongPress}
             // 150ms is faster than RN default (500ms) for more responsive long press
             // Unrelated to useDeferredRender's 150ms delay (different purpose)
             delayLongPress={150}
-            activeOpacity={1}
             style={styles.touchable}
             testID={testIDPrefix ? `${testIDPrefix}-touchable` : undefined}
           >
             {children}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       );
     }

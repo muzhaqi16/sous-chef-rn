@@ -71,18 +71,28 @@ query GetRecipe($id: ID!) {
 
 query MySavedRecipes($folder: String) {
   mySavedRecipes(folder: $folder) {
-    id
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-    lastCookedAt
-    createdAt
-    updatedAt
-    recipe {
-      ...BasicRecipeFragment
+    edges {
+      node {
+        id
+        folder
+        tags
+        notes
+        personalRating
+        cookedCount
+        lastCookedAt
+        createdAt
+        updatedAt
+        recipe {
+          ...BasicRecipeFragment
+        }
+      }
+      cursor
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -96,7 +106,12 @@ query SavedRecipeFolders {
 
 mutation CreateRecipe($input: CreateRecipeInput!) {
   createRecipe(input: $input) {
-    ...RecipeFragment
+    success
+    message
+    code
+    recipe {
+      ...RecipeFragment
+    }
   }
 }
 
@@ -119,35 +134,53 @@ mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
 
 mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
   updateRecipe(id: $id, input: $input) {
-    ...RecipeFragment
+    success
+    message
+    code
+    recipe {
+      ...RecipeFragment
+    }
   }
 }
 
 mutation DeleteRecipe($id: ID!) {
-  deleteRecipe(id: $id)
+  deleteRecipe(id: $id) {
+    success
+    message
+    code
+  }
 }
 
 mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
   favoriteRecipe(input: $input) {
-    id
-    recipeId
-    userId
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-    lastCookedAt
-    createdAt
-    updatedAt
-    recipe {
-      ...BasicRecipeFragment
+    success
+    message
+    code
+    savedRecipe {
+      id
+      recipeId
+      userId
+      folder
+      tags
+      notes
+      personalRating
+      cookedCount
+      lastCookedAt
+      createdAt
+      updatedAt
+      recipe {
+        ...BasicRecipeFragment
+      }
     }
   }
 }
 
 mutation UnfavoriteRecipe($recipeId: ID!) {
-  unfavoriteRecipe(recipeId: $recipeId)
+  unfavoriteRecipe(recipeId: $recipeId) {
+    success
+    message
+    code
+  }
 }
 
 mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
@@ -156,16 +189,21 @@ mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
   updateFavoriteRecipe(recipeId: $recipeId, input: $input) {
-    id
-    recipeId
-    userId
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    savedRecipe {
+      id
+      recipeId
+      userId
+      folder
+      tags
+      notes
+      personalRating
+      cookedCount
+      createdAt
+      updatedAt
+    }
   }
 }
 
@@ -258,11 +296,16 @@ mutation AddRecipeToShoppingList(
     servings: $servings
     checkPantry: $checkPantry
   ) {
-    id
-    itemsConnection(first: 100) {
-      edges {
-        node {
-          ...ShoppingListItemCore
+    success
+    message
+    code
+    shoppingList {
+      id
+      itemsConnection(first: 100) {
+        edges {
+          node {
+            ...ShoppingListItemDisplayFragment
+          }
         }
       }
     }
@@ -283,13 +326,18 @@ mutation MarkRecipeAsCooked(
     ingredientsUsed: $ingredientsUsed
     notes: $notes
   ) {
-    id
-    servingsMade
-    notes
-    cookedAt
-    recipe {
+    success
+    message
+    code
+    cookingLog {
       id
-      name
+      servingsMade
+      notes
+      cookedAt
+      recipe {
+        id
+        name
+      }
     }
   }
 }
@@ -308,15 +356,20 @@ mutation RecordPantryUsage(
     purpose: $purpose
     notes: $notes
   ) {
-    id
-    quantityUsed
-    usedAt
-    purpose
-    notes
-    pantryItem {
+    success
+    message
+    code
+    pantryItemUsage {
       id
-      itemName
-      quantity
+      quantityUsed
+      usedAt
+      purpose
+      notes
+      pantryItem {
+        id
+        itemName
+        quantity
+      }
     }
   }
 }

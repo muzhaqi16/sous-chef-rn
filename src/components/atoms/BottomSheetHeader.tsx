@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface BottomSheetHeaderProps {
@@ -48,16 +48,16 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
+        <Pressable
           onPress={onCancel}
-          style={styles.button}
+          style={({pressed}) => [styles.button, pressed && styles.pressed]}
           accessibilityRole="button"
           accessibilityLabel={cancelLabel}
         >
           <Text style={[styles.cancelText, { color: theme.colors.textSecondary }]}>
             {cancelLabel}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
         <Text
           style={[styles.title, { color: theme.colors.textPrimary }]}
@@ -66,9 +66,9 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           {title}
         </Text>
 
-        <TouchableOpacity
+        <Pressable
           onPress={onConfirm}
-          style={styles.button}
+          style={({pressed}) => [styles.button, pressed && styles.pressed]}
           disabled={confirmDisabled}
           accessibilityRole="button"
           accessibilityLabel={confirmLabel}
@@ -77,7 +77,7 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           <Text style={[styles.confirmText, { color: getConfirmColor() }]}>
             {confirmLabel}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
       <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
     </View>
@@ -117,6 +117,9 @@ const styles = StyleSheet.create(theme => ({
   divider: {
     height: 1,
     marginTop: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

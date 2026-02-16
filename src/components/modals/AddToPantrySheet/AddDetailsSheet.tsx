@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
@@ -18,8 +18,16 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import type { StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { StorageState, useCreatePantryItemMutation } from '#generated';
+import {
+  StorageState,
+  useCreatePantryItemMutation,
+  useRestockPantryItemMutation,
+} from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  isPantryItemDuplicateError,
+  getPantryItemDuplicateInfo,
+} from '#/utils/errors/pantryItemDuplicate';
 
 const STORAGE_STATES = Object.values(StorageState);
 const PAGES = ['Main', 'Details', 'Storage', 'Stock'] as const;
@@ -44,10 +52,10 @@ const PageIndicator: React.FC<{
   return (
     <View style={indicatorStyles.container}>
       {pages.map((label, index) => (
-        <TouchableOpacity
+        <Pressable
           key={label}
           onPress={() => onPagePress(index)}
-          style={indicatorStyles.item}
+          style={({pressed}) => [indicatorStyles.item, pressed && indicatorStyles.pressed]}
         >
           <View
             style={[
@@ -74,7 +82,7 @@ const PageIndicator: React.FC<{
           >
             {label}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
@@ -101,6 +109,9 @@ const indicatorStyles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.fonts.size.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 
@@ -131,6 +142,20 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     StorageState.Ambient,
   );
 
+  // Form state - Package Details (on Page 2)
+  const [showPackageDetails, setShowPackageDetails] = useState(false);
+  const [packageSize, setPackageSize] = useState('');
+  const [contentUnit, setContentUnit] = useState('');
+  const [contentUnitId, setContentUnitId] = useState<string | null>(null);
+  const [itemNetWeight, setItemNetWeight] = useState('');
+  const [weightUnit, setWeightUnit] = useState('');
+  const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
+
+  // Form state - Pantry Net Weight (on Page 2, always visible)
+  const [pantryNetWeight, setPantryNetWeight] = useState('');
+  const [pantryNetWeightUnit, setPantryNetWeightUnit] = useState('');
+  const [pantryNetWeightUnitId, setPantryNetWeightUnitId] = useState<string | null>(null);
+
   // Form state - Page 2 (Details)
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
@@ -153,8 +178,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Create mutation
   const [createPantryItem, { loading }] = useCreatePantryItemMutation({
+    errorPolicy: 'all',
     update: (cache, { data }) => {
-      if (!data?.createPantryItem || !pantryId) return;
+      const pantryItem = data?.createPantryItem?.pantryItem;
+      if (!pantryItem || !pantryId) return;
 
       try {
         const addToPantryCache = createAddToParentConnectionUpdater(
@@ -162,11 +189,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           'itemsConnection',
           'PantryItem',
         );
-        addToPantryCache(cache, pantryId, data.createPantryItem);
+        addToPantryCache(cache, pantryId, pantryItem);
       } catch (error) {
         console.warn('Cache update failed for createPantryItem:', error);
       }
     },
+  });
+
+  // Restock mutation
+  const [restockPantryItem] = useRestockPantryItemMutation({
+    errorPolicy: 'all',
   });
 
   // Reset form for adding another item
@@ -176,6 +208,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setUnit('');
     setUnitId(null);
     setStorageState(StorageState.Ambient);
+    setShowPackageDetails(false);
+    setPackageSize('');
+    setContentUnit('');
+    setContentUnitId(null);
+    setItemNetWeight('');
+    setWeightUnit('');
+    setWeightUnitId(null);
+    setPantryNetWeight('');
+    setPantryNetWeightUnit('');
+    setPantryNetWeightUnitId(null);
     setExpirationDate(null);
     setStorageLocation('');
     setSelectedStorageLocationId(null);
@@ -207,6 +249,33 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     (id: string | null, name: string | null) => {
       setUnitId(id);
       if (name) setUnit(name);
+    },
+    [],
+  );
+
+  // Handle content unit selection
+  const handleContentUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setContentUnitId(id);
+      if (name) setContentUnit(name);
+    },
+    [],
+  );
+
+  // Handle pantry net weight unit selection
+  const handlePantryNetWeightUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setPantryNetWeightUnitId(id);
+      if (name) setPantryNetWeightUnit(name);
+    },
+    [],
+  );
+
+  // Handle weight unit selection
+  const handleWeightUnitSelected = useCallback(
+    (id: string | null, name: string | null) => {
+      setWeightUnitId(id);
+      if (name) setWeightUnit(name);
     },
     [],
   );
@@ -260,46 +329,164 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     const quantity = parseFractionalInput(quantityInput);
     if (quantity === null || isNaN(quantity) || quantity <= 0) {
       Alert.alert('Error', 'Please enter a valid quantity');
-      handlePageChange(0);
+      handlePageChange(1);
       return;
     }
 
     try {
-      await createPantryItem({
-        variables: {
-          input: {
-            pantryId,
-            itemName: itemName.trim(),
-            quantity,
-            unitId: unitId || undefined,
-            unitName: !unitId && unit.trim() ? unit.trim() : undefined,
-            storageState,
-            expiresAt: expirationDate
-              ? expirationDate.toISOString().split('T')[0]
+      // Build itemUnits array if package details are provided
+      let itemUnits;
+      let netWeight;
+      let displayUnitId;
+      let totalPackageNetWeight: number | undefined;
+      if (showPackageDetails && packageSize && contentUnit) {
+        const pkgSize = parseFloat(packageSize);
+        if (!isNaN(pkgSize) && pkgSize > 0) {
+          itemUnits = [
+            {
+              unitId: unitId || undefined,
+              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
+              packageSize: pkgSize,
+              contentUnitId: contentUnitId || undefined,
+              contentUnitName: !contentUnitId ? contentUnit.trim() : undefined,
+              retailUnit: true,
+            },
+            {
+              unitId: contentUnitId || undefined,
+              unitName: !contentUnitId ? contentUnit.trim() : undefined,
+              isDefault: true,
+            },
+          ];
+        }
+        // Set net weight if provided
+        if (itemNetWeight) {
+          const nw = parseFloat(itemNetWeight);
+          if (!isNaN(nw) && nw > 0) {
+            netWeight = nw;
+            displayUnitId = weightUnitId || undefined;
+            if (netWeight !== undefined) {
+              totalPackageNetWeight = pkgSize * netWeight;
+            }
+          }
+        }
+      }
+
+      // Compute the effective pantry-level net weight
+      const effectivePantryNetWeight = pantryNetWeight
+        ? parseFloat(pantryNetWeight) || undefined
+        : totalPackageNetWeight;
+      const effectiveNetWeightUnitId = pantryNetWeightUnitId
+        || (totalPackageNetWeight ? displayUnitId : undefined);
+
+      const mutationInput = {
+        pantryId,
+        quantity,
+        unit: (unitId || unit.trim())
+          ? {
+              unitId: unitId || undefined,
+              unitName: !unitId && unit.trim() ? unit.trim() : undefined,
+            }
+          : undefined,
+        storage: {
+          storageState,
+          storageLocationId: selectedStorageLocationId || undefined,
+          storageLocationName:
+            !selectedStorageLocationId && storageLocation.trim()
+              ? storageLocation.trim()
               : undefined,
-            // Use storage location ID if selected, otherwise use name for server to create
-            storageLocationId: selectedStorageLocationId || undefined,
-            storageLocationName:
-              !selectedStorageLocationId && storageLocation.trim()
-                ? storageLocation.trim()
-                : undefined,
-            storageNotes: storageNotes.trim() || undefined,
-            tags: tags
-              ? tags
-                  .split(',')
-                  .map(t => t.trim())
-                  .filter(Boolean)
-              : undefined,
-            itemBrand: brand.trim() || undefined,
-            minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
-            restockQuantity: restockQuantity
-              ? parseFloat(restockQuantity)
-              : undefined,
-          },
+          storageNotes: storageNotes.trim() || undefined,
         },
+        expiresAt: expirationDate
+          ? expirationDate.toISOString().split('T')[0]
+          : undefined,
+        tags: tags
+          ? tags
+              .split(',')
+              .map(t => t.trim())
+              .filter(Boolean)
+          : undefined,
+        thresholds: (minQuantity || restockQuantity)
+          ? {
+              minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
+              restockQuantity: restockQuantity
+                ? parseFloat(restockQuantity)
+                : undefined,
+            }
+          : undefined,
+        netWeight: (effectivePantryNetWeight || effectiveNetWeightUnitId)
+          ? {
+              netWeight: effectivePantryNetWeight,
+              netWeightUnitId: effectiveNetWeightUnitId,
+            }
+          : undefined,
+        item: {
+          name: itemName.trim(),
+          brand: brand.trim() || undefined,
+          units: itemUnits,
+          netWeight: netWeight,
+          displayUnitId: displayUnitId,
+        },
+      };
+
+      const result = await createPantryItem({
+        variables: { input: mutationInput },
       });
 
-      onSuccess();
+      // Check for duplicate pantry item error
+      if (result.error && isPantryItemDuplicateError(result.error)) {
+        const duplicateInfo = getPantryItemDuplicateInfo(result.error);
+        if (duplicateInfo) {
+          Alert.alert(
+            'Item Already in Pantry',
+            'This item is already in your pantry. Would you like to restock it or add a separate entry?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Restock',
+                onPress: async () => {
+                  try {
+                    await restockPantryItem({
+                      variables: {
+                        id: duplicateInfo.existingPantryItemId,
+                        input: { quantity },
+                      },
+                    });
+                    onSuccess();
+                  } catch {
+                    Alert.alert('Error', 'Failed to restock item. Please try again.');
+                  }
+                },
+              },
+              {
+                text: 'Add Anyway',
+                onPress: async () => {
+                  try {
+                    const retryResult = await createPantryItem({
+                      variables: {
+                        input: { ...mutationInput, forceAdd: true } as any,
+                      },
+                    });
+                    if (retryResult.data?.createPantryItem?.pantryItem) {
+                      onSuccess();
+                    } else {
+                      Alert.alert('Error', 'Failed to add item. Please try again.');
+                    }
+                  } catch {
+                    Alert.alert('Error', 'Failed to add item. Please try again.');
+                  }
+                },
+              },
+            ],
+          );
+          return;
+        }
+      }
+
+      if (result.data?.createPantryItem?.pantryItem) {
+        onSuccess();
+      } else if (result.error) {
+        Alert.alert('Error', 'Failed to add item. Please try again.');
+      }
     } catch {
       Alert.alert('Error', 'Failed to add item. Please try again.');
     }
@@ -310,6 +497,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     unit,
     unitId,
     storageState,
+    showPackageDetails,
+    packageSize,
+    contentUnit,
+    contentUnitId,
+    itemNetWeight,
+    weightUnitId,
+    pantryNetWeight,
+    pantryNetWeightUnitId,
     expirationDate,
     selectedStorageLocationId,
     storageLocation,
@@ -319,6 +514,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     minQuantity,
     restockQuantity,
     createPantryItem,
+    restockPantryItem,
     onSuccess,
     handlePageChange,
   ]);
@@ -352,12 +548,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       <View style={styles.container} testID="add-pantry-item-details-modal">
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+          <Pressable
+            onPress={onClose}
+            style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
+          >
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.title}>Add Item Details</Text>
-          <TouchableOpacity
-            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          <Pressable
+            style={({pressed}) => [styles.saveButton, loading && styles.saveButtonDisabled, pressed && styles.pressed]}
             onPress={handleConfirm}
             disabled={loading}
             testID="add-pantry-item-submit-button"
@@ -365,7 +564,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             <Text style={styles.saveButtonText}>
               {loading ? 'Adding...' : 'Add'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Page Indicators */}
@@ -396,18 +595,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             bottomOffset={16}
           >
             {/* Item Name */}
-            <View style={styles.section}>
-              <FormInput
-                label="Item Name"
-                required
-                value={itemName}
-                onChangeText={setItemName}
-                placeholder="e.g., Milk, Eggs, Bread..."
-                useBottomSheetInput
-                autoCapitalize="words"
-                testID="add-pantry-item-name-input"
-              />
-            </View>
+            <FormInput
+              label="Item Name"
+              required
+              value={itemName}
+              onChangeText={setItemName}
+              placeholder="e.g., Milk, Eggs, Bread..."
+              useBottomSheetInput
+              autoCapitalize="words"
+              testID="add-pantry-item-name-input"
+            />
 
             {/* Brand */}
             <View style={[styles.section, { zIndex: 10 }]}>
@@ -422,6 +619,35 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               />
             </View>
 
+            {/* Expiration Date */}
+            <DatePickerField
+              label="Expiration Date"
+              value={expirationDate}
+              onChange={setExpirationDate}
+              placeholder="Select date"
+              minimumDate={new Date()}
+            />
+
+            {/* Storage State */}
+            <SegmentedControl
+              label="Storage"
+              options={STORAGE_STATES}
+              value={storageState}
+              onChange={setStorageState}
+            />
+          </BottomSheetKeyboardAwareScrollView>
+          {/* Page 2: Details */}
+          <BottomSheetKeyboardAwareScrollView
+            key="details"
+            style={styles.page}
+            contentContainerStyle={[
+              styles.pageContent,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bottomOffset={16}
+          >
             {/* Quantity + Unit */}
             <View style={{ zIndex: 1 }}>
               <FieldRow>
@@ -445,34 +671,92 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               </FieldRow>
             </View>
 
-            {/* Storage State */}
-            <SegmentedControl
-              label="Storage"
-              options={STORAGE_STATES}
-              value={storageState}
-              onChange={setStorageState}
-            />
-          </BottomSheetKeyboardAwareScrollView>
-          {/* Page 2: Details */}
-          <BottomSheetKeyboardAwareScrollView
-            key="details"
-            style={styles.page}
-            contentContainerStyle={[
-              styles.pageContent,
-              { paddingBottom: insets.bottom + 20 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            bottomOffset={16}
-          >
-            {/* Expiration Date */}
-            <DatePickerField
-              label="Expiration Date"
-              value={expirationDate}
-              onChange={setExpirationDate}
-              placeholder="Select date"
-              minimumDate={new Date()}
-            />
+            {/* Net Weight */}
+            <View style={{ zIndex: 5 }}>
+              <FieldRow>
+                <FormInput
+                  label="Net Weight"
+                  value={pantryNetWeight}
+                  onChangeText={setPantryNetWeight}
+                  placeholder="e.g., 14.5"
+                  keyboardType="decimal-pad"
+                  useBottomSheetInput
+                  inputStyle={{ height: 44 }}
+                />
+                <UnitAutocompleteField
+                  variant="inline"
+                  label="Unit"
+                  value={pantryNetWeightUnit}
+                  onChangeText={setPantryNetWeightUnit}
+                  onUnitSelected={handlePantryNetWeightUnitSelected}
+                  placeholder="oz, g, ml"
+                />
+              </FieldRow>
+            </View>
+
+            {/* Package Details - Progressive Disclosure */}
+            <View style={styles.section}>
+              <Pressable
+                onPress={() => setShowPackageDetails(!showPackageDetails)}
+                style={({pressed}) => [styles.toggleButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.toggleButtonText}>
+                  {showPackageDetails ? 'Hide Package Details' : 'Add Package Details'}
+                </Text>
+              </Pressable>
+
+              {showPackageDetails && (
+                <View style={styles.packageDetailsContainer}>
+                  <Text style={styles.sectionDescription}>
+                    Define what's inside a package (e.g., 12 cans of 335ml each).
+                  </Text>
+
+                  {/* Package Size */}
+                  <FormInput
+                    label="Qty per Package"
+                    value={packageSize}
+                    onChangeText={setPackageSize}
+                    placeholder="e.g., 12"
+                    keyboardType="decimal-pad"
+                    useBottomSheetInput
+                  />
+
+                  {/* Content Unit */}
+                  <View style={[styles.section, { zIndex: 10 }]}>
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label="Content Unit"
+                      value={contentUnit}
+                      onChangeText={setContentUnit}
+                      onUnitSelected={handleContentUnitSelected}
+                      placeholder="e.g., can, bottle"
+                    />
+                  </View>
+
+                  {/* Net Weight + Weight Unit */}
+                  <View style={{ zIndex: 1 }}>
+                    <FieldRow>
+                      <FormInput
+                        label="Weight per Unit"
+                        value={itemNetWeight}
+                        onChangeText={setItemNetWeight}
+                        placeholder="e.g., 335"
+                        keyboardType="decimal-pad"
+                        useBottomSheetInput
+                      />
+                      <UnitAutocompleteField
+                        variant="inline"
+                        label="Weight Unit"
+                        value={weightUnit}
+                        onChangeText={setWeightUnit}
+                        onUnitSelected={handleWeightUnitSelected}
+                        placeholder="mL, g, oz"
+                      />
+                    </FieldRow>
+                  </View>
+                </View>
+              )}
+            </View>
           </BottomSheetKeyboardAwareScrollView>
 
           {/* Page 3: Storage */}
@@ -502,27 +786,23 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             </View>
 
             {/* Tags */}
-            <View style={styles.section}>
-              <FormInput
-                label="Tags"
-                value={tags}
-                onChangeText={setTags}
-                placeholder="e.g., organic, gluten-free (comma separated)"
-                useBottomSheetInput
-              />
-            </View>
+            <FormInput
+              label="Tags"
+              value={tags}
+              onChangeText={setTags}
+              placeholder="e.g., organic, gluten-free (comma separated)"
+              useBottomSheetInput
+            />
 
             {/* Notes */}
-            <View style={styles.section}>
-              <FormInput
-                label="Notes"
-                value={storageNotes}
-                onChangeText={setStorageNotes}
-                placeholder="e.g., Store in cool, dry place"
-                multiline
-                useBottomSheetInput
-              />
-            </View>
+            <FormInput
+              label="Notes"
+              value={storageNotes}
+              onChangeText={setStorageNotes}
+              placeholder="e.g., Store in cool, dry place"
+              multiline
+              useBottomSheetInput
+            />
           </BottomSheetKeyboardAwareScrollView>
 
           {/* Page 4: Stock Settings */}
@@ -542,27 +822,23 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               Get notified when this item is running low.
             </Text>
 
-            <View style={styles.section}>
-              <FormInput
-                label="Alert When Below"
-                value={minQuantity}
-                onChangeText={setMinQuantity}
-                placeholder="e.g., 2"
-                keyboardType="decimal-pad"
-                useBottomSheetInput
-              />
-            </View>
+            <FormInput
+              label="Alert When Below"
+              value={minQuantity}
+              onChangeText={setMinQuantity}
+              placeholder="e.g., 2"
+              keyboardType="decimal-pad"
+              useBottomSheetInput
+            />
 
-            <View style={styles.section}>
-              <FormInput
-                label="Restock To"
-                value={restockQuantity}
-                onChangeText={setRestockQuantity}
-                placeholder="e.g., 6"
-                keyboardType="decimal-pad"
-                useBottomSheetInput
-              />
-            </View>
+            <FormInput
+              label="Restock To"
+              value={restockQuantity}
+              onChangeText={setRestockQuantity}
+              placeholder="e.g., 6"
+              keyboardType="decimal-pad"
+              useBottomSheetInput
+            />
 
             <Text style={styles.helpText}>
               Leave empty to disable low stock alerts for this item.
@@ -628,7 +904,7 @@ const styles = StyleSheet.create(theme => ({
     flexGrow: 1,
   },
   section: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
@@ -639,12 +915,27 @@ const styles = StyleSheet.create(theme => ({
   sectionDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   helpText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
+  },
+  toggleButton: {
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  packageDetailsContainer: {
+    marginTop: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

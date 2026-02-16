@@ -2,57 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetItems(
-  $filters: ItemFilters
-  $sort: ItemSortInput
-  $first: Int
-  $after: String
-) {
-  items(filters: $filters, sort: $sort, first: $first, after: $after) {
-    edges {
-      cursor
-      node {
-        id
-        name
-        description
-        type
-        storageState
-        imageUrl
-        shelfLifeDays
-        tags
-        status
-        visibility
-        showInOnboarding
-        popularity
-        units {
-          id
-          isDefault
-        }
-        brands {
-          id
-        }
-        categories {
-          id
-        }
-        nutritions
-        healthBenefits
-        metadata
-        createdAt
-        updatedAt
-        deletedAt
-        version
-      }
-    }
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query SearchItems($input: SearchItemsInput!) {
   searchItems(input: $input) {
     edges {
@@ -74,7 +23,7 @@ query SearchItems($input: SearchItemsInput!) {
 }
 
 query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
-  items(filters: { upc: $upc, upcFormat: $upcFormat }, first: 1) {
+  items(filters: { lookup: { upc: $upc, upcFormat: $upcFormat } }, first: 1) {
     edges {
       cursor
       node {
@@ -124,7 +73,7 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
 }
 
 query ItemBySkuFilter($sku: String!, $skuStoreId: String) {
-  items(filters: { sku: $sku, skuStoreId: $skuStoreId }, first: 1) {
+  items(filters: { lookup: { sku: $sku, skuStoreId: $skuStoreId } }, first: 1) {
     edges {
       cursor
       node {
@@ -219,9 +168,14 @@ query AutocompleteItems($input: AutocompleteInput!) {
 }
 
 query SearchBrands($search: String!, $limit: Int) {
-  brands(search: $search, take: $limit) {
-    id
-    name
+  brands(filters: { search: $search }, first: $limit) {
+    edges {
+      node {
+        id
+        name
+      }
+    }
+    totalCount
   }
 }
 
@@ -280,43 +234,62 @@ query GetPopularItems($first: Int = 10) {
 
 mutation CreateItem($input: CreateItemInput!) {
   createItem(input: $input) {
-    id
-    name
-    description
-    netWeight
-    displayUnit {
+    success
+    message
+    code
+    item {
       id
       name
-      symbol
-    }
-    convertedNetWeight {
-      value
-      unit {
+      description
+      netWeight
+      displayUnit {
         id
         name
         symbol
       }
-    }
-    type
-    storageState
-    shelfLifeDays
-    imageUrl
-    tags
-    brands {
-      brand {
-        id
-        name
+      convertedNetWeight {
+        value
+        unit {
+          id
+          name
+          symbol
+        }
       }
-    }
-    categories {
-      category {
-        id
-        name
+      type
+      storageState
+      shelfLifeDays
+      imageUrl
+      tags
+      brands {
+        brand {
+          id
+          name
+        }
       }
-    }
-    units {
-      isDefault
-      unitId
+      categories {
+        category {
+          id
+          name
+        }
+      }
+      units {
+        id
+        unitId
+        isDefault
+        packageSize
+        retailUnit
+        contentUnitId
+        unit {
+          id
+          name
+          symbol
+        }
+        contentUnit {
+          id
+          name
+          symbol
+        }
+      }
     }
   }
 }

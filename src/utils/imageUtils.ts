@@ -7,18 +7,60 @@ import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
  * @param item - Item object with imageUrl field
  * @returns Image URL or null if no image is available
  */
-export const getItemImageUrl = (item: any): string | null => {
-  const imageUrl = item?.imageUrl;
-  if (!imageUrl) return null;
+/**
+ * Resolves the best available image URL from any common data shape.
+ * Handles: Item (direct), PantryItem/ShoppingListItem (nested .item),
+ * PantryItemSuggestion (own imageUrl + nested .item fallback).
+ */
+export function resolveImageUrl(
+  source: { imageUrl?: string | null; images?: unknown; item?: { imageUrl?: string | null; images?: unknown } | null } | null | undefined,
+): string | null {
+  if (!source) return null;
 
-  // Only return valid URLs - filenames without full path are invalid
-  // The API should be returning full CDN URLs, not just filenames
-  if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-    console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
-    return null;
+  // 1. Try own imageUrl (validates it's a full URL)
+  const ownUrl = source.imageUrl;
+  if (ownUrl && (ownUrl.startsWith('http://') || ownUrl.startsWith('https://'))) {
+    return ownUrl;
   }
 
-  return imageUrl;
+  // 2. Try nested .item via getItemImageUrl (handles imageUrl + images fallback)
+  if (source.item) {
+    const fromItem = getItemImageUrl(source.item);
+    if (fromItem) return fromItem;
+  }
+
+  // 3. Try own images array (for direct Item objects)
+  if (source.images) {
+    return getItemImageUrl(source);
+  }
+
+  return null;
+}
+
+export const getItemImageUrl = (
+  item: { imageUrl?: string | null; images?: unknown } | null | undefined,
+): string | null => {
+  const imageUrl = item?.imageUrl;
+  if (imageUrl) {
+    // Only return valid URLs - filenames without full path are invalid
+    // The API should be returning full CDN URLs, not just filenames
+    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      console.warn('[getItemImageUrl] Invalid imageUrl (not a full URL):', imageUrl);
+      return null;
+    }
+    return imageUrl;
+  }
+
+  // Fallback: extract from images JSON array (used when imageUrl is not populated)
+  if (item?.images) {
+    const parsed = parseImages(item.images);
+    const primary = getPrimaryImage(parsed);
+    if (primary) {
+      return getBestImageUrl(primary);
+    }
+  }
+
+  return null;
 };
 
 // =============================================================================
@@ -115,13 +157,12 @@ export function getPrimaryImage(images: ItemImage[]): ItemImage | null {
 /**
  * Get display label for a perspective
  */
-function getPerspectiveLabel(perspective: string): string {
+export function getPerspectiveLabel(perspective: string): string {
   const labels: Record<string, string> = {
     front: 'Front',
     back: 'Back',
     left: 'Left',
     right: 'Right',
-    top: 'Top',
     nutrition_label: 'Nutrition',
     ingredient_list: 'Ingredients',
   };
@@ -148,7 +189,6 @@ export function groupImagesByPerspective(images: ItemImage[]): ImageTab[] {
     'back',
     'left',
     'right',
-    'top',
     'nutrition_label',
     'ingredient_list',
   ];

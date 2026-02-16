@@ -74,14 +74,14 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       'websocket',      // Generic WebSocket errors
     ].some(issue => message.includes(issue));
 
-    // For network errors, just log and let Apollo's errorPolicy handle it
-    // With cache-first + errorPolicy: 'ignore', Apollo will use cached data automatically
+    // For network errors, log and forward the operation to let Apollo's errorPolicy handle it
+    // Returning void silently swallows the error, leaving query observers without a result
     if (isNetworkIssue) {
       console.warn(
         `Network error for ${operation.operationName}:`,
         error.message
       );
-      return; // Let Apollo's errorPolicy handle it
+      return forward(operation);
     }
 
     // Only log non-network errors as these are unexpected

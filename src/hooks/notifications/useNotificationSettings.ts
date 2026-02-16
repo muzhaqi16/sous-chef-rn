@@ -82,10 +82,16 @@ export const useNotificationSettings = () => {
       return {
         __typename: 'Mutation',
         updateNotificationPreferences: {
-          ...preferences,
-          ...definedInputs,
-          __typename: 'NotificationPreferences',
-          updatedAt: new Date().toISOString(),
+          __typename: 'NotificationPreferencesPayload',
+          success: true,
+          message: 'Notification preferences updated',
+          code: 'NOTIFICATION_PREFERENCES_UPDATED',
+          notificationPreferences: {
+            ...preferences,
+            ...definedInputs,
+            __typename: 'NotificationPreferences',
+            updatedAt: new Date().toISOString(),
+          },
         },
       };
     },

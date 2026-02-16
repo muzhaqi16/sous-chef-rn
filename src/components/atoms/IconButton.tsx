@@ -1,9 +1,12 @@
-import React from 'react';
-import {TouchableOpacity, StyleProp, ViewStyle} from 'react-native';
+import React, { useCallback } from 'react';
+import {Pressable, StyleProp, ViewStyle} from 'react-native';
 import {StyleSheet, withUnistyles} from 'react-native-unistyles';
 import {IconLibrary, Icon} from '#/utils/iconUtils';
+import {HapticService} from '#services/haptic/HapticService';
 
 const UniIcon = withUnistyles(Icon);
+
+const BORDERLESS_RIPPLE = { borderless: true, radius: 22 };
 
 export interface IconButtonProps {
   /** glyph name to render */
@@ -20,7 +23,7 @@ export interface IconButtonProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** icon color (defaults to theme.colors.iconPrimary) */
   color?: string;
-  /** extra styling on the Touchable */
+  /** extra styling on the Pressable */
   style?: StyleProp<ViewStyle>;
   /** override default library—pass Ionicons, MaterialIcons, etc. */
   library?: IconLibrary;
@@ -40,11 +43,21 @@ export const IconButton: React.FC<IconButtonProps> = ({
   library = 'MaterialIcons',
   disabled = false,
 }) => {
+  const handlePress = useCallback(() => {
+    HapticService.selection();
+    onPress();
+  }, [onPress]);
+
   return (
-    <TouchableOpacity
-      style={[styles.button, style]}
-      onPress={onPress}
+    <Pressable
+      style={({pressed}) => [
+        styles.button,
+        pressed && !disabled && styles.pressed,
+        style,
+      ]}
+      onPress={handlePress}
       disabled={disabled}
+      android_ripple={BORDERLESS_RIPPLE}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
@@ -59,7 +72,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
             : color ?? theme.colors.iconPrimary,
         })}
       />
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -69,6 +82,9 @@ const styles = StyleSheet.create(theme => ({
     minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

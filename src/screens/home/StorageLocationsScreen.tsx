@@ -4,7 +4,7 @@ import {
   Alert,
   Text,
   ActivityIndicator,
-  TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -158,10 +158,11 @@ export const StorageLocationsScreen: React.FC<{
           {/* View Mode Toggle */}
           {locations.length > 0 && (
             <View style={styles.viewModeToggle}>
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({pressed}) => [
                   styles.toggleButton,
                   viewMode === 'flat' && styles.toggleButtonActive,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setViewMode('flat')}
               >
@@ -174,11 +175,12 @@ export const StorageLocationsScreen: React.FC<{
                 >
                   List View
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
+              </Pressable>
+              <Pressable
+                style={({pressed}) => [
                   styles.toggleButton,
                   viewMode === 'tree' && styles.toggleButtonActive,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setViewMode('tree')}
               >
@@ -191,7 +193,7 @@ export const StorageLocationsScreen: React.FC<{
                 >
                   Tree View
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
 
@@ -311,5 +313,8 @@ const styles = StyleSheet.create(theme => ({
   toggleTextActive: {
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

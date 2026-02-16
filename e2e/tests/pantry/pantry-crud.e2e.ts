@@ -9,11 +9,10 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
 import { PantryScreen } from '../../screens';
 import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
 import { generateItemName } from '../../helpers/data';
-import { delay, TIMEOUTS } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry CRUD', () => {
   const pantryScreen = new PantryScreen();
@@ -36,11 +35,14 @@ describe('Pantry CRUD', () => {
         const item = element(by.text(itemName));
         // Swipe left to reveal delete button
         await item.swipe('left', 'fast', 0.7);
-        await delay(300);
         // Tap delete button (trash icon)
         const deleteButton = element(by.id('swipe-action-delete')).atIndex(0);
+        await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.QUICK);
         await deleteButton.tap();
-        await delay(500);
+        // Wait for item to be removed
+        await waitFor(element(by.text(itemName)))
+          .not.toBeVisible()
+          .withTimeout(TIMEOUTS.DEFAULT);
       } catch {
         // Item might already be deleted or not found
       }
@@ -53,8 +55,9 @@ describe('Pantry CRUD', () => {
       itemsToCleanup.push(itemName);
 
       await pantryScreen.addItem(itemName);
-      await delay(500);
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should add item with quantity and unit', async () => {
@@ -62,8 +65,9 @@ describe('Pantry CRUD', () => {
       itemsToCleanup.push(itemName);
 
       await pantryScreen.addItem(itemName, '2', 'lb');
-      await delay(500);
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should add item via quick add (autocomplete)', async () => {
@@ -79,7 +83,7 @@ describe('Pantry CRUD', () => {
 
       // Close the modal by pressing back
       await pantryScreen.goBack();
-      await delay(500);
+      await pantryScreen.waitForScreen();
     });
 
     it('should validate empty item name', async () => {
@@ -102,18 +106,15 @@ describe('Pantry CRUD', () => {
       const submitButton = element(by.id('add-pantry-item-submit-button'));
       await submitButton.tap();
 
-      // Should show error alert
-      await delay(500);
-
       // Dismiss the error alert if it appeared
       try {
         await waitFor(element(by.text('Error')))
           .toBeVisible()
-          .withTimeout(2000);
+          .withTimeout(TIMEOUTS.DEFAULT);
         await element(by.text('OK')).tap();
         console.log('✓ Empty name validation shows error alert');
       } catch {
-        // Error might show differently
+        // Error might show differently - modal should still be open
         console.log('✓ Validation handled (error alert or prevented submission)');
       }
 
@@ -129,20 +130,18 @@ describe('Pantry CRUD', () => {
       itemsToCleanup.push(originalName);
       itemsToCleanup.push(originalName + ' Edited'); // In case rename succeeds
       await pantryScreen.addItem(originalName);
-      await delay(500);
-      await pantryScreen.expectTextVisible(originalName);
+      await waitFor(element(by.text(originalName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Find and tap the item to edit
       const item = element(by.text(originalName));
       await item.tap();
 
-      // Wait for detail/edit screen
-      await delay(500);
-
       // Try to find edit button or navigate to edit mode
       try {
         const editButton = element(by.id('edit-item-button'));
-        await waitFor(editButton).toBeVisible().withTimeout(2000);
+        await waitFor(editButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
         await editButton.tap();
 
         // Change the name
@@ -167,22 +166,19 @@ describe('Pantry CRUD', () => {
       const itemName = generateItemName('QtyEdit');
       itemsToCleanup.push(itemName);
       await pantryScreen.addItem(itemName, '1', 'lb');
-      await delay(500);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Navigate to item detail
       const item = element(by.text(itemName));
       await item.tap();
 
-      await delay(500);
-
       // Look for inline quantity controls or edit screen
       try {
-        // Try increment button
         const incrementButton = element(by.id('quantity-increment'));
-        await waitFor(incrementButton).toBeVisible().withTimeout(2000);
+        await waitFor(incrementButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
         await incrementButton.tap();
-
-        await delay(500);
         await pantryScreen.goBack();
       } catch {
         console.log('Inline quantity edit not available');
@@ -196,28 +192,29 @@ describe('Pantry CRUD', () => {
       const itemName = generateItemName('ToDelete');
       // Don't add to cleanup - we're deleting it in this test
       await pantryScreen.addItem(itemName);
-      await delay(500);
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Swipe left to reveal delete button
       const item = element(by.text(itemName));
       await item.swipe('left', 'fast', 0.7);
-      await delay(500);
 
-      // Tap the delete button (trash icon on the right side of revealed actions)
+      // Tap the delete action button
       try {
-        // Try tapping the visible delete action area
-        await element(by.text(itemName)).tap({ x: 300, y: 0 }); // Tap on right side where delete button is
-        await delay(500);
+        const deleteButton = element(by.id('swipe-action-delete')).atIndex(0);
+        await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+        await deleteButton.tap();
       } catch {
         // Try alternative approach
+        console.log('Delete action button not found via testID');
       }
 
       // Verify item is gone
       try {
         await waitFor(element(by.text(itemName)))
           .not.toBeVisible()
-          .withTimeout(2000);
+          .withTimeout(TIMEOUTS.DEFAULT);
         console.log('✓ Item deleted successfully');
       } catch {
         console.log('⚠️ Item might still be visible - adding to cleanup');
@@ -229,15 +226,13 @@ describe('Pantry CRUD', () => {
       const itemName = generateItemName('CancelDel');
       itemsToCleanup.push(itemName);
       await pantryScreen.addItem(itemName);
-      await delay(500);
-
-      // Verify item exists first
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Swipe left to reveal delete actions (but don't tap delete)
       const item = element(by.text(itemName));
       await item.swipe('left', 'fast', 0.3);
-      await delay(500);
 
       // Item should still exist - swipe reveal doesn't delete
       await expect(element(by.text(itemName))).toExist();
@@ -250,7 +245,9 @@ describe('Pantry CRUD', () => {
       const longName = 'LongItemNameTest';
       itemsToCleanup.push(longName);
       await pantryScreen.addItem(longName);
-      await delay(500);
+      await waitFor(element(by.text(longName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       console.log('✓ Long item name handled');
     });
 
@@ -258,16 +255,18 @@ describe('Pantry CRUD', () => {
       const itemName = generateItemName('Frac');
       itemsToCleanup.push(itemName);
       await pantryScreen.addItem(itemName, '1/2', 'cup');
-      await delay(500);
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should handle decimal quantities', async () => {
       const itemName = generateItemName('Decimal');
       itemsToCleanup.push(itemName);
       await pantryScreen.addItem(itemName, '2.5', 'kg');
-      await delay(500);
-      await pantryScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 });

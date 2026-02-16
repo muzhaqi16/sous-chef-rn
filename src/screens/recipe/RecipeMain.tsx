@@ -5,14 +5,14 @@ import React, {
   useEffect,
   useRef,
 } from 'react';
-import { View, Alert, Text, TouchableOpacity, Pressable } from 'react-native';
+import { View, Alert, Text, Pressable } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ItemList } from '#components/organisms/ItemList';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { RecipesHeader } from '#components/molecules/RecipesHeader';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { TagPicker } from '#components/molecules/TagPicker';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
@@ -190,18 +190,22 @@ export const RecipeMain: React.FC = React.memo(() => {
   const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
     // Use cache updates instead of refetchQueries for better performance and offline support
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe || !variables?.recipeId) return;
+      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 
-      // Remove from mySavedRecipes array
+      // Remove from mySavedRecipes connection
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
           if (!existing) return existing;
           return {
             ...existing,
-            mySavedRecipes: existing.mySavedRecipes.filter(
-              sr => sr.recipe.id !== variables.recipeId,
-            ),
+            mySavedRecipes: {
+              ...existing.mySavedRecipes,
+              edges: existing.mySavedRecipes.edges.filter(
+                edge => edge.node.recipe.id !== variables.recipeId,
+              ),
+              totalCount: existing.mySavedRecipes.totalCount - 1,
+            },
           };
         },
       );
@@ -247,13 +251,13 @@ export const RecipeMain: React.FC = React.memo(() => {
     navigate('RecipeSearch', { initialQuery: searchQuery });
   }, [navigate, searchQuery]);
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (showRandomRecipes) {
       await handleRefreshRandom();
     } else {
       await refetch();
     }
-  };
+  }, [showRandomRecipes, handleRefreshRandom, refetch]);
 
   const handleRemoveRecipe = useCallback(
     async (recipeId: string) => {
@@ -322,11 +326,12 @@ export const RecipeMain: React.FC = React.memo(() => {
             Here are some recipe ideas to try
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.refreshButton}
+        <Pressable
+          style={({pressed}) => [styles.refreshButton, pressed && styles.pressed]}
           onPress={handleRefreshRandom}
           disabled={loadingRandom}
-          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Refresh recipe suggestions"
         >
           <Icon
             name="refresh"
@@ -336,7 +341,7 @@ export const RecipeMain: React.FC = React.memo(() => {
             }
             library="Ionicons"
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }, [
@@ -456,12 +461,14 @@ export const RecipeMain: React.FC = React.memo(() => {
 
   return (
     <View style={styles.container} testID="recipes-screen">
-      <RecipesHeader
+      <TabScreenHeader
+        label="What to cook?"
+        title="Recipes"
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
         onAvatarPress={() => navigate('Notifications')}
       />
-      <View style={{ paddingHorizontal: theme.spacing.md }}>
+      <View style={styles.searchBarContainer}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -524,6 +531,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  searchBarContainer: {
+    paddingHorizontal: theme.spacing.md,
+  },
   suggestedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,5 +561,8 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.background,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -44,7 +44,7 @@ export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) 
   );
 
   const getResults = useCallback((): BrandItem[] => {
-    const searchedBrands = brandsData?.brands || [];
+    const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) || [];
     if (searchedBrands.length === 0) return [];
     return searchedBrands.map(brand => ({ id: brand.id, name: brand.name, isSuggested: false }));
   }, [brandsData?.brands]);
@@ -65,7 +65,7 @@ export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) 
   // Override displayItems to handle the stale-data check and suggested brand priority
   const displayItems = useMemo((): BrandItem[] => {
     const { searchTerm, shouldSearch } = autocomplete;
-    const searchedBrands = brandsData?.brands || [];
+    const searchedBrands = brandsData?.brands?.edges?.map(e => e.node) || [];
 
     // Check if API results are relevant to current search
     const resultsAreRelevant =

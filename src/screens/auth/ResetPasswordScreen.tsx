@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -142,9 +142,9 @@ export const ResetPasswordScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleGoBack}>
+          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.content}>
@@ -157,11 +157,11 @@ export const ResetPasswordScreen: React.FC = () => {
             Please request a new password reset from the login screen.
           </Text>
 
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
+          <Pressable
+            style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
             onPress={handleReturnToLogin}>
             <Text style={styles.primaryButtonText}>Return to Login</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -170,9 +170,9 @@ export const ResetPasswordScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleGoBack}>
+        <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
           <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -206,8 +206,8 @@ export const ResetPasswordScreen: React.FC = () => {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
+          <Pressable
+            style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
             onPress={form.handleSubmit(onSubmit)}
             disabled={isSubmitting || !form.formState.isValid}>
             {isSubmitting ? (
@@ -215,7 +215,7 @@ export const ResetPasswordScreen: React.FC = () => {
             ) : (
               <Text style={styles.primaryButtonText}>Reset Password</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -285,5 +285,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

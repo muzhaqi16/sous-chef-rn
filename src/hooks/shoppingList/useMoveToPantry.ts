@@ -82,8 +82,8 @@ export function useMoveToPantry({
               cache.modify({
                 id: cacheId,
                 fields: {
-                  isPurchased() {
-                    return false;
+                  purchaseInfo(existing: any) {
+                    return { ...existing, isPurchased: false };
                   },
                   version(existingVersion) {
                     return (existingVersion ?? 0) + 1;

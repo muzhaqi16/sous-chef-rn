@@ -52,6 +52,9 @@ export interface AddToConnectionOptions extends AddToArrayOptions {
 export interface RemoveFromArrayOptions {
   /** Whether to evict the item from cache entirely (default: false) */
   evictItem?: boolean;
+  /** Whether to run garbage collection after eviction (default: true).
+   *  Set to false in multi-delete operations and call cache.gc() once at the end. */
+  gc?: boolean;
 }
 
 // =============================================================================
@@ -218,7 +221,7 @@ export function createRemoveFromQueryFieldUpdater(
     itemId: string,
     options: RemoveFromArrayOptions = {},
   ): void => {
-    const { evictItem = false } = options;
+    const { evictItem = false, gc = true } = options;
 
     try {
       // Remove from Query field
@@ -240,7 +243,9 @@ export function createRemoveFromQueryFieldUpdater(
         cache.evict({
           id: cache.identify({ __typename: typename, id: itemId }),
         });
-        cache.gc();
+        if (gc) {
+          cache.gc();
+        }
       }
     } catch (error) {
       console.warn(
@@ -365,7 +370,7 @@ export function createRemoveFromQueryConnectionUpdater(
     itemId: string,
     options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
   ): void => {
-    const { evictItem = false, updateTotalCount = true } = options;
+    const { evictItem = false, gc = true, updateTotalCount = true } = options;
 
     try {
       cache.modify({
@@ -398,7 +403,9 @@ export function createRemoveFromQueryConnectionUpdater(
         cache.evict({
           id: cache.identify({ __typename: typename, id: itemId }),
         });
-        cache.gc();
+        if (gc) {
+          cache.gc();
+        }
       }
     } catch (error) {
       console.warn(
@@ -629,7 +636,7 @@ export function createRemoveFromParentConnectionUpdater(
     itemId: string,
     options: RemoveFromArrayOptions & { updateTotalCount?: boolean } = {},
   ): void => {
-    const { evictItem = false, updateTotalCount = true } = options;
+    const { evictItem = false, gc = true, updateTotalCount = true } = options;
 
     try {
       const parentCacheId = cache.identify({
@@ -681,7 +688,9 @@ export function createRemoveFromParentConnectionUpdater(
         cache.evict({
           id: cache.identify({ __typename: itemTypename, id: itemId }),
         });
-        cache.gc();
+        if (gc) {
+          cache.gc();
+        }
       }
     } catch (error) {
       console.warn(
@@ -715,7 +724,7 @@ export function createRemoveFromParentArrayUpdater(
     itemId: string,
     options: RemoveFromArrayOptions = {},
   ): void => {
-    const { evictItem = false } = options;
+    const { evictItem = false, gc = true } = options;
 
     try {
       const parentCacheId = cache.identify({
@@ -749,7 +758,9 @@ export function createRemoveFromParentArrayUpdater(
         cache.evict({
           id: cache.identify({ __typename: itemTypename, id: itemId }),
         });
-        cache.gc();
+        if (gc) {
+          cache.gc();
+        }
       }
     } catch (error) {
       console.warn(

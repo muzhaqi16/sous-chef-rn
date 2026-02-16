@@ -43,9 +43,10 @@ function initializeClient() {
   const client = new ApolloClient({
     link,
     cache,
-    // Client identification (name/version/connectToDevTools) requires Apollo Client v4.1+
-    // Current version: 4.0.5 - upgrade to enable GraphOS tracking and dev tools integration
-    // Configure Apollo Client with best practices for offline-first apps
+    clientAwareness: {
+      name: 'sous-chef-app',
+      version: require('../../package.json').version,
+    },
     defaultOptions: {
       query: {
         fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries
@@ -97,21 +98,11 @@ export function cancelCachePersistence() {
  * Approach from apollo3-cache-persist - cleanest way to persist cache
  */
 function setupCachePersistence(client: ApolloClient) {
-  // PERFORMANCE: Reduced from 3000ms to 1000ms to improve perceived mutation speed
-  // 1000ms is still sufficient to batch rapid mutations while reducing visible delay
-  const DEBOUNCE_MS = 1000;
-
-  // Helper to schedule cache persistence (debounced)
+  // Helper to schedule cache persistence
+  // No debounce here - ApolloCachePersistence.save() already debounces at 1000ms
   const schedulePersistence = () => {
-    if (persistTimeout) {
-      clearTimeout(persistTimeout);
-    }
-
-    persistTimeout = setTimeout(() => {
-      const extracted = client.cache.extract() as any;
-      apolloCachePersistence.save(extracted);
-      persistTimeout = null; // Clear reference after execution
-    }, DEBOUNCE_MS);
+    const extracted = client.cache.extract() as any;
+    apolloCachePersistence.save(extracted);
   };
 
   // Listen for cache resets (e.g., logout, clearStore)

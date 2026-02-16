@@ -2,7 +2,7 @@ import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
   Dimensions,
@@ -251,14 +251,15 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             const isSelected = selectedRole === role;
 
             return (
-              <TouchableOpacity
+              <Pressable
                 key={role}
-                style={[
+                style={({pressed}) => [
                   styles.roleCard,
                   isSelected && {
                     borderColor: theme.colors.primary,
                     backgroundColor: theme.colors.primary + '10',
                   },
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setSelectedRole(role)}
                 disabled={isSubmitting}
@@ -322,7 +323,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                     </View>
                   </View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -458,6 +459,9 @@ const styles = StyleSheet.create(theme => ({
   },
   cancelButton: {
     backgroundColor: theme.colors.surface,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

@@ -51,18 +51,6 @@ export const displayPricePerUnitRule = string()
   .max(50, 'Display price per unit cannot exceed 50 characters')
   .optional();
 
-// Net weight validation
-export const netWeightRule = number()
-  .transform((value, originalValue) =>
-    String(originalValue).trim() === '' ? undefined : value
-  )
-  .min(0.001, 'Net weight must be greater than 0')
-  .optional();
-
-// Display unit ID validation
-export const displayUnitIdRule = string()
-  .optional();
-
 // Unit quantity validation
 export const unitQtyRule = number()
   .transform((value, originalValue) =>
@@ -85,9 +73,13 @@ export const categoryIdsRule = array()
 export const unitsRule = array()
   .of(
     object({
-      unitId: string().required(),
+      unitId: string().optional(),
+      unitName: string().optional(),
       isDefault: boolean().default(false),
-      packageSize: number().min(0.001).required(),
+      packageSize: number().min(0.001).optional(),
+      contentUnitId: string().optional(),
+      contentUnitName: string().optional(),
+      retailUnit: boolean().optional(),
       packageDescription: string().optional(),
       conversionRatio: number().min(0.001).optional(),
     })
@@ -105,6 +97,27 @@ export const tagsRule = array()
   .max(10, 'Cannot have more than 10 tags')
   .optional();
 
+// Selected images validation (for multi-image picker)
+export const selectedImagesRule = array()
+  .of(
+    object({
+      uri: string().required(),
+      fileName: string().optional(),
+      perspective: string()
+        .oneOf([
+          'front',
+          'back',
+          'left',
+          'right',
+          'top',
+          'nutrition_label',
+          'ingredient_list',
+        ])
+        .default('front'),
+    })
+  )
+  .optional();
+
 // --- Create Item validation schema -------------------------------------------
 
 export const createItemSchema = object({
@@ -116,17 +129,34 @@ export const createItemSchema = object({
   upc: upcRule,
   sku: skuRule,
 
-  // Weight and Units
-  netWeight: netWeightRule,
-  displayUnitId: displayUnitIdRule,
+  // Net Weights (manufacturer-provided, e.g., dual-label packaging)
+  netWeights: array()
+    .of(
+      object({
+        value: number()
+          .min(0.001, 'Net weight must be greater than 0')
+          .required('Value is required'),
+        unitName: string().required('Unit is required'),
+      }),
+    )
+    .optional(),
 
   // Product Details
   type: string().nullable().optional(),
   storageState: string().nullable().optional(),
   shelfLifeDays: shelfLifeDaysRule,
+  baseDimension: string().nullable().optional(),
+  defaultConsumeIncrement: number()
+    .transform((value, originalValue) =>
+      String(originalValue).trim() === '' ? undefined : value
+    )
+    .min(0.001, 'Must be greater than 0')
+    .optional(),
+  defaultConsumeUnitId: string().optional(),
 
   // Images
   imageUrl: urlRule,
+  selectedImages: selectedImagesRule,
 
   // Brand Information
   brandId: string().optional(),
@@ -137,8 +167,6 @@ export const createItemSchema = object({
 
   // Units
   units: unitsRule,
-  unitQty: unitQtyRule,
-  defaultUnit: defaultUnitRule,
 
   // Metadata
   tags: tagsRule,

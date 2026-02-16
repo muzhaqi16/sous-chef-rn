@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, TouchableOpacity, Text, Modal} from 'react-native';
+import {View, Pressable, Text, Modal} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 
@@ -28,17 +28,17 @@ export const RememberMeModal: React.FC<{
           </Text>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonSecondary]}
+            <Pressable
+              style={({pressed}) => [styles.modalButton, styles.modalButtonSecondary, pressed && styles.pressed]}
               onPress={onDecline}>
               <Text style={styles.modalButtonSecondaryText}>Not Now</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonPrimary]}
+            <Pressable
+              style={({pressed}) => [styles.modalButton, styles.modalButtonPrimary, pressed && styles.pressed]}
               onPress={onAccept}>
               <Text style={styles.modalButtonPrimaryText}>Remember</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -104,5 +104,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

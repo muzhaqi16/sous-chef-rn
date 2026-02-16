@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
 } from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
@@ -23,10 +23,11 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterScroll}>
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({pressed}) => [
             styles.filterPill,
             !selectedCategory && styles.filterPillActive,
+            pressed && styles.pressed,
           ]}
           onPress={() => onCategoryChange(null)}>
           <Text
@@ -36,14 +37,15 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
             ]}>
             All
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
         {Object.values(NotificationCategory).map(category => (
-          <TouchableOpacity
+          <Pressable
             key={category}
-            style={[
+            style={({pressed}) => [
               styles.filterPill,
               selectedCategory === category && styles.filterPillActive,
+              pressed && styles.pressed,
             ]}
             onPress={() => onCategoryChange(category)}>
             <Text
@@ -53,7 +55,7 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
               ]}>
               {category.replace('_', ' ')}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </ScrollView>
     </View>
@@ -91,5 +93,8 @@ const styles = StyleSheet.create(theme => ({
   filterTextActive: {
     color: theme.colors.white,
     fontWeight: 'bold',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

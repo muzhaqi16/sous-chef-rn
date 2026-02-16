@@ -1,6 +1,6 @@
 # CI/CD Pipeline Documentation
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-11
 **Status:** ✅ Active
 
 This document describes the Continuous Integration and Continuous Deployment (CI/CD) pipeline for the Sous Chef React Native application.
@@ -190,7 +190,7 @@ gh workflow run e2e-nightly.yml
 - Push tags: `dev-v*`, `stg-v*`, `prod-v*`, `playstore-v*`
 - Manual workflow dispatch (choose environment + build type)
 
-**Runner:** Self-hosted
+**Runner:** Self-hosted Linux (ubuntu)
 
 **Environment:** Resolved from tag prefix or manual input
 
@@ -218,16 +218,16 @@ gh workflow run e2e-nightly.yml
 
 **Usage:**
 ```bash
-# Development build
+# Using npm tag scripts (recommended)
+npm run tag:android:dev        # Dev APK
+npm run tag:android:stg        # Staging APK
+npm run tag:android:prod       # Production APK
+npm run tag:android:playstore  # Play Store AAB
+
+# Or using git tags manually
 git tag dev-v1.2.0 && git push origin dev-v1.2.0
-
-# Staging build
 git tag stg-v1.2.0 && git push origin stg-v1.2.0
-
-# Production APK
 git tag prod-v1.2.0 && git push origin prod-v1.2.0
-
-# Play Store AAB
 git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 # Or trigger manually via Actions tab:
@@ -241,7 +241,7 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 **Triggers:**
 - Push tags: `v*`, `ios-v*`
 
-**Runner:** macOS 15 (GitHub-hosted)
+**Runner:** Self-hosted macOS (mac-mini-m1)
 
 **Environment:** Always `prod`
 
@@ -249,27 +249,27 @@ The version number is extracted from the tag (stripping the `v` or `ios-v` prefi
 
 **Pipeline steps:**
 
-1. Select Xcode 16.4
-2. Checkout repository
-3. Install Apple certificate & provisioning profile — Decodes base64 secrets, creates a temporary keychain, installs the distribution certificate and provisioning profiles
-4. Setup Node.js (v20)
-5. Clean workspace and npm cache
-6. Install npm dependencies
-7. Generate `.env` file — Writes config from the `prod` environment secrets/variables for `react-native-config`
-8. Install CocoaPods dependencies
-9. Set version from git tag (marketing version + build number)
-10. Build Xcode archive — Manual code signing with Apple Distribution certificate and `souschef-appstore-dist` provisioning profile
-11. Export IPA — App Store distribution method
-12. Upload to App Store Connect — Uses App Store Connect API key via `xcrun altool`
-13. Upload build artifact to GitHub Actions (3-day retention)
+1. Checkout repository
+2. Install Apple certificate & provisioning profile — Decodes base64 secrets, creates a temporary keychain, installs the distribution certificate and provisioning profiles
+3. Setup Node.js (v20)
+4. Clean workspace and npm cache
+5. Install npm dependencies
+6. Generate `.env` file — Writes config from the `prod` environment secrets/variables for `react-native-config`
+7. Install CocoaPods dependencies
+8. Set version from git tag (marketing version + build number)
+9. Build Xcode archive — Manual code signing with Apple Distribution certificate and `souschef-appstore-dist` provisioning profile
+10. Export IPA — App Store distribution method
+11. Upload to App Store Connect — Uses App Store Connect API key via `xcrun altool`
+12. Upload build artifact to GitHub Actions (3-day retention)
 
 **Usage:**
 ```bash
-# Using a shared version tag (also triggers Android if prod-v* exists)
-git tag v1.2.0 && git push origin v1.2.0
+# Using npm tag script (recommended)
+npm run tag:ios           # Creates ios-v{version} from package.json
 
-# Using an iOS-specific tag
+# Or using git tags manually
 git tag ios-v1.2.0 && git push origin ios-v1.2.0
+git tag v1.2.0 && git push origin v1.2.0       # alternate pattern
 ```
 
 **Required secrets (prod environment):**
@@ -289,6 +289,46 @@ git tag ios-v1.2.0 && git push origin ios-v1.2.0
 ---
 
 ## 🚀 Quick Reference: Triggering Releases
+
+### Using npm tag scripts (recommended)
+
+The tag scripts read the version from `package.json`, create annotated git tags, and push them to trigger the corresponding build workflows.
+
+```bash
+# Both platforms (prod only — iOS is prod-only)
+npm run tag:prod          # Creates prod-v{version} (Android) + ios-v{version} (iOS)
+
+# Android only
+npm run tag:dev           # Creates dev-v{version}
+npm run tag:stg           # Creates stg-v{version}
+npm run tag:prod          # Creates prod-v{version} + ios-v{version}
+npm run tag:playstore     # Creates playstore-v{version}
+
+# Android only (explicit)
+npm run tag:android:dev   # Creates dev-v{version}
+npm run tag:android:stg   # Creates stg-v{version}
+npm run tag:android:prod  # Creates prod-v{version} (skips iOS)
+npm run tag:android:playstore  # Creates playstore-v{version}
+
+# iOS only
+npm run tag:ios           # Creates ios-v{version} (always prod)
+```
+
+| Command | Tag(s) Created | Triggers |
+|---|---|---|
+| `npm run tag:dev` | `dev-v{version}` | Android dev build |
+| `npm run tag:stg` | `stg-v{version}` | Android staging build |
+| `npm run tag:prod` | `prod-v{version}` + `ios-v{version}` | Android prod + iOS prod |
+| `npm run tag:playstore` | `playstore-v{version}` | Android Play Store AAB |
+| `npm run tag:android:dev` | `dev-v{version}` | Android dev only |
+| `npm run tag:android:stg` | `stg-v{version}` | Android staging only |
+| `npm run tag:android:prod` | `prod-v{version}` | Android prod only (no iOS) |
+| `npm run tag:android:playstore` | `playstore-v{version}` | Android Play Store only |
+| `npm run tag:ios` | `ios-v{version}` | iOS prod only |
+
+If a tag already exists locally or on the remote, the script will prompt for confirmation before deleting and recreating it.
+
+### Using git tags manually
 
 ```bash
 # Android
@@ -310,15 +350,15 @@ gh run list --workflow=build-ios.yml
 
 ## 🏗️ Build Configuration (E2E Testing)
 
-### iOS Build
+### iOS E2E
 
-**Runner:** `macos-14` (Apple Silicon)
+**Runner:** Self-hosted macOS (mac-mini-m1, labels: `self-hosted`, `macOS`)
 
 **Environment:**
 - Node.js 20
 - Ruby 3.2
 - CocoaPods
-- Xcode (latest on runner)
+- Xcode 16.4 (`/Applications/Xcode.app`)
 - Detox with applesimutils
 
 **Build Command:**
@@ -327,13 +367,9 @@ npm run test:e2e:build
 # Runs: detox build --configuration ios.sim.debug
 ```
 
-**Simulator:**
-- Device: iPhone 15
-- iOS: Latest available
+### Android E2E
 
-### Android Build
-
-**Runner:** `ubuntu-latest`
+**Runner:** Self-hosted Linux (ubuntu, labels: `self-hosted`, `Linux`)
 
 **Environment:**
 - Node.js 20
@@ -357,6 +393,16 @@ npm run test:e2e:build:android
 - AVD caching for faster startup
 - Snapshot creation on first run
 - No window, no audio, no animations
+
+### Runner Assignment Summary
+
+| Job Type | Runner |
+|---|---|
+| iOS E2E / smoke / nightly | `[self-hosted, macOS]` |
+| Android E2E / smoke / nightly | `[self-hosted, Linux]` |
+| iOS production build | `[self-hosted, macOS]` |
+| Android build (all envs) | `[self-hosted, Linux]` |
+| Utility (typecheck, lint, unit tests, status checks) | `ubuntu-latest` (GitHub-hosted) |
 
 ---
 

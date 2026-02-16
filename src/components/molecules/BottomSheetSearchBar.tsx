@@ -5,7 +5,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
-import { View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Pressable, ActivityIndicator } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, type IconLibrary } from '#utils/iconUtils';
@@ -190,8 +190,8 @@ export const BottomSheetSearchBar = forwardRef<
           />
         )}
         {hasText && (
-          <TouchableOpacity
-            style={styles.clearButton}
+          <Pressable
+            style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}
             onPress={handleClear}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -201,12 +201,12 @@ export const BottomSheetSearchBar = forwardRef<
               color={theme.colors.textSecondary}
               library="MaterialIcons"
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
         {rightActions?.map((action, index) => (
-          <TouchableOpacity
+          <Pressable
             key={index}
-            style={styles.actionButton}
+            style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
             onPress={action.onPress}
             testID={action.testID}
           >
@@ -216,7 +216,7 @@ export const BottomSheetSearchBar = forwardRef<
               color={action.color || theme.colors.primary}
               library={action.library || 'MaterialIcons'}
             />
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
     );
@@ -251,5 +251,8 @@ const styles = StyleSheet.create(theme => ({
   actionButton: {
     padding: theme.spacing.xs,
     marginLeft: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

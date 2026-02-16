@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   FlatList,
   ActivityIndicator,
@@ -70,8 +70,8 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
     }
 
     return (
-      <TouchableOpacity
-        style={[styles.item, isSelected && styles.selectedItem]}
+      <Pressable
+        style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
         onPress={() => handleItemSelect(item)}>
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
           {String(item[displayProperty])}
@@ -84,7 +84,7 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
             library="MaterialIcons"
           />
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -191,6 +191,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

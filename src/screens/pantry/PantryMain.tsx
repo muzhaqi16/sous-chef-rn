@@ -20,7 +20,7 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
@@ -43,7 +43,7 @@ import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 const PantryMainScreen: React.FC = React.memo(() => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   useUnistyles();
-  const { setOverlayOpen } = useTabBarActions();
+  const { setOverlayOpen } = useTabBarSetters();
 
   // PERF: Defer non-critical features until after React paints the initial render.
   // React 19's useDeferredValue returns `false` on first render (initial value),
@@ -158,6 +158,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const {
     items: pantryItems,
     allItems,
+    totalCount,
     searchQuery,
     setSearchQuery,
     removeItem,
@@ -184,6 +185,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
     creating: creatingLocation,
   } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
 
+  // Stable navigateTo wrapper for usePantryItemActions
+  const stableNavigateTo = useMemo(
+    () => ({ pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params) }),
+    [navigateTo],
+  );
+
   // Extract item actions (modal state + mutations + handlers) to separate hook
   const {
     consumeModal,
@@ -201,7 +208,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     pantryItems,
     refetch,
     removeItem,
-    navigateTo: { pantryItem: params => navigateTo.pantryItem(params) },
+    navigateTo: stableNavigateTo,
   });
 
   // Refetch pantry items when switching between pantries
@@ -266,7 +273,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     ];
 
     // Add custom storage locations as tabs
-    type StorageLocation = GetStorageLocationsQuery['storageLocations'][number];
+    type StorageLocation = GetStorageLocationsQuery['storageLocations']['edges'][number]['node'];
     const customTabs: FilterTabConfig<LocationFilter>[] = storageLocations.map(
       (location: StorageLocation) => ({
         id: location.id,
@@ -281,6 +288,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Handle add storage location
   const handleAddLocationPress = useCallback(() => {
     setAddLocationSheetVisible(true);
+  }, []);
+
+  // Handle add item from empty state
+  const handleAddItem = useCallback(() => {
+    setAddSheetVisible(true);
   }, []);
 
   // Track screen view (deferred — telemetry not needed during initial render)
@@ -330,14 +342,19 @@ const PantryMainScreen: React.FC = React.memo(() => {
     [navigateTo],
   );
 
+  const handleAvatarPress = useCallback(
+    () => navigate('Notifications'),
+    [navigate],
+  );
+
   const handleHomePress = useCallback(
     () => navigate('HomeManagement', { homeId: selectedHomeId }),
     [navigate, selectedHomeId],
   );
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     await Promise.all([refetch(), refetchHome()]);
-  };
+  }, [refetch, refetchHome]);
 
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner
@@ -380,9 +397,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
-        onAvatarPress={() => navigate('Notifications')}
+        onAvatarPress={handleAvatarPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
+        totalCount={totalCount}
+        onAddItem={handleAddItem}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
         refreshing={isRefreshing}

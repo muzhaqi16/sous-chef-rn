@@ -56,24 +56,30 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
       return {
         __typename: 'Mutation',
         toggleShoppingListItemPurchased: {
-          __typename: 'ShoppingListItem',
-          id: variables.id,
-          itemName: item?.itemName ?? null,
-          quantity: item?.quantity ?? null,
-          quantityInput: item?.quantityInput ?? null,
-          normalizedQuantity: null,
-          purchaseInfo: {
-            __typename: 'ShoppingListItemPurchaseInfo',
-            isPurchased: variables.purchased,
-            purchasedQuantity: null,
-            purchasedPrice: null,
-            purchaseDate: variables.purchased ? new Date().toISOString() : null,
+          __typename: 'ShoppingListItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+            itemName: item?.itemName ?? null,
+            quantity: item?.quantity ?? null,
+            quantityInput: item?.quantityInput ?? null,
+            normalizedQuantity: null,
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: variables.purchased,
+              purchasedQuantity: null,
+              purchasedPrice: null,
+              purchaseDate: variables.purchased ? new Date().toISOString() : null,
+            },
+            updatedAt: new Date().toISOString(),
+            version: item?.version ?? 0,
+            category: item?.category ?? null,
+            unitName: item?.unitName ?? null,
+            unit: item?.unit ?? null,
           },
-          updatedAt: new Date().toISOString(),
-          version: item?.version ?? 0,
-          category: item?.category ?? null,
-          unitName: item?.unitName ?? null,
-          unit: item?.unit ?? null,
         },
       };
     },
@@ -230,10 +236,11 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
     },
     onCompleted: data => {
       // Clear persisted optimistic data on successful server sync
-      if (data?.toggleShoppingListItemPurchased?.id) {
+      const item = data?.toggleShoppingListItemPurchased?.shoppingListItem;
+      if (item?.id) {
         optimisticDataPersistence.clear(
           'ShoppingListItem',
-          data.toggleShoppingListItemPurchased.id,
+          item.id,
           'isPurchased',
         );
       }
@@ -270,7 +277,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
           variables: { id: itemId, purchased: newStatus },
         });
 
-        return result.data?.toggleShoppingListItemPurchased ?? false;
+        return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;
       } catch (error) {
         console.error('Toggle shopping list item purchased error:', error);
         return false;

@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
@@ -26,8 +26,8 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   return (
     <View style={styles.homeActions}>
       {!isDefault && (
-        <TouchableOpacity
-          style={styles.actionButton}
+        <Pressable
+          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onSetDefault(homeId)}>
           <Icon
             name="star-outline"
@@ -35,27 +35,27 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
             color={theme.colors.textSecondary}
           />
           <Text style={styles.actionText}>Set Default</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {canInvite && (
-        <TouchableOpacity
-          style={styles.actionButton}
+        <Pressable
+          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onInvite(homeId)}>
           <Icon name="person-add" size={20} color={theme.colors.textSecondary} />
           <Text style={styles.actionText}>Invite</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {canDelete && (
-        <TouchableOpacity
-          style={styles.actionButton}
+        <Pressable
+          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onDelete(homeId)}>
           <Icon name="delete" size={20} color={theme.colors.error} />
           <Text style={[styles.actionText, {color: theme.colors.error}]}>
             Delete
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   );
@@ -81,5 +81,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.xs + 2,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

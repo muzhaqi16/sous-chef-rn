@@ -44,6 +44,9 @@ export interface EmptyStateProps {
 
   /** Additional container styles */
   style?: StyleProp<ViewStyle>;
+
+  /** Test ID for E2E testing */
+  testID?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -58,6 +61,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   iconLibrary,
   alignment = 'center',
   style,
+  testID,
 }) => {
   const { theme } = useUnistyles();
 
@@ -88,7 +92,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   return (
-    <View style={[styles.container, { justifyContent: alignment }, style]}>
+    <View testID={testID} style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
         {title}

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ListRenderItem } from 'react-native';
+import { View, Text, FlatList, Pressable, ListRenderItem } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -126,9 +126,9 @@ export const PurchaseHistoryScreen: React.FC<{
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
+        <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Purchase History</Text>
           <Text style={styles.headerSubtitle}>{itemName}</Text>
@@ -284,5 +284,8 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
     textAlign: 'center',
     paddingHorizontal: theme.spacing.xl,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

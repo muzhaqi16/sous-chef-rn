@@ -1,10 +1,8 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { enableMapSet } from 'immer';
 import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
 
-// Enable Immer MapSet plugin for Map data structures in performance metrics
-enableMapSet();
+// enableMapSet() is already called in src/store/index.ts — no need to call it again
 
 /**
  * Separate performance store - isolated from main app store

@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -108,7 +108,7 @@ const CreateHomeScreenComponent = () => {
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
     update: (cache, { data }) => {
-      const newPantry = data?.createPantry;
+      const newPantry = data?.createPantry?.pantry;
       if (!newPantry?.homeId) {
         return;
       }
@@ -142,12 +142,9 @@ const CreateHomeScreenComponent = () => {
             }
 
             const newEdge = {
-              __typename: 'PantryEdge',
+              __typename: 'PantryEdge' as const,
               cursor: newPantry.id,
-              node: {
-                __typename: 'Pantry',
-                ...newPantry,
-              },
+              node: newPantry,
             };
 
             const edges = [...(existingConnection.edges || []), newEdge];
@@ -171,10 +168,10 @@ const CreateHomeScreenComponent = () => {
       // The mutation returns a Membership object with homeId; the Home entity
       // should already exist in cache from the invite query
       update: (cache, { data }) => {
-        if (!data?.acceptHomeInvite?.homeId || !user?.id) return;
+        if (!data?.acceptHomeInvite?.membership?.homeId || !user?.id) return;
 
         try {
-          const homeId = data.acceptHomeInvite.homeId;
+          const homeId = data.acceptHomeInvite.membership.homeId;
 
           // The Home entity should already be cached from the invite query
           // We just need to ensure it's in the GetHomes query result
@@ -214,8 +211,8 @@ const CreateHomeScreenComponent = () => {
         }
       },
       onCompleted: data => {
-        if (data.acceptHomeInvite?.homeId) {
-          setSelectedHomeId(data.acceptHomeInvite.homeId);
+        if (data.acceptHomeInvite?.membership?.homeId) {
+          setSelectedHomeId(data.acceptHomeInvite.membership.homeId);
           navigateToNextStep('CreateHome');
         }
       },
@@ -307,8 +304,8 @@ const CreateHomeScreenComponent = () => {
             },
           });
 
-          if (response.data?.createHome) {
-            homeId = response.data.createHome.id;
+          if (response.data?.createHome?.home) {
+            homeId = response.data.createHome.home.id;
             setSelectedHomeId(homeId);
           } else {
             throw new Error('Failed to create home');
@@ -448,8 +445,8 @@ const CreateHomeScreenComponent = () => {
 
                   {/* Actions */}
                   <View style={styles.inviteActions}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.inviteDeclineButton]}
+                    <Pressable
+                      style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
                       onPress={() =>
                         handleDeclineInvite(invite.id, inviteHomeName)
                       }
@@ -458,9 +455,9 @@ const CreateHomeScreenComponent = () => {
                       <Text style={styles.inviteDeclineButtonText}>
                         Decline
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.inviteAcceptButton]}
+                    </Pressable>
+                    <Pressable
+                      style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
                       onPress={() => handleAcceptInvite(invite.id)}
                       disabled={accepting}
                     >
@@ -474,7 +471,7 @@ const CreateHomeScreenComponent = () => {
                           Accept
                         </Text>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
               );
@@ -728,5 +725,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
+import {View, Text, ScrollView, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import Chip from '../atoms/Chip';
 
@@ -38,6 +38,9 @@ const styles = StyleSheet.create(theme => ({
   chipList: {
     flexDirection: 'row',
   },
+  pressed: {
+    opacity: 0.7,
+  },
 }));
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
@@ -51,9 +54,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       <View style={styles.headerRow}>
         <Text style={styles.title}>Category</Text>
         {onSeeAll && (
-          <TouchableOpacity onPress={onSeeAll}>
+          <Pressable onPress={onSeeAll} style={({pressed}) => pressed && styles.pressed}>
             <Text style={styles.seeAll}>See all</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
       <ScrollView

@@ -13,15 +13,23 @@
       "UnauthorizedError",
       "ValidationError"
     ],
-    "Connection": ["NotificationConnection"],
+    "Connection": [
+      "NotificationConnection"
+    ],
     "CreateItemResult": [
       "DuplicateError",
       "Item",
       "UnauthorizedError",
       "ValidationError"
     ],
-    "DeleteItemResult": ["DeleteSuccess", "NotFoundError", "UnauthorizedError"],
-    "Edge": ["NotificationEdge"],
+    "DeleteItemResult": [
+      "DeleteSuccess",
+      "NotFoundError",
+      "UnauthorizedError"
+    ],
+    "Edge": [
+      "NotificationEdge"
+    ],
     "MutationError": [
       "ConflictError",
       "DuplicateError",
@@ -31,8 +39,53 @@
       "ValidationError",
       "VersionMismatchError"
     ],
-    "Node": ["Notification"],
-    "Timestamped": ["Notification"],
+    "MutationPayload": [
+      "BrandPayload",
+      "CategoryPayload",
+      "CookingLogPayload",
+      "CurrencyPayload",
+      "DevicePayload",
+      "DietaryProfilePayload",
+      "DietaryRestrictionPayload",
+      "ExpirationNotificationPayload",
+      "ExternalSourceMappingPayload",
+      "HomeInvitePayload",
+      "HomeOwnershipPayload",
+      "HomePayload",
+      "ItemCategoryPayload",
+      "ItemPayload",
+      "ItemPriceHistoryPayload",
+      "ItemUnitConversionPayload",
+      "LoginHistoryPayload",
+      "MealPlanPayload",
+      "MealTemplateItemPayload",
+      "MealTemplatePayload",
+      "MembershipPayload",
+      "NotificationPayload",
+      "NotificationPreferencesPayload",
+      "PantryItemPayload",
+      "PantryItemUsagePayload",
+      "PantryPayload",
+      "PurchasePayload",
+      "RecipePayload",
+      "SavedRecipePayload",
+      "ShoppingListCollaboratorPayload",
+      "ShoppingListItemPayload",
+      "ShoppingListPayload",
+      "StorageLocationPayload",
+      "StorePayload",
+      "UnitPayload",
+      "UserAddressPayload",
+      "UserPayload",
+      "UserProfilePayload",
+      "UserSettingsPayload"
+    ],
+    "Node": [
+      "Notification"
+    ],
+    "Timestamped": [
+      "Notification"
+    ],
     "TogglePurchasedResult": [
       "NotFoundError",
       "ShoppingListItem",

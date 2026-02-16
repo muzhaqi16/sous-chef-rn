@@ -10,7 +10,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 // Components
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { ListTemplate } from '#components/templates/ListTemplate';
-import { ShoppingListHeader } from '#components/molecules/ShoppingListHeader';
+import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#components/organisms/ShoppingListTabs/ShoppingListTabs';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
@@ -28,7 +28,7 @@ import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActio
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -93,7 +93,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     });
 
     const { navigate, navigateTo } = useAppNavigation();
-    const { setScannerProps } = useTabBarActions();
+    const { setScannerProps } = useTabBarSetters();
     const { theme } = useUnistyles();
 
     // Get profile data for header
@@ -385,8 +385,9 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
       return (
         <View style={styles.container} testID="shopping-list-screen">
-          <ShoppingListHeader
-            listName="Shopping List"
+          <TabScreenHeader
+            label="Shopping list"
+            title="Shopping List"
             avatarUrl={profile?.avatar}
             notificationCount={unreadCount}
             onAvatarPress={() => navigateTo.notificationList()}
@@ -411,13 +412,14 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     return (
       <View style={styles.container} testID="shopping-list-screen">
-        <ShoppingListHeader
-          listName={currentList?.name || 'Shopping List'}
+        <TabScreenHeader
+          label="Shopping list"
+          title={currentList?.name || 'Shopping List'}
           avatarUrl={profile?.avatar}
           notificationCount={unreadCount}
           onAvatarPress={() => navigateTo.notificationList()}
         />
-        <View style={{ paddingHorizontal: theme.spacing.md }}>
+        <View style={styles.searchBarContainer}>
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -501,5 +503,8 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  searchBarContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
 }));

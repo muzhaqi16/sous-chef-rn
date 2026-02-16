@@ -103,11 +103,11 @@ const styles = StyleSheet.create(theme => ({
     flex: 1, // Allow ScrollView to fill the bottom sheet
   },
   contentContainer: {
-    padding: 16, // Padding for content, no flex to allow scrolling
+    padding: theme.spacing.md,
   },
   view: {
-    flex: 1, // Allow View to fill the bottom sheet
-    padding: 16,
+    flex: 1,
+    padding: theme.spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -119,7 +119,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
   sheetTitle: {

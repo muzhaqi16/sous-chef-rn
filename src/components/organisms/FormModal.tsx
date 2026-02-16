@@ -60,9 +60,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: 12,
+    paddingTop: theme.spacing['3'],
   },
   form: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
 }));

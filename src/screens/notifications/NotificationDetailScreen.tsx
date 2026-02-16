@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
@@ -57,8 +57,8 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
             )}
 
             {notification.requiresAction && notification.actionType && (
-              <TouchableOpacity
-                style={styles.actionButton}
+              <Pressable
+                style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                 onPress={() => handleNotificationAction(notification)}
               >
                 <Text style={styles.actionButtonText}>
@@ -66,7 +66,7 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
                     ? 'Accept Home Invitation'
                     : 'Accept Invitation'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         </ScrollView>
@@ -167,5 +167,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.error,
     textAlign: 'center',
     marginTop: theme.spacing.xl,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

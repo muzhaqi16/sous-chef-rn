@@ -10,12 +10,9 @@ on:
 
 jobs:
   build_with_signing:
-    runs-on: souschef-runner
+    runs-on: [self-hosted, macOS]
     environment: prod
     steps:
-      - name: Select Xcode 16.4
-        run: sudo /usr/bin/xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
-
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version
 
@@ -61,8 +58,7 @@ jobs:
 
       - name: Clean workspace
         run: |
-          git clean -ffdx
-          npm cache clean --force
+          git clean -ffd -e ios/Pods -e vendor/bundle
 
       - name: install npm dependencies
         run: npm install
@@ -80,11 +76,15 @@ jobs:
           EOF
           echo "Generated .env file"
 
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
+
       - name: install Cocoapod dependencies
         run: |
           cd ios
-          pod repo update
-          pod install
+          bundle exec pod install --repo-update
 
       - name: Set version from git tag
         run: |
@@ -95,6 +95,14 @@ jobs:
           cd ios
           agvtool new-marketing-version "$VERSION"
           agvtool new-version -all "${{ github.run_number }}"
+
+      - name: Cache Xcode DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-derived-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-derived-
 
       - name: build archive
         run: |

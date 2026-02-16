@@ -116,8 +116,9 @@ export const CreateShoppingListScreen = () => {
         },
       });
 
-      if (response.data?.createShoppingList) {
-        setSelectedShoppingListId(response.data.createShoppingList.id);
+      const newList = response.data?.createShoppingList?.shoppingList;
+      if (newList) {
+        setSelectedShoppingListId(newList.id);
         navigateToNextStep('CreateShoppingList');
       } else {
         throw new Error('Failed to create shopping list');

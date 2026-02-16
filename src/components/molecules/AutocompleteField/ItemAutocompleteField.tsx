@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { ItemSuggestion } from '#generated';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -53,7 +53,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   const renderItem = useCallback(
     (i: ItemSuggestion) => (
       <AutocompleteRow
-        image={getItemImageUrl(i) ?? null}
+        image={resolveImageUrl(i) ?? null}
         title={i.name}
         subtitle={showBrand && i.brands?.length === 1 ? i.brands[0].name : undefined}
       />

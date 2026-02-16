@@ -174,8 +174,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
 
@@ -194,8 +194,8 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
-    fontSize: 16,
+    paddingVertical: theme.spacing['2.5'],
+    fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.inputBackground,
   },
@@ -213,14 +213,14 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
 
   errorText: {
-    fontSize: 12,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
   },
@@ -262,8 +262,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
   },
 
   buttonTextPrimary: {
@@ -300,13 +300,13 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   listItemTitle: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
 
   listItemSubtitle: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
@@ -365,15 +365,15 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
 
   emptyStateText: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.lg,
@@ -411,8 +411,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
@@ -523,8 +523,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
   },
 
@@ -537,8 +537,8 @@ export const commonStyles = StyleSheet.create(theme => ({
   },
 
   chipText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.chipText,
   },
 
@@ -566,8 +566,8 @@ export const commonStyles = StyleSheet.create(theme => ({
 
   fab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
+    bottom: theme.spacing['5'],
+    right: theme.spacing['5'],
     width: 56,
     height: 56,
     borderRadius: theme.radii.full,

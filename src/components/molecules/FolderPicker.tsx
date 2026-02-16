@@ -8,7 +8,7 @@ import React, {
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -222,8 +222,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const renderFolderItem = ({ item }: { item: string }) => {
     const isSelected = item === selectedFolder;
     return (
-      <TouchableOpacity
-        style={[styles.folderItem, isSelected && styles.folderItemSelected]}
+      <Pressable
+        style={({pressed}) => [styles.folderItem, isSelected && styles.folderItemSelected, pressed && styles.pressed]}
         onPress={() => handleSelectFolder(item)}
         onLongPress={
           hasFolderActions ? () => handleFolderLongPress(item) : undefined
@@ -251,7 +251,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             color={theme.colors.primary}
           />
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -288,14 +288,14 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         >
           <View style={styles.header}>
             <Text style={styles.title}>Select Folder</Text>
-            <TouchableOpacity onPress={handleCancel}>
+            <Pressable onPress={handleCancel} style={({pressed}) => pressed && styles.pressed}>
               <Icon
                 library="Feather"
                 name="x"
                 size={24}
                 color={theme.colors.textPrimary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Search Input */}
@@ -319,10 +319,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           )}
 
           {/* No Folder Option */}
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({pressed}) => [
               styles.folderItem,
               !selectedFolder && styles.folderItemSelected,
+              pressed && styles.pressed,
             ]}
             onPress={() => handleSelectFolder(null)}
           >
@@ -352,7 +353,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 color={theme.colors.primary}
               />
             )}
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Divider */}
           <View style={styles.divider} />
@@ -371,10 +372,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   autoCapitalize="words"
                   onSubmitEditing={handleCreateFolder}
                 />
-                <TouchableOpacity
-                  style={[
+                <Pressable
+                  style={({pressed}) => [
                     styles.createButton,
                     !newFolderName.trim() && styles.createButtonDisabled,
+                    pressed && styles.pressed,
                   ]}
                   onPress={handleCreateFolder}
                   disabled={!newFolderName.trim()}
@@ -387,11 +389,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   >
                     Create
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.newFolderButton}
+              <Pressable
+                style={({pressed}) => [styles.newFolderButton, pressed && styles.pressed]}
                 onPress={() => setShowNewFolder(true)}
               >
                 <Icon
@@ -403,7 +405,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 <Text style={styles.newFolderButtonText}>
                   Create New Folder
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
 
           {/* Existing Folders */}
@@ -484,9 +486,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {/* Header */}
           <View style={styles.manageFolderHeader}>
             <Text style={styles.manageFolderTitle}>Manage Folder</Text>
-            <TouchableOpacity
+            <Pressable
               onPress={handleManageFolderClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={({pressed}) => pressed && styles.pressed}
             >
               <Icon
                 library="Feather"
@@ -494,7 +497,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 size={24}
                 color={theme.colors.textPrimary}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Current folder name */}
@@ -522,15 +525,15 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 Recipes in this folder will be moved to "No Folder".
               </Text>
               <View style={styles.deleteConfirmButtons}>
-                <TouchableOpacity
-                  style={styles.deleteConfirmCancelButton}
+                <Pressable
+                  style={({pressed}) => [styles.deleteConfirmCancelButton, pressed && styles.pressed]}
                   onPress={() => setShowDeleteConfirm(false)}
                   disabled={folderActionLoading}
                 >
                   <Text style={styles.deleteConfirmCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteConfirmDeleteButton}
+                </Pressable>
+                <Pressable
+                  style={({pressed}) => [styles.deleteConfirmDeleteButton, pressed && styles.pressed]}
                   onPress={handleDeleteConfirm}
                   disabled={folderActionLoading}
                 >
@@ -542,7 +545,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   ) : (
                     <Text style={styles.deleteConfirmDeleteText}>Delete</Text>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           ) : (
@@ -562,12 +565,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                       onSubmitEditing={handleRenameConfirm}
                       editable={!folderActionLoading}
                     />
-                    <TouchableOpacity
-                      style={[
+                    <Pressable
+                      style={({pressed}) => [
                         styles.renameButton,
                         (!renameValue.trim() ||
                           renameValue.trim() === managingFolder) &&
                           styles.renameButtonDisabled,
+                        pressed && styles.pressed,
                       ]}
                       onPress={handleRenameConfirm}
                       disabled={
@@ -593,7 +597,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                           Rename
                         </Text>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
               )}
@@ -601,8 +605,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               {/* Delete Section */}
               {onDeleteFolder && (
                 <View style={styles.deleteSection}>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
+                  <Pressable
+                    style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
                     onPress={() => setShowDeleteConfirm(true)}
                     disabled={folderActionLoading}
                   >
@@ -613,7 +617,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                       color={theme.colors.error}
                     />
                     <Text style={styles.deleteButtonText}>Delete Folder</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                   <Text style={styles.deleteDescription}>
                     Recipes will be moved to No Folder
                   </Text>
@@ -908,5 +912,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

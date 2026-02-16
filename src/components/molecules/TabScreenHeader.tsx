@@ -1,18 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-interface ShoppingListHeaderProps {
-  listName: string;
+interface TabScreenHeaderProps {
+  label: string;
+  title: string;
   avatarUrl?: string | null;
   notificationCount?: number;
   onAvatarPress?: () => void;
 }
 
-export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
-  listName,
+export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
+  label,
+  title,
   avatarUrl,
   notificationCount = 0,
   onAvatarPress,
@@ -20,14 +22,14 @@ export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text style={styles.label}>Shopping list</Text>
-        <Text style={styles.listName} numberOfLines={1} ellipsizeMode="tail">
-          {listName}
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+          {title}
         </Text>
       </View>
 
       <View style={styles.headerActions}>
-        <TouchableOpacity onPress={onAvatarPress}>
+        <Pressable onPress={onAvatarPress} style={styles.avatarPressable}>
           <View style={styles.avatar}>
             {avatarUrl ? (
               <CachedImage
@@ -49,7 +51,7 @@ export const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({
               <View style={styles.avatarNotification} />
             )}
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -70,19 +72,22 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
   },
-  listName: {
+  title: {
     fontSize: theme.fonts.size['2xl'],
-    fontWeight: 'bold',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  avatarPressable: {
+    borderRadius: theme.radii.xl,
   },
   avatar: {
     position: 'relative',

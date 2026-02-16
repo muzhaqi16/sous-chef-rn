@@ -24,45 +24,18 @@ export class PantryScreen extends BaseScreen {
   private readonly lowStockButton = 'pantry-low-stock-button';
 
   /**
-   * Get item element by index
+   * Get item element by name (text-based lookup - reliable across data changes)
+   * Source uses `pantry-item-${databaseId}` which is unpredictable in tests
+   */
+  getItemByText(name: string) {
+    return element(by.text(name));
+  }
+
+  /**
+   * Get item element by index (fallback - uses atIndex on list items)
    */
   private getItemByIndex(index: number) {
     return element(by.id(`pantry-item-${index}`));
-  }
-
-  /**
-   * Get item element by name
-   */
-  private getItemByName(name: string) {
-    return element(by.id(`pantry-item-${name}`));
-  }
-
-  /**
-   * Get item delete button by index
-   */
-  private getItemDeleteButtonByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-delete`));
-  }
-
-  /**
-   * Get item edit button by index
-   */
-  private getItemEditButtonByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-edit`));
-  }
-
-  /**
-   * Get item expiration date by index
-   */
-  private getItemExpirationByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-expiration`));
-  }
-
-  /**
-   * Get item quantity by index
-   */
-  private getItemQuantityByIndex(index: number) {
-    return element(by.id(`pantry-item-${index}-quantity`));
   }
 
   /**

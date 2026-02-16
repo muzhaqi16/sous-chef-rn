@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
+import DeviceInfo from 'react-native-device-info';
 import {
   MemorySnapshot,
   MemoryWarning,
@@ -12,10 +12,7 @@ import { usePerformanceStore } from '#/store/performanceStore';
  * Memory Monitor Service
  *
  * Tracks memory usage over time and emits warnings when thresholds are exceeded.
- * Uses platform-specific APIs where available.
- *
- * Note: React Native has limited memory APIs. This service provides best-effort
- * monitoring using available platform features.
+ * Uses react-native-device-info for actual memory readings instead of hardcoded fallbacks.
  */
 class MemoryMonitorService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -65,8 +62,8 @@ class MemoryMonitorService {
    * @param context - Context or trigger for this snapshot
    * @returns Memory snapshot or null if unavailable
    */
-  takeSnapshot(context?: string): MemorySnapshot | null {
-    const memoryInfo = this.getMemoryInfo();
+  async takeSnapshot(context?: string): Promise<MemorySnapshot | null> {
+    const memoryInfo = await this.getMemoryInfo();
 
     if (!memoryInfo) {
       return null;
@@ -109,49 +106,32 @@ class MemoryMonitorService {
   }
 
   /**
-   * Get current memory info
+   * Get current memory info using react-native-device-info
    *
    * @returns Memory information or null if unavailable
    */
-  private getMemoryInfo(): {
+  private async getMemoryInfo(): Promise<{
     usedBytes: number;
     limitBytes?: number;
     usagePercent: number;
-  } | null {
-    // Try to get memory info from performance API (available in some environments)
-    if (typeof performance !== 'undefined' && (performance as any).memory) {
-      const memory = (performance as any).memory;
-      const usedBytes = memory.usedJSHeapSize || 0;
-      const limitBytes = memory.jsHeapSizeLimit || undefined;
-      const usagePercent = limitBytes ? (usedBytes / limitBytes) * 100 : 0;
+  } | null> {
+    try {
+      // Use react-native-device-info for actual memory readings
+      const [usedBytes, totalBytes] = await Promise.all([
+        DeviceInfo.getUsedMemory(),
+        DeviceInfo.getTotalMemory(),
+      ]);
+
+      const usagePercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
 
       return {
         usedBytes,
-        limitBytes,
+        limitBytes: totalBytes,
         usagePercent,
       };
+    } catch {
+      return null;
     }
-
-    // Fallback: Estimate based on platform (very rough estimates)
-    // This is not accurate but provides some indication
-    if (Platform.OS === 'ios') {
-      // iOS devices typically have 1-4GB available for apps
-      // Assume 50% usage as baseline
-      return {
-        usedBytes: 524288000, // ~500MB estimate
-        limitBytes: 1048576000, // ~1GB estimate
-        usagePercent: 50,
-      };
-    } else if (Platform.OS === 'android') {
-      // Android varies widely, use conservative estimate
-      return {
-        usedBytes: 419430400, // ~400MB estimate
-        limitBytes: 838860800, // ~800MB estimate
-        usagePercent: 50,
-      };
-    }
-
-    return null;
   }
 
   /**
@@ -211,9 +191,6 @@ class MemoryMonitorService {
       const logFn = warning.level === MemoryWarningLevel.CRITICAL ? console.error : console.warn;
       logFn(`[MemoryMonitor] ${warning.message}`);
     }
-
-    // Could emit events here for UI notifications if needed
-    // For now, just log and report to telemetry
   }
 
   /**

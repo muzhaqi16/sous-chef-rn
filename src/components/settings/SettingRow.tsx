@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
@@ -24,11 +24,10 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 }) => {
   const {theme} = useUnistyles();
   return (
-    <TouchableOpacity
-      style={[styles.container, disabled && styles.containerDisabled]}
+    <Pressable
+      style={({pressed}) => [styles.container, disabled && styles.containerDisabled, pressed && styles.pressed]}
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}>
+      disabled={disabled}>
       {icon && (
         <View style={styles.iconContainer}>
           <Icon name={icon} size={24} color={theme.colors.textSecondary} />
@@ -59,7 +58,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           color={theme.colors.textTertiary}
         />
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -101,5 +100,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
     marginRight: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

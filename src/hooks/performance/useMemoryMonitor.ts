@@ -38,16 +38,17 @@ export function useMemoryMonitor(
 
     // Track memory on mount
     if (trackMount) {
-      const snapshot = MemoryMonitor.takeSnapshot(`${componentName}_mount`);
-      if (snapshot) {
-        mountMemory.current = snapshot.usedBytes;
+      MemoryMonitor.takeSnapshot(`${componentName}_mount`).then(snapshot => {
+        if (snapshot) {
+          mountMemory.current = snapshot.usedBytes;
 
-        if (__DEV__) {
-          console.log(
-            `[MemoryMonitor] ${componentName} mounted - Memory: ${(snapshot.usedBytes / 1024 / 1024).toFixed(2)}MB`,
-          );
+          if (__DEV__) {
+            console.log(
+              `[MemoryMonitor] ${componentName} mounted - Memory: ${(snapshot.usedBytes / 1024 / 1024).toFixed(2)}MB`,
+            );
+          }
         }
-      }
+      });
     }
 
     // Track memory on unmount
@@ -56,25 +57,26 @@ export function useMemoryMonitor(
         return;
       }
 
-      const snapshot = MemoryMonitor.takeSnapshot(`${componentName}_unmount`);
-      if (snapshot && mountMemory.current !== null) {
-        const memoryDelta = snapshot.usedBytes - mountMemory.current;
-        const memoryDeltaMB = memoryDelta / 1024 / 1024;
+      MemoryMonitor.takeSnapshot(`${componentName}_unmount`).then(snapshot => {
+        if (snapshot && mountMemory.current !== null) {
+          const memoryDelta = snapshot.usedBytes - mountMemory.current;
+          const memoryDeltaMB = memoryDelta / 1024 / 1024;
 
-        if (__DEV__) {
-          const sign = memoryDelta >= 0 ? '+' : '';
-          console.log(
-            `[MemoryMonitor] ${componentName} unmounted - Memory delta: ${sign}${memoryDeltaMB.toFixed(2)}MB`,
-          );
-
-          // Warn if significant memory growth
-          if (memoryDeltaMB > 10) {
-            console.warn(
-              `[MemoryMonitor] Potential memory leak in ${componentName}: ${memoryDeltaMB.toFixed(2)}MB not released`,
+          if (__DEV__) {
+            const sign = memoryDelta >= 0 ? '+' : '';
+            console.log(
+              `[MemoryMonitor] ${componentName} unmounted - Memory delta: ${sign}${memoryDeltaMB.toFixed(2)}MB`,
             );
+
+            // Warn if significant memory growth
+            if (memoryDeltaMB > 10) {
+              console.warn(
+                `[MemoryMonitor] Potential memory leak in ${componentName}: ${memoryDeltaMB.toFixed(2)}MB not released`,
+              );
+            }
           }
         }
-      }
+      });
     };
   }, [componentName, enabled, trackMount, trackUnmount]);
 }

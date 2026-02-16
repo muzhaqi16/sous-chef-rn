@@ -1,6 +1,6 @@
 // src/components/molecules/SmartSearchAddBar.tsx
 import React, {useState, useRef} from 'react';
-import {View, TextInput, TouchableOpacity, Text, Keyboard} from 'react-native';
+import {View, TextInput, Pressable, Text, Keyboard} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#/utils/iconUtils';
 import {Counter} from './Counter';
@@ -60,14 +60,14 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
           onSubmitEditing={handleAddPress}
         />
         {value.length > 0 && (
-          <TouchableOpacity
+          <Pressable
             onPress={() => {
               onChangeText('');
               setShowAddControls(false);
             }}
-            style={styles.clearButton}>
+            style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}>
             <Icon name="close" size={20} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 
@@ -80,9 +80,9 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
               onIncrement={() => setQuantity(q => q + 1)}
               onDecrement={() => setQuantity(q => Math.max(1, q - 1))}
             />
-            <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
+            <Pressable style={({pressed}) => [styles.addButton, pressed && styles.pressed]} onPress={handleAddPress}>
               <Icon name="add" size={24} color="white" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       )}
@@ -90,9 +90,9 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
       {suggestions.length > 0 && (
         <View style={styles.suggestions}>
           {suggestions.slice(0, 3).map(item => (
-            <TouchableOpacity
+            <Pressable
               key={item.id}
-              style={styles.suggestionItem}
+              style={({pressed}) => [styles.suggestionItem, pressed && styles.pressed]}
               onPress={() => onSelectSuggestion?.(item)}>
               <Text style={styles.suggestionText}>{item.name}</Text>
               <Icon
@@ -100,7 +100,7 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
                 size={20}
                 color={theme.colors.primary}
               />
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
       )}
@@ -175,5 +175,8 @@ const styles = StyleSheet.create(theme => ({
   suggestionText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

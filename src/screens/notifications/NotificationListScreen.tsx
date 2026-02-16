@@ -135,9 +135,17 @@ export const NotificationListScreen: React.FC = () => {
   );
 
   // Prepare sections for SectionList using utility
-  const sections = createSectionListData(filteredGroups);
+  const sections = useMemo(
+    () => createSectionListData(filteredGroups),
+    [filteredGroups],
+  );
 
   const hasNotifications = sections.length > 0;
+
+  const keyExtractor = useCallback(
+    (item: NotificationType) => item.id,
+    [],
+  );
 
   const renderHeader = () => (
     <Header
@@ -176,7 +184,7 @@ export const NotificationListScreen: React.FC = () => {
 
           <SectionList
             sections={sections}
-            keyExtractor={item => item.id}
+            keyExtractor={keyExtractor}
             renderItem={({ item }) => (
               <NotificationItem
                 notification={item}

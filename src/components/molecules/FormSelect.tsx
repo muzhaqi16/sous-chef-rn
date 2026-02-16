@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, FlatList, Modal, ViewStyle} from 'react-native';
+import {View, Text, Pressable, FlatList, Modal, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
@@ -43,13 +43,13 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   const renderOption = ({item}: {item: SelectOption}) => {
     const isSelected = item.value === value;
     return (
-      <TouchableOpacity
-        style={[styles.option, isSelected && styles.selectedOption]}
+      <Pressable
+        style={({pressed}) => [styles.option, isSelected && styles.selectedOption, pressed && styles.pressed]}
         onPress={() => handleSelect(item.value)}>
         <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
           {item.label}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -59,8 +59,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       error={error}
       required={required}
       containerStyle={containerStyle}>
-      <TouchableOpacity
-        style={[styles.selectButton, error && styles.selectButtonError]}
+      <Pressable
+        style={({pressed}) => [styles.selectButton, error && styles.selectButtonError, pressed && styles.pressed]}
         onPress={() => setModalVisible(true)}>
         <Text
           style={[
@@ -74,7 +74,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           size={24}
           color={theme.colors.textSecondary}
         />
-      </TouchableOpacity>
+      </Pressable>
 
       <Modal
         visible={modalVisible}
@@ -95,11 +95,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
               initialNumToRender={10}
               updateCellsBatchingPeriod={50}
             />
-            <TouchableOpacity
-              style={styles.closeButton}
+            <Pressable
+              style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}
               onPress={() => setModalVisible(false)}>
               <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -177,5 +177,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
     fontWeight: '500',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

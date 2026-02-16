@@ -14,7 +14,7 @@ import {
   LoginScreen,
   ForgotPasswordScreen,
 } from '../../screens';
-import { waitForNetworkIdle, delay, TIMEOUTS } from '../../helpers';
+import { waitForNetworkIdle, TIMEOUTS } from '../../helpers';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Password Reset', () => {
@@ -52,6 +52,7 @@ describe('Password Reset', () => {
 
       // Should stay on forgot password screen with validation error
       await forgotPasswordScreen.waitForScreen();
+      await forgotPasswordScreen.expectEmailFieldError();
     });
 
     it('should show error for invalid email format', async () => {
@@ -59,6 +60,7 @@ describe('Password Reset', () => {
       await forgotPasswordScreen.submit();
 
       await forgotPasswordScreen.waitForScreen();
+      await forgotPasswordScreen.expectEmailFieldError();
     });
   });
 
@@ -68,19 +70,29 @@ describe('Password Reset', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // Should show success message or navigate back
-      // The exact behavior depends on the app's implementation
+      // Should show success message or navigate back to login
+      let handledResponse = false;
+
       try {
         await forgotPasswordScreen.expectSuccessMessage();
+        handledResponse = true;
       } catch {
-        // Might navigate back to login
+        // Might navigate back to login instead
+      }
+
+      if (!handledResponse) {
         try {
-          await loginScreen.waitForScreen(3000);
-          console.log('✓ Navigated back to login after reset request');
+          await loginScreen.waitForScreen(TIMEOUTS.DEFAULT);
+          handledResponse = true;
         } catch {
           // Might stay on forgot password with success state
           await forgotPasswordScreen.waitForScreen();
+          handledResponse = true;
         }
+      }
+
+      if (!handledResponse) {
+        throw new Error('Password reset did not show success message or navigate to login');
       }
     });
 
@@ -93,9 +105,8 @@ describe('Password Reset', () => {
 
       // For security, many apps show the same success message
       // regardless of whether the email exists
-      await delay(2000);
-
       // Should not crash and should show some feedback
+      await forgotPasswordScreen.waitForScreen();
     });
   });
 
@@ -117,8 +128,8 @@ describe('Password Reset', () => {
 
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
-      // Should not crash, should complete request
-      await delay(1000);
+      // Should not crash - verify we're on a known screen
+      await forgotPasswordScreen.waitForScreen();
     });
 
     it('should handle email with special characters', async () => {
@@ -128,7 +139,7 @@ describe('Password Reset', () => {
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
 
       // Should handle gracefully
-      await delay(1000);
+      await forgotPasswordScreen.waitForScreen();
     });
 
     it('should handle very long email', async () => {

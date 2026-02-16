@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatInviteStatus, getInviteStatusColor } from '#/utils/formatters/inviteFormatters';
@@ -47,9 +47,9 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
           </Text>
         </View>
         {invite.status === 'PENDING' && (
-          <TouchableOpacity style={styles.revokeButton} onPress={onRevoke}>
+          <Pressable style={({pressed}) => [styles.revokeButton, pressed && styles.pressed]} onPress={onRevoke}>
             <Icon name="close" size={20} />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     </View>
@@ -102,5 +102,8 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.validation.errorBg,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

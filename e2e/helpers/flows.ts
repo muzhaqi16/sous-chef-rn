@@ -9,8 +9,9 @@ import {
   SelectPantryItemsScreen,
   BiometricSetupScreen,
 } from '../screens';
-import { dismissBiometricPromptIfPresent } from './auth';
+import { dismissBiometricPromptIfPresent, isLoggedIn } from './auth';
 import { delay } from './waitFor';
+import { getAuthTokens } from './tokenProvider';
 
 const landingScreen = new LandingAuthScreen();
 const loginScreen = new LoginScreen();
@@ -41,31 +42,62 @@ async function skipOptionalOnboardingScreens() {
   } catch {}
 
   // NOTE: Biometric setup only appears on devices with biometric support
-  // Emulators don't have biometrics, so use very short timeout
+  // Use 3s timeout to allow for real device delays
   try {
-    await biometricSetupScreen.waitForScreen(500);
+    await biometricSetupScreen.waitForScreen(3000);
     await biometricSetupScreen.tapSkip();
   } catch {}
 }
 
 /**
  * Bootstrap fresh authenticated session with clean app state
- * Use this when you need a completely fresh app install + login
+ * Use this when you need a completely fresh app install + login.
+ * Uses token injection for speed, falls back to UI login.
  */
 export async function bootstrapFreshAuthenticatedSession() {
-  await launchAppWithFabricWorkaround({
-    newInstance: true,
-    delete: true,
-    permissions: { notifications: 'YES', camera: 'YES' },
-  });
+  // Try token injection first (fast path)
+  try {
+    const tokens = await getAuthTokens();
+    console.log('🔑 Launching fresh app with injected auth tokens...');
 
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      delete: true,
+      permissions: { notifications: 'YES', camera: 'YES' },
+      launchArgs: {
+        detoxUserToken: tokens.accessToken,
+        detoxRefreshToken: tokens.refreshToken,
+        detoxUser: JSON.stringify(tokens.user),
+      },
+    });
+
+    const loggedIn = await isLoggedIn();
+    if (loggedIn) {
+      console.log('✅ Token injection successful (fresh session)');
+      await skipOptionalOnboardingScreens();
+      await pantryScreen.waitForScreen();
+      return;
+    }
+
+    console.log('⚠️ Token injection did not result in logged-in state, falling back to UI login...');
+  } catch (error) {
+    console.log(`⚠️ Token injection failed: ${error}, falling back to UI login...`);
+
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      delete: true,
+      permissions: { notifications: 'YES', camera: 'YES' },
+    });
+  }
+
+  // Fallback: UI login
   await landingScreen.waitForScreen(5000);
   await landingScreen.tapLogin();
   await loginScreen.waitForScreen(5000);
   await loginScreen.loginAsTestUser();
 
   await skipOptionalOnboardingScreens();
-  await pantryScreen.waitForScreen(); // Uses default 5s timeout
+  await pantryScreen.waitForScreen();
 }
 
 export async function relaunchToHomeTab() {

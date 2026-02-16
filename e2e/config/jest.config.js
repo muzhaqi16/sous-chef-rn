@@ -2,6 +2,7 @@
 module.exports = {
   rootDir: '../..',
   testMatch: ['<rootDir>/e2e/tests/**/*.e2e.{js,ts}'],
+  testSequencer: '<rootDir>/e2e/config/testSequencer.js',
 
   // ⭐ OPTIMIZED TIMEOUTS FOR ANDROID DEVICE
   testTimeout: 300000, // 5 minutes per test (device is slower than emulator)
@@ -13,6 +14,9 @@ module.exports = {
   globalSetup: 'detox/runners/jest/globalSetup',
   globalTeardown: 'detox/runners/jest/globalTeardown',
   testEnvironment: 'detox/runners/jest/testEnvironment',
+
+  // Note: init.ts (which imports config/setup.ts) is loaded transitively
+  // by all test files via helpers/auth.ts and helpers/flows.ts
 
   // ⭐ ENHANCED REPORTING FOR BETTER DEBUGGING
   reporters: ['detox/runners/jest/reporter'],

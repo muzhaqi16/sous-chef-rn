@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
-  TouchableOpacity,
+  Pressable,
   Text,
   Image,
   Alert,
@@ -197,9 +197,9 @@ export const ProfilePictureUploadScreen = () => {
                 source={{ uri: croppedImage?.uri || selectedImage?.uri }}
                 style={styles.avatarImage}
               />
-              <TouchableOpacity
+              <Pressable
                 onPress={handleRemoveImage}
-                style={styles.avatarRemove}
+                style={({pressed}) => [styles.avatarRemove, pressed && styles.pressed]}
                 disabled={isUploading}
               >
                 <Icon
@@ -208,7 +208,7 @@ export const ProfilePictureUploadScreen = () => {
                   name="close-circle"
                   size={24}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </>
           ) : (
             <View style={styles.avatarPlaceholder}>
@@ -224,11 +224,12 @@ export const ProfilePictureUploadScreen = () => {
 
         {selectedImage && !croppedImage && (
           <View style={styles.cropContainer}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleCropImage}
-              style={[
+              style={({pressed}) => [
                 styles.cropButton,
                 { backgroundColor: theme.colors.primary },
+                pressed && styles.pressed,
               ]}
               disabled={isUploading}
             >
@@ -237,7 +238,7 @@ export const ProfilePictureUploadScreen = () => {
               >
                 Crop & Center
               </Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text
               style={[styles.cropHint, { color: theme.colors.textSecondary }]}
             >
@@ -248,9 +249,9 @@ export const ProfilePictureUploadScreen = () => {
 
         {!selectedImage && (
           <View style={styles.formAction}>
-            <TouchableOpacity
+            <Pressable
               onPress={handleSelectPhoto}
-              style={styles.uploadOption}
+              style={({pressed}) => [styles.uploadOption, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
@@ -288,11 +289,11 @@ export const ProfilePictureUploadScreen = () => {
                 name="chevron-forward"
                 size={20}
               />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={handleTakePhoto}
-              style={styles.uploadOption}
+              style={({pressed}) => [styles.uploadOption, pressed && styles.pressed]}
               disabled={isUploading}
             >
               <View style={styles.uploadOptionIcon}>
@@ -330,7 +331,7 @@ export const ProfilePictureUploadScreen = () => {
                 name="chevron-forward"
                 size={20}
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         )}
 
@@ -345,11 +346,11 @@ export const ProfilePictureUploadScreen = () => {
           </Text>
 
           <View style={styles.formFooterLinks}>
-            <TouchableOpacity
+            <Pressable
               onPress={() => {
                 // handle onPress
               }}
-              style={styles.formFooterLink}
+              style={({pressed}) => [styles.formFooterLink, pressed && styles.pressed]}
             >
               <Text
                 style={[
@@ -359,7 +360,7 @@ export const ProfilePictureUploadScreen = () => {
               >
                 Terms of Service
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             <Text
               style={[
@@ -372,11 +373,11 @@ export const ProfilePictureUploadScreen = () => {
               {'   '}
             </Text>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => {
                 // handle onPress
               }}
-              style={styles.formFooterLink}
+              style={({pressed}) => [styles.formFooterLink, pressed && styles.pressed]}
             >
               <Text
                 style={[
@@ -386,7 +387,7 @@ export const ProfilePictureUploadScreen = () => {
               >
                 Privacy Policy
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -516,7 +517,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   formFooterLink: {
-    // Empty style for TouchableOpacity wrapper
+    // Empty style for Pressable wrapper
   },
   formFooterLinkText: {
     fontSize: theme.typography.fontSize.sm - 1,
@@ -527,5 +528,8 @@ const styles = StyleSheet.create(theme => ({
   nextText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

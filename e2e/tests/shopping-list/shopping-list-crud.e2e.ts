@@ -8,11 +8,10 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
 import { ShoppingListScreen } from '../../screens';
 import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
 import { generateItemName } from '../../helpers/data';
-import { delay, TIMEOUTS } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';
 
 describe('Shopping List CRUD', () => {
@@ -30,22 +29,21 @@ describe('Shopping List CRUD', () => {
 
   describe('Add Item', () => {
     it('should add item with minimal info', async () => {
-      // Extra stability delay for first test
-      await delay(500);
-
       const itemName = generateItemName('ShopItem');
 
       await shoppingListScreen.addItem(itemName);
-      await delay(500);
-      await shoppingListScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should add item with quantity and unit', async () => {
       const itemName = generateItemName('WithQty');
 
       await shoppingListScreen.addItem(itemName, '3', 'lb');
-      await delay(1000);
-      await shoppingListScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should add item via quick add modal', async () => {
@@ -55,13 +53,11 @@ describe('Shopping List CRUD', () => {
       // Wait for "Add Manually" button to appear (indicates modal is open)
       await waitFor(element(by.id('add-shopping-add-manually-button')))
         .toBeVisible()
-        .withTimeout(3000);
-
-      console.log('✓ Add modal opened with Add Manually button');
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Close modal
       await device.pressBack();
-      await delay(500);
+      await shoppingListScreen.waitForScreen();
     });
 
     it('should validate empty item name', async () => {
@@ -70,7 +66,7 @@ describe('Shopping List CRUD', () => {
       // Wait for "Add Manually" button to appear (indicates modal is open)
       await waitFor(element(by.id('add-shopping-add-manually-button')))
         .toBeVisible()
-        .withTimeout(3000);
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Tap add manually
       await element(by.id('add-shopping-add-manually-button')).tap();
@@ -78,28 +74,24 @@ describe('Shopping List CRUD', () => {
       // Wait for the add item form modal
       await waitFor(element(by.id('add-item-modal')))
         .toBeVisible()
-        .withTimeout(3000);
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Try to submit without name
       await tapByID('add-item-submit-button');
-
-      // Should stay on modal or show error
-      await delay(500);
 
       // Dismiss any error alert
       try {
         await waitFor(element(by.text('Error')))
           .toBeVisible()
-          .withTimeout(2000);
+          .withTimeout(TIMEOUTS.DEFAULT);
         await element(by.text('OK')).tap();
-        console.log('✓ Empty name validation shows error alert');
       } catch {
-        console.log('✓ Validation handled');
+        // Validation may prevent submission without showing alert
       }
 
       // Close modal
       await device.pressBack();
-      await delay(500);
+      await shoppingListScreen.waitForScreen();
     });
   });
 
@@ -107,71 +99,67 @@ describe('Shopping List CRUD', () => {
     it('should edit item name', async () => {
       const originalName = generateItemName('ToEdit');
       await shoppingListScreen.addItem(originalName);
-      await delay(1000);
+      await waitFor(element(by.text(originalName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Tap item to edit
       const item = element(by.text(originalName));
       await item.tap();
 
-      // Wait for detail/edit screen
-      await delay(500);
+      // Look for edit button
+      const editButton = element(by.id('edit-item-button'));
+      await waitFor(editButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await editButton.tap();
 
-      try {
-        // Look for edit button
-        const editButton = element(by.id('edit-item-button'));
-        await waitFor(editButton).toBeVisible().withTimeout(2000);
-        await editButton.tap();
+      // Wait for edit modal
+      await waitFor(element(by.id('edit-item-modal')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Wait for edit modal
-        await waitFor(element(by.id('edit-item-modal')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      // Change name
+      const nameInput = element(by.id('edit-item-name-input'));
+      await nameInput.clearText();
+      await nameInput.typeText(originalName + ' Edited');
 
-        // Change name
-        const nameInput = element(by.id('edit-item-name-input'));
-        await nameInput.clearText();
-        await nameInput.typeText(originalName + ' Edited');
+      // Save
+      await tapByID('edit-item-submit-button');
 
-        // Save
-        await tapByID('edit-item-submit-button');
+      // Wait for modal to close
+      await waitFor(element(by.id('edit-item-modal')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        await delay(1000);
-
-        // Navigate back and verify
-        await shoppingListScreen.expectTextVisible(originalName + ' Edited');
-      } catch {
-        console.log('Edit flow different - navigating back');
-        await shoppingListScreen.goBack();
-      }
+      // Verify change
+      await waitFor(element(by.text(originalName + ' Edited')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should edit item quantity', async () => {
       const itemName = generateItemName('QtyEdit');
       await shoppingListScreen.addItem(itemName, '1', 'lb');
-      await delay(1000);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       const item = element(by.text(itemName));
       await item.tap();
 
-      await delay(500);
+      // Look for quantity controls
+      const quantityButton = element(by.id('quantity-button'));
+      await waitFor(quantityButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await quantityButton.tap();
 
-      try {
-        // Look for quantity controls
-        const quantityButton = element(by.id('quantity-button'));
-        await waitFor(quantityButton).toBeVisible().withTimeout(2000);
-        await quantityButton.tap();
+      // Increment quantity
+      const incrementButton = element(by.id('quantity-increment'));
+      await waitFor(incrementButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await incrementButton.tap();
 
-        // Increment quantity
-        const incrementButton = element(by.id('quantity-increment'));
-        await incrementButton.tap();
-
-        await delay(300);
-        await tapByID('quantity-confirm');
-      } catch {
-        console.log('Quantity edit UI not found');
-      }
+      await tapByID('quantity-confirm');
 
       await shoppingListScreen.goBack();
+      await shoppingListScreen.waitForScreen();
     });
   });
 
@@ -179,33 +167,22 @@ describe('Shopping List CRUD', () => {
     it('should delete item via swipe', async () => {
       const itemName = generateItemName('ToDelete');
       await shoppingListScreen.addItem(itemName);
-      await delay(1000);
-      await shoppingListScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
       // Swipe to delete
       const item = element(by.text(itemName));
       await item.swipe('left', 'fast', 0.7);
 
-      await delay(500);
+      const deleteButton = element(by.id('swipe-delete-button'));
+      await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await deleteButton.tap();
 
-      try {
-        const deleteButton = element(by.id('swipe-delete-button'));
-        await waitFor(deleteButton).toBeVisible().withTimeout(1000);
-        await deleteButton.tap();
-      } catch {
-        // Might auto-delete
-      }
-
-      await delay(500);
-
-      try {
-        await waitFor(element(by.text(itemName)))
-          .not.toBeVisible()
-          .withTimeout(2000);
-        console.log('✓ Item deleted');
-      } catch {
-        console.log('⚠️ Item deletion verification unclear');
-      }
+      // Verify item is gone
+      await waitFor(element(by.text(itemName)))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 
@@ -214,20 +191,25 @@ describe('Shopping List CRUD', () => {
       const longName =
         'Very long shopping list item name that should be handled properly';
       await shoppingListScreen.addItem(longName);
-      await delay(1000);
+      await waitFor(element(by.text(longName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should handle fractional quantities', async () => {
       const itemName = generateItemName('Fractional');
       await shoppingListScreen.addItem(itemName, '1/4', 'cup');
-      await delay(1000);
-      await shoppingListScreen.expectTextVisible(itemName);
+      await waitFor(element(by.text(itemName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should handle special characters in item name', async () => {
       const specialName = "Trader Joe's O's Cereal";
       await shoppingListScreen.addItem(specialName);
-      await delay(1000);
+      await waitFor(element(by.text(specialName)))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, Pressable, StyleProp, ViewStyle, TextStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
 
@@ -80,8 +80,8 @@ export const BaseHeader: React.FC<BaseHeaderProps> = ({
     return (
       <View style={styles.section}>
         {(showBackButton || onBack) && (
-          <TouchableOpacity
-            style={styles.iconButton}
+          <Pressable
+            style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}
             onPress={onBack}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityLabel="Go back"
@@ -91,7 +91,7 @@ export const BaseHeader: React.FC<BaseHeaderProps> = ({
               size={theme.sizes.icon.md}
               color={theme.colors.textPrimary}
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
         {leftActions.map((action, index) => renderAction(action, index))}
       </View>
@@ -140,9 +140,9 @@ export const BaseHeader: React.FC<BaseHeaderProps> = ({
 
   const renderAction = (action: HeaderAction, index: number) => {
     return (
-      <TouchableOpacity
+      <Pressable
         key={index}
-        style={styles.iconButton}
+        style={({pressed}) => [styles.iconButton, pressed && styles.pressed]}
         onPress={action.onPress}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityLabel={action.accessibilityLabel}
@@ -165,7 +165,7 @@ export const BaseHeader: React.FC<BaseHeaderProps> = ({
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -226,7 +226,7 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.typography.fontSize as any,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
 
@@ -257,9 +257,13 @@ const styles = StyleSheet.create(theme => ({
 
   badgeText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: theme.fonts.weight.semibold as any,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.neutral[0],
     textAlign: 'center',
+  },
+
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

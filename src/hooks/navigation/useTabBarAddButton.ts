@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppNavigation } from './useAppNavigation';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 
 /**
  * Register a handler for the tab bar add button when the screen is focused.
@@ -29,7 +29,7 @@ export const useTabBarAddButton = (
   disabledTooltip?: string,
 ) => {
   const { isFocused } = useAppNavigation();
-  const { setAddProps } = useTabBarActions();
+  const { setAddProps } = useTabBarSetters();
 
   // Store handler in ref to avoid stale closures
   const handlerRef = useRef(handler);

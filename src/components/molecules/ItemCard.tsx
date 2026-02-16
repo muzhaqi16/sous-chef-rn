@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Counter } from './Counter';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -22,7 +22,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
 }) => {
   useRenderTime('ItemCard');
   return (
-    <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
+    <Pressable key={item?.id} onPress={onPress} style={({pressed}) => [styles.card, pressed && styles.pressed]}>
       <CachedImage
         accessibilityLabel={item?.name}
         resizeMode="contain"
@@ -46,7 +46,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
           <Text style={styles.cardDescription}>{item?.unitName}</Text>
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 const styles = StyleSheet.create(theme => ({
@@ -93,6 +93,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingVertical: theme.spacing['3'],
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 export default ItemCard;

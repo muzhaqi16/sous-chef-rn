@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, Image} from 'react-native';
+import {View, Text, Pressable, Image} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {ImagePicker, ImageFile} from './ImagePicker';
@@ -31,12 +31,12 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
       <View style={styles.imageContainer}>
         {selectedImage ? (
           <View style={styles.imagePreview}>
-            <TouchableOpacity
-              style={styles.removeButton}
+            <Pressable
+              style={({pressed}) => [styles.removeButton, pressed && styles.pressed]}
               onPress={onImageRemoved}
               disabled={disabled}>
               <Icon name="close" size={16} color={theme.colors.white} />
-            </TouchableOpacity>
+            </Pressable>
             <Image
               source={{uri: selectedImage.uri}}
               style={styles.image}
@@ -116,5 +116,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

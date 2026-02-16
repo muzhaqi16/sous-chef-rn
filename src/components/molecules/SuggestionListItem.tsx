@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useSharedValue,
@@ -93,12 +93,11 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
 
   return (
     <Animated.View style={animatedStyle}>
-      <TouchableOpacity
-        style={styles.container}
+      <Pressable
+        style={({pressed}) => [styles.container, pressed && styles.pressed]}
         onPress={handlePress}
         disabled={!onPress && !onQuickAdd || isExiting}
         testID={testID}
-        activeOpacity={0.7}
       >
         <View style={styles.imageContainer}>
           {imageUrl ? (
@@ -125,8 +124,8 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
           )}
         </View>
         {onQuickAdd && (
-          <TouchableOpacity
-            style={styles.quickAddButton}
+          <Pressable
+            style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
             onPress={onQuickAdd}
             disabled={quickAddDisabled || isExiting}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -137,9 +136,9 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
               color={quickAddDisabled || isExiting ? theme.colors.textTertiary : theme.colors.primary}
               library="MaterialIcons"
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 };
@@ -191,5 +190,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

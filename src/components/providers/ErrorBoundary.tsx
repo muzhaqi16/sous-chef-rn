@@ -1,5 +1,5 @@
 import React, { Component, ReactNode } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 
@@ -38,14 +38,14 @@ const DefaultErrorFallback: React.FC<{
             Context: {context}
           </Text>
         )}
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+        <Pressable
+          style={({pressed}) => [styles.retryButton, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
           onPress={retry}
         >
           <Text style={[styles.retryText, { color: theme.colors.background }]}>
             Try Again
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -235,6 +235,9 @@ const styles = StyleSheet.create(theme => ({
   retryText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

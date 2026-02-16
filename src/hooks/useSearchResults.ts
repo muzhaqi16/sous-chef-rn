@@ -151,21 +151,38 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {
-      if (data.createItem) {
-        const createdItem = data.createItem;
+      if (data.createItem?.item) {
+        const createdItem = data.createItem.item;
         let finalItem = createdItem;
 
-        // If there was an image selected, upload it after item creation
+        // If there were images selected, upload them after item creation
         try {
+          const pendingImagesJson = storage.getString(
+            'temp_pending_item_images',
+          );
+          if (pendingImagesJson && createdItem.id) {
+            const images = JSON.parse(pendingImagesJson);
+            let firstImageUrl: string | null = null;
+            for (const image of images) {
+              const imageUrl = await uploadItemImage(image, createdItem.id);
+              if (imageUrl && !firstImageUrl) {
+                firstImageUrl = imageUrl;
+              }
+            }
+            if (firstImageUrl) {
+              // Update the finalItem with the first image URL for display
+              finalItem = { ...createdItem, imageUrl: firstImageUrl };
+            }
+          }
+
+          // Backward compat: also check old singular key
           const pendingImageUpload = storage.getString(
             'temp_pending_item_image',
           );
           if (pendingImageUpload && createdItem.id) {
             const imageFile = JSON.parse(pendingImageUpload);
-
             const imageUrl = await uploadItemImage(imageFile, createdItem.id);
             if (imageUrl) {
-              // Update the finalItem with the new image URL for display
               finalItem = { ...createdItem, imageUrl };
             }
           }
@@ -173,7 +190,8 @@ export const useSearchResults = (barcode: string, format?: string) => {
           console.error('Error handling pending image upload:', error);
           // Continue without showing error since item was created successfully
         } finally {
-          // Clean up the temporary storage
+          // Clean up both storage keys
+          storage.remove('temp_pending_item_images');
           storage.remove('temp_pending_item_image');
         }
 
@@ -190,6 +208,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     },
     onError: error => {
       // Clean up pending data on error
+      storage.remove('temp_pending_item_images');
       storage.remove('temp_pending_item_image');
       pendingBrandNameRef.current = undefined;
 
@@ -340,72 +359,45 @@ export const useSearchResults = (barcode: string, format?: string) => {
   const handleAddItem = async (formData: any) => {
     try {
       // Store brand name for use in mutation callback
-      pendingBrandNameRef.current = formData.brandName;
+      pendingBrandNameRef.current = formData.brand?.brandName;
 
-      // Store the selected image in MMKV for post-creation upload
-      if (formData.selectedImage) {
+      // Store the selected images in MMKV for post-creation upload
+      if (formData.selectedImages && formData.selectedImages.length > 0) {
+        storage.set(
+          'temp_pending_item_images',
+          JSON.stringify(formData.selectedImages),
+        );
+      } else if (formData.selectedImage) {
+        // Backward compat: support singular selectedImage
         storage.set(
           'temp_pending_item_image',
           JSON.stringify(formData.selectedImage),
         );
       }
 
-      // Process the form data to match the CreateItemInput type
+      // Process the form data to match the new nested CreateItemInput structure
       const processedInput = {
         name: formData.name,
         description: formData.description || undefined,
-        primaryUpc: formData.upc || barcode,
-        sku: formData.sku || undefined,
-
-        // Classification
         type: formData.type || undefined,
-        storageState: formData.storageState || undefined,
 
-        // Product Details
-        shelfLifeDays: formData.shelfLifeDays || undefined,
-        displayItemSize: formData.displayItemSize || undefined,
+        // Brand reference
+        brand: formData.brand || undefined,
 
-        // Images
-        imageUrl: formData.imageUrl || undefined,
+        // Classification (storageState, categories, tags)
+        classification: formData.classification || undefined,
 
-        // Brand Information
-        brandId: formData.brandId || undefined,
-        vendor: formData.vendor || undefined,
+        // Product details (primaryUpc, vendor, shelfLifeDays)
+        productDetails: formData.productDetails || undefined,
 
-        // Weight and Units
-        netWeight: formData.netWeight || undefined,
-        displayUnitId: formData.displayUnitId || undefined,
+        // Media (imageUrl)
+        media: formData.media || undefined,
 
-        // Categories
-        categoryIds: formData.categoryIds || undefined,
+        // Net weights (manufacturer-provided dual-label values)
+        netWeights: formData.netWeights || undefined,
 
-        // Units array
-        units: formData.units || undefined,
-
-        // Metadata
-        tags: (() => {
-          let tags: string[] = [];
-
-          // Include existing tags
-          if (formData.tags && Array.isArray(formData.tags)) {
-            tags = [...formData.tags];
-          } else if (formData.tags && typeof formData.tags === 'string') {
-            tags = formData.tags
-              .split(',')
-              .map((tag: string) => tag.trim())
-              .filter(Boolean);
-          }
-
-          // Add tags based on boolean flags
-          if (formData.isFoodStampItem) {
-            tags.push('food-stamp-eligible');
-          }
-          if (formData.isFsaEligible) {
-            tags.push('fsa-eligible');
-          }
-
-          return tags.length > 0 ? tags : undefined;
-        })(),
+        // Unit configuration
+        unitConfig: formData.unitConfig || undefined,
       };
 
       await addNewItem({

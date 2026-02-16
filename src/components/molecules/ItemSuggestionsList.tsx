@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { ItemSuggestion } from '#generated';
 
 interface ItemSuggestionsListProps {
@@ -42,9 +43,9 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
 
   // Render "Add manually" option
   const renderAddManually = (isLast: boolean) => (
-    <TouchableOpacity
+    <Pressable
       key="add-manually"
-      style={[styles.addManuallyOption, !isLast && styles.itemBorder]}
+      style={({pressed}) => [styles.addManuallyOption, !isLast && styles.itemBorder, pressed && styles.pressed]}
       onPress={onAddManually}
     >
       <Icon
@@ -58,12 +59,12 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
           ? `Add "${searchQuery}" manually`
           : `No matches. Add "${searchQuery}" manually`}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 
   // Render a single suggestion item
   const renderSuggestion = (item: ItemSuggestion, isLast: boolean) => {
-    const imageUrl = item.imageUrl || null;
+    const imageUrl = resolveImageUrl(item);
     return (
       <View
         key={item.id}
@@ -93,10 +94,11 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
             </Text>
           )}
         </View>
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({pressed}) => [
             styles.quickAddButton,
             quickAddDisabled && styles.quickAddButtonDisabled,
+            pressed && styles.pressed,
           ]}
           onPress={() => onSelectSuggestion(item)}
           disabled={quickAddDisabled}
@@ -107,7 +109,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
             color={theme.colors.primary}
             library="MaterialIcons"
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   };
@@ -197,5 +199,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

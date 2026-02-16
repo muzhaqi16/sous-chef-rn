@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -117,11 +117,12 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
             contentContainerStyle={styles.typeScrollContent}
           >
             {STORAGE_TYPES.map(type => (
-              <TouchableOpacity
+              <Pressable
                 key={type.value}
-                style={[
+                style={({pressed}) => [
                   styles.typeButton,
                   formData.type === type.value && styles.typeButtonSelected,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setFormData({ ...formData, type: type.value, icon: type.icon })}
               >
@@ -134,7 +135,7 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
                 >
                   {type.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
           <View
@@ -177,10 +178,11 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
             showsHorizontalScrollIndicator={false}
             style={styles.parentScroll}
           >
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 styles.parentButton,
                 !formData.parentLocationId && styles.parentButtonSelected,
+                pressed && styles.pressed,
               ]}
               onPress={() =>
                 setFormData({ ...formData, parentLocationId: undefined })
@@ -194,14 +196,15 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
               >
                 None
               </Text>
-            </TouchableOpacity>
+            </Pressable>
             {parentOptions.map(location => (
-              <TouchableOpacity
+              <Pressable
                 key={location.id}
-                style={[
+                style={({pressed}) => [
                   styles.parentButton,
                   formData.parentLocationId === location.id &&
                     styles.parentButtonSelected,
+                  pressed && styles.pressed,
                 ]}
                 onPress={() =>
                   setFormData({ ...formData, parentLocationId: location.id })
@@ -216,7 +219,7 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
                 >
                   {location.name}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </ScrollView>
           <Text style={styles.hint}>
@@ -227,15 +230,15 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
 
       {!hideActions && (
         <View style={styles.formActions}>
-          <TouchableOpacity
-            style={[commonStyles.button, commonStyles.buttonSecondary]}
+          <Pressable
+            style={({pressed}) => [commonStyles.button, commonStyles.buttonSecondary, pressed && styles.pressed]}
             onPress={onCancel}
             disabled={isSubmitting}
           >
             <Text style={commonStyles.buttonTextSecondary}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[commonStyles.button, commonStyles.buttonPrimary]}
+          </Pressable>
+          <Pressable
+            style={({pressed}) => [commonStyles.button, commonStyles.buttonPrimary, pressed && styles.pressed]}
             onPress={handleSubmit}
             disabled={isSubmitting || !formData.name.trim()}
           >
@@ -246,7 +249,7 @@ export const StorageLocationForm = forwardRef<StorageLocationFormRef, StorageLoc
                 {initialData ? 'Update' : 'Create'}
               </Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>
@@ -349,5 +352,8 @@ const styles = StyleSheet.create(theme => ({
     ...commonStyles.row,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.md,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

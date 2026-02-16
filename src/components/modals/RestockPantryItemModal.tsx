@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, Pressable } from 'react-native';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#/utils/iconUtils';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { PantryItemFragment } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
@@ -47,6 +48,23 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'content' | 'weight'>('tracking');
+
+  // Determine if this item supports dual-tracking
+  const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
+
+  // Detect content unit availability (package items like "12 x 335 mL cans")
+  const hasContentUnit = isDualTracked
+    && pantryItem?.packageBreakdown != null
+    && pantryItem.packageBreakdown.perUnitNetWeight != null
+    && pantryItem.packageBreakdown.perUnitNetWeight > 0;
+
+  // Compute how many content units remain (e.g., how many cans)
+  const contentUnitCount = pantryItem?.quantityBreakdown?.totalContentUnits != null
+    ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
+    : (hasContentUnit && pantryItem?.remainingNetWeight != null
+      ? Math.floor(pantryItem.remainingNetWeight / pantryItem.packageBreakdown!.perUnitNetWeight!)
+      : 0);
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -58,18 +76,41 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       setCostPerUnitInput('');
       setTotalCostInput('');
       setExpiresAt(null);
+      setSelectedUnit('tracking');
     } else {
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
 
+  const activeUnitSymbol = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) {
+      return pantryItem!.packageBreakdown!.contentUnit.symbol || pantryItem!.packageBreakdown!.contentUnit.name;
+    }
+    if (selectedUnit === 'weight' && isDualTracked) {
+      return pantryItem!.netWeightUnit!.symbol || '';
+    }
+    return pantryItem?.unit?.symbol || '';
+  })();
+
+  const activeUnitId = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return pantryItem!.packageBreakdown!.contentUnit.id;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.netWeightUnit!.id;
+    return pantryItem?.unit?.id;
+  })();
+
+  const currentQuantity = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return contentUnitCount;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.remainingNetWeight!;
+    return pantryItem?.quantity ?? 0;
+  })();
+
   const calculateNewQuantity = useCallback((): number | null => {
     if (!pantryItem) return null;
     const addAmount = parseFractionalInput(quantityInput);
     if (addAmount === null || isNaN(addAmount)) return null;
-    const newQuantity = pantryItem.quantity + addAmount;
+    const newQuantity = currentQuantity + addAmount;
     return isNaN(newQuantity) ? null : newQuantity;
-  }, [pantryItem, quantityInput]);
+  }, [pantryItem, quantityInput, currentQuantity]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -81,20 +122,26 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       return;
     }
 
-    // Use the item's current unit
-    const unitId = pantryItem.unit?.id;
-
     // Parse cost values (optional)
     const costPerUnit = costPerUnitInput
       ? parseFloat(costPerUnitInput)
       : undefined;
     const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
 
+    // Convert content units to weight for the backend
+    // e.g., "1 can" → "335 mL" (quantity * perUnitNetWeight with weight unit ID)
+    let finalQuantity = quantityValue;
+    let finalUnitId = activeUnitId;
+    if (selectedUnit === 'content' && hasContentUnit) {
+      finalQuantity = quantityValue * pantryItem.packageBreakdown!.perUnitNetWeight!;
+      finalUnitId = pantryItem.netWeightUnit!.id;
+    }
+
     onConfirm(
-      quantityValue,
+      finalQuantity,
       quantityInput,
       notes,
-      unitId,
+      finalUnitId,
       isNaN(costPerUnit!) ? undefined : costPerUnit,
       isNaN(totalCost!) ? undefined : totalCost,
       expiresAt,
@@ -109,6 +156,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     expiresAt,
     onConfirm,
     onClose,
+    activeUnitId,
+    selectedUnit,
+    hasContentUnit,
   ]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
@@ -173,8 +223,86 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
                   unitSymbol={pantryItem.unit?.symbol}
                 />
+                {isDualTracked && (
+                  <Text style={commonStyles.bottomSheetItemLabel}>
+                    {' '}({pantryItem.remainingNetWeight} {pantryItem.netWeightUnit?.symbol} remaining)
+                  </Text>
+                )}
               </View>
             </View>
+
+            {/* Unit Toggle for dual-tracked items */}
+            {isDualTracked && (
+              <View style={commonStyles.bottomSheetSection}>
+                <Text style={commonStyles.bottomSheetSectionLabel}>
+                  Restock by
+                </Text>
+                <View style={commonStyles.bottomSheetOptionContainer}>
+                  <Pressable
+                    style={({pressed}) => [
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => setSelectedUnit('tracking')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'tracking' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.unit?.symbol || pantryItem.unit?.name || 'Unit'}
+                    </Text>
+                    {selectedUnit === 'tracking' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </Pressable>
+                  {hasContentUnit && (
+                    <Pressable
+                      style={({pressed}) => [
+                        commonStyles.bottomSheetOption,
+                        selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setSelectedUnit('content')}
+                    >
+                      <Text
+                        style={[
+                          commonStyles.bottomSheetOptionText,
+                          selectedUnit === 'content' && commonStyles.bottomSheetOptionTextSelected,
+                        ]}
+                      >
+                        {pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}
+                      </Text>
+                      {selectedUnit === 'content' && (
+                        <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                      )}
+                    </Pressable>
+                  )}
+                  <Pressable
+                    style={({pressed}) => [
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => setSelectedUnit('weight')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'weight' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || 'Weight'}
+                    </Text>
+                    {selectedUnit === 'weight' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            )}
 
             {/* Quantity Input */}
             <View style={commonStyles.bottomSheetSection}>
@@ -190,7 +318,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               {newQuantity !== null && (
                 <Text style={styles.newQuantityText}>
                   New quantity: {formatQuantity(newQuantity)}{' '}
-                  {pantryItem.unit?.symbol || ''}
+                  {activeUnitSymbol}
                 </Text>
               )}
             </View>
@@ -264,5 +392,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     marginTop: theme.spacing.xs,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

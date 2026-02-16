@@ -1,12 +1,12 @@
 import React from 'react';
-import { TouchableOpacity, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { SelectorItemProps, SelectableItem } from './types';
 
-const AnimatedTouchableOpacity =
-  Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable =
+  Animated.createAnimatedComponent(Pressable);
 
 export const SelectorItem = <T extends SelectableItem>({
   item,
@@ -30,10 +30,10 @@ export const SelectorItem = <T extends SelectableItem>({
   }
 
   return (
-    <AnimatedTouchableOpacity
+    <AnimatedPressable
       entering={FadeInUp.delay(index * 15).duration(150)}
       layout={LinearTransition}
-      style={[styles.item, isSelected && styles.selectedItem]}
+      style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
       onPress={onPress}
     >
       <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
@@ -47,7 +47,7 @@ export const SelectorItem = <T extends SelectableItem>({
           <Icon name="check" size={18} color={theme.colors.primary} />
         </Animated.View>
       )}
-    </AnimatedTouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
@@ -80,5 +80,8 @@ const styles = StyleSheet.create(theme => ({
   },
   checkIcon: {
     marginLeft: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

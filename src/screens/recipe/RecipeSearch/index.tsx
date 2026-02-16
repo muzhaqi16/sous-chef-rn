@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, Text, TouchableOpacity } from 'react-native';
+import { View, FlatList, Text, Pressable } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
@@ -34,14 +34,14 @@ const IngredientItem = React.memo(
     const handlePress = useCallback(() => onToggle(name), [name, onToggle]);
 
     return (
-      <TouchableOpacity style={styles.ingredientItem} onPress={handlePress}>
+      <Pressable style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]} onPress={handlePress}>
         <Ionicons
           name={selected ? 'checkbox' : 'square-outline'}
           size={24}
           color={selected ? primaryColor : textSecondary}
         />
         <Text style={styles.ingredientText}>{name}</Text>
-      </TouchableOpacity>
+      </Pressable>
     );
   },
 );
@@ -57,7 +57,7 @@ const RecipeSearchContent: React.FC<{
 }> = ({ items, loading, searchPerformed, onItemPress, onRefresh, emptyState }) => {
   if (loading && searchPerformed) {
     return (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+      <ScrollView contentContainerStyle={styles.skeletonContainer}>
         {[1, 2, 3, 4, 5].map(key => (
           <RecipeCardSkeleton key={key} />
         ))}
@@ -155,6 +155,7 @@ export const RecipeSearch: React.FC = () => {
           onPress: handleTextSearch,
           color: theme.colors.primary,
           backgroundColor: theme.colors.surface,
+          testID: 'recipe-search-submit',
         },
       ] as SearchBarAction[],
     [handleTextSearch, openIngredientSelector, openFilterSheet, selectedIngredients.size, activeFilterCount, theme],
@@ -190,6 +191,7 @@ export const RecipeSearch: React.FC = () => {
             onChangeText={setSearchQuery}
             placeholder="Search recipes..."
             rightActions={searchBarRightActions}
+            testID="recipe-search-input"
           />
         </View>
         <ListTemplate
@@ -208,17 +210,18 @@ export const RecipeSearch: React.FC = () => {
         snapPoints={['50%', '75%', '90%']}
         scrollable={false}
         headerRight={
-          <TouchableOpacity
-            style={[
+          <Pressable
+            style={({pressed}) => [
               styles.headerSearchButton,
               { backgroundColor: theme.colors.primary },
               selectedIngredients.size === 0 && styles.headerSearchButtonDisabled,
+              pressed && styles.pressed,
             ]}
             onPress={handleIngredientSearch}
             disabled={selectedIngredients.size === 0}
           >
             <Text style={styles.headerSearchButtonText}>Search ({selectedIngredients.size})</Text>
-          </TouchableOpacity>
+          </Pressable>
         }
       >
         <FlatList
@@ -247,9 +250,9 @@ export const RecipeSearch: React.FC = () => {
           <Text style={styles.filterSectionSubtitle}>Select one</Text>
           <View style={styles.chipRow}>
             {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Whole30'].map(diet => (
-              <TouchableOpacity
+              <Pressable
                 key={diet}
-                style={[styles.filterChip, activeFilters.diet === diet.toLowerCase() && styles.filterChipActive]}
+                style={({pressed}) => [styles.filterChip, activeFilters.diet === diet.toLowerCase() && styles.filterChipActive, pressed && styles.pressed]}
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
@@ -265,7 +268,7 @@ export const RecipeSearch: React.FC = () => {
                 >
                   {diet}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -278,9 +281,9 @@ export const RecipeSearch: React.FC = () => {
             {['Gluten', 'Dairy', 'Egg', 'Peanut', 'Tree Nut', 'Soy', 'Shellfish', 'Seafood'].map(intolerance => {
               const isSelected = activeFilters.intolerances.includes(intolerance.toLowerCase());
               return (
-                <TouchableOpacity
+                <Pressable
                   key={intolerance}
-                  style={styles.checkboxItem}
+                  style={({pressed}) => [styles.checkboxItem, pressed && styles.pressed]}
                   onPress={() =>
                     setActiveFilters(prev => ({
                       ...prev,
@@ -296,7 +299,7 @@ export const RecipeSearch: React.FC = () => {
                     color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
                   />
                   <Text style={styles.checkboxText}>{intolerance}</Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
@@ -308,9 +311,9 @@ export const RecipeSearch: React.FC = () => {
           <Text style={styles.filterSectionSubtitle}>Select one</Text>
           <View style={styles.chipRow}>
             {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(type => (
-              <TouchableOpacity
+              <Pressable
                 key={type}
-                style={[styles.filterChip, activeFilters.mealType === type.toLowerCase() && styles.filterChipActive]}
+                style={({pressed}) => [styles.filterChip, activeFilters.mealType === type.toLowerCase() && styles.filterChipActive, pressed && styles.pressed]}
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
@@ -326,7 +329,7 @@ export const RecipeSearch: React.FC = () => {
                 >
                   {type}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -342,9 +345,9 @@ export const RecipeSearch: React.FC = () => {
               { label: '45 min', value: 45 },
               { label: '60 min', value: 60 },
             ].map(time => (
-              <TouchableOpacity
+              <Pressable
                 key={time.value}
-                style={[styles.filterChip, activeFilters.maxReadyTime === time.value && styles.filterChipActive]}
+                style={({pressed}) => [styles.filterChip, activeFilters.maxReadyTime === time.value && styles.filterChipActive, pressed && styles.pressed]}
                 onPress={() =>
                   setActiveFilters(prev => ({
                     ...prev,
@@ -360,22 +363,22 @@ export const RecipeSearch: React.FC = () => {
                 >
                   {time.label}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.filterActions}>
-          <TouchableOpacity style={[styles.filterActionButton, styles.clearButton]} onPress={clearFilters}>
+          <Pressable style={({pressed}) => [styles.filterActionButton, styles.clearButton, pressed && styles.pressed]} onPress={clearFilters}>
             <Text style={styles.clearButtonText}>Clear All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterActionButton, styles.applyButton, { backgroundColor: theme.colors.primary }]}
+          </Pressable>
+          <Pressable
+            style={({pressed}) => [styles.filterActionButton, styles.applyButton, { backgroundColor: theme.colors.primary }, pressed && styles.pressed]}
             onPress={applyFilters}
           >
             <Text style={styles.applyButtonText}>Apply Filters</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </BottomSheetAction>
       </OfflineGate>
@@ -387,6 +390,10 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  skeletonContainer: {
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   ingredientList: {
     flex: 1,
@@ -509,5 +516,8 @@ const styles = StyleSheet.create(theme => ({
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

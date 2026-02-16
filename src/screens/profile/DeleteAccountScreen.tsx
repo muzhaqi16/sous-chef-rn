@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -100,12 +100,12 @@ export const DeleteAccountScreen: React.FC = () => {
       <Text style={styles.errorText}>
         {eligibilityError?.message || 'An error occurred. Please try again.'}
       </Text>
-      <TouchableOpacity
-        style={styles.retryButton}
+      <Pressable
+        style={({pressed}) => [styles.retryButton, pressed && styles.pressed]}
         onPress={() => refetchEligibility()}
       >
         <Text style={styles.retryButtonText}>Retry</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 
@@ -155,9 +155,9 @@ export const DeleteAccountScreen: React.FC = () => {
         </View>
       ))}
 
-      <TouchableOpacity style={styles.goBackButton} onPress={goBack}>
+      <Pressable style={({pressed}) => [styles.goBackButton, pressed && styles.pressed]} onPress={goBack}>
         <Text style={styles.goBackButtonText}>Go Back</Text>
-      </TouchableOpacity>
+      </Pressable>
     </ScrollView>
   );
 
@@ -253,11 +253,12 @@ export const DeleteAccountScreen: React.FC = () => {
           />
         </View>
 
-        <TouchableOpacity
-          style={[
+        <Pressable
+          style={({pressed}) => [
             styles.deleteButton,
             (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
               styles.deleteButtonDisabled,
+            pressed && styles.pressed,
           ]}
           onPress={handleDeleteAccount}
           disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
@@ -265,15 +266,15 @@ export const DeleteAccountScreen: React.FC = () => {
           <Text style={styles.deleteButtonText}>
             {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
+        <Pressable
+          style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}
           onPress={goBack}
           disabled={isDeleting}
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -321,8 +322,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -537,6 +538,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

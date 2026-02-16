@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -8,7 +8,7 @@ import Animated, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FloatingTabItemProps } from './types';
 
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
   route: _route,
@@ -59,17 +59,16 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View
   return (
     <View style={styles.tabItem}>
-      <AnimatedTouchableOpacity
+      <AnimatedPressable
         accessibilityRole="button"
         accessibilityState={isActive ? { selected: true } : {}}
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}
         onLongPress={onLongPress}
         style={[{ flex: 1, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}
-        activeOpacity={0.7}
       >
         {renderIcon()}
-      </AnimatedTouchableOpacity>
+      </AnimatedPressable>
     </View>
   );
 };

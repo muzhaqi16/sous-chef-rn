@@ -6,12 +6,20 @@
  * - Handles both existing item linking and new item creation
  * - Storage location resolution (ID vs name)
  * - Category resolution (ID vs name)
+ * - Handles PANTRY_ITEM_ALREADY_EXISTS with restock/force-add options
  */
 
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useCreatePantryItemMutation } from '#generated';
+import {
+  useCreatePantryItemMutation,
+  useRestockPantryItemMutation,
+} from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
+import {
+  isPantryItemDuplicateError,
+  getPantryItemDuplicateInfo,
+} from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
 import type { CreatePantryItemParams } from './types';
 
@@ -53,12 +61,10 @@ export function useCreatePantryItem({
         console.warn('Cache update failed:', error);
       }
     },
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Create Pantry Item',
-      });
-      Alert.alert('Error', message);
-    },
+  });
+
+  const [restockMutation] = useRestockPantryItemMutation({
+    errorPolicy: 'all',
   });
 
   const createPantryItem = useCallback(
@@ -94,6 +100,8 @@ export function useCreatePantryItem({
         restockQuantity: input.restockQuantity
           ? parseFloat(input.restockQuantity)
           : undefined,
+        netWeight: input.netWeight ? parseFloat(input.netWeight) : undefined,
+        netWeightUnitId: input.netWeightUnitId || undefined,
         ...storageLocationInput,
       };
 
@@ -131,9 +139,77 @@ export function useCreatePantryItem({
         return true;
       }
 
+      // Check for duplicate pantry item error
+      if (result.error && isPantryItemDuplicateError(result.error)) {
+        const duplicateInfo = getPantryItemDuplicateInfo(result.error);
+        if (duplicateInfo) {
+          return new Promise<boolean>(resolve => {
+            Alert.alert(
+              'Item Already in Pantry',
+              'This item is already in your pantry. Would you like to restock it or add a separate entry?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: 'Restock',
+                  onPress: async () => {
+                    try {
+                      await restockMutation({
+                        variables: {
+                          id: duplicateInfo.existingPantryItemId,
+                          input: { quantity: quantityValue ?? 1 },
+                        },
+                      });
+                      onSuccess?.();
+                      resolve(true);
+                    } catch {
+                      Alert.alert('Error', 'Failed to restock item. Please try again.');
+                      resolve(false);
+                    }
+                  },
+                },
+                {
+                  text: 'Add Anyway',
+                  onPress: async () => {
+                    try {
+                      const retryResult = await createMutation({
+                        variables: {
+                          input: { ...mutationInput, forceAdd: true },
+                        },
+                      });
+                      if (retryResult.data?.createPantryItem) {
+                        onSuccess?.();
+                        resolve(true);
+                      } else {
+                        Alert.alert('Error', 'Failed to add item. Please try again.');
+                        resolve(false);
+                      }
+                    } catch {
+                      Alert.alert('Error', 'Failed to add item. Please try again.');
+                      resolve(false);
+                    }
+                  },
+                },
+              ],
+            );
+          });
+        }
+      }
+
+      // Non-duplicate error
+      if (result.error) {
+        const { message } = handleApolloError(result.error, {
+          operation: 'Create Pantry Item',
+        });
+        Alert.alert('Error', message);
+      }
+
       return false;
     },
-    [createMutation, onSuccess],
+    [createMutation, restockMutation, onSuccess, handleApolloError],
   );
 
   return { createPantryItem };

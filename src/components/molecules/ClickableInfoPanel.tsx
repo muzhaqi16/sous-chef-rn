@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, Pressable, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -30,10 +30,9 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
     <View style={[styles.container, style]}>
       <Text style={styles.title}>{title}</Text>
 
-      <TouchableOpacity
-        style={styles.panel}
+      <Pressable
+        style={({pressed}) => [styles.panel, pressed && styles.pressed]}
         onPress={onPress}
-        activeOpacity={0.7}
       >
         {hasItems ? (
           <>
@@ -66,7 +65,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -140,5 +139,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

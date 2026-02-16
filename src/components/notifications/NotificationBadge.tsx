@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useStore} from '#store';
@@ -29,7 +29,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress}>
+    <Pressable style={({pressed}) => [styles.container, pressed && styles.pressed]} onPress={handlePress}>
       <Icon
         name="notifications"
         size={size}
@@ -42,7 +42,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
           </Text>
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -67,5 +67,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.bold,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

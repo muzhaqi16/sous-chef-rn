@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { Environment } from '#/utils/environment';
@@ -94,21 +94,21 @@ export const DebugInfo: React.FC = () => {
           <Text style={styles.headerText}>
             Detailed debug information for troubleshooting API connections and app configuration.
           </Text>
-          <TouchableOpacity style={styles.copyAllButton} onPress={handleCopyAll}>
+          <Pressable style={({pressed}) => [styles.copyAllButton, pressed && styles.pressed]} onPress={handleCopyAll}>
             <Text style={styles.copyAllButtonText}>Copy All Info</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {Object.entries(debugData).map(([sectionName, sectionData]) => (
           <View key={sectionName} style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{sectionName}</Text>
-              <TouchableOpacity
-                style={styles.copySectionButton}
+              <Pressable
+                style={({pressed}) => [styles.copySectionButton, pressed && styles.pressed]}
                 onPress={() => handleCopySection(sectionName, sectionData)}
               >
                 <Text style={styles.copySectionButtonText}>Copy</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
             <View style={styles.infoContainer}>
               {Object.entries(sectionData).map(([key, value]) => (
@@ -235,6 +235,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

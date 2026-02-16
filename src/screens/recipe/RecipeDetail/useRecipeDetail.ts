@@ -229,9 +229,9 @@ export function useRecipeDetail() {
 
   const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
     update: (cache, { data }, { variables }) => {
-      if (!data?.addItemToShoppingList || !variables) return;
+      if (!data?.addItemToShoppingList?.shoppingListItem || !variables) return;
       try {
-        const item = data.addItemToShoppingList;
+        const item = data.addItemToShoppingList.shoppingListItem;
         const shoppingListId = variables.input.shoppingListId;
         const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
           'ShoppingList',
@@ -283,10 +283,12 @@ export function useRecipeDetail() {
 
   const [updateFavoriteRecipeMutation] = useUpdateFavoriteRecipeMutation({
     update: (cache, { data }) => {
-      if (!data?.updateFavoriteRecipe) return;
+      if (!data?.updateFavoriteRecipe?.savedRecipe) return;
+
+      const updatedSavedRecipe = data.updateFavoriteRecipe.savedRecipe;
 
       // Update SavedRecipeFolders cache if a folder was set
-      const folder = data.updateFavoriteRecipe.folder;
+      const folder = updatedSavedRecipe.folder;
       if (folder) {
         cache.updateQuery<SavedRecipeFoldersQuery>(
           { query: SavedRecipeFoldersDocument },
@@ -310,11 +312,14 @@ export function useRecipeDetail() {
           if (!existing) return existing;
           return {
             ...existing,
-            mySavedRecipes: existing.mySavedRecipes.map(sr =>
-              sr.id === data.updateFavoriteRecipe.id
-                ? { ...sr, ...data.updateFavoriteRecipe }
-                : sr,
-            ),
+            mySavedRecipes: {
+              ...existing.mySavedRecipes,
+              edges: existing.mySavedRecipes.edges.map(edge =>
+                edge.node.id === updatedSavedRecipe.id
+                  ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
+                  : edge,
+              ),
+            },
           };
         },
       );
@@ -328,18 +333,22 @@ export function useRecipeDetail() {
   const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
     // Use cache updates instead of refetchQueries for better performance and offline support
     update: (cache, { data }, { variables }) => {
-      if (!data?.unfavoriteRecipe || !variables?.recipeId) return;
+      if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 
-      // 1. Remove from mySavedRecipes array
+      // 1. Remove from mySavedRecipes connection
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
           if (!existing) return existing;
           return {
             ...existing,
-            mySavedRecipes: existing.mySavedRecipes.filter(
-              sr => sr.recipe.id !== variables.recipeId,
-            ),
+            mySavedRecipes: {
+              ...existing.mySavedRecipes,
+              edges: existing.mySavedRecipes.edges.filter(
+                edge => edge.node.recipe.id !== variables.recipeId,
+              ),
+              totalCount: existing.mySavedRecipes.totalCount - 1,
+            },
           };
         },
       );
@@ -523,12 +532,16 @@ export function useRecipeDetail() {
                   ingredient.originalString ||
                   'Unknown ingredient',
                 quantity: ingredient.amount || 0,
-                unitName:
-                  ingredient.measures?.us?.unitShort ||
-                  ingredient.measures?.metric?.unitShort ||
-                  '',
+                unit: {
+                  unitName:
+                    ingredient.measures?.us?.unitShort ||
+                    ingredient.measures?.metric?.unitShort ||
+                    undefined,
+                },
                 shoppingListId: targetList.id,
-                aisle: ingredient.aisle || '',
+                storePrefs: ingredient.aisle
+                  ? { aisle: ingredient.aisle }
+                  : undefined,
               },
             },
           });

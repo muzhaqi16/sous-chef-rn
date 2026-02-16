@@ -27,6 +27,7 @@ import {
   SortableListThemeContext,
   type SortableListThemeColors,
 } from './SortableListThemeContext';
+import { getTabBarBottomPadding } from '#constants/layout';
 
 /**
  * Ref handle for SortableShoppingList
@@ -35,9 +36,6 @@ import {
 export interface SortableShoppingListRef {
   // No methods currently exposed - placeholder for future functionality
 }
-
-// Tab bar height constant (65px from FloatingTabBar)
-const TAB_BAR_HEIGHT = 65;
 
 const SortableShoppingListComponent = forwardRef<
   SortableShoppingListRef,
@@ -125,10 +123,9 @@ const SortableShoppingListComponent = forwardRef<
 
     const handleSwipeableClose = useCallback(() => {}, []);
 
-    // Key extractor - ensure we have a valid ID
+    // Key extractor - validItems already guarantees every item has an id
     const keyExtractor = useCallback(
-      (item: SortableShoppingListItem) =>
-        item?.id ?? `invalid-${Math.random()}`,
+      (item: SortableShoppingListItem) => item.id,
       [],
     );
 
@@ -187,7 +184,7 @@ const SortableShoppingListComponent = forwardRef<
     const contentContainerStyle = useMemo(
       () => ({
         paddingTop: 8,
-        paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
+        paddingBottom: getTabBarBottomPadding(insets.bottom),
       }),
       [insets.bottom],
     );
@@ -232,7 +229,7 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              drawDistance={500}
+              drawDistance={400}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }

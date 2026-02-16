@@ -1,5 +1,5 @@
 import React, {useRef} from 'react';
-import {Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {Text, TextInput, Pressable, View} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 export const CodeInput: React.FC<{
@@ -10,7 +10,10 @@ export const CodeInput: React.FC<{
   const inputRef = useRef<TextInput>(null);
 
   return (
-    <TouchableOpacity onPress={() => inputRef.current?.focus()}>
+    <Pressable
+      onPress={() => inputRef.current?.focus()}
+      style={({pressed}) => pressed && styles.pressed}
+    >
       <View style={styles.formInput}>
         <TextInput
           ref={inputRef}
@@ -32,7 +35,7 @@ export const CodeInput: React.FC<{
           ))}
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -71,5 +74,8 @@ const styles = StyleSheet.create(theme => ({
   formInputCharEmpty: {
     color: theme.colors.textTertiary,
     fontWeight: '400',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

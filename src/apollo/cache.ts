@@ -19,9 +19,14 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   incoming: T[] = [],
   { readField }: { readField: (field: string, ref: any) => any },
 ): T[] {
-  // If no incoming data, always keep existing (preserves cache on network errors)
-  if (!incoming || incoming.length === 0) {
+  // If incoming is null/undefined, keep existing (preserves cache on network errors)
+  // But if incoming is an explicit empty array [], the user genuinely has no items
+  if (incoming == null) {
     return existing || [];
+  }
+
+  if (incoming.length === 0) {
+    return [];
   }
 
   // If no existing data, return incoming (first load or after cache clear)
@@ -244,25 +249,47 @@ export function makeCache(): InMemoryCache {
           },
           invitesConnection: {
             keyArgs: false,
-            merge(existing, incoming, { args }) {
+            merge(existing, incoming, { args, readField }) {
               if (!incoming) return existing;
               if (!existing || !args?.invitesCursor) return incoming;
 
+              // Deduplicate by node ID to prevent duplicates during pagination
+              const edgeMap = new Map();
+              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
+                (edge: any) => {
+                  const id = readField('id', edge?.node);
+                  if (id) {
+                    edgeMap.set(id, edge);
+                  }
+                },
+              );
+
               return {
                 ...incoming,
-                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+                edges: Array.from(edgeMap.values()),
               };
             },
           },
           pantriesConnection: {
             keyArgs: false,
-            merge(existing, incoming, { args }) {
+            merge(existing, incoming, { args, readField }) {
               if (!incoming) return existing;
               if (!existing || !args?.pantriesCursor) return incoming;
 
+              // Deduplicate by node ID to prevent duplicates during pagination
+              const edgeMap = new Map();
+              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
+                (edge: any) => {
+                  const id = readField('id', edge?.node);
+                  if (id) {
+                    edgeMap.set(id, edge);
+                  }
+                },
+              );
+
               return {
                 ...incoming,
-                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+                edges: Array.from(edgeMap.values()),
               };
             },
           },
@@ -296,12 +323,20 @@ export function makeCache(): InMemoryCache {
               const existingEdges = existing.edges || [];
               const incomingEdges = incoming.edges || [];
 
-              // Deduplicate by node ID to prevent duplicates
+              // Deduplicate by node ID, overwriting existing with incoming
               const edgeMap = new Map();
 
-              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+              existingEdges.forEach((edge: any) => {
                 const id = readField('id', edge?.node);
-                if (id && !edgeMap.has(id)) {
+                if (id) {
+                  edgeMap.set(id, edge);
+                }
+              });
+
+              // Incoming edges overwrite existing (newer data wins)
+              incomingEdges.forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) {
                   edgeMap.set(id, edge);
                 }
               });
@@ -314,14 +349,24 @@ export function makeCache(): InMemoryCache {
           },
           storageLocationsConnection: {
             keyArgs: false,
-            merge(existing, incoming, { args }) {
+            merge(existing, incoming, { args, readField }) {
               if (!incoming) return existing;
               if (!existing || !args?.after) return incoming;
 
-              // Pagination - append edges
+              // Pagination - merge edges with deduplication by node ID
+              const edgeMap = new Map();
+              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
+                (edge: any) => {
+                  const id = readField('id', edge?.node);
+                  if (id) {
+                    edgeMap.set(id, edge);
+                  }
+                },
+              );
+
               return {
                 ...incoming,
-                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+                edges: Array.from(edgeMap.values()),
               };
             },
           },
@@ -339,6 +384,21 @@ export function makeCache(): InMemoryCache {
       Unit: {
         keyFields: ['id'],
       },
+      StorageLocation: { keyFields: ['id'] },
+      Notification: { keyFields: ['id'] },
+      Category: { keyFields: ['id'] },
+      Brand: { keyFields: ['id'] },
+      Membership: { keyFields: ['id'] },
+      HomeInvite: { keyFields: ['id'] },
+      ShoppingListCollaborator: { keyFields: ['id'] },
+      Purchase: { keyFields: ['id'] },
+      Store: { keyFields: ['id'] },
+      SavedRecipe: { keyFields: ['id'] },
+      NotificationPreferences: { keyFields: ['id'] },
+      DietaryProfile: { keyFields: ['id'] },
+      UserProfile: { keyFields: ['id'] },
+      UserSettings: { keyFields: ['id'] },
+      RecipeIngredient: { keyFields: ['id'] },
       Item: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
@@ -396,9 +456,9 @@ export function makeCache(): InMemoryCache {
             // Different homes have different shopping lists - cache separately per filter
             keyArgs: ['filters'],
             merge(existing = [], incoming) {
-              // Preserve existing cache if network request failed and returned empty
-              // This prevents cache clearing when API is offline
-              if (!incoming || incoming.length === 0) {
+              // Preserve existing cache only on network errors (null/undefined)
+              // Allow empty arrays through - user may genuinely have no lists
+              if (incoming == null) {
                 return existing;
               }
               return incoming;
@@ -408,9 +468,7 @@ export function makeCache(): InMemoryCache {
             // Different homes have different pantries - cache separately
             keyArgs: ['homeId'],
             merge(existing = [], incoming) {
-              // Preserve existing cache if network request failed and returned empty
-              // This prevents cache clearing when API is offline
-              if (!incoming || incoming.length === 0) {
+              if (incoming == null) {
                 return existing;
               }
               return incoming;
@@ -421,9 +479,7 @@ export function makeCache(): InMemoryCache {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],
             merge(existing = [], incoming) {
-              // Preserve existing cache if network request failed and returned empty
-              // This prevents cache clearing when API is offline
-              if (!incoming || incoming.length === 0) {
+              if (incoming == null) {
                 return existing;
               }
               return incoming;
@@ -433,9 +489,7 @@ export function makeCache(): InMemoryCache {
             // Different homes have different storage location trees - cache separately
             keyArgs: ['homeId'],
             merge(existing = [], incoming) {
-              // Preserve existing cache if network request failed and returned empty
-              // This prevents cache clearing when API is offline
-              if (!incoming || incoming.length === 0) {
+              if (incoming == null) {
                 return existing;
               }
               return incoming;
@@ -445,9 +499,7 @@ export function makeCache(): InMemoryCache {
             // Different pantries have different suggestions - cache separately
             keyArgs: ['pantryId', 'limit'],
             merge(existing = [], incoming) {
-              // Suggestions are server-generated, so incoming replaces existing
-              // Preserve existing if network request failed
-              if (!incoming || incoming.length === 0) {
+              if (incoming == null) {
                 return existing;
               }
               return incoming;
@@ -456,7 +508,7 @@ export function makeCache(): InMemoryCache {
           shoppingListSuggestions: {
             keyArgs: ['shoppingListId', 'limit'],
             merge(existing = [], incoming) {
-              if (!incoming || incoming.length === 0) {
+              if (incoming == null) {
                 return existing;
               }
               return incoming;

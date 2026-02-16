@@ -127,6 +127,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: theme.sizes.itemCard.compact.height,
     padding: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderWidth: 1,

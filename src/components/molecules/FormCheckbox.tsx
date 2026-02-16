@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, ViewStyle} from 'react-native';
+import {View, Text, Pressable, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 
@@ -24,11 +24,10 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <TouchableOpacity
-        style={styles.checkboxRow}
+      <Pressable
+        style={({pressed}) => [styles.checkboxRow, pressed && styles.pressed]}
         onPress={onPress}
-        disabled={disabled}
-        activeOpacity={0.7}>
+        disabled={disabled}>
         <View
           style={[
             styles.checkbox,
@@ -42,7 +41,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
@@ -86,5 +85,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 interface SwipeableContentProps {
@@ -19,11 +19,10 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
 }) => {
   return (
     <View style={styles.itemContainer}>
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
         onLongPress={onLongPress}
         delayLongPress={150}
-        activeOpacity={1}
         style={styles.touchable}
         accessibilityRole={onPress ? 'button' : undefined}
         accessibilityLabel={accessibilityLabel}
@@ -32,7 +31,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         }
       >
         {children}
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };

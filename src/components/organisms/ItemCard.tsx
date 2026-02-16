@@ -119,7 +119,7 @@ export const ItemCard = React.memo(ItemCardComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    opacity: 1, // Prevent TouchableOpacity transparency inheritance
+    opacity: 1, // Prevent transparency inheritance
     // Horizontal margin for shadow visibility
     marginHorizontal: theme.spacing.md,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)

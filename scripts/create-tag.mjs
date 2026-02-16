@@ -11,18 +11,46 @@ const __dirname = dirname(__filename);
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 const { version } = packageJson;
 
-// Get tag prefix from command line argument (e.g., 'playstore', 'prod', 'dev')
-const tagPrefix = process.argv[2];
+// Parse arguments: <prefix> [--ios-only | --android-only]
+const args = process.argv.slice(2);
+const platformFlag = args.find(a => a === '--ios-only' || a === '--android-only');
+const tagPrefix = args.find(a => !a.startsWith('--'));
 
 if (!tagPrefix) {
   console.error('❌ Error: Tag prefix is required');
-  console.error('Usage: node scripts/create-tag.js <prefix>');
-  console.error('Example: node scripts/create-tag.js playstore');
+  console.error('Usage: node scripts/create-tag.mjs <prefix> [--ios-only | --android-only]');
+  console.error('');
+  console.error('Examples:');
+  console.error('  node scripts/create-tag.mjs prod              # Both iOS and Android');
+  console.error('  node scripts/create-tag.mjs prod --ios-only   # iOS only');
+  console.error('  node scripts/create-tag.mjs stg --android-only # Android only');
   process.exit(1);
 }
 
-const tag = `${tagPrefix}-v${version}`;
-const message = `${tagPrefix.charAt(0).toUpperCase() + tagPrefix.slice(1)} release ${tag}`;
+// Determine which tags to create
+// Android tag: {prefix}-v{version}  (e.g., stg-v2.6.7, prod-v2.6.7)
+// iOS tag:     ios-v{version}       (e.g., ios-v2.6.7) — prod only
+//
+// iOS only has prod builds, so:
+// - tag:prod (no flag)    → both Android prod + iOS prod
+// - tag:dev / tag:stg     → Android only (no iOS equivalent)
+// - --ios-only            → iOS prod tag only
+// - --android-only        → Android tag only
+// - playstore             → always Android only
+const isPlaystore = tagPrefix === 'playstore';
+const iosProdOnly = tagPrefix === 'prod';
+
+const buildAndroid = platformFlag !== '--ios-only' || isPlaystore;
+const buildIos = !isPlaystore && (platformFlag === '--ios-only' || (iosProdOnly && !platformFlag));
+
+const tags = [];
+if (buildAndroid) tags.push(`${tagPrefix}-v${version}`);
+if (buildIos) tags.push(`ios-v${version}`);
+
+if (tags.length === 0) {
+  console.error('❌ No tags to create');
+  process.exit(1);
+}
 
 // Helper function to prompt user for yes/no confirmation
 function askQuestion(query) {
@@ -37,79 +65,109 @@ function askQuestion(query) {
   }));
 }
 
-console.log(`📦 Creating tag: ${tag}`);
+const platforms = [buildAndroid && 'Android', buildIos && 'iOS'].filter(Boolean).join(' + ');
+console.log(`📦 Creating ${platforms} tags for: ${tagPrefix}`);
 console.log(`📝 Version: ${version}`);
+console.log(`🏷️  Tags: ${tags.join(', ')}`);
 console.log('');
 
-try {
-  let tagExistsLocally = false;
-  let tagExistsRemotely = false;
+/**
+ * Check if a tag exists locally and/or remotely.
+ */
+function checkTagExists(tag) {
+  let local = false;
+  let remote = false;
 
-  // Check if tag exists locally
   try {
     execSync(`git rev-parse ${tag}`, { stdio: 'pipe' });
-    tagExistsLocally = true;
-  } catch (error) {
+    local = true;
+  } catch {
     // Tag doesn't exist locally
   }
 
-  // Check if tag exists on remote
   try {
     const remoteCheck = execSync(`git ls-remote --tags origin ${tag}`, { stdio: 'pipe' }).toString().trim();
-    if (remoteCheck) {
-      tagExistsRemotely = true;
-    }
-  } catch (error) {
+    if (remoteCheck) remote = true;
+  } catch {
     // Tag doesn't exist on remote
   }
 
-  // If tag exists, ask user for confirmation
-  if (tagExistsLocally || tagExistsRemotely) {
-    console.log(`⚠️  Tag ${tag} already exists:`);
-    if (tagExistsLocally) console.log('   - Exists locally');
-    if (tagExistsRemotely) console.log('   - Exists on remote');
+  return { local, remote };
+}
+
+/**
+ * Delete a tag locally and/or remotely.
+ */
+function deleteTag(tag, { local, remote }) {
+  if (local) {
+    console.log(`🗑️  Deleting local tag ${tag}...`);
+    execSync(`git tag -d ${tag}`, { stdio: 'inherit' });
+  }
+  if (remote) {
+    console.log(`🗑️  Deleting remote tag ${tag}...`);
+    execSync(`git push origin :refs/tags/${tag}`, { stdio: 'inherit' });
+  }
+}
+
+try {
+  // Check all tags for existence
+  const existingTags = [];
+  for (const tag of tags) {
+    const exists = checkTagExists(tag);
+    if (exists.local || exists.remote) {
+      existingTags.push({ tag, ...exists });
+    }
+  }
+
+  // If any tags exist, ask for confirmation once
+  if (existingTags.length > 0) {
+    console.log('⚠️  The following tags already exist:');
+    for (const { tag, local, remote } of existingTags) {
+      const where = [local && 'local', remote && 'remote'].filter(Boolean).join(', ');
+      console.log(`   - ${tag} (${where})`);
+    }
     console.log('');
 
-    const answer = await askQuestion('Do you want to delete and recreate this tag? (y/N): ');
+    const answer = await askQuestion('Do you want to delete and recreate these tags? (y/N): ');
 
     if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-      console.log('❌ Aborted. Tag was not modified.');
+      console.log('❌ Aborted. Tags were not modified.');
       process.exit(0);
     }
 
     console.log('');
 
-    // Delete local tag if exists
-    if (tagExistsLocally) {
-      console.log(`🗑️  Deleting local tag ${tag}...`);
-      execSync(`git tag -d ${tag}`, { stdio: 'inherit' });
+    // Delete existing tags
+    for (const { tag, local, remote } of existingTags) {
+      deleteTag(tag, { local, remote });
     }
-
-    // Delete remote tag if exists
-    if (tagExistsRemotely) {
-      console.log(`🗑️  Deleting remote tag ${tag}...`);
-      execSync(`git push origin :refs/tags/${tag}`, { stdio: 'inherit' });
-      console.log('');
-    }
+    console.log('');
   }
 
-  // Create the tag
-  console.log(`🏷️  Creating tag ${tag}...`);
-  execSync(`git tag -a ${tag} -m "${message}"`, { stdio: 'inherit' });
-  console.log(`✅ Successfully created tag: ${tag}`);
+  // Create and push all tags
+  for (const tag of tags) {
+    const platform = tag.startsWith('ios-') ? 'iOS' : 'Android';
+    const message = `${platform} ${tagPrefix} release ${tag}`;
+
+    console.log(`🏷️  Creating tag ${tag}...`);
+    execSync(`git tag -a ${tag} -m "${message}"`, { stdio: 'inherit' });
+    console.log(`✅ Created: ${tag}`);
+  }
+
+  console.log('');
+  console.log('⬆️  Pushing tags to remote...');
+  execSync(`git push origin ${tags.join(' ')}`, { stdio: 'inherit' });
   console.log('');
 
-  // Push the tag
-  console.log(`⬆️  Pushing tag to remote...`);
-  execSync(`git push origin ${tag}`, { stdio: 'inherit' });
-  console.log('');
-  console.log(`✅ Successfully pushed tag: ${tag}`);
-  console.log('');
-  console.log(`🎉 Done! Tag ${tag} has been created and pushed.`);
+  console.log(`🎉 Done! ${tags.length} tag(s) created and pushed:`);
+  for (const tag of tags) {
+    const icon = tag.startsWith('ios-') ? '🍎' : '🤖';
+    console.log(`   ${icon} ${tag}`);
+  }
 
 } catch (error) {
   console.error('');
-  console.error(`❌ Failed to create/push tag: ${tag}`);
+  console.error('❌ Failed to create/push tags');
   console.error('');
 
   if (error.message.includes('not a git repository')) {

@@ -9,11 +9,9 @@
  */
 
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
 import { PantryScreen } from '../../screens';
 import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
-import { generateItemName } from '../../helpers/data';
-import { delay, TIMEOUTS } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry Filtering', () => {
   const pantryScreen = new PantryScreen();
@@ -40,245 +38,185 @@ describe('Pantry Filtering', () => {
 
   describe('Search', () => {
     it('should search items by name', async () => {
-      // Find and use search input
-      try {
-        const searchInput = element(by.id('pantry-search-input'));
-        await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-        await searchInput.typeText('Apple');
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.typeText('Apple');
 
-        await delay(500);
-
-        // Should show Apple, hide others
-        await pantryScreen.expectTextVisible('Apple');
-      } catch {
-        console.log('Search input not found - might be in different location');
-      }
+      await waitFor(element(by.text('Apple')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should show empty state when no search results', async () => {
-      try {
-        const searchInput = element(by.id('pantry-search-input'));
-        await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-        await searchInput.clearText();
-        await searchInput.typeText('NonExistentItem123');
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.clearText();
+      await searchInput.typeText('NonExistentItem123');
 
-        await delay(500);
-
-        // Should show empty state or "no results" message
-        try {
-          await waitFor(element(by.id('pantry-empty-state')))
-            .toBeVisible()
-            .withTimeout(2000);
-        } catch {
-          // Might show "no results" text instead
-          try {
-            await waitFor(element(by.text('No items found')))
-              .toBeVisible()
-              .withTimeout(2000);
-          } catch {
-            console.log('Empty state element not found');
-          }
-        }
-      } catch {
-        console.log('Search functionality test skipped');
-      }
+      // Should show empty state or "no results" message
+      await waitFor(element(by.id('pantry-empty-state')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should clear search and show all items', async () => {
-      try {
-        const searchInput = element(by.id('pantry-search-input'));
-        await searchInput.typeText('Apple');
-        await delay(300);
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.typeText('Apple');
 
-        // Clear search
-        await searchInput.clearText();
-        await delay(300);
+      await waitFor(element(by.text('Apple')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Should show all items again
-        await pantryScreen.expectTextVisible('Banana');
-        await pantryScreen.expectTextVisible('Milk');
-      } catch {
-        console.log('Search clear test skipped');
-      }
+      // Clear search
+      await searchInput.clearText();
+
+      // Should show all items again
+      await waitFor(element(by.text('Banana')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+      await pantryScreen.expectTextVisible('Milk');
     });
 
     it('should search case-insensitively', async () => {
-      try {
-        const searchInput = element(by.id('pantry-search-input'));
-        await searchInput.clearText();
-        await searchInput.typeText('apple'); // lowercase
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.clearText();
+      await searchInput.typeText('apple'); // lowercase
 
-        await delay(500);
-
-        // Should still find Apple
-        await pantryScreen.expectTextVisible('Apple');
-      } catch {
-        console.log('Case-insensitive search test skipped');
-      }
+      // Should still find Apple
+      await waitFor(element(by.text('Apple')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should search partial matches', async () => {
-      try {
-        const searchInput = element(by.id('pantry-search-input'));
-        await searchInput.clearText();
-        await searchInput.typeText('App'); // partial
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.clearText();
+      await searchInput.typeText('App'); // partial
 
-        await delay(500);
-
-        await pantryScreen.expectTextVisible('Apple');
-      } catch {
-        console.log('Partial search test skipped');
-      }
+      await waitFor(element(by.text('Apple')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 
   describe('Filter by Storage Location', () => {
     it('should filter by storage location', async () => {
-      // Look for filter button or storage location picker
-      try {
-        const filterButton = element(by.id('pantry-filter-button'));
-        await waitFor(filterButton).toBeVisible().withTimeout(2000);
-        await filterButton.tap();
+      const filterButton = element(by.id('pantry-filter-button'));
+      await waitFor(filterButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await filterButton.tap();
 
-        await delay(500);
+      // Select a storage location filter
+      const storageFilter = element(by.id('filter-refrigerator'));
+      await waitFor(storageFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await storageFilter.tap();
 
-        // Try to select a storage location filter
-        const storageFilter = element(by.id('filter-refrigerator'));
-        await waitFor(storageFilter).toBeVisible().withTimeout(2000);
-        await storageFilter.tap();
-
-        // Should show only refrigerated items
-        await delay(500);
-      } catch {
-        console.log('Storage filter UI not found - skipping');
-      }
+      // Should show only refrigerated items
+      await pantryScreen.waitForListToLoad();
     });
 
     it('should show all locations option', async () => {
-      try {
-        const filterButton = element(by.id('pantry-filter-button'));
-        await filterButton.tap();
+      const filterButton = element(by.id('pantry-filter-button'));
+      await waitFor(filterButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await filterButton.tap();
 
-        await delay(500);
-
-        // Look for "All Locations" option
-        const allLocations = element(by.id('filter-all-locations'));
-        await waitFor(allLocations).toBeVisible().withTimeout(2000);
-      } catch {
-        console.log('All locations filter not found');
-      }
+      // Look for "All Locations" option
+      const allLocations = element(by.id('filter-all-locations'));
+      await waitFor(allLocations).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 
   describe('Sort', () => {
     it('should sort by name', async () => {
-      try {
-        const sortButton = element(by.id('pantry-sort-button'));
-        await waitFor(sortButton).toBeVisible().withTimeout(2000);
-        await sortButton.tap();
+      const sortButton = element(by.id('pantry-sort-button'));
+      await waitFor(sortButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await sortButton.tap();
 
-        const sortByName = element(by.id('sort-by-name'));
-        await waitFor(sortByName).toBeVisible().withTimeout(2000);
-        await sortByName.tap();
+      const sortByName = element(by.id('sort-by-name'));
+      await waitFor(sortByName).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await sortByName.tap();
 
-        await delay(500);
-
-        // Items should now be sorted alphabetically
-        // Apple should appear before Banana
-      } catch {
-        console.log('Sort functionality not found - skipping');
-      }
+      // Items should now be sorted alphabetically
+      await pantryScreen.waitForListToLoad();
     });
 
     it('should sort by expiration date', async () => {
-      try {
-        const sortButton = element(by.id('pantry-sort-button'));
-        await sortButton.tap();
+      const sortButton = element(by.id('pantry-sort-button'));
+      await waitFor(sortButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await sortButton.tap();
 
-        const sortByExpiration = element(by.id('sort-by-expiration'));
-        await waitFor(sortByExpiration).toBeVisible().withTimeout(2000);
-        await sortByExpiration.tap();
+      const sortByExpiration = element(by.id('sort-by-expiration'));
+      await waitFor(sortByExpiration).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await sortByExpiration.tap();
 
-        await delay(500);
-      } catch {
-        console.log('Expiration sort not found - skipping');
-      }
+      await pantryScreen.waitForListToLoad();
     });
   });
 
   describe('Combined Filters', () => {
     it('should combine search and location filter', async () => {
-      try {
-        // First apply search
-        const searchInput = element(by.id('pantry-search-input'));
-        await searchInput.typeText('il'); // matches Milk
+      // First apply search
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.typeText('il'); // matches Milk
 
-        await delay(300);
+      await waitFor(element(by.text('Milk')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Then apply filter
-        const filterButton = element(by.id('pantry-filter-button'));
-        await filterButton.tap();
+      // Then apply filter
+      const filterButton = element(by.id('pantry-filter-button'));
+      await filterButton.tap();
 
-        const storageFilter = element(by.id('filter-refrigerator'));
-        await storageFilter.tap();
+      const storageFilter = element(by.id('filter-refrigerator'));
+      await waitFor(storageFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await storageFilter.tap();
 
-        await delay(500);
-
-        // Should show items matching both criteria
-      } catch {
-        console.log('Combined filter test skipped');
-      }
+      // Should show items matching both criteria
+      await pantryScreen.waitForListToLoad();
     });
 
     it('should reset all filters', async () => {
-      try {
-        // Apply some filters first
-        const searchInput = element(by.id('pantry-search-input'));
-        await searchInput.typeText('Apple');
+      // Apply some filters first
+      const searchInput = element(by.id('pantry-search-input'));
+      await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await searchInput.typeText('Apple');
 
-        await delay(300);
+      await waitFor(element(by.text('Apple')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Find and tap reset/clear button
-        const resetButton = element(by.id('reset-filters-button'));
-        await waitFor(resetButton).toBeVisible().withTimeout(2000);
-        await resetButton.tap();
+      // Find and tap reset/clear button
+      const resetButton = element(by.id('reset-filters-button'));
+      await waitFor(resetButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await resetButton.tap();
 
-        await delay(500);
-
-        // All items should be visible again
-        await pantryScreen.expectTextVisible('Banana');
-        await pantryScreen.expectTextVisible('Milk');
-      } catch {
-        console.log('Reset filters test skipped');
-      }
+      // All items should be visible again
+      await waitFor(element(by.text('Banana')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+      await pantryScreen.expectTextVisible('Milk');
     });
   });
 
   describe('Expiring Items', () => {
     it('should show expiring soon section', async () => {
-      try {
-        // Look for expiring soon section
-        await waitFor(element(by.id('expiring-soon-section')))
-          .toBeVisible()
-          .withTimeout(2000);
-
-        console.log('✓ Expiring soon section visible');
-      } catch {
-        console.log('Expiring soon section not found - might not have expiring items');
-      }
+      await waitFor(element(by.id('expiring-soon-section')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should navigate to low stock view', async () => {
-      try {
-        const lowStockButton = element(by.id('low-stock-button'));
-        await waitFor(lowStockButton).toBeVisible().withTimeout(2000);
-        await lowStockButton.tap();
+      const lowStockButton = element(by.id('low-stock-button'));
+      await waitFor(lowStockButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await lowStockButton.tap();
 
-        // Should show low stock items
-        await delay(500);
-      } catch {
-        console.log('Low stock view not found - skipping');
-      }
+      // Should show low stock items screen
+      await waitFor(element(by.id('low-stock-items-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 });

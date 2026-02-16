@@ -142,6 +142,11 @@ query GetPantryItemSuggestions(
       name
       symbol
     }
+    item {
+      id
+      imageUrl
+      images
+    }
     currentQuantity
     minQuantity
     restockQuantity
@@ -162,7 +167,7 @@ query GetPantryItemSuggestions(
 query GetPantryLedgerAnalytics(
   $pantryId: ID!
   $itemId: String
-  $filter: AnalyticsFilterInput
+  $filter: AnalyticsFilters
   $granularity: PeriodGranularity
 ) {
   pantryLedgerAnalytics(
@@ -230,7 +235,7 @@ query GetPantryLedgerAnalytics(
   }
 }
 
-query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
+query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilters) {
   pantryItemLedger(pantryItemId: $pantryItemId, filter: $filter) {
     totalAdded
     totalConsumed
@@ -253,7 +258,7 @@ query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
   }
 }
 
-query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
     totalUsageCount
     totalQuantityUsed
@@ -288,7 +293,7 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
   }
 }
 
-query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
     totalWasteCount
     totalWasteQuantity
@@ -323,115 +328,238 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
   }
 }
 
+query GetPantryConsumptionRate(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilters
+) {
+  pantryConsumptionRate(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    averageDailyConsumption
+    daysUntilEmpty
+    dataPoints
+    unitName
+    periodStart
+    periodEnd
+  }
+}
+
+query GetPantryRestockingFrequency(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilters
+) {
+  pantryRestockingFrequency(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    averageDaysBetweenRestocks
+    totalRestocks
+    lastRestockedAt
+    periodStart
+    periodEnd
+  }
+}
+
+query GetPantryExpirationRisk($pantryId: ID!, $daysThreshold: Int = 7) {
+  pantryExpirationRisk(pantryId: $pantryId, daysThreshold: $daysThreshold) {
+    totalAtRisk
+    daysThreshold
+    items {
+      pantryItemId
+      itemName
+      quantity
+      unitName
+      expiresAt
+      daysUntilExpiry
+      condition
+    }
+  }
+}
+
+query GetPantryEffectiveUsageRate(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilters
+) {
+  pantryEffectiveUsageRate(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+  ) {
+    itemId
+    itemName
+    effectiveRate
+    totalConsumed
+    totalWasted
+    unitName
+    periodStart
+    periodEnd
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
 
 mutation CreatePantry($input: CreatePantryInput!) {
   createPantry(input: $input) {
-    id
-    homeId
-    name
-    description
-    isDefault
-    location
-    temperature
-    tags
-    metadata
-    version
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    pantry {
+      id
+      homeId
+      name
+      description
+      isDefault
+      location
+      temperature
+      tags
+      metadata
+      version
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
   updatePantry(id: $id, input: $input) {
-    id
-    homeId
-    name
-    description
-    isDefault
-    location
-    temperature
-    tags
-    metadata
-    version
-    createdAt
-    updatedAt
+    success
+    message
+    code
+    pantry {
+      id
+      homeId
+      name
+      description
+      isDefault
+      location
+      temperature
+      tags
+      metadata
+      version
+      createdAt
+      updatedAt
+    }
   }
 }
 
 mutation DeletePantry($id: ID!) {
   deletePantry(id: $id) {
-    id
-    name
+    success
+    message
+    code
+    pantry {
+      id
+      name
+    }
   }
 }
 
 mutation SetDefaultPantry($pantryId: ID!) {
   setDefaultPantry(id: $pantryId) {
-    id
-    name
-    isDefault
-    homeId
+    success
+    message
+    code
+    pantry {
+      id
+      name
+      isDefault
+      homeId
+    }
   }
 }
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
   createPantryItem(input: $input) {
-    ...PantryItemDisplay
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
   }
 }
 
 mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   updatePantryItem(id: $id, input: $input) {
-    ...PantryItemFragment
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemFragment
+    }
   }
 }
 
 mutation DeletePantryItem($id: ID!) {
   deletePantryItem(id: $id) {
-    id
+    success
+    message
+    code
+    pantryItem {
+      id
+    }
   }
 }
 
 mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
-    id
-    quantityUsed
-    usageUnitId
-    usageUnit {
+    success
+    message
+    code
+    pantryItemUsage {
       id
-      name
-      symbol
-    }
-    usedAt
-    purpose
-    notes
-    wasteReason
-    isComposted
-    isRecycled
-    pantryItem {
-      id
-      quantity
-      ...PantryItemFragment
-    }
-    usedBy {
-      id
-      email
+      quantityUsed
+      usageUnitId
+      usageUnit {
+        id
+        name
+        symbol
+      }
+      usedAt
+      purpose
+      notes
+      wasteReason
+      isComposted
+      isRecycled
+      pantryItem {
+        id
+        quantity
+        ...PantryItemDisplay
+      }
+      usedBy {
+        id
+        email
+      }
     }
   }
 }
 
 mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
   restockPantryItem(id: $id, input: $input) {
-    id
-    quantityUsed
-    purpose
-    costPerUnit
-    totalCost
-    pantryItem {
-      ...PantryItemFragment
+    success
+    message
+    code
+    pantryItemUsage {
+      id
+      quantityUsed
+      purpose
+      costPerUnit
+      totalCost
+      pantryItem {
+        ...PantryItemDisplay
+      }
     }
   }
 }
@@ -448,7 +576,48 @@ mutation UpdatePantryItemQuantity(
     unitId: $unitId
     version: $version
   ) {
-    ...PantryItemFragment
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInput!) {
+  adjustPantryItemQuantity(id: $id, input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!) {
+  correctPantryItemWeight(id: $id, input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation ConvertExpiredToWaste($pantryItemId: ID!) {
+  convertExpiredToWaste(pantryItemId: $pantryItemId) {
+    success
+    message
+    code
+    pantryItem {
+      id
+      quantity
+      condition
+      wasteReason
+    }
   }
 }
 
@@ -463,7 +632,7 @@ mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
     operation
     wasCreated
     item {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
     conflict {
       clientVersion
@@ -531,7 +700,6 @@ subscription PantryLowStockAlert($pantryId: ID!) {
       id
       itemId
       itemName
-      unitName
       item {
         id
         name
@@ -552,7 +720,6 @@ subscription PantryExpiringItemsAlert($pantryId: ID!) {
       id
       itemId
       itemName
-      unitName
       item {
         id
         name

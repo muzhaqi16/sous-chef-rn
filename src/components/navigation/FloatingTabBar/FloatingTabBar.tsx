@@ -8,12 +8,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTabBarActions } from '#context/TabBarActionsContext';
+import { useTabBarState, useTabBarSetters } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#hooks/settings/useSettings';
+import { HapticService } from '#services/haptic/HapticService';
 
 export const TAB_BAR_HEIGHT = 65;
 
@@ -25,9 +26,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       addButtonConfig,
       isAddButtonDisabled,
       addButtonDisabledMessage,
-      setActiveTab,
       isOverlayOpen,
-    } = useTabBarActions();
+    } = useTabBarState();
+    const { setActiveTab } = useTabBarSetters();
 
     // Navigation labels preference
     const showNavigationLabels = useShowNavigationLabels();
@@ -121,6 +122,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       ) => {
         // Set shared value immediately for instant UI-thread icon feedback
         activeTabIndex.value = targetIndex;
+        HapticService.selection();
 
         const event = navigation.emit({
           type: 'tabPress',

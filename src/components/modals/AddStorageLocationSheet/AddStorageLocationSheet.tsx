@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -132,9 +132,9 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
       >
         {/* Header with Cancel/Create */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <Pressable
             onPress={handleCancel}
-            style={styles.headerButton}
+            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
@@ -143,15 +143,15 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
             >
               Cancel
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             Add Location
           </Text>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleCreate}
-            style={styles.headerButton}
+            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Create"
             disabled={isCreateDisabled}
@@ -172,7 +172,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
                 Create
               </Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Divider */}
@@ -276,6 +276,9 @@ const styles = StyleSheet.create(theme => ({
   hint: {
     fontSize: theme.typography.fontSize.xs,
     marginTop: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

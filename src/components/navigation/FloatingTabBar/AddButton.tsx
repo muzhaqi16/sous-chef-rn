@@ -1,8 +1,16 @@
-import React from 'react';
-import { Platform, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { Platform, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { HapticService } from '#services/haptic/HapticService';
 import type { AddButtonProps } from './types';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
@@ -11,16 +19,37 @@ export const AddButton: React.FC<AddButtonProps> = ({
   disabled = false,
 }) => {
   const { theme } = useUnistyles();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    HapticService.medium();
+    onPress();
+  }, [onPress]);
+
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       testID="tab-bar-add-button"
-      onPress={onPress}
-      style={[styles.addButton, disabled && styles.addButtonDisabled]}
-      activeOpacity={disabled ? 1 : 0.8}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={[styles.addButton, disabled && styles.addButtonDisabled, animatedStyle]}
       accessibilityRole="button"
       accessibilityLabel="Action button"
       accessibilityHint="Opens the action for the current tab"
       accessibilityState={{ disabled }}
+      disabled={disabled}
     >
       <Icon
         name={icon}
@@ -28,7 +57,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
         color={theme.colors.iconOnPrimary}
         library={iconLibrary}
       />
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 

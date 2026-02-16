@@ -22,9 +22,6 @@ fragment ShoppingListItemCore on ShoppingListItem {
     id
     name
     symbol
-    displayAsFraction
-    minPrecision
-    autoConvertThreshold
   }
 }
 
@@ -165,7 +162,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     purchasedPrice
     purchaseDate
     purchasedBy {
-      ...PartialUser
+      ...UserSummary
     }
   }
   # NEW: Source fields in nested object
@@ -200,7 +197,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   deletedAt
   # User reference
   addedBy {
-    ...PartialUser
+    ...UserSummary
   }
   # Purchase history (paginated connection for performance)
   purchasesConnection(first: 10) {
@@ -268,6 +265,17 @@ fragment BasicUser on User {
   email
 }
 
+# Lightweight user reference for nested display (addedBy, purchasedBy)
+# Only includes fields actually rendered in list item UIs
+fragment UserSummary on User {
+  id
+  email
+  profile {
+    displayName
+    avatar
+  }
+}
+
 fragment AuthUser on User {
   id
   email
@@ -277,6 +285,42 @@ fragment AuthUser on User {
   createdAt
   updatedAt
   timezone
+}
+
+# Bootstrap fragment for login/register responses
+# Extends AuthUser with IDs needed to skip the GetHomes waterfall
+# and fire all post-login queries in parallel
+fragment LoginUser on User {
+  ...AuthUser
+  defaultHomeId
+  defaultShoppingListId
+  preferredCurrency
+  language
+  defaultHome {
+    id
+    name
+    isDefault
+    pantriesConnection {
+      edges {
+        node {
+          id
+          homeId
+          isDefault
+        }
+      }
+    }
+  }
+  profile {
+    id
+    firstName
+    lastName
+    displayName
+    avatar
+  }
+  settings {
+    id
+    theme
+  }
 }
 
 fragment PartialUser on User {
@@ -382,17 +426,6 @@ fragment CompleteUser on User {
   }
 }
 
-# DISPLAY: Lightweight unit info for nested display (4 fields)
-# Contains only essential unit fields for rendering in lists
-# Used in: Nested in ShoppingListItemDisplay, PantryItemDisplay
-fragment UnitDisplay on Unit {
-  id
-  name
-  symbol
-  displayAsFraction
-  __typename
-}
-
 fragment UnitFragment on ItemUnit {
   id
   itemId
@@ -409,15 +442,6 @@ fragment UnitFragment on ItemUnit {
   maxQuantity
   quantityStep
   averagePricePerUnit
-  lastPriceUpdate
-  priceSource
-  usageCount
-  lastUsedAt
-  popularityScore
-  source
-  confidence
-  isVerified
-  verifiedAt
   createdAt
   updatedAt
   version
@@ -425,38 +449,21 @@ fragment UnitFragment on ItemUnit {
   # e.g., "pineapple" / "pineapples" instead of generic "count"
   displayNameSingular
   displayNamePlural
+  contentUnitId
+  contentUnit {
+    id
+    name
+    symbol
+    __typename
+  }
 }
 fragment BrandFragment on ItemBrand {
   id
   brand {
     id
     name
-    description
-    createdAt
-    updatedAt
-    version
   }
 }
-fragment CategoryFragment on Category {
-  id
-  name
-  slug
-  description
-  icon
-  color
-  sortOrder
-  type
-  isActive
-  isSystem
-  visibility
-  itemCount
-  usageCount
-  createdAt
-  updatedAt
-  deletedAt
-  version
-}
-
 # ============================================
 # ITEM FRAGMENTS (3-tier pattern)
 # ============================================
@@ -528,6 +535,14 @@ fragment ItemFragment on Item {
     name
     symbol
   }
+  baseDimension
+  defaultConsumeUnit {
+    id
+    name
+    symbol
+  }
+  defaultConsumeUnitId
+  defaultConsumeIncrement
   displayUnit {
     id
     name
@@ -570,8 +585,6 @@ fragment PantryItemCore on PantryItem {
   itemId
   itemName
   quantity
-  unitId
-  unitName
   version
   updatedAt
   storageState
@@ -579,9 +592,8 @@ fragment PantryItemCore on PantryItem {
   lowStockAlert
   minQuantity
   lastUsedAt
-  # NEW: netWeight fields for pantry item tracking
   netWeight
-  netWeightUnitId
+  remainingNetWeight
   __typename
 }
 
@@ -593,6 +605,7 @@ fragment PantryItemDisplay on PantryItem {
   item {
     id
     imageUrl
+    images
     name
     netWeight
     displayUnit {
@@ -627,6 +640,43 @@ fragment PantryItemDisplay on PantryItem {
     __typename
   }
   tags
+  packageBreakdown {
+    count
+    contentUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    perUnitNetWeight
+    perUnitNetWeightUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    totalNetWeight
+    __typename
+  }
+  quantityBreakdown {
+    fullPackages
+    looseContentUnits
+    contentUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    totalContentUnits
+    remainingWeight
+    remainingWeightUnit {
+      id
+      name
+      symbol
+      __typename
+    }
+    __typename
+  }
   __typename
 }
 
@@ -671,10 +721,16 @@ fragment PantryItemFragment on PantryItem {
   usageRecords {
     id
     quantityUsed
+    usageUnit {
+      id
+      name
+      symbol
+    }
     usedAt
     purpose
     notes
     wasteReason
+    adjustmentReason
     isComposted
     isRecycled
     pantryItem {
@@ -772,7 +828,7 @@ fragment PantryFragment on Pantry {
   itemsConnection(first: 50) {
     edges {
       node {
-        ...PantryItemFragment
+        ...PantryItemDisplay
       }
       cursor
     }
@@ -870,6 +926,7 @@ fragment HomeDisplay on Home {
   id
   name
   type
+  description
   currency
   timezone
   version
@@ -991,7 +1048,7 @@ fragment HomeFragment on Home {
   pantriesConnection(first: 50) {
     edges {
       node {
-        ...PantryFragment
+        ...BasicPantryFragment
       }
       cursor
     }

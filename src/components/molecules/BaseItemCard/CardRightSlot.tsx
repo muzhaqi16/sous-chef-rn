@@ -12,6 +12,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
   type,
   primary,
   secondary,
+  tertiary,
   quantity,
   unit,
   onIncrement,
@@ -75,6 +76,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
     <View style={styles.metaContainer}>
       {primary && <Text style={styles.primary}>{primary}</Text>}
       {secondary && <Text style={styles.secondary}>{secondary}</Text>}
+      {tertiary && <Text style={styles.secondary}>{tertiary}</Text>}
     </View>
   );
 };
@@ -95,7 +97,6 @@ const styles = StyleSheet.create(theme => ({
   secondary: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textTertiary,
-    textTransform: 'capitalize',
     marginTop: theme.spacing.xs,
   },
   counterContainer: {

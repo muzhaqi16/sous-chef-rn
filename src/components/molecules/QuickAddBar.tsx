@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Keyboard } from 'react-native';
+import { View, TextInput, Pressable, Keyboard } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
 
@@ -51,8 +51,8 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           accessibilityLabel="Quantity"
           accessibilityHint="Enter the quantity"
         />
-        <TouchableOpacity
-          style={styles.addButton}
+        <Pressable
+          style={({pressed}) => [styles.addButton, pressed && styles.pressed]}
           onPress={handleAdd}
           disabled={!itemName.trim()}
           accessibilityRole="button"
@@ -61,7 +61,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           accessibilityState={{ disabled: !itemName.trim() }}
         >
           <Icon name="add" size={24} color="white" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -106,5 +106,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

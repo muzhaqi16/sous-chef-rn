@@ -10,7 +10,7 @@
 import { Alert } from 'react-native';
 import {
   useUpdatePantryItemQuantityMutation,
-  PantryItemFragmentDoc,
+  PantryItemDisplayFragmentDoc,
   PantryItemFragment,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
@@ -62,15 +62,15 @@ export function useUpdatePantryItemQuantity({
 
   const [updateQuantityMutation] = useUpdatePantryItemQuantityMutation({
     errorPolicy: 'all',
-    // Ensure full fragment including nested item.nutritions is written to cache
     update: (cache, { data }) => {
-      if (!data?.updatePantryItemQuantity) return;
+      const pantryItem = data?.updatePantryItemQuantity?.pantryItem;
+      if (!pantryItem) return;
 
       cache.writeFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: data.updatePantryItemQuantity.id }),
-        fragment: PantryItemFragmentDoc,
-        fragmentName: 'PantryItemFragment',
-        data: data.updatePantryItemQuantity,
+        id: cache.identify({ __typename: 'PantryItem', id: pantryItem.id }),
+        fragment: PantryItemDisplayFragmentDoc,
+        fragmentName: 'PantryItemDisplay',
+        data: pantryItem,
       });
     },
     onError: error => {
@@ -97,7 +97,7 @@ export function useUpdatePantryItemQuantity({
     quantityInput,
     quantityValue,
     unitId,
-    unitSymbol,
+    unitSymbol: _unitSymbol,
     trackingUnit,
     currentItem,
   }: UpdateQuantityParams): void => {
@@ -113,12 +113,17 @@ export function useUpdatePantryItemQuantity({
       },
       optimisticResponse: {
         __typename: 'Mutation',
-        updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
-          quantity: newQuantity,
-          unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-          unitId: unitId || currentItem.unitId,
-          unitName: unitSymbol || currentItem.unitName,
-        }),
+        updatePantryItemQuantity: {
+          __typename: 'PantryItemPayload',
+          success: true,
+          message: '',
+          code: 'SUCCESS',
+          pantryItem: enhanceWithVersion(currentItem as any, {
+            quantity: newQuantity,
+            unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
+            unitId: unitId || currentItem.unit?.id,
+          }),
+        },
       },
     }).catch(error => {
       console.error('Quantity update failed:', error);

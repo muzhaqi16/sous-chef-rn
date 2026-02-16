@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, Image, Text, Pressable, Linking } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { Button } from '#components/base/Button';
@@ -48,7 +48,8 @@ export function LandingAuthScreen() {
           />
         </View>
 
-        <TouchableOpacity
+        <Pressable
+          style={({pressed}) => pressed && styles.pressed}
           onPress={() => {
             Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
               console.error('Failed to open URL:', err),
@@ -60,7 +61,7 @@ export function LandingAuthScreen() {
             <Text style={styles.link}>Terms & Conditions</Text> and{' '}
             <Text style={styles.link}>Privacy Policy</Text>.
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </AuthWrapper>
   );
@@ -129,5 +130,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

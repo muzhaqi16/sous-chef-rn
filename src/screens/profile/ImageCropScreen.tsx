@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  TouchableOpacity,
+  Pressable,
   Text,
   Image,
   Dimensions,
@@ -261,9 +261,9 @@ export const ImageCropScreen = () => {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View style={styles.header}>
-        <TouchableOpacity
+        <Pressable
           onPress={goBack}
-          style={styles.headerButton}
+          style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
           disabled={isCropping}
         >
           <Icon
@@ -272,7 +272,7 @@ export const ImageCropScreen = () => {
             size={24}
             library="Feather"
           />
-        </TouchableOpacity>
+        </Pressable>
 
         <View style={styles.headerTitleContainer}>
           <Text
@@ -282,9 +282,9 @@ export const ImageCropScreen = () => {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <Pressable
           onPress={resetTransforms}
-          style={styles.headerButton}
+          style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
           disabled={isCropping}
         >
           <Icon
@@ -293,7 +293,7 @@ export const ImageCropScreen = () => {
             size={20}
             library="Feather"
           />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -361,11 +361,12 @@ export const ImageCropScreen = () => {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          <Pressable
             onPress={handleCrop}
-            style={[
+            style={({pressed}) => [
               styles.cropButton,
               { backgroundColor: theme.colors.primary },
+              pressed && styles.pressed,
             ]}
             disabled={isCropping || !imageLoaded}
           >
@@ -377,7 +378,7 @@ export const ImageCropScreen = () => {
             >
               {isCropping ? 'Cropping...' : 'Crop Photo'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>
@@ -483,6 +484,9 @@ const styles = StyleSheet.create(theme => ({
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

@@ -185,3 +185,15 @@ export const staggeredEntryAnimation = {
   duration: 200, // Individual item fade duration (reduced from 250ms)
   initialDelay: 30, // Delay before first item for smoother skeleton→content transition
 } as const;
+
+/**
+ * Screen content entry animation preset.
+ * Apply `FadeIn.delay(index * delayPerItem)` to visible list items
+ * on initial mount only (track with ref to prevent re-animation on scroll).
+ */
+export const screenEntryAnimation = {
+  delayPerItem: 50,
+  maxItems: 5,
+  duration: 250,
+  initialDelay: 100,
+} as const;

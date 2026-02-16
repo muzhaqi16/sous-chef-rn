@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,8 +37,12 @@ const WASTE_REASON_OPTIONS: Array<{ label: string; value: WasteReason }> = [
   { label: 'Mold', value: WasteReason.Mold },
   { label: 'Pest', value: WasteReason.Pest },
   { label: 'Cooking Fail', value: WasteReason.CookingFail },
+  { label: 'Spilled', value: WasteReason.Spilled },
+  { label: 'Burnt', value: WasteReason.Burnt },
   { label: 'Overstock', value: WasteReason.Overstock },
   { label: 'Bad Taste', value: WasteReason.Taste },
+  { label: 'Gave Away', value: WasteReason.GaveAway },
+  { label: 'Unknown Loss', value: WasteReason.UnknownLoss },
   { label: 'Other', value: WasteReason.Other },
 ];
 
@@ -57,6 +61,24 @@ export const RecordWastePantryItemModal: React.FC<
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
   const [notes, setNotes] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<'tracking' | 'content' | 'weight'>('tracking');
+
+  // Determine if this item supports dual-tracking
+  const isDualTracked = pantryItem?.remainingNetWeight != null && pantryItem?.netWeightUnit != null;
+
+  // Detect content unit availability (package items like "12 x 335 mL cans")
+  const hasContentUnit = isDualTracked
+    && pantryItem?.packageBreakdown != null
+    && pantryItem.packageBreakdown.perUnitNetWeight != null
+    && pantryItem.packageBreakdown.perUnitNetWeight > 0;
+
+  // Compute how many content units remain (e.g., how many cans)
+  // Prefer server-computed totalContentUnits when available
+  const contentUnitCount = pantryItem?.quantityBreakdown?.totalContentUnits != null
+    ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
+    : (hasContentUnit && pantryItem?.remainingNetWeight != null
+      ? Math.floor(pantryItem.remainingNetWeight / pantryItem.packageBreakdown!.perUnitNetWeight!)
+      : 0);
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -68,19 +90,43 @@ export const RecordWastePantryItemModal: React.FC<
       setIsComposted(false);
       setIsRecycled(false);
       setNotes('');
+      setSelectedUnit('tracking');
     } else {
       bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
+
+  // Get the available quantity and unit symbol based on selected unit
+  const availableQuantity = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return contentUnitCount;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.remainingNetWeight!;
+    return pantryItem?.quantity ?? 0;
+  })();
+
+  const activeUnitSymbol = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) {
+      return pantryItem!.packageBreakdown!.contentUnit.symbol || pantryItem!.packageBreakdown!.contentUnit.name;
+    }
+    if (selectedUnit === 'weight' && isDualTracked) {
+      return pantryItem!.netWeightUnit!.symbol || '';
+    }
+    return pantryItem?.unit?.symbol || '';
+  })();
+
+  const activeUnitId = (() => {
+    if (selectedUnit === 'content' && hasContentUnit) return pantryItem!.packageBreakdown!.contentUnit.id;
+    if (selectedUnit === 'weight' && isDualTracked) return pantryItem!.netWeightUnit!.id;
+    return pantryItem?.unit?.id;
+  })();
 
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const wasteAmount = parseFractionalInput(wasteAmountInput);
     if (wasteAmount === null || isNaN(wasteAmount)) return null;
 
-    const remaining = pantryItem.quantity - wasteAmount;
+    const remaining = availableQuantity - wasteAmount;
     return isNaN(remaining) ? null : remaining;
-  }, [pantryItem, wasteAmountInput]);
+  }, [pantryItem, wasteAmountInput, availableQuantity]);
 
   const handleConfirm = useCallback(() => {
     if (!pantryItem) return;
@@ -92,12 +138,10 @@ export const RecordWastePantryItemModal: React.FC<
       return;
     }
 
-    if (wasteValue > pantryItem.quantity) {
+    if (wasteValue > availableQuantity) {
       Alert.alert(
         'Error',
-        `Cannot waste more than available quantity (${pantryItem.quantity} ${
-          pantryItem.unit?.symbol || ''
-        })`,
+        `Cannot waste more than available quantity (${availableQuantity} ${activeUnitSymbol})`,
       );
       return;
     }
@@ -108,7 +152,7 @@ export const RecordWastePantryItemModal: React.FC<
       isComposted,
       isRecycled,
       notes,
-      pantryItem.unit?.id,
+      activeUnitId,
     );
     onClose();
   }, [
@@ -120,6 +164,9 @@ export const RecordWastePantryItemModal: React.FC<
     notes,
     onConfirm,
     onClose,
+    availableQuantity,
+    activeUnitSymbol,
+    activeUnitId,
   ]);
 
   const remaining = pantryItem ? calculateRemaining() : null;
@@ -187,8 +234,91 @@ export const RecordWastePantryItemModal: React.FC<
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
                   unitSymbol={pantryItem.unit?.symbol}
                 />
+                {isDualTracked && (
+                  <Text style={commonStyles.bottomSheetItemLabel}>
+                    {' '}({pantryItem.quantityBreakdown
+                      ? `${pantryItem.quantityBreakdown.fullPackages} full + ${Math.floor(pantryItem.quantityBreakdown.looseContentUnits)} loose ${pantryItem.quantityBreakdown.contentUnit?.symbol || ''}`
+                      : hasContentUnit
+                        ? `${contentUnitCount} ${pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}`
+                        : `${pantryItem.remainingNetWeight} ${pantryItem.netWeightUnit?.symbol}`
+                    } remaining)
+                  </Text>
+                )}
               </View>
             </View>
+
+            {/* Unit Toggle for dual-tracked items */}
+            {isDualTracked && (
+              <View style={commonStyles.bottomSheetSection}>
+                <Text style={commonStyles.bottomSheetSectionLabel}>
+                  Waste by
+                </Text>
+                <View style={commonStyles.bottomSheetOptionContainer}>
+                  <Pressable
+                    style={({pressed}) => [
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'tracking' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => setSelectedUnit('tracking')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'tracking' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.unit?.symbol || pantryItem.unit?.name || 'Unit'}
+                    </Text>
+                    {selectedUnit === 'tracking' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </Pressable>
+                  {hasContentUnit && (
+                    <Pressable
+                      style={({pressed}) => [
+                        commonStyles.bottomSheetOption,
+                        selectedUnit === 'content' && commonStyles.bottomSheetOptionSelected,
+                        pressed && styles.pressed,
+                      ]}
+                      onPress={() => setSelectedUnit('content')}
+                    >
+                      <Text
+                        style={[
+                          commonStyles.bottomSheetOptionText,
+                          selectedUnit === 'content' && commonStyles.bottomSheetOptionTextSelected,
+                        ]}
+                      >
+                        {pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}
+                      </Text>
+                      {selectedUnit === 'content' && (
+                        <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                      )}
+                    </Pressable>
+                  )}
+                  <Pressable
+                    style={({pressed}) => [
+                      commonStyles.bottomSheetOption,
+                      selectedUnit === 'weight' && commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                    onPress={() => setSelectedUnit('weight')}
+                  >
+                    <Text
+                      style={[
+                        commonStyles.bottomSheetOptionText,
+                        selectedUnit === 'weight' && commonStyles.bottomSheetOptionTextSelected,
+                      ]}
+                    >
+                      {pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || 'Weight'}
+                    </Text>
+                    {selectedUnit === 'weight' && (
+                      <Icon library="Feather" name="check" size={16} color={theme.colors.primary} />
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            )}
 
             {/* Waste Amount Input */}
             <View style={commonStyles.bottomSheetSection}>
@@ -209,7 +339,7 @@ export const RecordWastePantryItemModal: React.FC<
                   ]}
                 >
                   Remaining: {remaining >= 0 ? formatQuantity(remaining) : 'Invalid'}{' '}
-                  {pantryItem.unit?.symbol || ''}
+                  {activeUnitSymbol}
                 </Text>
               )}
             </View>
@@ -221,12 +351,13 @@ export const RecordWastePantryItemModal: React.FC<
               </Text>
               <View style={commonStyles.bottomSheetOptionContainer}>
                 {WASTE_REASON_OPTIONS.map(option => (
-                  <TouchableOpacity
+                  <Pressable
                     key={option.value}
-                    style={[
+                    style={({pressed}) => [
                       commonStyles.bottomSheetOption,
                       wasteReason === option.value &&
                         commonStyles.bottomSheetOptionSelected,
+                      pressed && styles.pressed,
                     ]}
                     onPress={() => setWasteReason(option.value)}
                   >
@@ -247,7 +378,7 @@ export const RecordWastePantryItemModal: React.FC<
                         color={theme.colors.primary}
                       />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
@@ -295,5 +426,8 @@ export const RecordWastePantryItemModal: React.FC<
 const styles = StyleSheet.create(theme => ({
   checkboxContainer: {
     marginBottom: theme.spacing.sm,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

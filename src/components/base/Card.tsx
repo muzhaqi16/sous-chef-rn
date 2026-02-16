@@ -3,7 +3,7 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
+  Pressable,
   StyleProp,
   ViewStyle,
   ImageStyle,
@@ -258,17 +258,17 @@ export const Card: React.FC<CardProps> = ({
     const cardLabel = accessibilityLabel || [title, subtitle, description].filter(Boolean).join(', ');
 
     return (
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
-        activeOpacity={0.7}
         disabled={disabled}
+        style={({pressed}) => pressed && styles.pressed}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
         accessibilityHint={accessibilityHint || 'Tap to view details'}
         accessibilityState={{ disabled }}
       >
         {cardContent}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
@@ -333,7 +333,7 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold as any,
+    fontWeight: theme.fonts.weight.semibold,
     lineHeight: theme.typography.lineHeight.normal,
   },
 
@@ -349,7 +349,7 @@ const styles = StyleSheet.create(theme => ({
 
   price: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold as any,
+    fontWeight: theme.fonts.weight.semibold,
     marginTop: theme.spacing.xs,
   },
 
@@ -375,6 +375,10 @@ const styles = StyleSheet.create(theme => ({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     padding: theme.spacing.md,
+  },
+
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

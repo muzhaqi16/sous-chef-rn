@@ -1,5 +1,5 @@
 import React from 'react';
-import {TouchableOpacity, Text, StyleProp, ViewStyle} from 'react-native';
+import {Pressable, Text, StyleProp, ViewStyle} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 type ChipProps = {
@@ -11,10 +11,11 @@ type ChipProps = {
 
 const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({pressed}) => [
         styles.chip,
         selected ? styles.selected : styles.unselected,
+        pressed && styles.pressed,
         style,
       ]}
       onPress={onPress}
@@ -29,7 +30,7 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
         ]}>
         {label}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -55,6 +56,9 @@ const styles = StyleSheet.create(theme => ({
   },
   unselectedText: {
     color: theme.colors.chipText,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

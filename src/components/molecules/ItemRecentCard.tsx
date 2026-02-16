@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
@@ -75,11 +75,10 @@ export function ItemRecentCard<T extends RecentItem>({
       </View>
 
       {/* Quick Add Button */}
-      <TouchableOpacity
-        style={[styles.addButton, disabled && styles.addButtonDisabled]}
+      <Pressable
+        style={({pressed}) => [styles.addButton, disabled && styles.addButtonDisabled, pressed && styles.pressed]}
         onPress={() => onQuickAdd(item)}
         disabled={disabled}
-        activeOpacity={0.7}
       >
         <Icon
           name="add"
@@ -87,7 +86,7 @@ export function ItemRecentCard<T extends RecentItem>({
           color={theme.colors.primary}
           library="MaterialIcons"
         />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -143,5 +142,8 @@ const styles = StyleSheet.create(theme => ({
   },
   addButtonDisabled: {
     opacity: 0.5,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

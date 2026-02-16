@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
@@ -48,9 +48,8 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
       exiting={FadeOut.duration(200)}
       testID="feature-hint-overlay"
     >
-      <TouchableOpacity
+      <Pressable
         style={styles.backdrop}
-        activeOpacity={1}
         onPress={onDismiss}
         testID="feature-hint-overlay-backdrop"
       >
@@ -77,15 +76,15 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
             {subtitle && <Text style={styles.hintSubtitle}>{subtitle}</Text>}
           </View>
 
-          <TouchableOpacity
-            style={styles.dismissButton}
+          <Pressable
+            style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
             onPress={onDismiss}
             testID="feature-hint-overlay-dismiss"
           >
             <Text style={styles.dismissButtonText}>{dismissText}</Text>
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 };
@@ -150,5 +149,8 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
     textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

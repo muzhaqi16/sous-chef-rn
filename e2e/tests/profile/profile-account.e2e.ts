@@ -7,15 +7,14 @@
  * - Delete account (with safeguards)
  */
 
-import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../../init';
+import { element, by, waitFor } from 'detox';
 import { ProfileScreen, LoginScreen, LandingAuthScreen } from '../../screens';
 import {
   bootstrapAuthenticatedSession,
   relaunchToHomeTab,
   loginAsTestUser,
 } from '../../helpers';
-import { delay, TIMEOUTS, waitForScreen } from '../../helpers/waitFor';
+import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';
 import { TEST_USER } from '../../fixtures/testData';
 
@@ -36,86 +35,70 @@ describe('Profile Account', () => {
 
   describe('Change Password', () => {
     it('should navigate to change password', async () => {
-      try {
-        await tapByID('profile-menu-changePassword');
+      await tapByID('profile-menu-changePassword');
 
-        await waitFor(element(by.id('change-password-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('change-password-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        console.log('✓ Navigated to change password');
-
-        await profileScreen.goBack();
-      } catch {
-        console.log('Change password navigation not found');
-      }
+      await profileScreen.goBack();
+      await profileScreen.waitForScreen();
     });
 
     it('should validate current password', async () => {
-      try {
-        await tapByID('profile-menu-changePassword');
+      await tapByID('profile-menu-changePassword');
 
-        await waitFor(element(by.id('change-password-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('change-password-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Enter wrong current password
-        const currentPasswordInput = element(by.id('current-password-input'));
-        await currentPasswordInput.typeText('wrongpassword');
+      // Enter wrong current password
+      const currentPasswordInput = element(by.id('current-password-input'));
+      await currentPasswordInput.typeText('wrongpassword');
 
-        const newPasswordInput = element(by.id('new-password-input'));
-        await newPasswordInput.typeText('NewPassword123!');
+      const newPasswordInput = element(by.id('new-password-input'));
+      await newPasswordInput.typeText('NewPassword123!');
 
-        const confirmPasswordInput = element(by.id('confirm-password-input'));
-        await confirmPasswordInput.typeText('NewPassword123!');
+      const confirmPasswordInput = element(by.id('confirm-password-input'));
+      await confirmPasswordInput.typeText('NewPassword123!');
 
-        await tapByID('submit-password-change');
+      await tapByID('submit-password-change');
 
-        // Should show error
-        await delay(2000);
+      // Should stay on change password screen (validation error)
+      await waitFor(element(by.id('change-password-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.NETWORK);
 
-        // Should stay on screen
-        await waitFor(element(by.id('change-password-screen')))
-          .toBeVisible()
-          .withTimeout(1000);
-
-        console.log('✓ Current password validation working');
-
-        await profileScreen.goBack();
-      } catch {
-        console.log('Password validation test skipped');
-      }
+      await profileScreen.goBack();
+      await profileScreen.waitForScreen();
     });
 
     it('should validate password match', async () => {
-      try {
-        await tapByID('profile-menu-changePassword');
+      await tapByID('profile-menu-changePassword');
 
-        await waitFor(element(by.id('change-password-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('change-password-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Enter mismatched passwords
-        const currentPasswordInput = element(by.id('current-password-input'));
-        await currentPasswordInput.typeText(TEST_USER.password);
+      // Enter mismatched passwords
+      const currentPasswordInput = element(by.id('current-password-input'));
+      await currentPasswordInput.typeText(TEST_USER.password);
 
-        const newPasswordInput = element(by.id('new-password-input'));
-        await newPasswordInput.typeText('NewPassword123!');
+      const newPasswordInput = element(by.id('new-password-input'));
+      await newPasswordInput.typeText('NewPassword123!');
 
-        const confirmPasswordInput = element(by.id('confirm-password-input'));
-        await confirmPasswordInput.typeText('DifferentPassword123!');
+      const confirmPasswordInput = element(by.id('confirm-password-input'));
+      await confirmPasswordInput.typeText('DifferentPassword123!');
 
-        await tapByID('submit-password-change');
+      await tapByID('submit-password-change');
 
-        // Should show error
-        await delay(1000);
+      // Should stay on change password screen
+      await waitFor(element(by.id('change-password-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        console.log('✓ Password match validation working');
-
-        await profileScreen.goBack();
-      } catch {
-        console.log('Password match validation test skipped');
-      }
+      await profileScreen.goBack();
+      await profileScreen.waitForScreen();
     });
   });
 
@@ -125,13 +108,9 @@ describe('Profile Account', () => {
       const scrollView = element(by.id('profile-scroll-view'));
       await scrollView.scrollTo('bottom');
 
-      await delay(500);
-
       await waitFor(element(by.id('profile-logout-button')))
         .toBeVisible()
-        .withTimeout(2000);
-
-      console.log('✓ Logout button visible');
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should logout successfully', async () => {
@@ -139,34 +118,42 @@ describe('Profile Account', () => {
       const scrollView = element(by.id('profile-scroll-view'));
       await scrollView.scrollTo('bottom');
 
-      await delay(500);
-
       await tapByID('profile-logout-button');
 
-      // Might have confirmation
+      // Might have confirmation dialog
       try {
         await waitFor(element(by.id('confirm-logout-button')))
           .toBeVisible()
-          .withTimeout(2000);
+          .withTimeout(TIMEOUTS.QUICK);
         await tapByID('confirm-logout-button');
       } catch {
         // No confirmation needed
       }
 
       // Should navigate to landing or login screen
+      let loggedOut = false;
+
       try {
-        await landingScreen.waitForScreen(5000);
-        console.log('✓ Logged out - on landing screen');
+        await landingScreen.waitForScreen(TIMEOUTS.DEFAULT);
+        loggedOut = true;
       } catch {
-        await loginScreen.waitForScreen(5000);
-        console.log('✓ Logged out - on login screen');
+        // Not landing screen
       }
 
-      // Log back in for other tests
+      if (!loggedOut) {
+        await loginScreen.waitForScreen(TIMEOUTS.DEFAULT);
+        loggedOut = true;
+      }
+
+      if (!loggedOut) {
+        throw new Error('Logout did not navigate to landing or login screen');
+      }
+
+      // Log back in for subsequent tests
       try {
         await landingScreen.tapLogin();
       } catch {
-        // Already on login
+        // Already on login screen
       }
       await loginScreen.waitForScreen();
       await loginAsTestUser();
@@ -176,94 +163,86 @@ describe('Profile Account', () => {
   describe('Delete Account', () => {
     it('should show delete account option', async () => {
       // Look for more menu or scroll to find delete
+      const scrollView = element(by.id('profile-scroll-view'));
+      await scrollView.scrollTo('bottom');
+
+      let foundDeleteOption = false;
+
       try {
         const moreButton = element(by.id('profile-more-button'));
-        await waitFor(moreButton).toBeVisible().withTimeout(2000);
+        await waitFor(moreButton).toBeVisible().withTimeout(TIMEOUTS.QUICK);
         await moreButton.tap();
-
-        await delay(500);
 
         await waitFor(element(by.text('Delete Account')))
           .toBeVisible()
-          .withTimeout(2000);
-
-        console.log('✓ Delete account option visible');
+          .withTimeout(TIMEOUTS.DEFAULT);
+        foundDeleteOption = true;
 
         // Close menu
         await device.pressBack();
       } catch {
-        console.log('Delete account option not in more menu - checking main list');
+        // Check main list instead
+      }
 
-        const scrollView = element(by.id('profile-scroll-view'));
-        await scrollView.scrollTo('bottom');
+      if (!foundDeleteOption) {
+        await waitFor(element(by.id('delete-account-button')))
+          .toBeVisible()
+          .withTimeout(TIMEOUTS.DEFAULT);
+        foundDeleteOption = true;
+      }
 
-        try {
-          await waitFor(element(by.id('delete-account-button')))
-            .toBeVisible()
-            .withTimeout(2000);
-          console.log('✓ Delete account button visible');
-        } catch {
-          console.log('Delete account option not found');
-        }
+      if (!foundDeleteOption) {
+        throw new Error('Delete account option not found in more menu or main list');
       }
     });
 
     it('should require confirmation for delete', async () => {
-      try {
-        // Navigate to delete account
-        const moreButton = element(by.id('profile-more-button'));
-        await moreButton.tap();
+      const moreButton = element(by.id('profile-more-button'));
+      await waitFor(moreButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await moreButton.tap();
 
-        await delay(500);
+      const deleteOption = element(by.text('Delete Account'));
+      await waitFor(deleteOption).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await deleteOption.tap();
 
-        const deleteOption = element(by.text('Delete Account'));
-        await deleteOption.tap();
+      // Should show confirmation screen or dialog
+      await waitFor(element(by.id('delete-account-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Should show confirmation screen or dialog
-        await waitFor(element(by.id('delete-account-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      // Should require typing confirmation
+      await waitFor(element(by.id('delete-confirmation-input')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Should require typing confirmation
-        await waitFor(element(by.id('delete-confirmation-input')))
-          .toBeVisible()
-          .withTimeout(2000);
-
-        console.log('✓ Delete requires confirmation');
-
-        // Cancel and go back
-        await profileScreen.goBack();
-      } catch {
-        console.log('Delete confirmation flow not tested');
-      }
+      // Cancel and go back
+      await profileScreen.goBack();
+      await profileScreen.waitForScreen();
     });
 
     // NOTE: We don't actually test deleting the account as it would be destructive
     it('should NOT delete account without proper confirmation', async () => {
-      console.log('⊘ Skipping actual account deletion - destructive test');
+      // This is intentionally a no-op test as a reminder
+      // Verify we're still on a valid screen
+      await profileScreen.waitForScreen();
     });
   });
 
   describe('Security', () => {
     it('should show biometric settings', async () => {
-      try {
-        await tapByID('profile-menu-appSettings');
+      await tapByID('profile-menu-appSettings');
 
-        await waitFor(element(by.id('app-settings-screen')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('app-settings-screen')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        // Look for biometric toggle
-        await waitFor(element(by.id('biometric-toggle')))
-          .toBeVisible()
-          .withTimeout(2000);
+      // Look for biometric toggle
+      await waitFor(element(by.id('biometric-toggle')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
 
-        console.log('✓ Biometric settings visible');
-
-        await profileScreen.goBack();
-      } catch {
-        console.log('Biometric settings not found');
-      }
+      await profileScreen.goBack();
+      await profileScreen.waitForScreen();
     });
   });
 });

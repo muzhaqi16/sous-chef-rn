@@ -111,6 +111,8 @@ export interface CardRightSlotProps {
   primary?: string;
   /** Secondary text (for type='meta') */
   secondary?: string;
+  /** Tertiary text (for type='meta') */
+  tertiary?: string;
   /** Current quantity (for type='counter') */
   quantity?: number;
   /** Unit label (for type='counter') */

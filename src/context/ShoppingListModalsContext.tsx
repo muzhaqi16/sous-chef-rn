@@ -1,4 +1,4 @@
-import React, { createContext, useContext, type ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
@@ -121,12 +121,14 @@ export function ShoppingListModalsProvider({
     items,
   });
 
-  // Context value - stable since hooks return stable callbacks
-  const value: ShoppingListModalsContextValue = {
-    addItemSheet,
-    quantityEdit,
-    moveToPantry,
-  };
+  const value = useMemo<ShoppingListModalsContextValue>(
+    () => ({
+      addItemSheet,
+      quantityEdit,
+      moveToPantry,
+    }),
+    [addItemSheet, quantityEdit, moveToPantry],
+  );
 
   return (
     <ShoppingListModalsContext.Provider value={value}>

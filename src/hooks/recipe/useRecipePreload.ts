@@ -77,7 +77,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [favoriteRecipe] = useFavoriteRecipeMutation({
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
-      if (!data?.favoriteRecipe) return;
+      if (!data?.favoriteRecipe?.savedRecipe) return;
+
+      const savedRecipe = data.favoriteRecipe.savedRecipe;
 
       // Add to MySavedRecipes cache
       cache.updateQuery<MySavedRecipesQuery>(
@@ -86,20 +88,31 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
           if (!existing) return existing;
 
           // Check if already exists (prevent duplicates)
-          const exists = existing.mySavedRecipes.some(
-            sr => sr.id === data.favoriteRecipe.id,
+          const exists = existing.mySavedRecipes.edges.some(
+            edge => edge.node.id === savedRecipe.id,
           );
           if (exists) return existing;
 
           return {
             ...existing,
-            mySavedRecipes: [...existing.mySavedRecipes, data.favoriteRecipe],
+            mySavedRecipes: {
+              ...existing.mySavedRecipes,
+              edges: [
+                ...existing.mySavedRecipes.edges,
+                {
+                  __typename: 'SavedRecipeEdge' as const,
+                  cursor: savedRecipe.id,
+                  node: savedRecipe,
+                },
+              ],
+              totalCount: existing.mySavedRecipes.totalCount + 1,
+            },
           };
         },
       );
 
       // Update SavedRecipeFolders cache if a folder was specified
-      const folder = data.favoriteRecipe.folder;
+      const folder = savedRecipe.folder;
       if (folder) {
         cache.updateQuery<SavedRecipeFoldersQuery>(
           { query: SavedRecipeFoldersDocument },

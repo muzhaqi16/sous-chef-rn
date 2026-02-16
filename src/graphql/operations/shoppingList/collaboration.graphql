@@ -48,28 +48,33 @@ query MyShoppingListInvites {
 
 mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
   inviteToShoppingList(input: $input) {
-    id
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    expiresAt
-    shoppingList {
+    success
+    message
+    code
+    collaborator {
       id
-      name
-    }
-    invitedBy {
-      id
+      shoppingListId
+      collaboratorId
       email
-      profile {
-        displayName
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canMarkPurchased
+      canInviteOthers
+      invitedAt
+      expiresAt
+      shoppingList {
+        id
+        name
+      }
+      invitedBy {
+        id
+        email
+        profile {
+          displayName
+        }
       }
     }
   }
@@ -77,36 +82,45 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
 
 mutation AcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
-    id
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    shoppingList {
-      id
-      name
-      description
-    }
+    success
+    message
+    code
     collaborator {
       id
+      shoppingListId
+      collaboratorId
       email
-      profile {
-        displayName
-        avatar
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canMarkPurchased
+      canInviteOthers
+      invitedAt
+      shoppingList {
+        id
+        name
+        description
+      }
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
       }
     }
   }
 }
 
 mutation DeclineShoppingListInvite($token: String!) {
-  declineShoppingListInvite(token: $token)
+  declineShoppingListInvite(token: $token) {
+    success
+    message
+    code
+  }
 }
 
 # ============================================

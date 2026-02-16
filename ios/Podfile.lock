@@ -2157,6 +2157,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-launch-arguments (4.1.1):
+    - React
   - react-native-netinfo (11.5.2):
     - boost
     - DoubleConversion
@@ -3568,6 +3570,7 @@ DEPENDENCIES:
   - "react-native-image-editor (from `../node_modules/@react-native-community/image-editor`)"
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-keyboard-controller (from `../node_modules/react-native-keyboard-controller`)
+  - react-native-launch-arguments (from `../node_modules/react-native-launch-arguments`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-pager-view (from `../node_modules/react-native-pager-view`)
   - react-native-performance (from `../node_modules/react-native-performance`)
@@ -3742,6 +3745,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-image-picker"
   react-native-keyboard-controller:
     :path: "../node_modules/react-native-keyboard-controller"
+  react-native-launch-arguments:
+    :path: "../node_modules/react-native-launch-arguments"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-pager-view:
@@ -3919,6 +3924,7 @@ SPEC CHECKSUMS:
   react-native-image-editor: 2d7c254cc514d94b6580ff0a603a8e9d19fd1871
   react-native-image-picker: 0314366753615115fa55c3cc937ac44cb7e75702
   react-native-keyboard-controller: dbf568b5d029cdc5b26667a7c2323b160c25dc00
+  react-native-launch-arguments: eab68037b01ea7c78a0b3b55da3a5e967e9aaf92
   react-native-netinfo: 57447b5a45c98808f8eae292cf641f3d91d13830
   react-native-pager-view: 5c3098839820aa73d75873e7b1a7eb9f119602b7
   react-native-performance: b48d1aba7501a54af5e1a7efb0dab1ab25dc734f

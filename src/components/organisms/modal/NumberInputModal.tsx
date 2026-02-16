@@ -4,7 +4,7 @@ import {
   Text,
   Modal,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -306,20 +306,21 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
 
           {/* Buttons */}
           <View style={localStyles.modalButtons}>
-            <TouchableOpacity
-              style={[commonStyles.button, localStyles.modalButton]}
+            <Pressable
+              style={({pressed}) => [commonStyles.button, localStyles.modalButton, pressed && localStyles.pressed]}
               onPress={handleCancel}
               disabled={loading}
             >
               <Text style={commonStyles.buttonText}>{cancelButtonLabel}</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[
+            <Pressable
+              style={({pressed}) => [
                 commonStyles.button,
                 commonStyles.buttonPrimary,
                 localStyles.modalButton,
                 loading && localStyles.buttonDisabled,
+                pressed && localStyles.pressed,
               ]}
               onPress={handleSave}
               disabled={loading}
@@ -336,7 +337,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
                   {saveButtonLabel}
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -392,5 +393,8 @@ const localStyles = StyleSheet.create(theme => ({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

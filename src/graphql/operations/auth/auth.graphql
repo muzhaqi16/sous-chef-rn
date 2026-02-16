@@ -23,7 +23,7 @@ mutation Login($input: LoginInput!) {
     accessToken
     refreshToken
     user {
-      ...AuthUser
+      ...LoginUser
     }
   }
 }
@@ -33,7 +33,7 @@ mutation Register($input: RegisterInput!) {
     accessToken
     refreshToken
     user {
-      ...AuthUser
+      ...LoginUser
     }
   }
 }
@@ -46,7 +46,14 @@ mutation RefreshToken($token: String!) {
 }
 
 mutation VerifyEmail($code: String!) {
-  verifyEmail(code: $code)
+  verifyEmail(code: $code) {
+    success
+    message
+    code
+    user {
+      ...LoginUser
+    }
+  }
 }
 
 mutation ForgotPassword($email: String!) {
@@ -64,7 +71,11 @@ mutation ResetPassword($token: String!, $newPassword: String!) {
 }
 
 mutation ResendVerificationEmail($email: String!) {
-  resendVerificationEmail(email: $email)
+  resendVerificationEmail(email: $email) {
+    success
+    message
+    code
+  }
 }
 
 mutation ChangePassword($input: ChangePasswordInput!) {

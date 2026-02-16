@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Pressable, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -104,31 +104,29 @@ export const PostLoginBiometricPrompt = ({
           <Text style={styles.description}>{getBiometricDescription()}</Text>
 
           <View style={styles.buttons}>
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
               onPress={handleEnableNow}
               disabled={isEnabling}
               testID="biometric-prompt-enable"
               accessibilityLabel="Enable Now"
-              accessible={false}
             >
               <Text style={[styles.buttonText, styles.primaryButtonText]}>
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
+            <Pressable
+              style={({pressed}) => [styles.button, styles.secondaryButton, pressed && styles.pressed]}
               onPress={handleDecline}
               disabled={isEnabling}
               testID="biometric-prompt-decline"
               accessibilityLabel="Not now"
-              accessible={false}
             >
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Not now
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -226,5 +224,8 @@ const styles = StyleSheet.create(theme => ({
   },
   secondaryButtonText: {
     color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

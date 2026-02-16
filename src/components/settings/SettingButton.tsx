@@ -1,5 +1,5 @@
 import React from 'react';
-import {Text, TouchableOpacity} from 'react-native';
+import {Text, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 interface SettingButtonProps {
@@ -16,13 +16,12 @@ export const SettingButton: React.FC<SettingButtonProps> = ({
   disabled = false,
 }) => {
   return (
-    <TouchableOpacity
-      style={[styles.container, styles[variant], disabled && styles.disabled]}
+    <Pressable
+      style={({pressed}) => [styles.container, styles[variant], disabled && styles.disabled, pressed && styles.pressed]}
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}>
+      disabled={disabled}>
       <Text style={[styles.text, styles[`${variant}Text`]]}>{title}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -59,5 +58,8 @@ const styles = StyleSheet.create(theme => ({
   },
   primaryText: {
     color: theme.colors.white,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

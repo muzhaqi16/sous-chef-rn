@@ -130,7 +130,7 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold as any,
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },

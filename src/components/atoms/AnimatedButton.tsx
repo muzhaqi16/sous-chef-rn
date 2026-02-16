@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   ActivityIndicator,
-  TouchableOpacityProps,
+  PressableProps,
   View,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -15,16 +17,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-interface AnimatedButtonProps extends TouchableOpacityProps {
+interface AnimatedButtonProps extends Omit<PressableProps, 'style'> {
   children: React.ReactNode;
   loading?: boolean;
   variant?: 'primary' | 'secondary' | 'danger';
   fullWidth?: boolean;
+  style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   children,
@@ -129,7 +132,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
         style,
       ]}
     >
-      <AnimatedTouchable
+      <AnimatedPressable
         {...props}
         disabled={disabled || loading}
         style={[{ flex: 1, alignItems: 'center', justifyContent: 'center' }, animatedButtonStyle]}
@@ -151,7 +154,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
             </Text>
           </Animated.View>
         )}
-      </AnimatedTouchable>
+      </AnimatedPressable>
     </View>
   );
 };

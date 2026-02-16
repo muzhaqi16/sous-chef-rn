@@ -4,7 +4,7 @@ import {
   Text,
   Alert,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
@@ -14,13 +14,15 @@ import {
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
   StorageState,
+  UsagePurpose,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { getItemImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown } from '#hooks/pantry/usePantryItemTransformation';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -31,6 +33,11 @@ import { Icon } from '#/utils/iconUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useConvertExpiredToWaste } from '#hooks/pantry/mutations/useConvertExpiredToWaste';
+import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPantryItemQuantity';
+import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPantryItemWeight';
+import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
+import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -148,7 +155,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     update: (cache, { data: mutationData }) => {
-      if (!mutationData?.addItemToShoppingList || !selectedShoppingListId)
+      const shoppingListItem = mutationData?.addItemToShoppingList?.shoppingListItem;
+      if (!shoppingListItem || !selectedShoppingListId)
         return;
 
       try {
@@ -160,13 +168,31 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         addToShoppingListItemsCache(
           cache,
           selectedShoppingListId,
-          mutationData.addItemToShoppingList,
+          shoppingListItem,
         );
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }
     },
   });
+
+  // Adjust quantity modal state
+  const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+  // Correct weight modal state
+  const [correctWeightVisible, setCorrectWeightVisible] = useState(false);
+
+  // Expired to waste mutation
+  const { convertExpiredToWaste } = useConvertExpiredToWaste({
+    onSuccess: () => {
+      Alert.alert('Done', 'Expired item has been discarded.');
+    },
+  });
+
+  // Adjust quantity mutation
+  const { adjustQuantity } = useAdjustPantryItemQuantity();
+
+  // Correct weight mutation
+  const { correctWeight } = useCorrectPantryItemWeight();
 
   const item = data?.pantryItem;
 
@@ -260,7 +286,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.quantity || 1,
-            unitId: data?.pantryItem?.unit.id ?? '',
+            unit: data?.pantryItem?.unit?.id
+              ? { unitId: data.pantryItem.unit.id }
+              : undefined,
             itemName: data?.pantryItem?.itemName || '',
           },
         },
@@ -292,8 +320,40 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     });
   };
 
+  const handleDiscardExpired = useCallback(() => {
+    if (!item) return;
+    Alert.alert(
+      'Discard Expired Item',
+      `This will mark the remaining ${item.quantity} ${item.unit?.name || ''} as wasted due to expiration.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => convertExpiredToWaste(item.id),
+        },
+      ],
+    );
+  }, [item, convertExpiredToWaste]);
+
+  const handleConfirmAdjust = useCallback(
+    (newQuantity: number, reason: string, remainingNetWeight?: number) => {
+      if (!item) return;
+      adjustQuantity(item.id, newQuantity, reason, item.version ?? undefined, remainingNetWeight);
+    },
+    [item, adjustQuantity],
+  );
+
+  const handleCorrectWeight = useCallback(
+    (netWeight: number, reason: string, netWeightUnitId?: string) => {
+      if (!item) return;
+      correctWeight(item.id, netWeight, reason, item.version ?? 0, netWeightUnitId);
+    },
+    [item, correctWeight],
+  );
+
   // Computed values
-  const imageUrl = getItemImageUrl(item?.item);
+  const imageUrl = resolveImageUrl(item);
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState);
@@ -306,6 +366,10 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = hasImages(itemImages) || !!imageUrl;
   const showNutrition = hasNutritionData(itemNutritions);
+  const packageBreakdownText = formatPackageBreakdownFull(item?.packageBreakdown);
+  const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
+  const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
+  const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
 
   if (!item) {
     return (
@@ -333,6 +397,21 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             loading: addToListStatus === 'loading',
             library: 'Ionicons',
             testID: 'pantry-item-add-to-list-button',
+          },
+          ...(item.condition === 'EXPIRED' && item.quantity > 0
+            ? [{
+                icon: 'close-circle-outline' as const,
+                onPress: handleDiscardExpired,
+                variant: 'error' as const,
+                library: 'Ionicons' as const,
+                testID: 'pantry-item-discard-button',
+              }]
+            : []),
+          {
+            icon: 'swap-vertical-outline',
+            onPress: () => setAdjustModalVisible(true),
+            library: 'Ionicons',
+            testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
@@ -418,8 +497,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>Amount</Text>
             <Text style={styles.infoColumnValue}>
-              {/* unitName from server includes item-specific display name */}
-              {item.quantity} {item.unitName ?? item.unit?.symbol}
+              {item.quantity} {item.unit?.name}
             </Text>
           </View>
         </View>
@@ -455,11 +533,96 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               />
             </View>
             <Text style={styles.infoValue}>
-              {/* unitName from server includes item-specific display name */}
-              {item.quantity} {item.unitName ?? item.unit?.name}
+              {item.quantity} {item.unit?.name}
             </Text>
           </View>
         </View>
+
+        {/* Net Weight Row */}
+        {netWeightText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Net Weight</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="scale-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{netWeightText}</Text>
+              {item.lastUsedAt && (
+                <Pressable
+                  onPress={() => setCorrectWeightVisible(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={({pressed}) => [styles.correctWeightButton, pressed && styles.pressed]}
+                >
+                  <Icon
+                    name="create-outline"
+                    size={16}
+                    color={theme.colors.primary}
+                    library="Ionicons"
+                  />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Remaining Weight Row - only show for dual-tracked items */}
+        {remainingNetWeightText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Remaining Weight</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="scale-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{remainingNetWeightText}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Inventory Breakdown Row - live remaining decomposition */}
+        {quantityBreakdownText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Inventory</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="layers-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{quantityBreakdownText}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Package Details Row - only show if breakdown is available */}
+        {packageBreakdownText && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Package</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="layers-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{packageBreakdownText}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Brand Row - only show if brand is set */}
         {brandName && (
@@ -529,7 +692,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="fitness-outline"
                   size={16}
                   color={
-                    item.condition === 'SPOILED'
+                    item.condition === 'SPOILED' || item.condition === 'EXPIRED'
                       ? theme.colors.error
                       : theme.colors.warning
                   }
@@ -539,7 +702,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               <Text
                 style={[
                   styles.infoValue,
-                  item.condition === 'SPOILED' && styles.infoValueError,
+                  (item.condition === 'SPOILED' || item.condition === 'EXPIRED') && styles.infoValueError,
                   item.condition === 'FAIR' && styles.infoValueWarning,
                 ]}
               >
@@ -623,8 +786,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {/* unitName from server includes item-specific display name */}
-                {item.minQuantity} {item.unitName ?? item.unit?.symbol}
+                {item.minQuantity} {item.unit?.name}
               </Text>
             </View>
           </View>
@@ -644,8 +806,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>
-                {/* unitName from server includes item-specific display name */}
-                {item.restockQuantity} {item.unitName ?? item.unit?.symbol}
+                {item.restockQuantity} {item.unit?.name}
               </Text>
             </View>
           </View>
@@ -743,12 +904,11 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {/* Usage Records Section - only show if there are usage records */}
         {item.usageRecords && item.usageRecords.length > 0 && (
           <>
-            <TouchableOpacity
-              style={styles.sectionHeader}
+            <Pressable
+              style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
               onPress={() =>
                 setPurchaseHistoryExpanded(!purchaseHistoryExpanded)
               }
-              activeOpacity={0.7}
             >
               <Text style={styles.sectionTitle}>
                 Usage History ({item.usageRecords.length})
@@ -759,27 +919,47 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 color={theme.colors.textSecondary}
                 library="Ionicons"
               />
-            </TouchableOpacity>
+            </Pressable>
 
             {purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
-                {item.usageRecords.slice(0, 5).map(usage => (
-                  <View key={usage.id} style={styles.purchaseRow}>
-                    <View style={styles.purchaseDateStore}>
-                      <Text style={styles.purchaseDate}>
-                        {formatDate(usage.usedAt)}
-                      </Text>
-                      {usage.purpose && (
-                        <Text style={styles.purchaseStore}>
-                          {usage.purpose}
+                {item.usageRecords.slice(0, 5).map(usage => {
+                  const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
+                  const purposeLabel = isAdjustment
+                    ? 'Inventory adjusted'
+                    : usage.purpose;
+                  const quantityPrefix = isAdjustment
+                    ? (usage.quantityUsed >= 0 ? '+' : '')
+                    : '-';
+                  return (
+                    <View key={usage.id} style={styles.purchaseRow}>
+                      <View style={styles.purchaseDateStore}>
+                        <Text style={styles.purchaseDate}>
+                          {formatDate(usage.usedAt)}
                         </Text>
-                      )}
+                        {purposeLabel && (
+                          <Text style={[
+                            styles.purchaseStore,
+                            isAdjustment && styles.adjustmentPurpose,
+                          ]}>
+                            {purposeLabel}
+                          </Text>
+                        )}
+                        {isAdjustment && usage.adjustmentReason && (
+                          <Text style={styles.adjustmentReason}>
+                            {usage.adjustmentReason}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.purchasePrice,
+                        isAdjustment && styles.adjustmentQuantity,
+                      ]}>
+                        {quantityPrefix}{usage.quantityUsed}{usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
+                      </Text>
                     </View>
-                    <Text style={styles.purchasePrice}>
-                      -{usage.quantityUsed}
-                    </Text>
-                  </View>
-                ))}
+                  );
+                })}
                 {item.usageRecords.length > 5 && (
                   <Text style={styles.noPurchaseData}>
                     +{item.usageRecords.length - 5} more entries
@@ -807,10 +987,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recipesList}
               renderItem={({ item: recipe }) => (
-                <TouchableOpacity
-                  style={styles.recipeCard}
+                <Pressable
+                  style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
                   onPress={() => handleRecipePress(recipe.id)}
-                  activeOpacity={0.8}
                 >
                   <Animated.Image
                     source={{ uri: recipe.image }}
@@ -821,7 +1000,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   <Text style={styles.recipeTitle} numberOfLines={2}>
                     {recipe.title}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             />
           ) : (
@@ -834,6 +1013,24 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         {/* Bottom padding for safe area */}
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
+
+      {adjustModalVisible && (
+        <AdjustQuantityModal
+          visible={adjustModalVisible}
+          pantryItem={item}
+          onClose={() => setAdjustModalVisible(false)}
+          onConfirm={handleConfirmAdjust}
+        />
+      )}
+
+      {correctWeightVisible && (
+        <CorrectWeightModal
+          visible={correctWeightVisible}
+          pantryItem={item}
+          onClose={() => setCorrectWeightVisible(false)}
+          onConfirm={handleCorrectWeight}
+        />
+      )}
     </View>
   );
 };
@@ -976,6 +1173,10 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
     fontStyle: 'italic',
   },
+  correctWeightButton: {
+    marginLeft: theme.spacing.sm,
+    padding: theme.spacing.xs,
+  },
   infoValueError: {
     color: theme.colors.error,
   },
@@ -1029,6 +1230,17 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  adjustmentPurpose: {
+    color: theme.colors.info,
+  },
+  adjustmentReason: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
+    marginTop: 1,
+  },
+  adjustmentQuantity: {
+    color: theme.colors.info,
   },
   notesSection: {
     marginHorizontal: theme.spacing.lg,
@@ -1110,5 +1322,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

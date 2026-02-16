@@ -36,6 +36,8 @@ export interface FormDataInput {
   notes: string;
   category: string;
   tags?: string[];
+  netWeight?: string;
+  netWeightUnitId?: string;
 }
 
 export interface CreatePantryItemParams<T extends FormDataInput = FormDataInput> {

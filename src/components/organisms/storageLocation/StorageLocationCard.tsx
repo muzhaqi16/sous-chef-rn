@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -30,10 +30,9 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
 
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.card]}>
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
-        style={styles.cardHeader}
-        activeOpacity={onPress ? 0.7 : 1}
+        style={({pressed}) => [styles.cardHeader, pressed && onPress && styles.pressed]}
         disabled={!onPress}
       >
         <View style={commonStyles.row}>
@@ -59,32 +58,32 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       <View style={[commonStyles.row, styles.actions]}>
         {!isDefault && (
-          <TouchableOpacity
-            style={[commonStyles.row, styles.actionButton]}
+          <Pressable
+            style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
             onPress={onSetDefault}
           >
             <Icon name="star-outline" size={18} />
             <Text style={styles.actionText}>Set Default</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
-        <TouchableOpacity
-          style={[commonStyles.row, styles.actionButton]}
+        <Pressable
+          style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
           onPress={onEdit}
         >
           <Icon name="edit" size={18} />
           <Text style={styles.actionText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[commonStyles.row, styles.actionButton, styles.deleteButton]}
+        </Pressable>
+        <Pressable
+          style={({pressed}) => [commonStyles.row, styles.actionButton, styles.deleteButton, pressed && styles.pressed]}
           onPress={onDelete}
         >
           <Icon name="delete" size={18} color="#F44336" />
           <Text style={styles.deleteText}>Delete</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
@@ -139,5 +138,8 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.xs, // Reduced from sm to xs
     color: theme.colors.error,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

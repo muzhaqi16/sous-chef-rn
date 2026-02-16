@@ -187,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
 
   message: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.medium as any,
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -115,9 +115,9 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
+          <Pressable
             onPress={onClose}
-            style={styles.headerButton}
+            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
             disabled={isSubmitting}
@@ -127,15 +127,15 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             >
               Cancel
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
 
-          <TouchableOpacity
+          <Pressable
             onPress={handleHeaderSave}
-            style={styles.headerButton}
+            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel={saveText}
             disabled={isSubmitting}
@@ -149,7 +149,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
                 {saveText}
               </Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Divider */}
@@ -205,6 +205,9 @@ const styles = StyleSheet.create(theme => ({
   divider: {
     height: 1,
     marginBottom: theme.spacing.lg,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
 

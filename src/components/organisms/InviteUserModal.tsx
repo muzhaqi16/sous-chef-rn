@@ -4,7 +4,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
@@ -177,9 +177,9 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
             {/* Role Selection */}
             <Text style={[styles.label, styles.roleLabel]}>Select Role</Text>
             {availableRoleOptions.map(role => (
-              <TouchableOpacity
+              <Pressable
                 key={role.value}
-                style={[
+                style={({pressed}) => [
                   styles.roleOption,
                   selectedRole === role.value && styles.roleOptionSelected,
                   { borderColor: theme.colors.border },
@@ -187,6 +187,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                     borderColor: theme.colors.primary,
                     backgroundColor: `${theme.colors.primary}10`,
                   },
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => setSelectedRole(role.value)}
                 disabled={isSubmitting}
@@ -228,7 +229,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                     </Text>
                   )}
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             ))}
 
             {/* Error Message */}
@@ -240,20 +241,21 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+              <Pressable
+                style={({pressed}) => [styles.button, styles.cancelButton, pressed && styles.pressed]}
                 onPress={handleClose}
                 disabled={isSubmitting}
               >
                 <Text style={styles.cancelButtonText}>{cancelText}</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                style={[
+              <Pressable
+                style={({pressed}) => [
                   styles.button,
                   styles.submitButton,
                   { backgroundColor: theme.colors.primary },
                   (isSubmitting || isOffline) && styles.disabledButton,
+                  pressed && styles.pressed,
                 ]}
                 onPress={handleSubmit}
                 disabled={isSubmitting || isOffline}
@@ -263,7 +265,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                 ) : (
                   <Text style={styles.submitButtonText}>{submitText}</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </ScrollView>
         </View>
@@ -407,5 +409,8 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

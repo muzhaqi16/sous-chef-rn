@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, Text, FlatList, TouchableOpacity} from 'react-native';
+import {View, Text, FlatList, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {useNavigation} from '@react-navigation/native';
 import {usePantryManagement} from '#hooks/home/pantry/usePantryManagement';
@@ -37,9 +37,9 @@ export const CategoryManagement: React.FC = () => {
   return (
     <View style={commonStyles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[commonStyles.title, styles.headerTitle]}>Categories</Text>
         <View style={styles.placeholder} />
       </View>
@@ -50,8 +50,8 @@ export const CategoryManagement: React.FC = () => {
         data={categories}
         keyExtractor={(category) => category}
         renderItem={({ item: category }) => (
-          <TouchableOpacity
-            style={[commonStyles.card, styles.categoryCard]}
+          <Pressable
+            style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
             onPress={() => {}}>
             <View style={styles.categoryInfo}>
               <Text style={styles.categoryName}>{category}</Text>
@@ -64,7 +64,7 @@ export const CategoryManagement: React.FC = () => {
               size={24}
               color={theme.colors.textSecondary}
             />
-          </TouchableOpacity>
+          </Pressable>
         )}
       />
     </View>
@@ -108,5 +108,8 @@ const styles = StyleSheet.create(theme => ({
   },
   categoryDetails: {
     marginTop: theme.spacing.xs,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

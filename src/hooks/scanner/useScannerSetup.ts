@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
-import { useTabBarActions } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 interface ScannerContext {
@@ -59,7 +59,7 @@ interface UseScannerSetupOptions {
 export function useScannerSetup(options: UseScannerSetupOptions): void {
   const { enabled = true, homeId, context, onNoHome } = options;
 
-  const { setScannerProps } = useTabBarActions();
+  const { setScannerProps } = useTabBarSetters();
   const { navigate, navigateTo } = useAppNavigation();
 
   // Use refs to track dynamic values without triggering effect re-runs

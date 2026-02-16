@@ -11,7 +11,7 @@ jobs:
   # iOS E2E Tests
   e2e-ios:
     name: E2E Tests (iOS)
-    runs-on: macos-15
+    runs-on: [self-hosted, macOS]
     timeout-minutes: 60
 
     steps:
@@ -27,19 +27,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          bundle exec pod install --repo-update
 
       - name: Setup Detox
         run: |
@@ -77,7 +73,7 @@ jobs:
   # Android E2E Tests
   e2e-android:
     name: E2E Tests (Android)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     timeout-minutes: 60
 
     steps:

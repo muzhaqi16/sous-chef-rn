@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { DateRange } from '#generated';
 
@@ -36,18 +36,18 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
         {DATE_RANGE_OPTIONS.map(option => {
           const isSelected = selected === option.value;
           return (
-            <TouchableOpacity
+            <Pressable
               key={option.value}
               onPress={() => onSelect(option.value)}
-              style={[
+              style={({pressed}) => [
                 styles.chip,
                 {
                   backgroundColor: isSelected
                     ? theme.colors.primary
                     : theme.colors.chipBackground,
                 },
+                pressed && styles.pressed,
               ]}
-              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -61,7 +61,7 @@ export const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
               >
                 {option.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -85,5 +85,8 @@ const styles = StyleSheet.create(theme => ({
   chipText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

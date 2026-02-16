@@ -8,13 +8,13 @@ import Animated, {
 import { FlashList, type FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { getItemImageUrl } from '#utils/imageUtils';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
 import { SearchBar } from '../molecules/SearchBar';
 import { FilterTabs } from '../molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '../molecules/FilterTabs/types';
 import { SectionHeader } from '../molecules/SectionHeader';
-import { PantryItemCard, ItemVariant } from './PantryItemCard';
+import { PantryItemCard, ItemVariant, ExpirationVariant } from './PantryItemCard';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -25,10 +25,13 @@ import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
   formatQuantityDisplay,
-  calculateExpiresIn,
+  formatPackageBreakdown,
+  formatRemainingNetWeight,
+  formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -56,9 +59,9 @@ interface PantryItem {
     name: string;
   } | null;
   createdAt?: string;
-  unit: {
+  unit?: {
     symbol: string;
-  };
+  } | null;
   item?: {
     name?: string;
     netWeight?: number | null;
@@ -68,9 +71,26 @@ interface PantryItem {
     category?: {
       name?: string;
     } | null;
-    primaryImage?: {
-      url?: string;
-    } | null;
+    imageUrl?: string | null;
+    images?: unknown;
+  } | null;
+  netWeight?: number | null;
+  remainingNetWeight?: number | null;
+  netWeightUnit?: { symbol?: string | null; name?: string | null } | null;
+  packageBreakdown?: {
+    count: number;
+    contentUnit: { name: string; symbol?: string | null };
+    perUnitNetWeight?: number | null;
+    perUnitNetWeightUnit?: { symbol?: string | null } | null;
+    totalNetWeight?: number | null;
+  } | null;
+  quantityBreakdown?: {
+    fullPackages: number;
+    looseContentUnits: number;
+    contentUnit?: { name?: string; symbol?: string | null } | null;
+    totalContentUnits: number;
+    remainingWeight?: number | null;
+    remainingWeightUnit?: { symbol?: string | null } | null;
   } | null;
 }
 
@@ -119,6 +139,10 @@ interface PantryContentProps {
   onRefresh?: () => void;
   onEndReached?: () => void;
 
+  // Empty state
+  totalCount?: number;
+  onAddItem?: () => void;
+
   // State
   refreshing?: boolean;
   loading?: boolean;
@@ -132,6 +156,19 @@ export interface PantryContentRef {
   scrollToTop(): void;
 }
 
+interface ItemDisplayData {
+  imageUrl: string | null;
+  expirationText: string | null;
+  expirationVariant?: ExpirationVariant;
+  variant: ItemVariant;
+  quantityDisplay: string;
+  location: string;
+  isOutOfStock: boolean;
+  packageBreakdownText: string | null;
+  remainingNetWeightText: string | null;
+  quantityBreakdownText: string | null;
+}
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -140,7 +177,7 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: '🗄️' },
 ];
 
-export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -165,11 +202,13 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   onAvatarPress,
   onHomePress,
   onSettingsPress,
+  totalCount,
+  onAddItem,
   onRefresh,
   onEndReached,
   refreshing = false,
   loading = false,
-  onSwipeableWillOpen,
+  onSwipeableWillOpen: _onSwipeableWillOpen,
   onSwipeableClose: _onSwipeableClose,
 }, ref) => {
   useRenderTime('PantryContent');
@@ -274,60 +313,91 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     return sorted.filter(item => item?.id);
   }, [items, sortItems]);
 
-  // Render list item - homogeneous list (items only)
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<PantryItem>) => {
-      // Guard against undefined items during concurrent rendering
-      if (!item) return null;
-
-      // Calculate expiration once per item (was previously duplicated across renderItem + renderItemCard)
-      const expiresIn = calculateExpiresIn(item.expiresAt);
+  // Pre-compute ALL per-item display data once to avoid per-render Date allocations and string formatting
+  const itemDisplayMap = useMemo(() => {
+    const map = new Map<string, ItemDisplayData>();
+    const now = Date.now();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    for (const item of sortedItems) {
+      const expiresIn = item.expiresAt
+        ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
+        : null;
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
-      const isExpiringSoon =
-        expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
-
-      const unitSymbol = item.unit.symbol;
-      const quantityDisplay = formatQuantityDisplay(item.quantity, unitSymbol);
-      const location = getLocationString(item.storageState, item.storageLocation);
-      const imageUrl = getItemImageUrl(item.item);
+      const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+      const variant: ItemVariant = (item as any).condition === 'EXPIRED' || isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
       const hasExpiry = item.expiresAt != null;
-      const isOutOfStock = item.quantity === 0;
+
+      const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
+      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits);
+      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
+      const qtyBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
+
+      map.set(item.id, {
+        imageUrl: resolveImageUrl(item),
+        expirationText: hasExpiry ? expStatus.text : null,
+        expirationVariant: hasExpiry ? expStatus.type : undefined,
+        variant,
+        quantityDisplay,
+        location: getLocationString(item.storageState, item.storageLocation),
+        isOutOfStock: item.quantity === 0,
+        packageBreakdownText: pkgBreakdownText,
+        remainingNetWeightText,
+        quantityBreakdownText: qtyBreakdownText,
+      });
+    }
+    return map;
+  }, [sortedItems, getLocationString]);
+
+  // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
+  const itemDisplayMapRef = useRef(itemDisplayMap);
+  itemDisplayMapRef.current = itemDisplayMap;
+
+  // Scroll to top when filter or sort changes — FlashList v2's
+  // maintainVisibleContentPosition causes layout corruption on data reorder
+  const prevLocationFilter = useRef(locationFilter);
+  const prevSortOption = useRef(sortOption);
+  const prevSortDirection = useRef(sortDirection);
+  useEffect(() => {
+    const changed =
+      prevLocationFilter.current !== locationFilter ||
+      prevSortOption.current !== sortOption ||
+      prevSortDirection.current !== sortDirection;
+
+    if (changed) {
+      flashListRef.current?.scrollToTop({ animated: false });
+      prevLocationFilter.current = locationFilter;
+      prevSortOption.current = sortOption;
+      prevSortDirection.current = sortDirection;
+    }
+  }, [locationFilter, sortOption, sortDirection]);
+
+  // Render list item — stable callback via ref pattern to avoid FlashList full re-renders
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<PantryItem>) => {
+      if (!item) return null;
+      const display = itemDisplayMapRef.current.get(item.id);
+      if (!display) return null;
 
       return (
         <PantryItemCard
-          key={item.id}
           id={item.id}
           name={item.itemName || 'Unknown Item'}
-          expirationText={hasExpiry ? expStatus.text : null}
-          expirationVariant={hasExpiry ? expStatus.type : undefined}
-          quantity={quantityDisplay}
-          location={location}
+          expirationText={display.expirationText}
+          expirationVariant={display.expirationVariant}
+          quantity={display.quantityDisplay}
+          location={display.location}
           storageState={item.storageState}
-          variant={variant}
-          imageUrl={imageUrl}
-          isOutOfStock={isOutOfStock}
-          onPress={() => onItemPress(item.id)}
-          onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
-          onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-          onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
-          onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
-          onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
-          onSwipeableWillOpen={onSwipeableWillOpen}
+          variant={display.variant}
+          imageUrl={display.imageUrl}
+          isOutOfStock={display.isOutOfStock}
+          packageBreakdownText={display.packageBreakdownText}
+          remainingNetWeightText={display.remainingNetWeightText}
+          quantityBreakdownText={display.quantityBreakdownText}
         />
       );
     },
-    [
-      getLocationString,
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onItemConsume,
-      onItemWaste,
-      onItemRestock,
-      onSwipeableWillOpen,
-    ],
+    [],
   );
 
   // Build tabs with optional add button at the end
@@ -352,6 +422,80 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     return `${label.toUpperCase()} ITEMS`;
   }, [tabs, locationFilter]);
 
+  // Stable keyExtractor - sortedItems already guarantees every item has an id
+  const keyExtractor = useCallback(
+    (item: PantryItem) => item.id,
+    [],
+  );
+
+  // Item type function for better FlashList cell recycling
+  // Items with different variants have different visual layouts
+  const getItemType = useCallback(
+    (item: PantryItem) => {
+      const display = itemDisplayMapRef.current.get(item.id);
+      return display?.variant ?? 'normal';
+    },
+    [],
+  );
+
+  // Memoize extraData to avoid new array reference every render
+  const extraData = useMemo(
+    () => [sortOption, sortDirection, locationFilter],
+    [sortOption, sortDirection, locationFilter],
+  );
+
+  const isEmpty = !showSkeletons && sortedItems.length === 0;
+
+  // Use flexGrow when empty so ListEmptyComponent can center properly;
+  // drop the large paddingBottom that creates excess space below the empty state
+  const listContentStyle = useMemo(
+    () => (isEmpty ? styles.listContentEmpty : styles.listContent),
+    [isEmpty],
+  );
+
+  // Empty state for FlashList — varies by context
+  const emptyStateContent = useMemo(() => {
+    // Don't show empty state while skeletons are visible
+    if (showSkeletons) return null;
+
+    if (searchQuery) {
+      return (
+        <EmptyState
+          testID="pantry-empty-state"
+          icon="search-off"
+          iconLibrary="MaterialIcons"
+          title="No items found"
+          description="Try a different search term"
+        />
+      );
+    }
+
+    if (totalCount != null && totalCount > 0 && items.length === 0) {
+      const activeTab = tabs.find(tab => tab.id === locationFilter);
+      const tabName = activeTab?.label ?? 'this location';
+      return (
+        <EmptyState
+          testID="pantry-empty-state"
+          icon="kitchen"
+          iconLibrary="MaterialIcons"
+          title={`No items in ${tabName}`}
+          description="Items stored here will appear in this tab"
+        />
+      );
+    }
+
+    return (
+      <EmptyState
+        testID="pantry-empty-state"
+        icon="kitchen"
+        iconLibrary="MaterialIcons"
+        title="Your pantry is empty"
+        description="Start tracking your food to reduce waste"
+        action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}
+      />
+    );
+  }, [showSkeletons, searchQuery, totalCount, items.length, tabs, locationFilter, onAddItem]);
+
   return (
     <PantryActionsProvider actions={itemActions}>
       <View style={styles.container}>
@@ -372,8 +516,14 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
             onChangeText={onSearchChange}
             placeholder="Search your pantry..."
             showSearchIcon={true}
+            testID="pantry-search-input"
             innerRightIcon={
-              <Pressable onPress={onSettingsPress} hitSlop={8}>
+              <Pressable
+                onPress={onSettingsPress}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Pantry settings"
+              >
                 <Icon
                   name="settings"
                   size={18}
@@ -398,42 +548,46 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
           variant="default"
           actionLabel={`Sort ${sortDirection === 'asc' ? '↑' : '↓'}`}
           onActionPress={openSortModal}
+          testID="pantry-sort-button"
         />
 
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
-          {/* Content layer - always mounted to preserve FlashList layout state */}
+          {/* Content layer - flex:1 normal flow so FlashList can measure properly */}
           <Animated.View
-            style={[styles.absoluteFill, contentAnimatedStyle]}
+            style={[styles.contentFill, contentAnimatedStyle]}
             pointerEvents={showSkeletons ? 'none' : 'auto'}
           >
             <FlashList<PantryItem>
-              key={locationFilter}
               ref={flashListRef}
+              testID="pantry-list"
               data={showSkeletons ? EMPTY_ARRAY : sortedItems}
               renderItem={renderItem}
-              keyExtractor={(item, index) => item?.id ?? `fallback-${index}`}
-              extraData={sortOption}
-              maintainVisibleContentPosition={{ autoscrollToTopThreshold: 1 }}
-              contentContainerStyle={styles.listContent}
+              keyExtractor={keyExtractor}
+              extraData={extraData}
+              contentContainerStyle={listContentStyle}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 onRefresh ? (
                   <RefreshControl
+                    testID="pantry-refresh-control"
                     refreshing={refreshing}
                     onRefresh={onRefresh}
                   />
                 ) : undefined
               }
+              ListEmptyComponent={emptyStateContent}
+              getItemType={getItemType}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
-              drawDistance={250}
+              drawDistance={400}
             />
           </Animated.View>
 
-          {/* Skeleton layer (on top, fades out) */}
+          {/* Skeleton layer (absolute on top, fades out) */}
           {showSkeletons && (
             <Animated.View
+              testID="pantry-loading"
               style={[styles.absoluteFill, skeletonAnimatedStyle]}
               pointerEvents="none"
             >
@@ -457,7 +611,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       </View>
     </PantryActionsProvider>
   );
-});
+}));
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -472,6 +626,9 @@ const styles = StyleSheet.create(theme => ({
   listContainer: {
     flex: 1,
   },
+  contentFill: {
+    flex: 1,
+  },
   absoluteFill: {
     position: 'absolute',
     top: 0,
@@ -482,6 +639,10 @@ const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingHorizontal: 0,
     paddingBottom: theme.spacing['3xl'] * 2,
+  },
+  listContentEmpty: {
+    paddingHorizontal: 0,
+    flexGrow: 1,
   },
   skeletonListContent: {
     paddingHorizontal: 0,

@@ -17,17 +17,19 @@ import {
   useShoppingListUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   useShoppingListItemsBatchClearedSubscription,
-  ShoppingListItemFragmentDoc,
   ShoppingListItemDisplayFragmentDoc,
   GetShoppingListDocument,
   GetShoppingListQuery,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
-import { MutationType } from '#/graphql/generated/types';
+import { MutationType } from '#generated';
 import {
   addToShoppingListItemsConnection,
   removeFromShoppingListItemsConnection,
+  addToUnpurchasedItems,
+  removeFromUnpurchasedItems,
+  removeFromPurchasedItems,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   clearAllPurchasedItemsFromCache,
@@ -107,39 +109,40 @@ export function useShoppingListSubscriptions(
       }
 
       if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
-        // Add new item to ShoppingList.itemsConnection
+        // Add new item to ShoppingList.itemsConnection and unpurchasedItems alias
+        // New items are unpurchased by default
         addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
+        addToUnpurchasedItems(client.cache, selectedShoppingListId, item);
       } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
-        // Remove item from ShoppingList.itemsConnection
-        // If animation scheduler is available, play exit animation first
+        // Remove item from ShoppingList.itemsConnection and both aliased fields
+        // We don't know which alias the item was in, so remove from both
         if (scheduleAnimation) {
           scheduleAnimation(item.id, -1, () => {
             removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
               evictItem: true,
             });
+            removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
+            removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
           });
         } else {
           removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
             evictItem: true,
           });
+          removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
+          removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
         }
       } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
-        // Read old item to detect sortOrder changes (needed for re-sorting)
-        // Use ShoppingListItemDisplayFragment because that's what GetShoppingListItemsPaginated uses
-        const oldItem = client.cache.readFragment({
-          id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
-          fragment: ShoppingListItemDisplayFragmentDoc,
-          fragmentName: 'ShoppingListItemDisplayFragment',
-        }) as { sortOrder?: string | null } | null;
-
-        const sortOrderChanged = oldItem?.sortOrder !== item.sortOrder;
+        // Apollo auto-normalizes subscription data BEFORE onData runs, so reading
+        // the old item via readFragment returns the already-updated value, making
+        // comparison unreliable. Instead, always re-sort when sortOrder is present.
+        const sortOrderChanged = item.sortOrder != null;
 
         // Write updated item data to cache using fragment
         // This handles quantity, sortOrder, purchaseInfo, and all other field updates
         client.cache.writeFragment({
           id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
-          fragment: ShoppingListItemFragmentDoc,
-          fragmentName: 'ShoppingListItemFragment',
+          fragment: ShoppingListItemDisplayFragmentDoc,
+          fragmentName: 'ShoppingListItemDisplayFragment',
           data: item,
         });
 

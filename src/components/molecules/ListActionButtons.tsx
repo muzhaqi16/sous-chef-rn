@@ -1,5 +1,5 @@
 import React from 'react';
-import {TouchableOpacity, Text, View} from 'react-native';
+import {Pressable, Text, View} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon, IconLibrary} from '#utils/iconUtils';
 
@@ -23,9 +23,9 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
   return (
     <View style={styles.container}>
       {actions.map((action, index) => (
-        <TouchableOpacity
+        <Pressable
           key={index}
-          style={styles.actionButton}
+          style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={action.onPress}>
           <Icon
             name={action.icon}
@@ -40,7 +40,7 @@ export const ListActionButtons: React.FC<ListActionButtonsProps> = ({
             ]}>
             {action.label}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
@@ -67,5 +67,8 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '500',
     marginLeft: theme.spacing['3'],
     flex: 1,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -28,6 +28,7 @@ export const PersonalInformationScreen: React.FC = () => {
           client.writeQuery<GetUserProfileQuery>({
             query: GetUserProfileDocument,
             data: {
+              __typename: 'Query' as const,
               userProfile: {
                 ...cache.userProfile,
                 ...input,

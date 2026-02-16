@@ -65,11 +65,11 @@ export const DragHandle = React.memo(function DragHandle({
   );
 });
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     // Padding provides larger touch target (replaces hitSlop from TouchableOpacity)
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: theme.spacing['2.5'],
+    paddingHorizontal: theme.spacing['2.5'],
     justifyContent: 'center',
     alignItems: 'center',
   },

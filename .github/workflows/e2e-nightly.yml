@@ -11,7 +11,7 @@ jobs:
   # Run all test suites on iOS
   full-suite-ios:
     name: Full E2E Suite (iOS)
-    runs-on: macos-15
+    runs-on: [self-hosted, macOS]
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -37,19 +37,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - name: Install Ruby gems
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
 
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          pod install --repo-update
+          bundle exec pod install --repo-update
 
       - name: Setup Detox
         run: |
@@ -88,7 +84,7 @@ jobs:
   # Run all test suites on Android
   full-suite-android:
     name: Full E2E Suite (Android)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     timeout-minutes: 90
     strategy:
       fail-fast: false

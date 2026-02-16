@@ -24,6 +24,16 @@ const QUICK_TIMEOUT = 2000;
 const NETWORK_TIMEOUT = 5000;
 
 /**
+ * Long timeout for complex flows or slow devices (20 seconds)
+ */
+const LONG_TIMEOUT = 20000;
+
+/**
+ * Launch timeout for app launch and hydration (30 seconds)
+ */
+const LAUNCH_TIMEOUT = 30000;
+
+/**
  * Wait for element to be visible with custom timeout
  */
 export async function waitForElementToBeVisible(
@@ -419,7 +429,9 @@ export async function waitIfPresent(
 
 // Export default timeouts for use in other files
 export const TIMEOUTS = {
-  DEFAULT: DEFAULT_TIMEOUT,
   QUICK: QUICK_TIMEOUT,
+  DEFAULT: DEFAULT_TIMEOUT,
   NETWORK: NETWORK_TIMEOUT,
+  LONG: LONG_TIMEOUT,
+  LAUNCH: LAUNCH_TIMEOUT,
 };

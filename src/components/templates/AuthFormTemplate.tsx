@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
@@ -70,9 +70,9 @@ export function AuthFormTemplate<T extends FieldValues>({
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
       {linkText && onLinkPress && (
-        <TouchableOpacity onPress={onLinkPress} testID={linkTestID}>
+        <Pressable onPress={onLinkPress} testID={linkTestID} style={({pressed}) => pressed && styles.pressed}>
           <Text style={styles.link}>{linkText}</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       <View style={styles.action}>
@@ -85,10 +85,11 @@ export function AuthFormTemplate<T extends FieldValues>({
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
-        <TouchableOpacity
+        <Pressable
           onPress={onFooterLinkPress}
           disabled={footerLinkDisabled}
           testID={footerLinkTestID}
+          style={({pressed}) => pressed && styles.pressed}
         >
           <Text
             style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
@@ -102,7 +103,7 @@ export function AuthFormTemplate<T extends FieldValues>({
                 : footerLinkText}
             </Text>
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   );
@@ -166,5 +167,8 @@ const styles = StyleSheet.create(theme => ({
   },
   linkDisabled: {
     textDecorationLine: 'none',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));
