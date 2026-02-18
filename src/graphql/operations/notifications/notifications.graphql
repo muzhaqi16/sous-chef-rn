@@ -55,6 +55,9 @@ mutation DeleteNotification($id: ID!) {
     success
     message
     code
+    notification {
+      id
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useGetHomesLazyQuery } from '#generated';
 import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
 import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
+import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import type { BasicPantryFragment } from '#generated';
 
 /**
@@ -25,9 +26,11 @@ export function useLazyHomeData() {
   });
 
   // Normalize homes data (extract nodes from connection type)
-  const homes = useMemo(() => {
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const rawHomes = useMemo(() => {
     return normalizeHomes(extractNodes(homesData?.homes));
   }, [homesData?.homes]);
+  const homes = usePreservedArrayData(rawHomes);
 
   // Get pantries for the current home
   const pantries = useMemo((): BasicPantryFragment[] => {

@@ -154,7 +154,7 @@ export const InviteMemberScreen = () => {
             invitePromises.push(
               addCollaborator({
                 variables: {
-                  data: {
+                  input: {
                     shoppingListId: selectedShoppingListId,
                     email: invite.email,
                     role: CollaboratorRole.Contributor,

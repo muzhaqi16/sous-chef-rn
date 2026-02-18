@@ -82,6 +82,19 @@ class ApolloCachePersistence {
    * @param cache - Normalized cache object from cache.extract()
    */
   save(cache: NormalizedCacheObject): void {
+    this.scheduleExtractAndSave(() => cache);
+  }
+
+  /**
+   * Schedule a lazy cache extraction and save (debounced)
+   *
+   * Unlike save(), this defers cache.extract() until after the debounce period,
+   * so only one extract() call happens per debounce window instead of one per
+   * cache operation (write, evict, modify, gc).
+   *
+   * @param extractor - Lazy function that returns the cache data when called
+   */
+  scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
     // Clear existing timeout
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -94,6 +107,8 @@ class ApolloCachePersistence {
       // Falls back to requestAnimationFrame which defers until after current paint
       const serialize = () => {
         try {
+          // Extract cache data lazily - only runs once after debounce
+          const cache = extractor();
           const cacheString = JSON.stringify(cache);
           const sizeKB = Math.round(cacheString.length / 1024);
 
@@ -126,6 +141,17 @@ class ApolloCachePersistence {
         setTimeout(serialize, 0);
       }
     }, this.debounceMs);
+  }
+
+  /**
+   * Cancel any pending debounced save
+   * Call during logout to prevent writing stale cache data
+   */
+  cancel(): void {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
   }
 
   /**

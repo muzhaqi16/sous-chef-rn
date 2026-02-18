@@ -26,25 +26,11 @@ fragment ShoppingListItemCore on ShoppingListItem {
 }
 
 # Lightweight fragment for shopping list display (GetShoppingLists)
-# Contains ONLY fields needed for SortableShoppingList rendering
+# Contains Core fields + display-critical fields for rendering shopping list items
 # For full item details, use ShoppingListItemFragment in GetShoppingListItem
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
-  id
-  itemName
-  quantity
-  quantityInput
-  purchaseInfo {
-    isPurchased
-  }
+  ...ShoppingListItemCore
   sortOrder
-  unitName
-  category
-  version # Required for optimistic concurrency control in mutations
-  unit {
-    id
-    name
-    symbol
-  }
   # NEW: Brand and netWeight fields for custom shopping list items
   brand {
     id
@@ -86,23 +72,10 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
 }
 
 # Full fragment for detail views and complete data
-# Spreads Core and adds all extended fields
+# Spreads Display (which includes Core) and adds all extended fields
 fragment ShoppingListItemFragment on ShoppingListItem {
-  ...ShoppingListItemCore
-  # NEW: Brand and netWeight fields for custom shopping list items
-  brand {
-    id
-    name
-  }
-  brandId
-  netWeight
-  netWeightUnit {
-    id
-    name
-    symbol
-  }
-  netWeightUnitId
-  # Extended fields not in Core
+  ...ShoppingListItemDisplayFragment
+  # Extended fields not in Display
   shoppingList {
     id
     totalItems
@@ -352,79 +325,6 @@ fragment PartialUser on User {
   }
 }
 
-fragment CompleteUser on User {
-  id
-  email
-  emailVerified
-  role
-  onBoarded
-  createdAt
-  updatedAt
-  timezone
-  addresses {
-    id
-    label
-    street
-    city
-    state
-    postalCode
-    country
-    lat
-    lng
-    isDefault
-  }
-  devices {
-    id
-    userId
-    deviceId
-    deviceName
-    deviceType
-    userAgent
-    browserName
-    browserVersion
-    osName
-    osVersion
-    screenResolution
-    timezone
-    language
-    appVersion
-    platform
-    pushToken
-    isActive
-    isTrusted
-    lastSeenAt
-    isVerified
-    verifiedAt
-    loginCount
-    lastLoginAt
-    createdAt
-    updatedAt
-    deletedAt
-  }
-  homeOwnerships {
-    id
-    createdAt
-    homeId
-    userId
-    user {
-      id
-    }
-    home {
-      id
-      name
-      createdAt
-    }
-  }
-  shoppingListOwnerships {
-    createdAt
-    id
-    shoppingList {
-      id
-    }
-    transferredAt
-    transferredFrom
-  }
-}
 
 fragment UnitFragment on ItemUnit {
   id
@@ -454,7 +354,6 @@ fragment UnitFragment on ItemUnit {
     id
     name
     symbol
-    __typename
   }
 }
 fragment BrandFragment on ItemBrand {
@@ -472,7 +371,6 @@ fragment BrandFragment on ItemBrand {
 fragment ItemCore on Item {
   id
   name
-  __typename
   version
   updatedAt
 }
@@ -485,11 +383,9 @@ fragment ItemDisplay on Item {
   name
   imageUrl
   netWeight
-  __typename
   displayUnit {
     id
     symbol
-    __typename
   }
   categories {
     id
@@ -499,7 +395,6 @@ fragment ItemDisplay on Item {
       name
       color
       icon
-      __typename
     }
   }
 }
@@ -594,7 +489,6 @@ fragment PantryItemCore on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
-  __typename
 }
 
 # DISPLAY: List views - Pantry screen cards
@@ -611,33 +505,27 @@ fragment PantryItemDisplay on PantryItem {
     displayUnit {
       id
       symbol
-      __typename
     }
-    __typename
   }
   unit {
     id
     name
     symbol
-    __typename
   }
   # NEW: netWeightUnit for pantry item tracking
   netWeightUnit {
     id
     name
     symbol
-    __typename
   }
   storageLocation {
     id
     name
     type
-    __typename
   }
   brand {
     id
     name
-    __typename
   }
   tags
   packageBreakdown {
@@ -646,17 +534,14 @@ fragment PantryItemDisplay on PantryItem {
       id
       name
       symbol
-      __typename
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
-      __typename
     }
     totalNetWeight
-    __typename
   }
   quantityBreakdown {
     fullPackages
@@ -665,7 +550,6 @@ fragment PantryItemDisplay on PantryItem {
       id
       name
       symbol
-      __typename
     }
     totalContentUnits
     remainingWeight
@@ -673,11 +557,8 @@ fragment PantryItemDisplay on PantryItem {
       id
       name
       symbol
-      __typename
     }
-    __typename
   }
-  __typename
 }
 
 # FULL: Detail views and analytics
@@ -932,7 +813,6 @@ fragment HomeDisplay on Home {
   version
   updatedAt
   isDefault
-  __typename
   membersConnection(first: 10) {
     edges {
       node {
@@ -1117,6 +997,7 @@ fragment BasicRecipeFragment on Recipe {
   totalTimeMinutes
   difficulty
   category
+  cuisine
   status
   isExternal
   externalSource
@@ -1136,18 +1017,9 @@ fragment BasicRecipeFragment on Recipe {
 }
 
 fragment RecipeFragment on Recipe {
-  id
-  name
-  description
-  imageUrl
-  servings
-  prepTimeMinutes
-  cookTimeMinutes
-  totalTimeMinutes
-  difficulty
-  category
-  status
-  cuisine
+  ...BasicRecipeFragment
+
+  # Extended fields not in BasicRecipeFragment
   instructions
   notes
   tips
@@ -1156,16 +1028,11 @@ fragment RecipeFragment on Recipe {
   source
   originalAuthor
 
-  # External source tracking
-  isExternal
-  externalSource
-  externalId
+  # Extended external source fields
   externalUrl
   externalData
-  primarySource
 
   # Nutrition
-  caloriesPerServing
   nutritionData
 
   # Tags and metadata
@@ -1185,16 +1052,5 @@ fragment RecipeFragment on Recipe {
     ...RecipeIngredientFragment
   }
 
-  savedDetails {
-    id
-    folder
-    tags
-    notes
-    personalRating
-    cookedCount
-  }
-
-  createdAt
-  updatedAt
   deletedAt
 }

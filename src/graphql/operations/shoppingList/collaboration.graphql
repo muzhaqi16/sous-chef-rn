@@ -120,6 +120,9 @@ mutation DeclineShoppingListInvite($token: String!) {
     success
     message
     code
+    collaborator {
+      id
+    }
   }
 }
 

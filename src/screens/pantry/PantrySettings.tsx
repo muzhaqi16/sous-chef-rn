@@ -260,7 +260,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     try {
       await setDefaultPantry({
         variables: {
-          pantryId,
+          id: pantryId,
         },
       });
     } catch (error) {

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetHomeQuery,
   useUpdateHomeMutation,
@@ -199,7 +200,9 @@ export function useHomeDetailManagement(homeId: string) {
       },
     });
 
-  const home = normalizeHome(data?.home);
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const preservedHomeData = usePreservedQueryData(data?.home, null);
+  const home = normalizeHome(preservedHomeData);
 
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();

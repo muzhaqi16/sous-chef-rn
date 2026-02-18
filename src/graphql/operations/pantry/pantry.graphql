@@ -466,8 +466,8 @@ mutation DeletePantry($id: ID!) {
   }
 }
 
-mutation SetDefaultPantry($pantryId: ID!) {
-  setDefaultPantry(id: $pantryId) {
+mutation SetDefaultPantry($id: ID!) {
+  setDefaultPantry(id: $id) {
     success
     message
     code
@@ -497,7 +497,7 @@ mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
     message
     code
     pantryItem {
-      ...PantryItemFragment
+      ...PantryItemDisplay
     }
   }
 }
@@ -613,8 +613,7 @@ mutation ConvertExpiredToWaste($pantryItemId: ID!) {
     message
     code
     pantryItem {
-      id
-      quantity
+      ...PantryItemDisplay
       condition
       wasteReason
     }

@@ -230,16 +230,16 @@ export function makeCache(): InMemoryCache {
               if (!incoming) return existing;
               if (!existing || !args?.membersCursor) return incoming;
 
-              // Deduplicate by node ID
+              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
               const edgeMap = new Map();
-              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
-                (edge: any) => {
-                  const id = readField('id', edge?.node);
-                  if (id && !edgeMap.has(id)) {
-                    edgeMap.set(id, edge);
-                  }
-                },
-              );
+              (existing.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
 
               return {
                 ...incoming,
@@ -253,16 +253,16 @@ export function makeCache(): InMemoryCache {
               if (!incoming) return existing;
               if (!existing || !args?.invitesCursor) return incoming;
 
-              // Deduplicate by node ID to prevent duplicates during pagination
+              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
               const edgeMap = new Map();
-              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
-                (edge: any) => {
-                  const id = readField('id', edge?.node);
-                  if (id) {
-                    edgeMap.set(id, edge);
-                  }
-                },
-              );
+              (existing.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
 
               return {
                 ...incoming,
@@ -276,16 +276,16 @@ export function makeCache(): InMemoryCache {
               if (!incoming) return existing;
               if (!existing || !args?.pantriesCursor) return incoming;
 
-              // Deduplicate by node ID to prevent duplicates during pagination
+              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
               const edgeMap = new Map();
-              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
-                (edge: any) => {
-                  const id = readField('id', edge?.node);
-                  if (id) {
-                    edgeMap.set(id, edge);
-                  }
-                },
-              );
+              (existing.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
 
               return {
                 ...incoming,
@@ -353,16 +353,16 @@ export function makeCache(): InMemoryCache {
               if (!incoming) return existing;
               if (!existing || !args?.after) return incoming;
 
-              // Pagination - merge edges with deduplication by node ID
+              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
               const edgeMap = new Map();
-              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
-                (edge: any) => {
-                  const id = readField('id', edge?.node);
-                  if (id) {
-                    edgeMap.set(id, edge);
-                  }
-                },
-              );
+              (existing.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
+              });
 
               return {
                 ...incoming,
@@ -546,15 +546,15 @@ export function makeCache(): InMemoryCache {
               if (!existing || !args?.cursor) return incoming;
 
               // Pagination - merge edges with deduplication
-              const existingEdges = existing.edges || [];
-              const incomingEdges = incoming.edges || [];
+              // Incoming overwrites existing (fresh data wins)
               const edgeMap = new Map();
-
-              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+              (existing.edges || []).forEach((edge: any) => {
                 const id = readField('id', edge?.node);
-                if (id && !edgeMap.has(id)) {
-                  edgeMap.set(id, edge);
-                }
+                if (id) edgeMap.set(id, edge);
+              });
+              (incoming.edges || []).forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id) edgeMap.set(id, edge);
               });
 
               return {

@@ -49,7 +49,6 @@ query MyRecipes(
     edges {
       node {
         ...BasicRecipeFragment
-        cuisine
       }
       cursor
     }
@@ -148,6 +147,9 @@ mutation DeleteRecipe($id: ID!) {
     success
     message
     code
+    recipe {
+      id
+    }
   }
 }
 
@@ -180,6 +182,9 @@ mutation UnfavoriteRecipe($recipeId: ID!) {
     success
     message
     code
+    savedRecipe {
+      id
+    }
   }
 }
 
@@ -301,13 +306,8 @@ mutation AddRecipeToShoppingList(
     code
     shoppingList {
       id
-      itemsConnection(first: 100) {
-        edges {
-          node {
-            ...ShoppingListItemDisplayFragment
-          }
-        }
-      }
+      totalItems
+      completedItems
     }
   }
 }

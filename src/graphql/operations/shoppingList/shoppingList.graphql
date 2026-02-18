@@ -89,6 +89,7 @@ query GetShoppingList($id: ID!) {
 query GetShoppingListsLite($homeId: String) {
   shoppingLists(filters: { homeId: $homeId }) {
     edges {
+      cursor
       node {
         id
         name
@@ -119,6 +120,11 @@ query GetShoppingListsLite($homeId: String) {
         }
       }
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -400,24 +406,14 @@ mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
   }
 }
 
-mutation AddCollaborator($data: AddCollaboratorInput!) {
-  addCollaborator(data: $data) {
+mutation AddCollaborator($input: AddCollaboratorInput!) {
+  addCollaborator(data: $input) {
     success
     message
     code
     collaborator {
-      id
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
-      canAddItems
-      canRemoveItems
-      canEditItems
-      canMarkPurchased
-      canInviteOthers
       canViewHistory
       canExport
       invitedAt
@@ -433,8 +429,8 @@ mutation AddCollaborator($data: AddCollaboratorInput!) {
   }
 }
 
-mutation RemoveCollaborator($data: RemoveCollaboratorInput!) {
-  removeCollaborator(data: $data) {
+mutation RemoveCollaborator($input: RemoveCollaboratorInput!) {
+  removeCollaborator(data: $input) {
     success
     message
     code
@@ -517,27 +513,13 @@ mutation ToggleShoppingListItemPurchased(
     message
     code
     shoppingListItem {
-      # Request all quantity-related fields to ensure cache is updated correctly
-      # when unmarking items as purchased (server resets purchasedQuantity, etc.)
-      id
-      itemName
-      quantity
-      quantityInput
+      ...ShoppingListItemDisplayFragment
+      # Additional fields for purchase state cache consistency
       normalizedQuantity
       purchaseInfo {
-        isPurchased
         purchasedQuantity
         purchasedPrice
         purchaseDate
-      }
-      updatedAt
-      version
-      category
-      unitName
-      unit {
-        id
-        name
-        symbol
       }
     }
   }
@@ -790,24 +772,10 @@ subscription ShoppingListCollaboratorsChanged($listId: ID!) {
     mutation
     listId
     collaborator {
-      id
-      collaboratorId
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
       invitedAt
-      collaborator {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
-      }
+      lastViewedAt
     }
     userId
     timestamp

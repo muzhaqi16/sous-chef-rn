@@ -99,7 +99,7 @@ export const ShareList: React.FC = () => {
     try {
       await shareList({
         variables: {
-          data: {
+          input: {
             shoppingListId: listId,
             email: email.trim(),
             role: CollaboratorRole.Contributor, // Assuming a role is required
@@ -129,7 +129,7 @@ export const ShareList: React.FC = () => {
               try {
                 await removeMember({
                   variables: {
-                    data: { shoppingListId: listId, email: memberEmail },
+                    input: { shoppingListId: listId, email: memberEmail },
                   },
                 });
                 refetch();
@@ -175,7 +175,7 @@ export const ShareList: React.FC = () => {
             try {
               await removeMember({
                 variables: {
-                  data: { shoppingListId: listId, email: currentUser.email },
+                  input: { shoppingListId: listId, email: currentUser.email },
                 },
               });
               navigation.goBack();

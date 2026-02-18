@@ -51,8 +51,9 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
     // Optimistic response ensures update() runs immediately (not after network response)
-    optimisticResponse: variables => {
+    optimisticResponse: (variables, { IGNORE }) => {
       const item = itemsRef.current?.find(i => i.id === variables.id);
+      if (!item) return IGNORE;
       return {
         __typename: 'Mutation',
         toggleShoppingListItemPurchased: {
@@ -61,11 +62,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
           message: '',
           code: 'SUCCESS',
           shoppingListItem: {
-            __typename: 'ShoppingListItem',
-            id: variables.id,
-            itemName: item?.itemName ?? null,
-            quantity: item?.quantity ?? null,
-            quantityInput: item?.quantityInput ?? null,
+            ...item,
             normalizedQuantity: null,
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
@@ -75,10 +72,6 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
               purchaseDate: variables.purchased ? new Date().toISOString() : null,
             },
             updatedAt: new Date().toISOString(),
-            version: item?.version ?? 0,
-            category: item?.category ?? null,
-            unitName: item?.unitName ?? null,
-            unit: item?.unit ?? null,
           },
         },
       };

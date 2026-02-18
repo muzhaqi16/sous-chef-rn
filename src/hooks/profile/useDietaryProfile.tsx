@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useStore } from '#store';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetDietaryProfileQuery,
   useUpdateDietaryProfileMutation,
@@ -59,7 +60,8 @@ export const useDietaryProfile = () => {
     notifyOnNetworkStatusChange: true,
   });
 
-  const profile = data?.myDietaryProfile;
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const profile = usePreservedQueryData(data?.myDietaryProfile, null);
 
   // ===== MUTATION 1: Update Dietary Profile =====
   const [updateProfile] = useUpdateDietaryProfileMutation({

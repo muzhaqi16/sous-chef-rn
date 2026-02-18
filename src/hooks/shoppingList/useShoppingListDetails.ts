@@ -1,5 +1,6 @@
 import { NetworkStatus } from '@apollo/client';
 import { useGetShoppingListQuery } from '#generated';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 
 export function useShoppingListDetails(listId: string | undefined) {
   // Fetch policies per docs/apollo-client-patterns.md:
@@ -20,7 +21,8 @@ export function useShoppingListDetails(listId: string | undefined) {
   // The ShoppingListUpdated subscription automatically updates the cache via
   // Apollo's normalization, eliminating the need for manual client.writeQuery
 
-  const shoppingList = data?.shoppingList || null;
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const shoppingList = usePreservedQueryData(data?.shoppingList, null);
   const isRefetching = networkStatus === NetworkStatus.refetch;
 
   return {

@@ -36,7 +36,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
     try {
       await shareShoppingList({
         variables: {
-          data: {
+          input: {
             shoppingListId,
             email: email.trim(),
             role: CollaboratorRole.Viewer, // Assuming you want to set this as collaborator

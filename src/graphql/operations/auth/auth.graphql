@@ -8,12 +8,6 @@ query GetAuthUser {
   }
 }
 
-query GetCompleteUser {
-  me {
-    ...CompleteUser
-  }
-}
-
 # ============================================
 # MUTATIONS
 # ============================================
