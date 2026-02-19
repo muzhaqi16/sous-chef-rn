@@ -70,7 +70,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   cardTitle: {
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     fontSize: theme.fonts.size.md,
     lineHeight: theme.typography.lineHeight.normal,
     color: theme.colors.textPrimary,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create(theme => ({
   },
   cardDescription: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
     color: theme.colors.textSecondary,
   },
   cardImg: {
@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 export default ItemCard;

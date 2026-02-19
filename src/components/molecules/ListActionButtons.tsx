@@ -64,11 +64,11 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginLeft: theme.spacing['3'],
     flex: 1,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

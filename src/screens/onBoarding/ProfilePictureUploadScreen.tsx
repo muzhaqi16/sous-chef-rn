@@ -453,7 +453,7 @@ const styles = StyleSheet.create(theme => ({
   },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,
@@ -487,7 +487,7 @@ const styles = StyleSheet.create(theme => ({
   uploadOptionLabel: {
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.xs,
   },
   uploadOptionDescription: {
@@ -500,7 +500,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing['2xl'],
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
     textAlign: 'center',
     alignItems: 'center',
   },
@@ -530,6 +530,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: 'bold',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

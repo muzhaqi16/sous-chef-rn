@@ -84,7 +84,7 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'left',
   },
@@ -104,7 +104,7 @@ const styles = StyleSheet.create(theme => ({
   subtitle: {
     fontSize: theme.fonts.size.md,
     lineHeight: theme.spacing.lg,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     textAlign: 'left',
     width: '100%',
@@ -128,10 +128,10 @@ const styles = StyleSheet.create(theme => ({
   link: {
     color: theme.colors.textOnSurfaceVariant,
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textDecorationLine: 'underline',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

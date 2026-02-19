@@ -92,7 +92,7 @@ const styles = StyleSheet.create(theme => ({
   },
   message: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },

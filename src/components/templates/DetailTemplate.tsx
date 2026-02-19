@@ -96,7 +96,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing['3'],
   },

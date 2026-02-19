@@ -61,7 +61,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   textContainer: {
     flex: 1,

@@ -207,10 +207,10 @@ const styles = StyleSheet.create(theme => ({
   menuItemTextDestructive: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

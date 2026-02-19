@@ -499,7 +499,7 @@ const styles = StyleSheet.create(theme => ({
   },
   itemName: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   category: {
     fontSize: theme.typography.fontSize.sm,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   chipsContainer: {
@@ -546,8 +546,8 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
   },
   quantityText: {
-    fontSize: 40,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize['5xl'],
+    fontWeight: theme.fonts.weight.semibold,
   },
   quantityDisplayEditing: {
     borderWidth: 2,
@@ -556,8 +556,8 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
   },
   quantityInput: {
-    fontSize: 40,
-    fontWeight: '600',
+    fontSize: theme.typography.fontSize['5xl'],
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     minWidth: 80,
     padding: 0,
@@ -571,9 +571,9 @@ const styles = StyleSheet.create(theme => ({
   },
   saveLinkText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

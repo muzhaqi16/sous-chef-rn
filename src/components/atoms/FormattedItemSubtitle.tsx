@@ -209,18 +209,18 @@ const styles = StyleSheet.create(theme => ({
   },
   quantity: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   weight: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   separator: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   additionalInfo: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
 }));

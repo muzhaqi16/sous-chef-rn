@@ -408,7 +408,7 @@ const styles = StyleSheet.create(theme => ({
   },
   headerTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   debugText: {
     fontSize: theme.typography.fontSize.xs - 2,
@@ -483,10 +483,10 @@ const styles = StyleSheet.create(theme => ({
   },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -310,8 +310,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {
-    borderTopLeftRadius: theme.radii.md,
-    borderTopRightRadius: theme.radii.md,
+    borderTopLeftRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.lg,
   },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sheetTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     paddingVertical: theme.spacing.sm,
@@ -362,6 +362,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

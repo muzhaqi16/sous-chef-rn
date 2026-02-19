@@ -4,6 +4,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { StorageState } from '#generated';
+import { fonts } from '#/theme/foundations/typography';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -418,7 +419,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
           lines.push(
             <Text
               key="location"
-              style={{ color: theme.colors.textSecondary, fontSize: 14 }}
+              style={{ color: theme.colors.textSecondary, fontSize: fonts.size.sm }}
             >
               {storageLocationName}
             </Text>,
@@ -434,7 +435,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
           lines.push(
             <Text
               key="expiry"
-              style={{ color: expiryColor, fontSize: 13, fontWeight: '500' }}
+              style={{ color: expiryColor, fontSize: 13, fontWeight: fonts.weight.medium }}
             >
               {urgentTimeInfo.text}
             </Text>,
@@ -465,7 +466,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
             {/* Line 1: Quantity */}
             <Text
               style={{
-                fontWeight: '600',
+                fontWeight: fonts.weight.semibold,
                 fontSize: 15,
                 color: theme.colors.textPrimary,
               }}
@@ -477,7 +478,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
               <Text
                 style={{
                   color: theme.colors.textSecondary,
-                  fontSize: 12,
+                  fontSize: fonts.size.xs,
                   marginTop: 2,
                 }}
               >

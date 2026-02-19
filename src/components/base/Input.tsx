@@ -2,6 +2,10 @@ import React from 'react';
 import {TextInput, View, Text} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
+/**
+ * @deprecated Use `BaseInput` for raw text input or `FormInput` for form-integrated input.
+ * This component is a simplified wrapper kept for backwards compatibility.
+ */
 interface InputProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -68,7 +72,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },

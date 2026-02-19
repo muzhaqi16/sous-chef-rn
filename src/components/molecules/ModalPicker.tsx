@@ -83,7 +83,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   option: {
@@ -99,6 +99,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

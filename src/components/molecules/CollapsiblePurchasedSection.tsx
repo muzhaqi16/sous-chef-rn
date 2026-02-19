@@ -224,7 +224,7 @@ const styles = StyleSheet.create(theme => ({
   },
   headerText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   headerRight: {
     flexDirection: 'row',
@@ -238,9 +238,9 @@ const styles = StyleSheet.create(theme => ({
   },
   clearButtonText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

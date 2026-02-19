@@ -393,7 +393,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   recipeName: {
@@ -415,11 +415,11 @@ const styles = StyleSheet.create(theme => ({
   updatingText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.lg,
@@ -454,7 +454,7 @@ const styles = StyleSheet.create(theme => ({
   },
   folderOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   newFolderButton: {
     flexDirection: 'row',
@@ -467,7 +467,7 @@ const styles = StyleSheet.create(theme => ({
   newFolderButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   newFolderContainer: {
     flexDirection: 'row',
@@ -498,7 +498,7 @@ const styles = StyleSheet.create(theme => ({
   createButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   createButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -515,6 +515,6 @@ const styles = StyleSheet.create(theme => ({
     minHeight: 80,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

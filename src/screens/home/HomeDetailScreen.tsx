@@ -269,6 +269,6 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.fonts.size.sm * 1.5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

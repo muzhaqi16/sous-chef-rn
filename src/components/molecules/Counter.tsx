@@ -152,11 +152,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xl,
     paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
     transform: [{scale: 0.92}],
   },
   containerDisabled: {

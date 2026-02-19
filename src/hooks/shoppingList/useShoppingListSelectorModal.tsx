@@ -288,6 +288,6 @@ const styles = StyleSheet.create(theme => ({
     letterSpacing: 0.5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

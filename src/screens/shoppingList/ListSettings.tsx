@@ -415,12 +415,12 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   content: {
@@ -433,7 +433,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -442,7 +442,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -468,7 +468,7 @@ const styles = StyleSheet.create(theme => ({
   },
   settingLabel: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   settingDescription: {
@@ -503,7 +503,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
     marginLeft: theme.spacing.sm,
   },
@@ -515,13 +515,13 @@ const styles = StyleSheet.create(theme => ({
   },
   infoLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs + 2,
   },
   infoValue: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   roleBadgeContainer: {
@@ -536,7 +536,7 @@ const styles = StyleSheet.create(theme => ({
   },
   collaboratorBadgeText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
   },
@@ -556,6 +556,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

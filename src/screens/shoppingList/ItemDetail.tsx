@@ -339,7 +339,7 @@ const styles = StyleSheet.create(theme => ({
   },
   statusBadgeText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.success,
     marginLeft: theme.spacing.xs,
   },

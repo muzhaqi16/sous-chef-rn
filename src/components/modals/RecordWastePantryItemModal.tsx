@@ -428,6 +428,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

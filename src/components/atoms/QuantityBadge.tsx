@@ -112,24 +112,24 @@ const styles = StyleSheet.create(theme => ({
   },
   quantityText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     lineHeight: 16,
   },
   unitText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: theme.typography.fontSize['2xs'],
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
     lineHeight: 13,
   },
   unitTextInline: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
     lineHeight: 16,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   purchasedText: {
     textDecorationLine: 'line-through',

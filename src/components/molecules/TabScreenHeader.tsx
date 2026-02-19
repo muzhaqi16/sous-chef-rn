@@ -29,7 +29,13 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
       </View>
 
       <View style={styles.headerActions}>
-        <Pressable onPress={onAvatarPress} style={styles.avatarPressable}>
+        <Pressable
+          onPress={onAvatarPress}
+          style={styles.avatarPressable}
+          accessibilityRole="button"
+          accessibilityLabel="Profile"
+          accessibilityHint="Open your profile"
+        >
           <View style={styles.avatar}>
             {avatarUrl ? (
               <CachedImage

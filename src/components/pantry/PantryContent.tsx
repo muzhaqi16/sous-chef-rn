@@ -172,9 +172,9 @@ interface ItemDisplayData {
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: '🧊' },
-  { id: 'freezer', label: 'Freezer', icon: '❄️' },
-  { id: 'pantry', label: 'Pantry', icon: '🗄️' },
+  { id: 'fridge', label: 'Fridge', icon: 'kitchen', iconLibrary: 'MaterialIcons' },
+  { id: 'freezer', label: 'Freezer', icon: 'ac-unit', iconLibrary: 'MaterialIcons' },
+  { id: 'pantry', label: 'Pantry', icon: 'inventory-2', iconLibrary: 'MaterialIcons' },
 ];
 
 export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({

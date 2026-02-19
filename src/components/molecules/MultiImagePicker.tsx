@@ -325,6 +325,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

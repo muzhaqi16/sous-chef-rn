@@ -72,16 +72,16 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   selectedItemText: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   checkIcon: {
     marginLeft: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

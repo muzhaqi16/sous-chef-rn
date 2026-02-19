@@ -370,7 +370,7 @@ const localStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     textAlign: 'center',
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   inputError: {
     borderColor: theme.colors.danger,
@@ -392,9 +392,9 @@ const localStyles = StyleSheet.create(theme => ({
     flex: 1,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

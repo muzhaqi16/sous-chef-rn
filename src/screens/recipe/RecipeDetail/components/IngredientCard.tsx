@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
   name: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
   },
   addedBadge: {
@@ -121,6 +121,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

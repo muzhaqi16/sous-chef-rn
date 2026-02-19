@@ -76,7 +76,7 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
       <Pressable
         onPress={handlePress}
         disabled={disabled}
-        style={{ opacity: disabled ? 0.5 : 1 }}
+        style={{ opacity: disabled ? theme.opacity.disabled : 1 }}
       >
         <RNAnimated.View
           style={[

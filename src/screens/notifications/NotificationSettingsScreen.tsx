@@ -453,7 +453,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   picker: {
     height: 50,
@@ -470,7 +470,7 @@ const styles = StyleSheet.create(theme => ({
   quietHoursText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.xs,
   },
   quietHoursSubtext: {

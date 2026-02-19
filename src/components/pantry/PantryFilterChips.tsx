@@ -161,6 +161,6 @@ const styles = StyleSheet.create(theme => ({
   badgeText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.xs - 2,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
   },
 }));

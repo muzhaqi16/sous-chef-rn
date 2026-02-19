@@ -222,6 +222,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

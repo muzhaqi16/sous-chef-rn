@@ -150,13 +150,13 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
           color: theme.colors.textSecondary,
         },
       },
@@ -170,7 +170,7 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
         },
       },
     },
@@ -180,12 +180,12 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
         },
       },
     },
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

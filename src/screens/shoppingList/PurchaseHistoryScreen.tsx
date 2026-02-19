@@ -286,6 +286,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xl,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

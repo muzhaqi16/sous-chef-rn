@@ -216,7 +216,7 @@ const styles = StyleSheet.create(theme => ({
   clearText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   scrollContent: {
     paddingBottom: theme.spacing.md,
@@ -245,6 +245,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

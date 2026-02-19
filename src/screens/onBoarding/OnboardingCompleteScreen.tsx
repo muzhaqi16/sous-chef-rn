@@ -128,7 +128,7 @@ const styles = StyleSheet.create(theme => ({
   },
   congratsText: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,

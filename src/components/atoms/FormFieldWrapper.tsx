@@ -45,7 +45,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },

@@ -226,6 +226,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: 5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

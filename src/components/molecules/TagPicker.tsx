@@ -202,7 +202,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   searchContainer: {
@@ -233,7 +233,7 @@ const styles = StyleSheet.create(theme => ({
   clearText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   tagItem: {
     flexDirection: 'row',
@@ -253,7 +253,7 @@ const styles = StyleSheet.create(theme => ({
   },
   tagNameSelected: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   divider: {
     height: 1,
@@ -287,6 +287,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

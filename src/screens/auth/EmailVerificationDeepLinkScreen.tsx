@@ -215,7 +215,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
@@ -243,9 +243,9 @@ const styles = StyleSheet.create(theme => ({
   retryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -287,7 +287,7 @@ const styles = StyleSheet.create(theme => ({
   },
 
   cardDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
 
   // Image styles
@@ -378,7 +378,7 @@ const styles = StyleSheet.create(theme => ({
   },
 
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

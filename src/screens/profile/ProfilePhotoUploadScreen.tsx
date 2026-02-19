@@ -340,7 +340,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize['3xl'],
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     marginBottom: theme.spacing.xs + 2,
     textAlign: 'center',
     flex: 1,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitle: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
   },
   header: {
@@ -412,7 +412,7 @@ const styles = StyleSheet.create(theme => ({
   btnText: {
     fontSize: theme.typography.fontSize.lg,
     lineHeight: theme.typography.lineHeight.relaxed,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   btnSecondary: {
     flexDirection: 'row',
@@ -427,11 +427,11 @@ const styles = StyleSheet.create(theme => ({
   btnSecondaryText: {
     fontSize: theme.typography.fontSize.lg,
     lineHeight: theme.typography.lineHeight.relaxed,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.secondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -192,12 +192,12 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
   input: {
     flex: 1,
     fontSize: theme.fonts.size.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   inputDisabled: {

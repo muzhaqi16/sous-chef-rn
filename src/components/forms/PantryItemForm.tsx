@@ -674,7 +674,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.error,
   },
   lockedSection: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   lockedHint: {
     fontSize: theme.fonts.size.sm,

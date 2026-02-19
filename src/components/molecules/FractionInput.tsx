@@ -114,7 +114,7 @@ const styles = StyleSheet.create(theme => ({
   },
   inputDisabled: {
     backgroundColor: theme.colors.surfaceVariant,
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   hintText: {
     fontSize: theme.typography.fontSize.xs,

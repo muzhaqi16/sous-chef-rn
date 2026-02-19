@@ -169,7 +169,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
           backgroundColor: theme.colors.surfaceVariant,
         },
       },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
   },
   itemName: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
     variants: {
@@ -240,6 +240,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

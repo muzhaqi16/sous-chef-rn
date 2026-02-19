@@ -39,7 +39,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

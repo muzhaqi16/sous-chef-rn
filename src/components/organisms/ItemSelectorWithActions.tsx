@@ -168,7 +168,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   selectedItemText: {
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   separator: {
@@ -193,7 +193,7 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

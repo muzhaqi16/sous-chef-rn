@@ -308,7 +308,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -333,7 +333,7 @@ const styles = StyleSheet.create(theme => ({
   },
   tableHeaderText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
   },
@@ -384,7 +384,7 @@ const styles = StyleSheet.create(theme => ({
   },
   memoryTime: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   memoryUsage: {
@@ -410,7 +410,7 @@ const styles = StyleSheet.create(theme => ({
   },
   emptyStateText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
@@ -431,11 +431,11 @@ const styles = StyleSheet.create(theme => ({
   },
   clearButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

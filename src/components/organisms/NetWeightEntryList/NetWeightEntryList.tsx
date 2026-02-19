@@ -155,6 +155,6 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.xl,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

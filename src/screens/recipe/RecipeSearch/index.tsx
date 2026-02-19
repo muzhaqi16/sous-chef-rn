@@ -425,19 +425,19 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
   },
   headerSearchButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   headerSearchButtonText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   filterSection: {
     marginBottom: theme.spacing.xl,
   },
   filterSectionTitle: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -465,7 +465,7 @@ const styles = StyleSheet.create(theme => ({
   },
   filterChipText: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   filterChipTextActive: {
@@ -509,15 +509,15 @@ const styles = StyleSheet.create(theme => ({
   clearButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   applyButton: {},
   applyButtonText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

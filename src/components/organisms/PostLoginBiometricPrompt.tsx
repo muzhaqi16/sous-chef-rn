@@ -170,7 +170,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   primaryButtonText: {
     color: theme.colors.background,
@@ -226,6 +226,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

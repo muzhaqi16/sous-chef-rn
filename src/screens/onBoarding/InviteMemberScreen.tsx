@@ -367,7 +367,7 @@ const styles = StyleSheet.create(theme => ({
   addButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   invitesList: {
     flex: 1,
@@ -415,12 +415,12 @@ const styles = StyleSheet.create(theme => ({
   typeText: {
     fontSize: theme.typography.fontSize.sm - 1,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   typeHint: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   removeButton: {
     width: 32,
@@ -445,6 +445,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

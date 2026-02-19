@@ -110,7 +110,7 @@ const styles = StyleSheet.create(theme => ({
   },
   displayChipText: {
     fontSize: theme.typography.fontSize.sm + 1,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.chipSelectedText,
   },
   removeButton: {
@@ -125,6 +125,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

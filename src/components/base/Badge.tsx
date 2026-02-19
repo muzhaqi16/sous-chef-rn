@@ -16,7 +16,11 @@ export const Badge: React.FC<BadgeProps> = ({
   style,
 }) => {
   return (
-    <View style={[styles.badge, styles[variant], styles[size], style]}>
+    <View
+      accessibilityRole="text"
+      accessibilityLabel={typeof children === 'string' ? children : undefined}
+      style={[styles.badge, styles[variant], styles[size], style]}
+    >
       <Text style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
     </View>
   );
@@ -26,7 +30,7 @@ const styles = StyleSheet.create(theme => ({
   badge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.xs,
+    borderRadius: theme.radii.sm,
   },
   default: {
     backgroundColor: theme.colors.surface,
@@ -53,7 +57,7 @@ const styles = StyleSheet.create(theme => ({
   },
   text: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   defaultText: {
     color: theme.colors.textPrimary,

@@ -111,7 +111,7 @@ const indicatorStyles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 
@@ -883,7 +883,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
   },
   saveButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   saveButtonText: {
     color: theme.colors.white,
@@ -936,6 +936,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

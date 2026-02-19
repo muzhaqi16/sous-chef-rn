@@ -65,7 +65,7 @@ const styles = StyleSheet.create(theme => ({
   },
   headerTitle: {
     fontSize: theme.fonts.size['2xl'],
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
     color: theme.colors.textOnSurfaceVariant,
   },
   headerTitleBold: {
@@ -122,6 +122,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.error,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

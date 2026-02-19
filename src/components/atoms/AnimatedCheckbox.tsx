@@ -122,7 +122,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      style={{ opacity: disabled ? 0.5 : 1 }}
+      style={{ opacity: disabled ? theme.opacity.disabled : 1 }}
       testID={testID}
     >
       <Animated.View

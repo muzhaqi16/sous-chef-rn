@@ -369,7 +369,8 @@ export const RecipeMain: React.FC = React.memo(() => {
       tabs.push({
         id: 'folder',
         label: selectedFolder || 'Folders',
-        icon: '📁',
+        icon: 'folder',
+        iconLibrary: 'MaterialIcons',
         onPress: () => setShowFolderPicker(true),
         showDropdownIndicator: true,
       });
@@ -383,7 +384,8 @@ export const RecipeMain: React.FC = React.memo(() => {
           selectedTags.length > 0
             ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
             : 'Tags',
-        icon: '🏷️',
+        icon: 'label',
+        iconLibrary: 'MaterialIcons',
         onPress: () => setShowTagPicker(true),
         showDropdownIndicator: true,
       });
@@ -563,6 +565,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

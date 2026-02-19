@@ -56,7 +56,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   fill: {
@@ -74,6 +74,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

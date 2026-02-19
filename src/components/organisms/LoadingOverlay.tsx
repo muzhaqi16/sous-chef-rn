@@ -103,6 +103,6 @@ const styles = StyleSheet.create(theme => ({
   message: {
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

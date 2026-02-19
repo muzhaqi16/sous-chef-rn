@@ -104,6 +104,6 @@ const styles = StyleSheet.create(theme => ({
   toastText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

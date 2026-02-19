@@ -123,11 +123,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   showMoreText: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     marginLeft: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

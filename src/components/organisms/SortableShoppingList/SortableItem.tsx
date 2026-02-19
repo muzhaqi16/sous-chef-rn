@@ -258,7 +258,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

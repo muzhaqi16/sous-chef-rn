@@ -246,7 +246,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing['3'],
@@ -267,7 +267,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -284,9 +284,9 @@ const styles = StyleSheet.create(theme => ({
   primaryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -303,7 +303,7 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   primaryButtonText: {
     color: theme.colors.background,
@@ -317,6 +317,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

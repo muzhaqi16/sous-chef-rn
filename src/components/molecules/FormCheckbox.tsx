@@ -71,7 +71,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   disabledCheckbox: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   label: {
     fontSize: theme.typography.fontSize.base,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   disabledLabel: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   errorText: {
     fontSize: theme.typography.fontSize.sm,
@@ -87,6 +87,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

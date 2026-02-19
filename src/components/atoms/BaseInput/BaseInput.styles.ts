@@ -91,6 +91,6 @@ export default StyleSheet.create(theme => ({
   },
 
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

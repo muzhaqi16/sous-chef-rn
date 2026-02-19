@@ -130,7 +130,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
-    minHeight: theme.sizes.button.lg,
     overflow: 'hidden',
   },
   primary: {
@@ -157,20 +156,23 @@ const styles = StyleSheet.create(theme => ({
   small: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
+    minHeight: theme.sizes.button.sm,
   },
   medium: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+    minHeight: theme.sizes.button.md,
   },
   large: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    minHeight: theme.sizes.button.lg,
   },
   fullWidth: {
     flex: 1,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   text: {
     fontWeight: theme.fonts.weight.semibold,

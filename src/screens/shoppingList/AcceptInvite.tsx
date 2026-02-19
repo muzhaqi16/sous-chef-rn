@@ -335,7 +335,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteName: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   inviteType: {
@@ -370,7 +370,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   messageContainer: {
     marginTop: theme.spacing.xl,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create(theme => ({
   },
   messageLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -408,7 +408,7 @@ const styles = StyleSheet.create(theme => ({
   declineButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   acceptButton: {
     backgroundColor: theme.colors.primary,
@@ -416,9 +416,9 @@ const styles = StyleSheet.create(theme => ({
   acceptButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

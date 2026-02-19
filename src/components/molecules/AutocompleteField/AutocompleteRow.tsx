@@ -81,7 +81,7 @@ const styles = StyleSheet.create(theme => ({
   },
   symbolText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     minWidth: 40,
   },
@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   subtitle: {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create(theme => ({
   },
   badgeText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   trailingText: {

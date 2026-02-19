@@ -157,6 +157,17 @@ export const colors = {
     heavy: 'rgba(0, 0, 0, 0.8)',
   },
 
+  // Action colors - for swipe actions and semantic interactions
+  actions: {
+    consume: { light: '#9C27B0', dark: '#BA68C8' },
+    waste: { light: '#FF9800', dark: '#FFB74D' },
+    restock: { light: '#4CAF50', dark: '#81C784' },
+    purchase: { light: '#4CAF50', dark: '#81C784' },
+    unpurchase: { light: '#FF9800', dark: '#FFB74D' },
+    favorite: { light: '#E91E63', dark: '#F48FB1' },
+    rating: { light: '#FFB800', dark: '#FFD54F' },
+  },
+
   // Special colors
   transparent: 'transparent',
   overlay: 'rgba(0, 0, 0, 0.6)', // Default overlay - kept for backwards compatibility

@@ -117,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
   skipText: {
     color: theme.colors.textSecondary,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -136,6 +136,6 @@ const styles = StyleSheet.create(theme => ({
   },
   continueText: {
     color: theme.colors.background,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
   },
 }));

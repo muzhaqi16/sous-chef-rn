@@ -289,7 +289,7 @@ export function BottomSheetAutocompleteInput<T>({
             renderItem={({ item }: { item: T }) => (
               <Pressable
                 onPress={() => handleSelectItem(item)}
-                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
               >
                 {renderItem(item)}
               </Pressable>
@@ -328,7 +328,7 @@ const styles = StyleSheet.create(theme => ({
   },
   autocompleteTitle: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create(theme => ({
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },

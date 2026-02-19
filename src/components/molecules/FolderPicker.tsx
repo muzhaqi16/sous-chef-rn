@@ -640,7 +640,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   searchContainer: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create(theme => ({
   },
   folderNameSelected: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   divider: {
     height: 1,
@@ -693,7 +693,7 @@ const styles = StyleSheet.create(theme => ({
   newFolderButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   newFolderContainer: {
     flexDirection: 'row',
@@ -724,7 +724,7 @@ const styles = StyleSheet.create(theme => ({
   createButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   createButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -780,7 +780,7 @@ const styles = StyleSheet.create(theme => ({
   },
   manageFolderTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   currentFolderContainer: {
@@ -795,12 +795,12 @@ const styles = StyleSheet.create(theme => ({
   },
   currentFolderName: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -837,7 +837,7 @@ const styles = StyleSheet.create(theme => ({
   renameButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   renameButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -857,7 +857,7 @@ const styles = StyleSheet.create(theme => ({
   deleteButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.error,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   deleteDescription: {
     fontSize: theme.typography.fontSize.sm,
@@ -872,7 +872,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteConfirmTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create(theme => ({
   deleteConfirmCancelText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   deleteConfirmDeleteButton: {
     flex: 1,
@@ -911,9 +911,9 @@ const styles = StyleSheet.create(theme => ({
   deleteConfirmDeleteText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

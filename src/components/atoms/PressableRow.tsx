@@ -86,7 +86,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   iconContainer: {
     marginRight: theme.spacing.md,
@@ -110,6 +110,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

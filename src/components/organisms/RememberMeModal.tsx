@@ -65,7 +65,7 @@ const styles = StyleSheet.create(theme => ({
   },
   modalTitle: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -98,14 +98,14 @@ const styles = StyleSheet.create(theme => ({
   modalButtonPrimaryText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   modalButtonSecondaryText: {
     color: theme.colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -197,6 +197,6 @@ const styles = StyleSheet.create(theme => ({
     borderLeftColor: theme.colors.borderLight,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

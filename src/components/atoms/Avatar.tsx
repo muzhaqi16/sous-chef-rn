@@ -117,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary + '20',
   },
   initials: {
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   iconContainer: {

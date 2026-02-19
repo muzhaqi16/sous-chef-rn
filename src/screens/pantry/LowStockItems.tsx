@@ -11,7 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
-import { ScreenHeader } from '#components/molecules/ScreenHeader';
+import { Header } from '#components/molecules/Header';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -60,7 +60,7 @@ export const LowStockItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <ScreenHeader title="Low Stock Items" onBack={goBack} />
+      <Header title="Low Stock Items" onBack={goBack} centerTitle />
 
       <FlatList
         style={styles.scrollView}
@@ -160,6 +160,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

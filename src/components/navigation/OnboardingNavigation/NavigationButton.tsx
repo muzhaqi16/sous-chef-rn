@@ -26,7 +26,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
         styles.button,
         {
           backgroundColor: action.backgroundColor,
-          opacity: action.disabled ? 0.6 : 1,
+          opacity: action.disabled ? theme.opacity.disabled : 1,
         },
         style,
         pressed && styles.pressed,
@@ -63,11 +63,11 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -173,7 +173,7 @@ const styles = StyleSheet.create(theme => ({
   }),
   text: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
   },
 }));

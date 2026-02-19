@@ -69,13 +69,13 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.sizes.input.lg + theme.spacing.sm,
     fontSize: theme.typography.fontSize['4xl'] - 2,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   formInputCharEmpty: {
     color: theme.colors.textTertiary,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

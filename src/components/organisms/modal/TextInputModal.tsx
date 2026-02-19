@@ -192,7 +192,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
     color: theme.colors.textPrimary,
@@ -239,19 +239,19 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.sm,
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   cancelButtonText: {
     color: theme.colors.textSecondary,
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   submitButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

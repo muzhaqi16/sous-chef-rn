@@ -179,7 +179,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
         needsOffscreenAlphaCompositing
         style={({ pressed }) => [
           { borderRadius: theme.radii.lg, overflow: 'hidden' },
-          pressed && { opacity: 0.7 },
+          pressed && { opacity: theme.opacity.pressed },
         ]}
       >
         {content}

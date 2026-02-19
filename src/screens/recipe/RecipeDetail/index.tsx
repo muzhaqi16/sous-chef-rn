@@ -843,7 +843,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size['2xl'],
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -918,7 +918,7 @@ const styles = StyleSheet.create(theme => ({
   tagChipText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   notesDisplayRow: {
     paddingVertical: theme.spacing.xs,
@@ -945,7 +945,7 @@ const styles = StyleSheet.create(theme => ({
   tagText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   section: {
     marginBottom: theme.spacing.xl,
@@ -958,12 +958,12 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   addAllButton: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   description: {
@@ -982,7 +982,7 @@ const styles = StyleSheet.create(theme => ({
   },
   stepNumber: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     minWidth: 24,
   },
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create(theme => ({
   viewOriginalText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   shoppingListOptions: {
     padding: theme.spacing.md,
@@ -1030,7 +1030,7 @@ const styles = StyleSheet.create(theme => ({
   },
   optionTitle: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create(theme => ({
   addSelectedButtonText: {
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   // List picker styles
   listPickerItem: {
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create(theme => ({
   },
   listPickerName: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -1107,7 +1107,7 @@ const styles = StyleSheet.create(theme => ({
   },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   emptyListPicker: {
     padding: theme.spacing.xl,
@@ -1120,6 +1120,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

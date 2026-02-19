@@ -232,7 +232,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   submitButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   submitButtonText: {
     color: theme.colors.white,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

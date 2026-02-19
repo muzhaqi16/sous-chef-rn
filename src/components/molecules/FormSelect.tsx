@@ -144,7 +144,7 @@ const styles = StyleSheet.create(theme => ({
   },
   modalTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create(theme => ({
   },
   selectedOptionText: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   closeButton: {
     marginTop: theme.spacing.md,
@@ -176,9 +176,9 @@ const styles = StyleSheet.create(theme => ({
   closeButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

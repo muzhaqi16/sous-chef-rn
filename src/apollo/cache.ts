@@ -122,6 +122,40 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
 }
 
 /**
+ * Generic merge function for cursor-based connection pagination.
+ *
+ * Deduplicates edges by node ID, with incoming edges taking precedence
+ * over existing ones (fresh data wins). When no cursor is provided
+ * (initial load), incoming data replaces existing data entirely.
+ *
+ * @param cursorArgName - The GraphQL argument name for the cursor (e.g. 'after', 'membersCursor')
+ */
+function mergeConnectionByNodeId(cursorArgName: string) {
+  return {
+    keyArgs: (cursorArgName === 'after' ? ['filters'] : false) as false | string[],
+    merge(existing: any, incoming: any, { args, readField }: any) {
+      if (!incoming) return existing;
+      if (!existing || !args?.[cursorArgName]) return incoming;
+
+      const edgeMap = new Map();
+      (existing.edges || []).forEach((edge: any) => {
+        const id = readField('id', edge?.node);
+        if (id) edgeMap.set(id, edge);
+      });
+      (incoming.edges || []).forEach((edge: any) => {
+        const id = readField('id', edge?.node);
+        if (id) edgeMap.set(id, edge);
+      });
+
+      return {
+        ...incoming,
+        edges: Array.from(edgeMap.values()),
+      };
+    },
+  };
+}
+
+/**
  * Apollo InMemoryCache with intelligent merge functions
  *
  * Uses version-based conflict resolution to properly handle:
@@ -224,75 +258,9 @@ export function makeCache(): InMemoryCache {
       Home: {
         keyFields: ['id'],
         fields: {
-          membersConnection: {
-            keyArgs: false,
-            merge(existing, incoming, { args, readField }) {
-              if (!incoming) return existing;
-              if (!existing || !args?.membersCursor) return incoming;
-
-              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
-          invitesConnection: {
-            keyArgs: false,
-            merge(existing, incoming, { args, readField }) {
-              if (!incoming) return existing;
-              if (!existing || !args?.invitesCursor) return incoming;
-
-              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
-          pantriesConnection: {
-            keyArgs: false,
-            merge(existing, incoming, { args, readField }) {
-              if (!incoming) return existing;
-              if (!existing || !args?.pantriesCursor) return incoming;
-
-              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
+          membersConnection: mergeConnectionByNodeId('membersCursor'),
+          invitesConnection: mergeConnectionByNodeId('invitesCursor'),
+          pantriesConnection: mergeConnectionByNodeId('pantriesCursor'),
         },
       },
       Pantry: {
@@ -347,29 +315,7 @@ export function makeCache(): InMemoryCache {
               };
             },
           },
-          storageLocationsConnection: {
-            keyArgs: false,
-            merge(existing, incoming, { args, readField }) {
-              if (!incoming) return existing;
-              if (!existing || !args?.after) return incoming;
-
-              // Deduplicate by node ID - incoming overwrites existing (fresh data wins)
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
+          storageLocationsConnection: mergeConnectionByNodeId('after'),
         },
       },
       PantryItem: {
@@ -404,20 +350,18 @@ export function makeCache(): InMemoryCache {
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
           imageUrl: {
-            // Preserve existing imageUrl if incoming mutation returns null
-            // This prevents partial responses from clearing cached images
+            // Preserve existing imageUrl only if the field was not included in the response
+            // (incoming === undefined). Allow explicit null through so users can remove images.
             merge(existing, incoming) {
-              // If incoming is null but we have an existing value, keep existing
-              if (incoming === null && existing) {
+              if (incoming === undefined) {
                 return existing;
               }
-              // Otherwise use incoming (handles updates and initial loads)
               return incoming;
             },
           },
           nutritions: {
             merge(existing, incoming) {
-              if (incoming === null && existing) {
+              if (incoming === undefined) {
                 return existing;
               }
               return incoming;
@@ -425,7 +369,7 @@ export function makeCache(): InMemoryCache {
           },
           images: {
             merge(existing, incoming) {
-              if (incoming === null && existing) {
+              if (incoming === undefined) {
                 return existing;
               }
               return incoming;
@@ -497,7 +441,8 @@ export function makeCache(): InMemoryCache {
           },
           pantryItemSuggestions: {
             // Different pantries have different suggestions - cache separately
-            keyArgs: ['pantryId', 'limit'],
+            // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
+            keyArgs: ['pantryId'],
             merge(existing = [], incoming) {
               if (incoming == null) {
                 return existing;
@@ -506,7 +451,8 @@ export function makeCache(): InMemoryCache {
             },
           },
           shoppingListSuggestions: {
-            keyArgs: ['shoppingListId', 'limit'],
+            // Note: 'limit' excluded from keyArgs to avoid unnecessary cache fragmentation
+            keyArgs: ['shoppingListId'],
             merge(existing = [], incoming) {
               if (incoming == null) {
                 return existing;
@@ -540,28 +486,8 @@ export function makeCache(): InMemoryCache {
             keyArgs: ['filters'],
           },
           recipes: {
+            ...mergeConnectionByNodeId('cursor'),
             keyArgs: ['category', 'difficulty'],
-            merge(existing, incoming, { args, readField }) {
-              if (!incoming) return existing;
-              if (!existing || !args?.cursor) return incoming;
-
-              // Pagination - merge edges with deduplication
-              // Incoming overwrites existing (fresh data wins)
-              const edgeMap = new Map();
-              (existing.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-              (incoming.edges || []).forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) edgeMap.set(id, edge);
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
           },
         },
       },

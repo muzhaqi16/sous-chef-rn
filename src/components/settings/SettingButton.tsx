@@ -44,11 +44,11 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 0,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   text: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   defaultText: {
     color: theme.colors.textPrimary,
@@ -60,6 +60,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -329,7 +329,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
           style={[
             componentStyles.bannerText,
             {
-              fontSize: 11 * scale,
+              fontSize: theme.typography.fontSize['2xs'] * scale,
               color: COLORS.bannerText,
             },
           ]}>
@@ -380,7 +380,7 @@ const componentStyles = StyleSheet.create(theme => ({
     height: 28,
   },
   bannerText: {
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     letterSpacing: 3,
     textAlign: 'center',
   },

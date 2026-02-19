@@ -10,7 +10,7 @@ const shadowStyle = {
       offsetY: 4,
       blurRadius: 15,
       spreadDistance: 1,
-      color: '#0000001A',
+      color: 'rgba(0, 0, 0, 0.1)',
     },
   ],
 };
@@ -54,7 +54,7 @@ export const commonStyles = StyleSheet.create(theme => ({
   // Cards
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
   },
@@ -241,7 +241,7 @@ export const commonStyles = StyleSheet.create(theme => ({
       xs: theme.spacing.md,
       md: theme.spacing.lg,
     },
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -574,16 +574,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 6,
-        spreadDistance: 0,
-        color: '#0000004D',
-      },
-    ],
+    ...theme.shadows.lg,
   },
 
   // ============= UTILITY =============
@@ -656,5 +647,19 @@ export const commonStyles = StyleSheet.create(theme => ({
   link: {
     color: theme.colors.primary,
     textDecorationLine: 'underline',
+  },
+
+  // ============= INTERACTION STATES =============
+
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
+
+  disabled: {
+    opacity: theme.opacity.disabled,
+  },
+
+  cardPressed: {
+    opacity: theme.opacity.cardPressed,
   },
 }));

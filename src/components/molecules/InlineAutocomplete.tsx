@@ -185,7 +185,7 @@ export function InlineAutocomplete<T>({
               <React.Fragment key={keyExtractor(item)}>
                 <Pressable
                   onPress={() => handleSelect(item)}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                  style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
                 >
                   {renderItem(item, index)}
                 </Pressable>

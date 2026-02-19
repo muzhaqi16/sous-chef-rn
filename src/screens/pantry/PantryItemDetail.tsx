@@ -1324,6 +1324,6 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

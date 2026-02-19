@@ -141,9 +141,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   addButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

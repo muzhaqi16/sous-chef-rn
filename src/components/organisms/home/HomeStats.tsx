@@ -53,7 +53,7 @@ const styles = StyleSheet.create(theme => ({
   },
   statNumber: {
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.primary,
   },
   statLabel: {

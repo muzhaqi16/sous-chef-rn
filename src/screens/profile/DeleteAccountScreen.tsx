@@ -520,7 +520,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonDisabled: {
     backgroundColor: theme.colors.border,
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   deleteButtonText: {
     color: theme.colors.white,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

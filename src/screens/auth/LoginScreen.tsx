@@ -286,12 +286,12 @@ const styles = StyleSheet.create(theme => ({
   biometricText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   biometricTextDisabled: {
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

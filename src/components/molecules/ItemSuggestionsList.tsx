@@ -187,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   quickAddButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   addManuallyOption: {
     flexDirection: 'row',
@@ -201,6 +201,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

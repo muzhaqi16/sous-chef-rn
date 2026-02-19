@@ -1,31 +1,18 @@
 /**
- * @format
+ * Minimal App smoke test.
  *
- * Note: App component test is minimal due to extensive native module dependencies.
- * The app's functionality is thoroughly tested through component and hook tests.
+ * The App component has deep native-module dependencies that make full rendering
+ * impractical in a Jest environment. Real integration testing is covered by the
+ * Detox E2E suite. This test verifies the module is importable.
  */
 
-import React from 'react';
-
-// Mock the entire App module to avoid deep dependency chain
-jest.mock('../App', () => {
-  return function MockApp() {
-    return null;
-  };
-});
-
-import App from '../App';
-
-describe('App', () => {
-  it('is defined and can be imported', () => {
-    expect(App).toBeDefined();
-    expect(typeof App).toBe('function');
-  });
-
-  it('can be instantiated without errors', () => {
-    expect(() => {
-      const app = <App />;
-      expect(app).toBeDefined();
-    }).not.toThrow();
+describe('App module', () => {
+  it('exports a default component', () => {
+    // Validate the module exists and has a default export.
+    // We don't render it here because it pulls in the full navigation tree,
+    // Apollo client, and many native modules.
+    const mod = require('../App');
+    expect(mod).toBeDefined();
+    expect(typeof mod.default === 'function' || typeof mod === 'function').toBe(true);
   });
 });

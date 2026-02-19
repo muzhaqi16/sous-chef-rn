@@ -102,12 +102,12 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   actionButtonText: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   primaryButtonText: {
     color: theme.colors.background,
@@ -119,6 +119,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

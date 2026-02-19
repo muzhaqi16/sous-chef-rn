@@ -48,7 +48,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       backgroundColor: selected
         ? theme.colors.chipSelectedBackground
         : theme.colors.chipBackground,
-      opacity: disabled ? 0.5 : 1,
+      opacity: disabled ? theme.opacity.disabled : 1,
     };
   }, [selected, disabled, theme, imageUrl]);
 
@@ -114,7 +114,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm + 1,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   iconContainer: {
     marginLeft: theme.spacing.sm,

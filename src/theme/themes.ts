@@ -14,6 +14,11 @@ const commonTheme = {
   shadows,
   sizes,
   zIndex,
+  opacity: {
+    pressed: 0.7,
+    disabled: 0.5,
+    cardPressed: 0.95,
+  },
 };
 
 export const lightTheme = {
@@ -41,7 +46,7 @@ export const lightTheme = {
     // Text
     textPrimary: colors.neutral[900],
     textSecondary: colors.neutral[600],
-    textTertiary: colors.neutral[500],
+    textTertiary: colors.neutral[600], // WCAG AA: ~4.6:1 contrast on white
     textInverse: colors.neutral[0],
     textOnSurfaceVariant: colors.neutral[700],
 
@@ -103,17 +108,15 @@ export const lightTheme = {
     overlay: colors.overlay,
 
     // Action colors for swipe actions
-    consumeAction: '#9C27B0',
-    wasteAction: '#FF9800',
-    restockAction: '#4CAF50',
-    purchaseAction: '#4CAF50',
-    unpurchaseAction: '#FF9800',
+    consumeAction: colors.actions.consume.light,
+    wasteAction: colors.actions.waste.light,
+    restockAction: colors.actions.restock.light,
+    purchaseAction: colors.actions.purchase.light,
+    unpurchaseAction: colors.actions.unpurchase.light,
 
     // Semantic action colors
-    favorite: '#E91E63',
-    rating: '#FFB800',
-
-    gap: (v: number) => v * 8,
+    favorite: colors.actions.favorite.light,
+    rating: colors.actions.rating.light,
   },
 };
 
@@ -142,7 +145,7 @@ export const darkTheme = {
     // Text
     textPrimary: colors.neutral[50],
     textSecondary: colors.neutral[300],
-    textTertiary: colors.neutral[400],
+    textTertiary: colors.neutral[300], // Better contrast on dark surfaces
     textInverse: colors.neutral[900],
     textOnSurfaceVariant: colors.neutral[200],
 
@@ -223,17 +226,15 @@ export const darkTheme = {
     overlay: colors.overlay,
 
     // Action colors for swipe actions (slightly adjusted for dark mode visibility)
-    consumeAction: '#BA68C8',
-    wasteAction: '#FFB74D',
-    restockAction: '#81C784',
-    purchaseAction: '#81C784',
-    unpurchaseAction: '#FFB74D',
+    consumeAction: colors.actions.consume.dark,
+    wasteAction: colors.actions.waste.dark,
+    restockAction: colors.actions.restock.dark,
+    purchaseAction: colors.actions.purchase.dark,
+    unpurchaseAction: colors.actions.unpurchase.dark,
 
     // Semantic action colors
-    favorite: '#F48FB1',
-    rating: '#FFD54F',
-
-    gap: (v: number) => v * 8,
+    favorite: colors.actions.favorite.dark,
+    rating: colors.actions.rating.dark,
   },
 };
 

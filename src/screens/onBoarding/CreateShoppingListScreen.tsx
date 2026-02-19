@@ -267,7 +267,7 @@ const styles = StyleSheet.create(theme => ({
   },
   resourceName: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   defaultBadge: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create(theme => ({
   defaultBadgeText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
   },
   infoText: {

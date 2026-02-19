@@ -91,7 +91,7 @@ export const styles = StyleSheet.create(theme => {
     color: theme.colors.white,
     fontSize: 12,
     marginTop: theme.spacing.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
 };
 });

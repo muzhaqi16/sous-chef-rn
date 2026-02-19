@@ -211,7 +211,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   pickerButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
     borderColor: theme.colors.border,
   },
   pickerButtonText: {
@@ -220,6 +220,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

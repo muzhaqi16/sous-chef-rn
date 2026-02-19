@@ -190,7 +190,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     flex: 1,
   },
@@ -199,7 +199,7 @@ const styles = StyleSheet.create(theme => ({
   },
   saveText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'right',
   },
   divider: {
@@ -207,7 +207,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 
