@@ -84,7 +84,7 @@ export const InvitationAcceptanceModal: React.FC<
           query: MyShoppingListInvitesDocument,
           fetchPolicy: 'network-only',
         });
-        const invites = result.data?.myShoppingListInvites;
+        const invites = result.data?.me?.pendingCollaborationInvites;
         const invite = invites?.find(
           inv => inv.id === invitation.payload?.inviteId,
         );
@@ -187,7 +187,7 @@ export const InvitationAcceptanceModal: React.FC<
                   query: MyShoppingListInvitesDocument,
                   fetchPolicy: 'network-only',
                 });
-                const invites = result.data?.myShoppingListInvites;
+                const invites = result.data?.me?.pendingCollaborationInvites;
                 const invite = invites?.find(
                   inv => inv.id === invitation.payload?.inviteId,
                 );

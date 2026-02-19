@@ -13,7 +13,7 @@ type Query {
   myProfile: User @auth
 }
 """
-directive @auth on FIELD_DEFINITION | OBJECT
+directive @auth on FIELD_DEFINITION
 
 """
 Cache control directive for GraphQL fields and types
@@ -23,7 +23,14 @@ Examples:
 - @cacheControl(maxAge: 0) - Don't cache (real-time data)
 - @cacheControl(maxAge: 300, scope: PUBLIC) - Public cache for 5 minutes
 """
-directive @cacheControl(inheritMaxAge: Boolean, maxAge: Int, scope: CacheControlScope) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
+directive @cacheControl(
+  """Whether to inherit max age from parent type"""
+  inheritMaxAge: Boolean
+  """Maximum age in seconds for cache TTL"""
+  maxAge: Int
+  """Scope of the cache (PUBLIC or PRIVATE)"""
+  scope: CacheControlScope
+) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
 
 """
 Require that the current user is the owner of the parent resource
@@ -72,7 +79,12 @@ type Mutation {
     @requireAccess(resource: "ShoppingList", level: OWNER)
 }
 """
-directive @requireAccess(level: AccessLevel!, resource: String!) on FIELD_DEFINITION
+directive @requireAccess(
+  """Required access level"""
+  level: AccessLevel!
+  """Resource type (e.g., ShoppingList, Pantry, Home)"""
+  resource: String!
+) on FIELD_DEFINITION
 
 """
 Require specific home membership role
@@ -85,7 +97,20 @@ type Mutation {
   deleteHome(id: ID!): Boolean @requireRole(role: OWNER)
 }
 """
-directive @requireRole(role: MembershipRole!) on FIELD_DEFINITION
+directive @requireRole(
+  """Required membership role in the home"""
+  role: MembershipRole!
+) on FIELD_DEFINITION
+
+"""
+Require specific system-level user role.
+Returns FORBIDDEN error if user doesn't have the required role.
+Role hierarchy: SUPER_ADMIN > ADMIN > MODERATOR > USER
+"""
+directive @requireSystemRole(
+  """Required system role from UserRole enum"""
+  role: UserRole!
+) on FIELD_DEFINITION
 
 """
 Access level for resource-based authorization
@@ -122,12 +147,9 @@ type AddIngredientResult {
   wasUpdated: Boolean!
 }
 
-"""Result of adding an item to pantry"""
-union AddPantryItemResult = NotFoundError | PantryItem | UnauthorizedError | ValidationError
-
 """Result of adding a pantry item to a shopping list"""
 type AddPantryItemToShoppingListResult {
-  shoppingListItemId: String!
+  shoppingListItemId: ID!
 }
 
 type AddRecipeToShoppingListResult {
@@ -155,9 +177,6 @@ input AddRestrictionsInput {
   userId: ID!
 }
 
-"""Result of adding an item to a shopping list"""
-union AddShoppingListItemResult = DuplicateError | NotFoundError | ShoppingListItem | UnauthorizedError | ValidationError
-
 input AddTemplateItemInput {
   customMealName: String
   dayOffset: Int!
@@ -173,12 +192,23 @@ input AddWarningInput {
   userId: ID!
 }
 
+enum AddedContext {
+  EXPIRING
+  FROM_MEAL_PLAN
+  FROM_RECIPE
+  LOW_STOCK
+  MANUAL
+  PANTRY_MISSING
+  RECURRING
+  SUGGESTED
+}
+
 """Item that was added to the shopping list from low stock detection"""
 type AddedLowStockItem {
   itemName: String!
-  pantryItemId: String!
+  pantryItemId: ID!
   quantity: Float!
-  shoppingListItemId: String!
+  shoppingListItemId: ID!
 }
 
 """Cost analytics for additions/restocks"""
@@ -193,9 +223,15 @@ Input for adjusting pantry item quantity to match physical count.
 Creates an ADJUSTMENT usage record for audit trail.
 """
 input AdjustPantryItemQuantityInput {
+  """The actual quantity from physical count"""
   newQuantity: Float!
+  """Why the adjustment was made (required for audit trail)"""
   reason: String!
+  """
+  Explicit remaining net weight override for full recount scenarios (dual-tracked items only)
+  """
   remainingNetWeight: Float
+  """Optimistic concurrency control — must match current version"""
   version: Int
 }
 
@@ -204,12 +240,22 @@ Input for batch deleting images from S3/MinIO storage.
 Used by admin panel after duplicate detection.
 """
 input AdminDeleteImagesInput {
+  """Image URLs to delete from S3/MinIO storage"""
   imageUrls: [String!]!
+  """
+  Optional Item IDs to update after deletion.
+  If not provided, all items will be checked for affected images.
+  """
   itemIds: [ID!]
+  """
+  Force background job processing regardless of batch size.
+  By default, batches >50 images are automatically queued.
+  """
   useQueue: Boolean
 }
 
 input AdminDeleteUserInput {
+  """If true, permanently deletes the user (SuperAdmin only)"""
   hard: Boolean
 }
 
@@ -238,8 +284,11 @@ enum AllergenSeverity {
 
 """Input for filtering analytics queries by time period"""
 input AnalyticsFilters {
+  """Custom date range - overrides dateRange if both provided"""
   customRange: DateRangeInput
+  """Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.)"""
   dateRange: DateRange
+  """Limit for top items lists (default: 10)"""
   topItemsLimit: Int
 }
 
@@ -330,6 +379,7 @@ Input for a single item in batch add operation (without shoppingListId)
 input BatchAddShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
+  """Client-provided ID for matching results (optional)"""
   clientId: String
   itemId: String
   itemName: String
@@ -346,19 +396,28 @@ input BatchAddShoppingListItemInput {
 
 """Result for a single item in batch add operation"""
 type BatchAddShoppingListItemResult {
+  """Client ID if provided in input"""
   clientId: String
+  """Error message if failed"""
   error: String
+  """Index in the input array"""
   index: Int!
+  """The created/updated item (null if failed)"""
   item: ShoppingListItem
+  """Whether quantity was incremented (item already existed)"""
   quantityIncremented: Boolean
+  """Whether the operation succeeded"""
   success: Boolean!
 }
 
 """Response for batch add operation"""
 type BatchAddShoppingListItemsResponse {
+  """Number of items that failed"""
   failedCount: Int!
+  """Number of items where quantity was incremented"""
   incrementedCount: Int!
   results: [BatchAddShoppingListItemResult!]!
+  """Number of items successfully added"""
   successCount: Int!
 }
 
@@ -389,8 +448,11 @@ type BatchUpsertItemResult {
   success: Boolean!
 }
 
-type BatchUpsertItemsResponse {
+type BatchUpsertItemsResponse implements MutationPayload {
+  code: String!
+  message: String!
   results: [BatchUpsertItemResult!]!
+  success: Boolean!
   summary: BatchOperationSummary!
 }
 
@@ -408,12 +470,12 @@ scalar BigInt
 Brand type for product manufacturers and retailers
 Cache: 1 hour - brand catalog is relatively stable
 """
-type Brand {
+type Brand implements Node {
   children: [Brand!]!
   createdAt: DateTime!
-  deletedAt: DateTime
   description: String
   id: ID!
+  """Denormalized count of items associated with this brand"""
   itemCount: Int!
   name: String!
   parent: Brand
@@ -421,14 +483,14 @@ type Brand {
   version: Int!
 }
 
-type BrandConnection {
+type BrandConnection implements Connection {
   edges: [BrandEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Brand connection for pagination"""
-type BrandEdge {
+type BrandEdge implements Edge {
   cursor: String!
   node: Brand!
 }
@@ -441,6 +503,8 @@ input BrandFilterInput {
 }
 
 input BrandFilters {
+  """Filter root brands (no parent)"""
+  isRoot: Boolean
   parentId: String
   search: String
 }
@@ -498,10 +562,13 @@ input BulkCreateItemInput {
   validateOnly: Boolean
 }
 
-type BulkCreateItemsResponse {
+type BulkCreateItemsResponse implements MutationPayload {
+  code: String!
   created: [Item!]!
   errors: [ItemError!]!
+  message: String!
   skipped: [SkippedItem!]!
+  success: Boolean!
   summary: BulkOperationSummary!
   updated: [Item!]!
 }
@@ -513,9 +580,11 @@ type BulkDeviceError {
 }
 
 """Result of bulk device update"""
-type BulkDeviceResult {
+type BulkDeviceResult implements MutationPayload {
+  code: String!
   devices: [Device!]!
   errors: [BulkDeviceError!]
+  message: String!
   success: Boolean!
   updatedCount: Int!
 }
@@ -529,6 +598,14 @@ input BulkDeviceUpdateInput {
   isActive: Boolean
   isTrusted: Boolean
   isVerified: Boolean
+}
+
+type BulkLoginHistoryPayload implements MutationPayload {
+  code: String!
+  count: Int!
+  loginHistories: [LoginHistory!]
+  message: String!
+  success: Boolean!
 }
 
 input BulkNotificationInput {
@@ -545,19 +622,49 @@ input BulkNotificationInput {
   userIds: [String!]!
 }
 
-type BulkNotificationResult {
+type BulkNotificationPayload implements MutationPayload {
+  code: String!
+  count: Int!
+  message: String!
+  notifications: [Notification!]
+  success: Boolean!
+}
+
+type BulkNotificationResult implements MutationPayload {
+  code: String!
   failed: [String!]!
+  message: String!
   sent: [Notification!]!
+  success: Boolean!
   totalFailed: Int!
   totalSent: Int!
 }
 
-type BulkOperationSummary {
+type BulkOperationSummary implements MutationPayload {
+  code: String!
   executionTime: Float!
   failed: Int!
+  message: String!
   skipped: Int!
+  success: Boolean!
   successful: Int!
   total: Int!
+}
+
+type BulkPurchasePayload implements MutationPayload {
+  code: String!
+  count: Int!
+  message: String!
+  purchases: [Purchase!]
+  success: Boolean!
+}
+
+type BulkStorePayload implements MutationPayload {
+  code: String!
+  count: Int!
+  message: String!
+  stores: [Store!]!
+  success: Boolean!
 }
 
 """
@@ -579,12 +686,11 @@ type CanDeleteAccountResult {
 Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
-type Category {
+type Category implements Node {
   children: [Category!]!
   color: String
   createdAt: DateTime!
   createdBy: User
-  deletedAt: DateTime
   description: String
   icon: String
   id: ID!
@@ -602,22 +708,35 @@ type Category {
   visibility: Visibility!
 }
 
-type CategoryConnection {
+type CategoryConnection implements Connection {
   edges: [CategoryEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Category connection for pagination (Relay spec)"""
-type CategoryEdge {
+type CategoryEdge implements Edge {
   cursor: String!
   node: Category!
+}
+
+input CategoryFilters {
+  parentId: String
+  search: String
+  type: CategoryType
 }
 
 input CategoryOpsInput {
   addCategoryIds: [String!]
   primaryCategoryId: String
   removeCategoryIds: [String!]
+}
+
+"""Order by options for categories"""
+input CategoryOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
+  sortOrder: SortOrder
 }
 
 type CategoryPayload implements MutationPayload {
@@ -639,7 +758,6 @@ type CategorySuggestion {
   color: String
   icon: String
   id: ID!
-  isPrimary: Boolean!
   name: String!
   slug: String
   type: CategoryType!
@@ -660,7 +778,8 @@ input ChangePasswordInput {
   newPassword: String!
 }
 
-type ChangePasswordResponse {
+type ChangePasswordResponse implements MutationPayload {
+  code: String!
   message: String!
   success: Boolean!
 }
@@ -691,7 +810,9 @@ enum ChangeType {
 
 """Response for clearing items from a shopping list"""
 type ClearItemsResponse {
+  """IDs of items that were cleared"""
   clearedItemIds: [ID!]!
+  """Summary of the bulk operation"""
   summary: BulkOperationSummary!
 }
 
@@ -713,10 +834,8 @@ enum CollaboratorRole {
 
 enum CollaboratorStatus {
   ACTIVE
-  LEFT
   PENDING
   REMOVED
-  SUSPENDED
 }
 
 type CompatibleUnit {
@@ -744,7 +863,9 @@ input ConfirmedIngredientConsumptionInput {
 """Error when operation conflicts with existing data"""
 type ConflictError implements MutationError {
   code: String!
+  """The field causing the conflict"""
   conflictingField: String
+  """The existing value causing the conflict"""
   existingValue: String
   message: String!
 }
@@ -753,14 +874,6 @@ interface Connection {
   edges: [Edge!]!
   pageInfo: PageInfo!
   totalCount: Int!
-}
-
-"""Relay-style cursor pagination input (for Connection types)"""
-input ConnectionPaginationInput {
-  after: String
-  before: String
-  first: Int
-  last: Int
 }
 
 """Sub-input for connectivity info"""
@@ -783,7 +896,7 @@ type ConsumptionRate {
   averageDailyConsumption: Float!
   dataPoints: Int!
   daysUntilEmpty: Float
-  itemId: String
+  itemId: ID
   itemName: String
   periodEnd: DateTime!
   periodStart: DateTime!
@@ -839,7 +952,7 @@ type ConvertedValue {
 }
 
 """Cooking activity log - personal user data"""
-type CookingLog {
+type CookingLog implements Node {
   actualCookTime: Int
   actualPrepTime: Int
   cookedAt: DateTime!
@@ -858,14 +971,14 @@ type CookingLog {
   wouldMakeAgain: Boolean
 }
 
-type CookingLogConnection {
+type CookingLogConnection implements Connection {
   edges: [CookingLogEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Cooking log connection for pagination"""
-type CookingLogEdge {
+type CookingLogEdge implements Edge {
   cursor: String!
   node: CookingLog!
 }
@@ -896,9 +1009,15 @@ Input for correcting the net weight of a dual-tracked pantry item.
 Recalculates remainingNetWeight proportionally and derives new quantity.
 """
 input CorrectPantryItemWeightInput {
+  """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
   netWeight: Float!
+  """
+  Unit for the net weight (optional — only provide to also change the unit)
+  """
   netWeightUnitId: String
+  """Why the correction is needed (required for audit trail)"""
   reason: String!
+  """Optimistic concurrency control"""
   version: Int!
 }
 
@@ -978,46 +1097,29 @@ input CreateItemInput {
   brand: BrandReferenceInput
   classification: ItemClassificationInput
   description: String
-  externalSource: ExternalSourceShorthandInput
   externalSources: [ExternalSourceMappingInput!]
   healthInfo: HealthInfoInput
   media: MediaAssetsInput
   metadata: JSON
   name: String!
+  nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
   productDetails: ProductDetailsInput
   type: ItemType
   unitConfig: ItemUnitConfigInput
 }
 
-"""Result of creating an item - either success or specific error"""
-union CreateItemResult = DuplicateError | Item | UnauthorizedError | ValidationError
-
-input CreateLoginHistoryInput {
-  attribution: AttributionInput
-  automation: ApiAutomationInput
-  behavioral: BehavioralSignalsInput
-  browserOs: BrowserOsDetailsInput
-  deviceId: ID
-  deviceType: DeviceType
-  failureDetails: String
-  failureReason: LoginFailureReason
-  isMobileApp: Boolean = false
-  method: LoginMethod = PASSWORD
-  network: NetworkLocationInput
-  provider: String
-  risk: RiskAssessmentInput
-  session: SessionInfoInput
-  success: Boolean!
-  userId: ID!
-}
-
 """Input for creating a meal plan from a template"""
 input CreateMealPlanFromTemplateInput {
+  """Optional budget for the meal plan"""
   budgetAmount: Float
+  """Optional dietary profile to link for nutrition tracking"""
   dietaryProfileId: ID
+  """Name for the new meal plan (defaults to template name + date)"""
   name: String
+  """Override default servings from template"""
   servings: Int
+  """Start date for the new meal plan"""
   startDate: DateTime!
   templateId: ID!
 }
@@ -1025,6 +1127,7 @@ input CreateMealPlanFromTemplateInput {
 input CreateMealPlanInput {
   budgetAmount: Float
   description: String
+  """Optional link to a dietary profile for nutrition goal tracking"""
   dietaryProfileId: ID
   endDate: DateTime!
   name: String!
@@ -1034,6 +1137,9 @@ input CreateMealPlanInput {
 }
 
 input CreateMealPlanItemInput {
+  """
+  Manual nutrition override - if not provided, will be pulled from recipe
+  """
   calories: Float
   carbs: Float
   customMealName: String
@@ -1053,6 +1159,7 @@ input CreateMealTemplateInput {
   defaultServings: Int
   description: String
   durationDays: Int
+  """Initial items to add to the template"""
   items: [MealTemplateItemInput!]
   name: String!
   tags: [String!]
@@ -1155,7 +1262,6 @@ input CreateRecipeInput {
   dietary: DietaryTagsInput
   diets: [Diet!]
   difficulty: Difficulty
-  externalSource: ExternalSourceShorthandInput
   externalSourceData: JSON
   externalSourceId: String
   externalSourceUrl: String
@@ -1179,6 +1285,12 @@ input CreateRecipeInput {
   timing: TimeEstimatesInput
   tips: String
   visibility: Visibility
+}
+
+input CreateRecipeReviewInput {
+  comment: String
+  rating: Int!
+  recipeId: ID!
 }
 
 input CreateShoppingListInput {
@@ -1209,18 +1321,31 @@ input CreateShoppingListItemInput {
 
 """Input for creating a new storage location"""
 input CreateStorageLocationInput {
+  """Maximum capacity in specified units"""
   capacity: Float
+  """Unit of measurement for capacity"""
   capacityUnit: String
+  """Optional color code (hex format recommended)"""
   color: String
+  """Optional description or notes"""
   description: String
+  """ID of the home this location belongs to"""
   homeId: ID!
+  """Optional icon identifier"""
   icon: String
+  """Whether the location has climate control (default: false)"""
   isClimateControlled: Boolean
+  """Set as default location for the home (default: false)"""
   isDefault: Boolean
+  """Display name for the location"""
   name: String!
+  """Optional parent location ID for nested locations"""
   parentLocationId: ID
+  """Sort order (default: 0)"""
   sortOrder: Int
+  """Temperature state of the location"""
   temperature: StorageState
+  """Type of storage location"""
   type: StorageType!
 }
 
@@ -1388,16 +1513,12 @@ scalar DateTime
 enum DeductionMethod {
   AUTOMATIC
   MANUAL
-  RECIPE_BASED
+  SKIPPED
 }
 
-"""Result of deleting an item"""
-union DeleteItemResult = DeleteSuccess | NotFoundError | UnauthorizedError
-
-"""Success response for delete operations"""
-type DeleteSuccess {
-  id: ID!
-  success: Boolean!
+input DeleteRecipeFolderInput {
+  folder: String!
+  moveTo: String
 }
 
 """Input for deleted device cleanup"""
@@ -1421,8 +1542,7 @@ enum DeletionBlockerType {
 """
 User device information - contains sensitive device fingerprinting data
 """
-type Device {
-  androidId: String
+type Device implements Node {
   apiLevel: Int
   appVersion: String
   availableLocationProviders: String
@@ -1434,7 +1554,6 @@ type Device {
   bundleId: String
   carrier: String
   createdAt: DateTime!
-  deletedAt: DateTime
   deviceId: String!
   deviceName: String
   deviceType: DeviceType!
@@ -1443,12 +1562,10 @@ type Device {
   hasNotch: Boolean
   hostNames: String
   id: ID!
-  instanceId: String
   isActive: Boolean!
   isAirplaneMode: Boolean
   isBatteryCharging: Boolean
   isBluetoothHeadphonesConnected: Boolean
-  isEmulator: Boolean
   isHeadphonesConnected: Boolean
   isKeyboardConnected: Boolean
   isLocationEnabled: Boolean
@@ -1468,7 +1585,6 @@ type Device {
   osVersion: String
   platform: MobilePlatform
   powerState: String
-  pushToken: String
   readableVersion: String
   screenResolution: String
   supportedAbis: String
@@ -1481,7 +1597,7 @@ type Device {
   usedMemory: String
   user: User
   userAgent: String
-  userId: String!
+  userId: ID!
   verifiedAt: DateTime
 }
 
@@ -1512,27 +1628,30 @@ input DeviceCharacteristicsInput {
 
 """Input for device cleanup operations"""
 input DeviceCleanupInput {
+  """Clean up soft-deleted devices older than X days"""
   deletedDevices: DeletedDeviceCleanupInput
+  """Clean up stale devices (not seen for X days)"""
   staleDevices: StaleDeviceCleanupInput
 }
 
 """Result of device cleanup operation"""
-type DeviceCleanupResult {
+type DeviceCleanupResult implements MutationPayload {
+  code: String!
   deletedDevicesRemoved: Int
+  message: String!
   staleDevicesRemoved: Int
   success: Boolean!
   totalRemoved: Int!
 }
 
-"""Device connection for pagination"""
-type DeviceConnection {
+type DeviceConnection implements Connection {
   edges: [DeviceEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
-"""Input for device count query"""
-input DeviceCountInput {
+"""Filter input for device count query"""
+input DeviceCountFilters {
   deviceType: DeviceType
   isActive: Boolean
   isTrusted: Boolean
@@ -1555,21 +1674,30 @@ input DeviceDetailsInput {
   supportedMediaTypes: JSON
 }
 
-"""Device edge for pagination"""
-type DeviceEdge {
+"""Device connection for pagination"""
+type DeviceEdge implements Edge {
   cursor: String!
   node: Device!
 }
 
+"""
+Filter input for querying devices.
+If userId is not provided, returns current user's devices.
+"""
 input DeviceFilters {
-  activeOnly: Boolean = true
+  batteryLevelBelow: Float
   deviceType: DeviceType
-  orderBy: SortOrder = DESC
+  hasPeripherals: Boolean
+  inactiveDays: Int
+  isActive: Boolean
+  isEmulated: Boolean
+  isSuspicious: Boolean
+  isTrusted: Boolean
+  isVerified: Boolean
+  manufacturer: String
   platform: MobilePlatform
-  skip: Int = 0
-  take: Int = 50
-  trustedOnly: Boolean = false
-  verifiedOnly: Boolean = false
+  search: String
+  userId: ID
 }
 
 input DeviceHardwareInfoInput {
@@ -1692,32 +1820,6 @@ type DeviceTypeStat {
   deviceType: DeviceType!
 }
 
-"""
-Comprehensive input for querying devices with filtering, pagination, and sorting.
-If userId is not provided, returns current user's devices.
-"""
-input DevicesQueryInput {
-  after: String
-  batteryLevelBelow: Float
-  before: String
-  deviceType: DeviceType
-  first: Int
-  hasPeripherals: Boolean
-  inactiveDays: Int
-  isActive: Boolean
-  isEmulated: Boolean
-  isSuspicious: Boolean
-  isTrusted: Boolean
-  isVerified: Boolean
-  last: Int
-  manufacturer: String
-  orderBy: DeviceSortField
-  orderDirection: SortOrder
-  platform: MobilePlatform
-  search: String
-  userId: ID
-}
-
 enum Diet {
   GLUTEN_FREE
   KETO
@@ -1761,7 +1863,7 @@ type DietaryProfile {
   snacksPerDay: Int!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 type DietaryProfilePayload implements MutationPayload {
@@ -1772,11 +1874,11 @@ type DietaryProfilePayload implements MutationPayload {
 }
 
 type DietaryRestriction {
-  appliesToHomeId: String
+  appliesToHomeId: ID
   createdAt: DateTime!
   diet: Diet
   dietaryProfile: DietaryProfile!
-  dietaryProfileId: String!
+  dietaryProfileId: ID!
   healthGoal: HealthGoal
   id: ID!
   intolerance: Intolerance
@@ -1822,9 +1924,12 @@ enum DisplayFormat {
 """Error when a duplicate resource already exists"""
 type DuplicateError implements MutationError {
   code: String!
+  """ID of the existing resource (if available)"""
   existingId: ID
+  """The field that has a duplicate value"""
   field: String!
   message: String!
+  """The duplicate value"""
   value: String
 }
 
@@ -1836,7 +1941,7 @@ interface Edge {
 """Effective usage rate: consumed / (consumed + wasted)"""
 type EffectiveUsageRate {
   effectiveRate: Float!
-  itemId: String
+  itemId: ID
   itemName: String
   periodEnd: DateTime!
   periodStart: DateTime!
@@ -1869,7 +1974,7 @@ input ExpirationNotifConfigInput {
   expirationNotifications: Boolean
 }
 
-type ExpirationNotification {
+type ExpirationNotification implements Node {
   actionAt: DateTime
   actionTaken: ExpirationAction
   batchId: String
@@ -1878,28 +1983,28 @@ type ExpirationNotification {
   dismissedAt: DateTime
   expiresAt: DateTime!
   genericNotification: Notification
-  genericNotificationId: String
+  genericNotificationId: ID
   id: ID!
   isBatched: Boolean!
   notificationType: ExpirationNotificationType!
   pantryItem: PantryItem!
-  pantryItemId: String!
+  pantryItemId: ID!
   readAt: DateTime
   sentAt: DateTime
   status: NotificationDeliveryStatus!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
 }
 
-type ExpirationNotificationConnection {
+type ExpirationNotificationConnection implements Connection {
   edges: [ExpirationNotificationEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Expiration notification connection for pagination"""
-type ExpirationNotificationEdge {
+type ExpirationNotificationEdge implements Edge {
   cursor: String!
   node: ExpirationNotification!
 }
@@ -2033,14 +2138,6 @@ type ExternalSourceMappingPayload implements MutationPayload {
   success: Boolean!
 }
 
-"""Reusable shorthand for a single external source mapping"""
-input ExternalSourceShorthandInput {
-  externalSourceData: JSON
-  externalSourceId: String
-  externalSourceType: String
-  externalSourceUrl: String
-}
-
 type FacetValue {
   count: Int!
   label: String!
@@ -2086,14 +2183,13 @@ Quantity input that accepts both strings and numbers. Strings can be fractions l
 """
 scalar FlexibleQuantity
 
-type ForgotPasswordResponse {
+type ForgotPasswordResponse implements MutationPayload {
+  code: String!
   message: String!
   success: Boolean!
 }
 
 input GetExpirationNotificationsInput {
-  limit: Int
-  offset: Int
   pantryItemId: ID
   status: NotificationDeliveryStatus
 }
@@ -2148,19 +2244,26 @@ input HealthInfoInput {
 Home/household for managing pantries and shopping lists
 Cache: 5 minutes - metadata changes occasionally
 """
-type Home {
+type Home implements Node {
   allowJoinCode: Boolean!
   createdAt: DateTime!
   currency: String
-  deletedAt: DateTime
   description: String
   id: ID!
+  inviteLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
+  inviteStats: [HomeInviteStatsGroup!]!
   invitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
+  """
+  Whether this home is the current user's default home.
+  Computed per-user from UserSettings.defaultHomeId.
+  """
   isDefault: Boolean!
   isPublic: Boolean!
   joinCode: String
+  lowStockItems: [LowStockItem!]!
   maxMembers: Int
   membersConnection(after: String, before: String, first: Int, last: Int): MembershipConnection!
+  membershipStats: MembershipStats!
   metadata: JSON
   myMembership: Membership
   name: String!
@@ -2170,18 +2273,22 @@ type Home {
   timezone: String
   type: HomeType!
   updatedAt: DateTime!
+  """
+  Usage statistics for this home.
+  Available for all users but primarily used by admin views.
+  """
   usageStats: HomeUsageStats
   version: Int!
 }
 
-type HomeConnection {
+type HomeConnection implements Connection {
   edges: [HomeEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Home connection for pagination"""
-type HomeEdge {
+type HomeEdge implements Edge {
   cursor: String!
   node: Home!
 }
@@ -2191,13 +2298,17 @@ Filters for querying homes.
 userId filter is admin-only - ignored for regular users.
 """
 input HomeFilters {
+  """Filter by public/private status"""
   isPublic: Boolean
+  """Search by home name"""
   search: String
+  """Filter by home type"""
   type: HomeType
+  """Admin-only: Filter by specific user ID (member of home)"""
   userId: ID
 }
 
-type HomeInvite {
+type HomeInvite implements Node {
   acceptedAt: DateTime
   createdAt: DateTime!
   customPermissions: HomePermissions
@@ -2205,10 +2316,10 @@ type HomeInvite {
   email: String!
   expiresAt: DateTime!
   home: Home!
-  homeId: String!
+  homeId: ID!
   id: ID!
   invitedUser: User
-  invitedUserId: String
+  invitedUserId: ID
   inviter: User!
   lastReminderAt: DateTime
   logs(limit: Int): [InviteLog!]!
@@ -2232,14 +2343,14 @@ type HomeInviteChangeEvent {
   userId: ID!
 }
 
-type HomeInviteConnection {
+type HomeInviteConnection implements Connection {
   edges: [HomeInviteEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Home invite connection for pagination"""
-type HomeInviteEdge {
+type HomeInviteEdge implements Edge {
   cursor: String!
   node: HomeInvite!
 }
@@ -2259,19 +2370,25 @@ type HomeInvitePayload implements MutationPayload {
 }
 
 type HomeInviteStatsGroup {
-  _count: InviteActionCount!
   action: InviteAction!
+  count: InviteActionCount!
+}
+
+"""Order by options for homes"""
+input HomeOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
 }
 
 type HomeOwnership {
   createdAt: DateTime!
   home: Home!
-  homeId: String!
+  homeId: ID!
   id: ID!
   transferredAt: DateTime
   transferredFrom: String
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 type HomeOwnershipPayload implements MutationPayload {
@@ -2312,11 +2429,17 @@ Usage statistics for a Home.
 Included when admin requests resources with stats.
 """
 type HomeUsageStats {
+  """Number of active shopping lists"""
   activeShoppingListCount: Int!
+  """Last activity timestamp in the home"""
   lastActivityAt: DateTime
+  """Total number of active members"""
   memberCount: Int!
+  """Total number of pantries"""
   pantryCount: Int!
+  """Total pantry items across all pantries"""
   pantryItemCount: Int!
+  """Total number of shopping lists"""
   shoppingListCount: Int!
 }
 
@@ -2329,8 +2452,13 @@ scalar IPv4
 
 """Error details for a failed image deletion"""
 type ImageDeletionError {
+  """Error message describing the failure"""
   error: String!
+  """
+  The S3/MinIO key (path) of the image (may be null if extraction failed)
+  """
   key: String
+  """The full URL of the image that failed to delete"""
   url: String!
 }
 
@@ -2339,11 +2467,17 @@ Status of a background image deletion job.
 Use this to track progress of large batch deletions.
 """
 type ImageDeletionJobStatus {
+  """When the job was created"""
   createdAt: DateTime!
+  """When the job finished (null if still running)"""
   finishedAt: DateTime
+  """Unique job identifier"""
   jobId: String!
+  """Progress percentage (0-100)"""
   progress: Int
+  """Deletion result (only available when status is 'completed')"""
   result: ImageDeletionResult
+  """Current job status: waiting, active, completed, failed, delayed"""
   status: String!
 }
 
@@ -2351,11 +2485,22 @@ type ImageDeletionJobStatus {
 Result of an image deletion operation.
 Contains counts of successfully deleted and failed images.
 """
-type ImageDeletionResult {
+type ImageDeletionResult implements MutationPayload {
+  code: String!
+  """Number of database Item records updated"""
   databaseUpdated: Int!
+  """Number of images successfully deleted from S3/MinIO storage"""
   deletedFromStorage: Int!
+  """List of storage deletion failures with error details"""
   failedStorage: [ImageDeletionError!]!
+  """
+  Job ID if the operation was queued for background processing.
+  Use adminGetImageDeletionJobStatus to check progress.
+  """
   jobId: String
+  message: String!
+  success: Boolean!
+  """Total number of images requested for deletion"""
   totalRequested: Int!
 }
 
@@ -2397,13 +2542,16 @@ input ImportItemsFromProviderInput {
   searchQuery: String
 }
 
-type ImportItemsResponse {
+type ImportItemsResponse implements MutationPayload {
+  code: String!
   errors: [ItemError!]!
   executionTime: Float
   failed: Int!
   imported: Int!
   items: [Item!]!
+  message: String!
   providerMetadata: JSON
+  success: Boolean!
   updated: Int!
 }
 
@@ -2488,28 +2636,28 @@ type InviteActionStats {
   inviteViewed: Int
 }
 
-type InviteLog {
+type InviteLog implements Node {
   action: InviteAction!
   actor: User
-  actorId: String
+  actorId: ID
   createdAt: DateTime!
   description: String!
   id: ID!
   invite: HomeInvite!
-  inviteId: String!
+  inviteId: ID!
   metadata: JSON
   newStatus: InviteStatus
   oldStatus: InviteStatus
 }
 
-type InviteLogConnection {
+type InviteLogConnection implements Connection {
   edges: [InviteLogEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Invite log connection for pagination"""
-type InviteLogEdge {
+type InviteLogEdge implements Edge {
   cursor: String!
   node: InviteLog!
 }
@@ -2531,6 +2679,7 @@ enum InviteStatus {
   EXPIRED
   PENDING
   REVOKED
+  USED
 }
 
 type InviteTimelineEntry {
@@ -2555,7 +2704,7 @@ input InviteToShoppingListInput {
   canRemoveItems: Boolean
   canViewHistory: Boolean
   email: String!
-  expiresAt: String
+  expiresAt: DateTime
   role: CollaboratorRole!
   shoppingListId: ID!
 }
@@ -2564,7 +2713,7 @@ input InviteToShoppingListInput {
 Item/Product catalog type
 Cache: 30 minutes - catalog items are relatively static
 """
-type Item {
+type Item implements Node {
   allergens: JSON
   alternateUpcs: [String!]!
   approvedAt: DateTime
@@ -2577,12 +2726,11 @@ type Item {
   dataSource: DataSource!
   defaultConsumeIncrement: Float
   defaultConsumeUnit: Unit
-  defaultConsumeUnitId: String
-  deletedAt: DateTime
+  defaultConsumeUnitId: ID
   density: Float
   description: String
   displayUnit: Unit
-  displayUnitId: String
+  displayUnitId: ID
   externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
   id: ID!
@@ -2599,7 +2747,7 @@ type Item {
   nutritions: JSON
   popularity: Int!
   preferredTrackingUnit: Unit
-  preferredTrackingUnitId: String
+  preferredTrackingUnitId: ID
   priceHistory: [ItemPriceHistory!]!
   primaryUpc: String
   servingSize: Float
@@ -2625,7 +2773,7 @@ type ItemAvailability {
   inventory: Int
   lastChecked: DateTime!
   price: Float
-  storeId: String!
+  storeId: ID!
   storeName: String!
 }
 
@@ -2653,6 +2801,13 @@ type ItemCategoryPayload implements MutationPayload {
   success: Boolean!
 }
 
+type ItemCategorySuggestion {
+  id: ID!
+  isPrimary: Boolean!
+  name: String!
+  type: CategoryType!
+}
+
 input ItemClassificationInput {
   categoryIds: [String!]
   storageState: StorageState
@@ -2666,7 +2821,7 @@ enum ItemCondition {
   SPOILED
 }
 
-type ItemConnection {
+type ItemConnection implements Connection {
   edges: [ItemEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
@@ -2683,7 +2838,7 @@ type ItemCreation {
 }
 
 """Item connection for pagination (Relay spec)"""
-type ItemEdge {
+type ItemEdge implements Edge {
   cursor: String!
   node: Item!
 }
@@ -2715,6 +2870,7 @@ input ItemFilters {
   curation: CurationFilterInput
   dateRange: DateRangeFilterInput
   dietary: DietaryFilterInput
+  """Filter items that have a default unit assigned"""
   hasDefaultUnit: Boolean
   lookup: ItemLookupInput
   priceRange: PriceRangeInput
@@ -2732,12 +2888,27 @@ input ItemFilters {
 
 """Sub-input for item lookup by identifier"""
 input ItemLookupInput {
+  """External ID from a provider (e.g., Kroger product ID)"""
   externalId: String
+  """Provider type for external ID lookup"""
   externalProvider: ProviderType
+  """SKU to search for"""
   sku: String
+  """
+  Store ID for SKU lookup (optional, searches all stores if not provided)
+  """
   skuStoreId: String
+  """UPC/barcode to search for"""
   upc: String
+  """Format hint for UPC validation/normalization (defaults to AUTO)"""
   upcFormat: UpcFormat
+}
+
+enum ItemMatchType {
+  CREATED
+  EXISTING_NAME
+  EXISTING_UPC
+  VARIATION
 }
 
 """
@@ -2752,6 +2923,7 @@ input ItemNetWeightInput {
 type ItemPayload implements MutationPayload {
   code: String!
   item: Item
+  matchType: ItemMatchType
   message: String!
   success: Boolean!
 }
@@ -2814,7 +2986,7 @@ type ItemStoreSku {
 
 type ItemSuggestion {
   brands: [BrandSuggestion!]!
-  category: CategorySuggestion
+  category: ItemCategorySuggestion
   defaultUnit: ItemUnitSuggestion
   displayUnit: String
   id: ID!
@@ -2840,9 +3012,8 @@ enum ItemType {
 type ItemUnit {
   averagePricePerUnit: Float
   contentUnit: Unit
-  contentUnitId: String
+  contentUnitId: ID
   createdAt: DateTime!
-  deletedAt: DateTime
   displayFormat: DisplayFormat!
   displayNamePlural: String
   displayNameSingular: String
@@ -2851,7 +3022,7 @@ type ItemUnit {
   isDefault: Boolean!
   isPreferred: Boolean!
   item: Item
-  itemId: String!
+  itemId: ID!
   maxQuantity: Float
   minQuantity: Float
   packageDescription: String
@@ -2860,7 +3031,7 @@ type ItemUnit {
   recommendedFor: [UnitRecommendation!]!
   retailUnit: Boolean!
   unit: Unit
-  unitId: String!
+  unitId: ID!
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
   version: Int!
@@ -2925,6 +3096,12 @@ type ItemUnitSuggestion {
   type: UnitType!
 }
 
+type ItemValidationError {
+  code: String!
+  field: String!
+  message: String!
+}
+
 type ItemsResponse {
   hasMore: Boolean!
   items: [Item!]
@@ -2971,29 +3148,17 @@ type LedgerSummary {
 }
 
 enum ListActivityType {
-  AUTO_SUGGESTION_ADDED
   COLLABORATOR_ADDED
-  COLLABORATOR_JOINED
-  COLLABORATOR_LEFT
   COLLABORATOR_REMOVED
   COLLABORATOR_ROLE_CHANGED
   ITEM_ADDED
-  ITEM_MOVED
-  ITEM_PRICE_UPDATED
   ITEM_PURCHASED
-  ITEM_QUANTITY_CHANGED
   ITEM_REMOVED
   ITEM_UPDATED
-  LIST_ARCHIVED
-  LIST_COMPLETED
   LIST_CREATED
   LIST_DELETED
-  LIST_DUPLICATED
-  LIST_EXPORTED
   LIST_SHARED
   LIST_UPDATED
-  PRICE_ALERT_TRIGGERED
-  RECURRING_LIST_GENERATED
 }
 
 enum ListStatus {
@@ -3009,21 +3174,6 @@ type LocationStat {
   count: Int!
   ipCity: String
   ipCountry: String
-}
-
-input LoginAttemptInput {
-  deviceType: DeviceType
-  failureReason: LoginFailureReason
-  ipAddress: String
-  isMobileApp: Boolean = false
-  method: LoginMethod = PASSWORD
-  provider: String
-  referrer: String
-  sessionId: String
-  source: String
-  success: Boolean!
-  userAgent: String
-  userId: ID!
 }
 
 enum LoginFailureReason {
@@ -3042,31 +3192,8 @@ enum LoginFailureReason {
   SUSPICIOUS_ACTIVITY
 }
 
-"""
-Consolidated input for querying login history.
-Replaces multiple specialized queries with a single flexible query.
-"""
-input LoginHistoriesInput {
-  after: String
-  before: String
-  failuresOnly: Boolean
-  first: Int = 50
-  fromDate: DateTime
-  hours: Int
-  ipAddress: String
-  last: Int
-  method: LoginMethod
-  orderBy: LoginHistoryOrderBy = LOGGED_IN_AT
-  orderDirection: SortOrder = DESC
-  riskyOnly: Boolean
-  search: String
-  successOnly: Boolean
-  toDate: DateTime
-  userId: ID
-}
-
 """Security audit log for login attempts - NEVER cache"""
-type LoginHistory {
+type LoginHistory implements Node {
   apiClient: String
   browserName: String
   browserVersion: String
@@ -3079,10 +3206,9 @@ type LoginHistory {
   failureReason: LoginFailureReason
   flaggedAt: DateTime
   flaggedBy: User
-  flaggedById: String
+  flaggedById: ID
   flaggedReason: String
   id: ID!
-  ipAddress: String
   ipCity: String
   ipCountry: String
   ipRegion: String
@@ -3112,10 +3238,7 @@ type LoginHistory {
   reviewedAt: DateTime
   reviewedBy: User
   reviewedById: ID
-  riskFactors: [RiskFactor!]!
-  riskScore: Float
   sessionDuration: Int
-  sessionId: String
   source: String
   success: Boolean!
   timezoneDiff: Int
@@ -3130,7 +3253,6 @@ type LoginHistoryActivity {
   isRisky: Boolean!
   loggedInAt: DateTime!
   method: LoginMethod!
-  riskFactors: [RiskFactor!]!
   success: Boolean!
 }
 
@@ -3141,22 +3263,13 @@ type LoginHistoryBreakdown {
   uniqueIPs: [IPStat!]!
 }
 
-input LoginHistoryByIPFilters {
-  fromDate: DateTime
-  skip: Int = 0
-  successOnly: Boolean = false
-  take: Int = 50
-  toDate: DateTime
-  userId: ID
-}
-
-type LoginHistoryConnection {
+type LoginHistoryConnection implements Connection {
   edges: [LoginHistoryEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
-type LoginHistoryEdge {
+type LoginHistoryEdge implements Edge {
   cursor: String!
   node: LoginHistory!
 }
@@ -3166,11 +3279,8 @@ input LoginHistoryFilters {
   fromDate: DateTime
   ipAddress: String
   method: LoginMethod
-  orderBy: SortOrder = DESC
   riskyOnly: Boolean = false
-  skip: Int = 0
   successOnly: Boolean = false
-  take: Int = 50
   toDate: DateTime
 }
 
@@ -3191,6 +3301,20 @@ type LoginHistoryPeriod {
   days: Int!
   from: DateTime!
   to: DateTime!
+}
+
+"""Filter input for querying login history."""
+input LoginHistoryQueryFilters {
+  failuresOnly: Boolean
+  fromDate: DateTime
+  hours: Int
+  ipAddress: String
+  method: LoginMethod
+  riskyOnly: Boolean
+  search: String
+  successOnly: Boolean
+  toDate: DateTime
+  userId: ID
 }
 
 type LoginHistoryStats {
@@ -3235,13 +3359,13 @@ type LoginMethodStat {
 type LowStockItem {
   currentQuantity: Float!
   id: ID!
-  itemId: String!
+  itemId: ID!
   itemName: String!
   minQuantity: Float!
-  pantryId: String!
+  pantryId: ID!
   pantryName: String!
   restockQuantity: Float
-  unitId: String!
+  unitId: ID!
   unitName: String!
 }
 
@@ -3251,6 +3375,30 @@ type LowStockToShoppingListResult {
   addedItems: [AddedLowStockItem!]!
   skippedCount: Int!
   skippedItems: [SkippedLowStockItem!]!
+}
+
+"""Input for managing appeals (submit or review)."""
+input ManageAppealInput {
+  """For submitting: appeal notes from the user"""
+  appealNotes: String
+  """
+  For reviewing: whether the appeal is approved (null = submitting, true/false = reviewing)
+  """
+  approved: Boolean
+  """For reviewing: reviewer's notes"""
+  reviewNotes: String
+  userId: ID!
+}
+
+"""Input for managing restrictions (add and/or remove in one call)."""
+input ManageRestrictionsInput {
+  """Restrictions to add"""
+  add: [ModerationRestriction!]
+  reason: String
+  """Restrictions to remove"""
+  remove: [ModerationRestriction!]
+  restrictedUntil: DateTime
+  userId: ID!
 }
 
 input MarkActionInput {
@@ -3274,11 +3422,10 @@ enum MatchType {
 Meal plan for organizing meals over a period
 Cache: 5 minutes - plans change occasionally
 """
-type MealPlan {
+type MealPlan implements Node {
   actualCost: Float!
   budgetAmount: Float
   createdAt: DateTime!
-  deletedAt: DateTime
   description: String
   dietaryProfile: DietaryProfile
   endDate: DateTime!
@@ -3286,7 +3433,15 @@ type MealPlan {
   id: ID!
   mealPlanItems: [MealPlanItem!]!
   name: String!
+  """
+  Progress toward nutrition goals from linked dietary profile.
+  Returns null if no dietary profile is linked.
+  """
   nutritionGoalProgress: NutritionGoalProgress
+  """
+  Aggregated nutrition summary for the entire meal plan.
+  Includes totals, daily averages, and breakdown by meal type.
+  """
   nutritionSummary: MealPlanNutritionSummary!
   planType: MealPlanType!
   servings: Int!
@@ -3300,14 +3455,14 @@ type MealPlan {
   version: Int!
 }
 
-type MealPlanConnection {
+type MealPlanConnection implements Connection {
   edges: [MealPlanEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Meal plan connection for pagination"""
-type MealPlanEdge {
+type MealPlanEdge implements Edge {
   cursor: String!
   node: MealPlan!
 }
@@ -3390,11 +3545,10 @@ Reusable meal template for quick meal plan creation.
 Templates store meal patterns that can be applied to create meal plans.
 Cache: 5 minutes - templates change occasionally
 """
-type MealTemplate {
+type MealTemplate implements Node {
   category: TemplateCategory!
   createdAt: DateTime!
   defaultServings: Int!
-  deletedAt: DateTime
   description: String
   durationDays: Int!
   id: ID!
@@ -3407,14 +3561,14 @@ type MealTemplate {
   user: User!
 }
 
-type MealTemplateConnection {
+type MealTemplateConnection implements Connection {
   edges: [MealTemplateEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Meal template connection for pagination"""
-type MealTemplateEdge {
+type MealTemplateEdge implements Edge {
   cursor: String!
   node: MealTemplate!
 }
@@ -3489,14 +3643,13 @@ type MealTypeNutrition {
   totalProtein: Float!
 }
 
-"""Reusable sub-input for media assets (images, video)"""
+"""Reusable sub-input for media assets (images)"""
 input MediaAssetsInput {
   imageUrl: String
   images: JSON
-  videoUrl: String
 }
 
-type Membership {
+type Membership implements Node {
   canAddItems: Boolean!
   canEditPantry: Boolean!
   canInviteOthers: Boolean!
@@ -3506,7 +3659,7 @@ type Membership {
   createdAt: DateTime!
   displayName: String
   home: Home!
-  homeId: String!
+  homeId: ID!
   id: ID!
   joinedAt: DateTime!
   lastActiveAt: DateTime
@@ -3515,18 +3668,18 @@ type Membership {
   status: MembershipStatus!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
   version: Int!
 }
 
-type MembershipConnection {
+type MembershipConnection implements Connection {
   edges: [MembershipEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Membership connection for pagination"""
-type MembershipEdge {
+type MembershipEdge implements Edge {
   cursor: String!
   node: Membership!
 }
@@ -3621,7 +3774,7 @@ type MembershipUpdatePayload {
   mutation: MembershipMutationType!
   node: Membership
   updatedFields: [String!]
-  userId: String!
+  userId: ID!
 }
 
 enum MfaMethod {
@@ -3664,11 +3817,17 @@ enum ModerationStatus {
 
 """Result of moving all purchased items to pantry"""
 type MovePurchasedItemsResult {
+  """Number of items successfully moved to pantry"""
   movedCount: Int!
+  """Details of successfully moved items"""
   movedItems: [MovedItemInfo!]!
+  """Number of items skipped (no itemId, already moved, or error)"""
   skippedCount: Int!
+  """Details of skipped items with reasons"""
   skippedItems: [SkippedItemInfo!]!
+  """ID of the pantry items were moved to"""
   targetPantryId: ID!
+  """Name of the pantry items were moved to"""
   targetPantryName: String!
 }
 
@@ -3677,15 +3836,31 @@ Input for moving a shopping list item to the pantry.
 Creates a PantryItem from a ShoppingListItem after purchase.
 """
 input MoveShoppingItemToPantryInput {
+  """
+  Actual per-unit price paid (optional).
+  If not provided, auto-derived from shopping item's purchasedPrice, then estimatedPrice.
+  Server calculates totalCost = actualPrice × actualQuantity for analytics.
+  """
   actualPrice: Float
+  """Actual quantity purchased (may differ from planned)"""
   actualQuantity: Float!
+  """Unit ID for the quantity (defaults to shopping item's unit)"""
   actualUnitId: ID
+  """Expiration date (optional)"""
   expiresAt: DateTime
+  """Additional notes"""
   notes: String
+  """ID of the target pantry"""
   pantryId: ID!
+  """
+  Whether to remove the item from the shopping list after moving (default: true)
+  """
   removeFromList: Boolean
+  """ID of the shopping list item to move"""
   shoppingListItemId: ID!
+  """Storage location ID (optional)"""
   storageLocationId: ID
+  """Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)"""
   storageState: StorageState
 }
 
@@ -3715,57 +3890,132 @@ type Mutation {
   _empty: String
   acceptHomeInvite(token: String!): MembershipPayload!
   acceptShoppingListInvite(token: String!): ShoppingListCollaboratorPayload!
-  addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaboratorPayload!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItemPayload!
+  """
+  Batch add multiple items to a shopping list.
+  More efficient than calling addItemToShoppingList multiple times.
+  Max 50 items per batch.
+  """
   addItemsToShoppingList(items: [BatchAddShoppingListItemInput!]!, shoppingListId: ID!): BatchAddShoppingListItemsResponse!
+  """
+  Add all low stock items from a home's pantries to a shopping list.
+  If no shoppingListId is provided, uses the home's default shopping list.
+  """
   addLowStockItemsToShoppingList(homeId: ID!, shoppingListId: ID): LowStockToShoppingListResult!
+  """
+  Add a specific pantry item to a shopping list.
+  Useful for manually adding items when running low.
+  """
   addPantryItemToShoppingList(pantryItemId: ID!, quantity: Float, shoppingListId: ID!): AddPantryItemToShoppingListResult!
+  """
+  Add recipe ingredients to shopping list with smart unit handling
+  Checks pantry for available items and only adds deficit
+  """
   addRecipeToShoppingList(checkPantry: Boolean, recipeId: ID!, servings: Float, shoppingListId: ID!): ShoppingListPayload!
   addRestriction(input: AddRestrictionInput!): DietaryRestrictionPayload!
-  addRestrictions(input: AddRestrictionsInput!): UserModerationPayload!
+  """Add an item to a template"""
   addTemplateItem(input: AddTemplateItemInput!): MealTemplateItemPayload!
-  addUserAddress(input: CreateUserAddressInput!): UserAddress!
+  addUserAddress(input: CreateUserAddressInput!): UserAddressPayload!
+  """Add a warning to a user's moderation record"""
   addWarning(input: AddWarningInput!): UserModerationPayload!
+  """
+  Adjust pantry item quantity to match a physical count.
+  Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
+  The delta (positive or negative) is calculated automatically.
+  """
   adjustPantryItemQuantity(id: ID!, input: AdjustPantryItemQuantityInput!): PantryItemPayload!
+  """
+  Delete images from S3/MinIO storage and update related Item records.
+  
+  For batches >50 images (or when useQueue=true), the operation runs
+  in the background. Use adminGetImageDeletionJobStatus to check progress.
+  
+  This endpoint is designed for admin panel use after duplicate detection.
+  It removes the specified images from storage and cleans up Item.images arrays.
+  """
   adminDeleteImages(input: AdminDeleteImagesInput!): ImageDeletionResult!
   adminDeleteUser(id: ID!, input: AdminDeleteUserInput): UserPayload!
+  """Approve a user-created item for public visibility"""
   approveItem(itemId: ID!): ItemPayload!
   archiveShoppingList(id: ID!): ShoppingListPayload!
-  banUser(input: BanUserInput!): UserModerationPayload!
-  batchUpsertItemsByExternalSource(items: [BatchUpsertItemInput!]!): BatchUpsertItemsResponse!
+  """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResponse!
+  bulkCreatePurchases(purchases: [CreatePurchaseInput!]!): BulkPurchasePayload!
+  bulkCreateStores(stores: [CreateStoreInput!]!): BulkStorePayload!
+  """Delete multiple items"""
   bulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
+  bulkDeletePurchases(purchaseIds: [ID!]!): BulkPurchasePayload!
+  bulkSendNotifications(input: BulkNotificationInput!): BulkNotificationResult!
+  """
+  Bulk update multiple devices at once.
+  Replaces: trustMultipleDevices, untrustMultipleDevices, deactivateMultipleDevices, deleteMultipleDevices
+  """
   bulkUpdateDevices(ids: [ID!]!, input: BulkDeviceUpdateInput!): BulkDeviceResult!
+  """Update multiple items with the same changes"""
   bulkUpdateItems(ids: [ID!]!, input: UpdateItemInput!): BulkOperationSummary!
+  """
+  Bulk update multiple login history records with the same changes.
+  Replaces markMultipleLoginsAsReviewed and flagMultipleLoginsAsRisky.
+  """
+  bulkUpdateLoginHistories(ids: [ID!]!, input: UpdateLoginHistoryInput!): BulkLoginHistoryPayload!
+  bulkUpsertItemsByExternalSource(items: [BatchUpsertItemInput!]!): BatchUpsertItemsResponse!
   cancelRecurring(id: ID!): ShoppingListPayload!
   categorizeItem(categoryId: ID!, isPrimary: Boolean, itemId: ID!): ItemCategoryPayload!
+  """
+  Change password for authenticated user (requires current password verification)
+  """
   changePassword(input: ChangePasswordInput!): ChangePasswordResponse!
+  """
+  Cleanup stale or deleted devices.
+  Admin operation for maintenance.
+  """
   cleanupDevices(input: DeviceCleanupInput!): DeviceCleanupResult!
   clearReminder(id: ID!): ShoppingListPayload!
+  """
+  Clear items from a shopping list based on purchased status.
+  Soft-deletes all items matching the purchased filter and where deletedAt is not set.
+  Use purchased=true to clear purchased items, purchased=false to clear unpurchased items.
+  Returns summary with count of cleared items.
+  """
   clearShoppingListItems(purchased: Boolean!, shoppingListId: ID!): ClearItemsResponse!
+  """Mark user onboarding as complete and send welcome email"""
   completeOnboarding: UserPayload!
-  completeReview(newStatus: ModerationStatus!, reviewNotes: String, userId: ID!): UserModerationPayload!
   completeShoppingList(id: ID!, input: CompleteShoppingListInput!): ShoppingListPayload!
-  confirmItemImageUpload(itemId: String!, key: String!): String!
-  confirmProfileImageUpload(key: String!): String!
+  confirmItemImageUpload(itemId: String!, key: String!): UploadPayload!
+  confirmProfileImageUpload(key: String!): UploadPayload!
   confirmRecipeConsumption(consumptions: [ConfirmedIngredientConsumptionInput!]!, pantryId: ID!, recipeId: ID!): RecipeConsumptionResult!
+  """
+  Convert an expired pantry item to waste in one step.
+  Sets condition to SPOILED, creates a WASTE usage record with wasteReason=EXPIRED,
+  and sets quantity to 0. Use after expiration job marks item as EXPIRED.
+  """
   convertExpiredToWaste(pantryItemId: ID!): PantryItemPayload!
+  """
+  Correct the net weight for a dual-tracked pantry item.
+  Recalculates remainingNetWeight proportionally and derives new quantity.
+  Use this when the original net weight was entered incorrectly.
+  """
   correctPantryItemWeight(id: ID!, input: CorrectPantryItemWeightInput!): PantryItemPayload!
   createBrand(input: CreateBrandInput!): BrandPayload!
-  createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
-  createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
   createCategory(input: CreateCategoryInput!): CategoryPayload!
+  createCookingLog(input: CreateCookingLogInput!): CookingLogPayload!
   createCurrency(input: CreateCurrencyInput!): CurrencyPayload!
   createFromTemplate(input: CreateFromTemplateInput!): ShoppingListPayload!
   createHome(input: CreateHomeInput!): HomePayload!
   createImageUploadUrl(itemId: String, mime: String!, purpose: ImageUploadPurpose!): PresignPayload!
+  """Create a new item"""
   createItem(input: CreateItemInput!): ItemPayload!
-  createLoginHistory(input: CreateLoginHistoryInput!): LoginHistoryPayload!
   createMealPlan(input: CreateMealPlanInput!): MealPlanPayload!
+  """
+  Create a new meal plan from a template.
+  Copies all template items to the new plan with dates offset from startDate.
+  """
   createMealPlanFromTemplate(input: CreateMealPlanFromTemplateInput!): MealPlanPayload!
   createMealPlanItem(input: CreateMealPlanItemInput!): MealPlanItemPayload!
+  """Create a new meal template"""
   createMealTemplate(input: CreateMealTemplateInput!): MealTemplatePayload!
   createMembership(input: CreateMembershipInput!): MembershipPayload!
+  """Create a moderation record for a user"""
   createModerationRecord(input: CreateUserModerationInput!): UserModerationPayload!
   createNotification(input: CreateNotificationInput!): NotificationPayload!
   createPantry(input: CreatePantryInput!): PantryPayload!
@@ -3774,55 +4024,76 @@ type Mutation {
   createProfile(input: CreateUserProfileInput!): UserProfilePayload!
   createPurchase(input: CreatePurchaseInput!): PurchasePayload!
   createRecipe(input: CreateRecipeInput!): RecipePayload!
+  createRecipeReview(input: CreateRecipeReviewInput!): RecipeReviewPayload!
   createShoppingList(input: CreateShoppingListInput!): ShoppingListPayload!
   createShoppingListItemFromRecipeIngredient(quantityOverride: Float, recipeIngredientId: ID!, shoppingListId: ID!): AddIngredientResult!
   createShoppingListItemsFromRecipe(recipeId: ID!, servings: Int, shoppingListId: ID!): AddRecipeToShoppingListResult!
+  """
+  Create a new storage location
+  Validates parent-child relationships and prevents circular references
+  Requires user to have edit permissions in the home
+  """
   createStorageLocation(input: CreateStorageLocationInput!): StorageLocationPayload!
   createStore(input: CreateStoreInput!): StorePayload!
+  """
+  Create a template from an existing meal plan.
+  Extracts the meal pattern into a reusable template.
+  """
   createTemplateFromMealPlan(input: CreateTemplateFromMealPlanInput!): MealTemplatePayload!
   createUnit(input: CreateUnitInput!): UnitPayload!
-  createUploadUrl(ext: String!, mime: String!): PresignPayload!
+  createUploadUrl(ext: String!, mime: String!): PresignPayload! @deprecated(reason: "Use createImageUploadUrl instead")
   declineHomeInvite(token: String!): HomeInvitePayload!
   declineShoppingListInvite(token: String!): ShoppingListCollaboratorPayload!
   deleteAccount: UserPayload!
-  deleteAllReadNotifications: Int!
+  deleteAllReadNotifications: BulkNotificationPayload!
   deleteBrand(id: ID!): BrandPayload!
-  deleteBulkPurchases(purchaseIds: [ID!]!): PurchasePayload!
   deleteCategory(id: ID!): CategoryPayload!
   deleteCookingLog(id: ID!): CookingLogPayload!
   deleteCurrency(id: ID!): CurrencyPayload!
-  deleteExpiredNotifications: Int!
+  deleteExpiredNotifications: BulkNotificationPayload!
   deleteExternalSource(id: ID!): ExternalSourceMappingPayload!
   deleteHome(id: ID!): HomePayload!
+  """Delete an item (soft delete by default, permanent if specified)"""
   deleteItem(id: ID!, permanent: Boolean): ItemPayload!
   deleteMealPlan(id: ID!): MealPlanPayload!
   deleteMealPlanItem(id: ID!): MealPlanItemPayload!
+  """Delete a meal template (soft delete)"""
   deleteMealTemplate(id: ID!): MealTemplatePayload!
-  deleteMultipleNotifications(ids: [ID!]!): Int!
+  deleteMultipleNotifications(ids: [ID!]!): BulkNotificationPayload!
   deleteNotification(id: ID!): NotificationPayload!
   deletePantry(id: ID!): PantryPayload!
   deletePantryItem(id: ID!): PantryItemPayload!
   deletePurchase(id: ID!): PurchasePayload!
   deleteRecipe(id: ID!): RecipePayload!
-  deleteRecipeFolder(folder: String!, moveTo: String): Int!
+  deleteRecipeFolder(input: DeleteRecipeFolderInput!): SavedRecipePayload!
+  deleteRecipeReview(id: ID!): RecipeReviewPayload!
   deleteShoppingList(id: ID!): ShoppingListPayload!
+  """
+  Delete a storage location (soft delete)
+  Fails if location has child locations or items
+  Requires user to have edit permissions in the home
+  """
   deleteStorageLocation(id: ID!): StorageLocationPayload!
   deleteStore(id: ID!): StorePayload!
   deleteUnit(id: ID!): UnitPayload!
-  deleteUserAddress(id: ID!): UserAddress!
+  deleteUserAddress(id: ID!): UserAddressPayload!
   dismissExpirationNotification(input: DismissNotificationInput!): ExpirationNotificationPayload!
+  """Duplicate a template with a new name"""
   duplicateTemplate(id: ID!, newName: String!): MealTemplatePayload!
+  """Export items to file"""
   exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse!
   favoriteRecipe(input: FavoriteRecipeInput!): SavedRecipePayload!
+  """Flag an item for review"""
   flagItemForReview(itemId: ID!, reason: String): ItemPayload!
-  flagLoginAsRisky(flaggedById: ID!, loginId: ID!, reason: String!): LoginHistoryPayload!
-  flagMultipleLoginsAsRisky(flaggedById: ID!, loginIds: [ID!]!, reason: String!): [LoginHistory!]!
+  """Request a password reset email"""
   forgotPassword(email: String!): ForgotPasswordResponse!
   forkRecipe(id: ID!): RecipePayload!
   generateNextRecurringList(id: ID!): ShoppingListPayload!
-  generateShoppingListShareCode(id: ID!): ShoppingListPayload!
+  """Hard delete a device permanently (admin only)"""
   hardDeleteDevice(id: ID!): DevicePayload!
+  """Import items from CSV file"""
   importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse!
+  """Import items from external provider (USDA, Spoonacular, etc.)"""
   importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse!
   incrementRecipeCookedCount(recipeId: ID!): SavedRecipePayload!
   inviteToHome(input: InviteToHomeInput!): HomeInvitePayload!
@@ -3831,126 +4102,200 @@ type Mutation {
   joinShoppingListByShareCode(shareCode: String!): ShoppingListPayload!
   leaveHome(homeId: ID!): MembershipPayload!
   linkItemToExternalSource(data: JSON, externalId: String!, externalType: String, isPrimary: Boolean, itemId: ID!, source: ExternalSource!): ExternalSourceMappingPayload!
-  logCooking(input: CreateCookingLogInput!): CookingLogPayload!
   login(input: LoginInput!): AuthPayload!
-  markAllNotificationsAsRead: [Notification!]!
+  """
+  Manage appeals (submit or review).
+  Consolidates: submitAppeal, reviewAppeal.
+  """
+  manageAppeal(input: ManageAppealInput!): UserModerationPayload!
+  """
+  Manage user restrictions (add and/or remove in one call).
+  Consolidates: addRestrictions, removeRestrictions.
+  """
+  manageRestrictions(input: ManageRestrictionsInput!): UserModerationPayload!
+  markAllNotificationsAsRead: BulkNotificationPayload!
   markAsTemplate(id: ID!, input: MarkAsTemplateInput!): ShoppingListPayload!
   markExpirationAction(input: MarkActionInput!): ExpirationNotificationPayload!
   markExpirationNotificationAsRead(notificationId: ID!): ExpirationNotificationPayload!
-  markItemPurchased(id: ID!, status: Boolean!): ShoppingListItemPayload!
-  markLoginAsReviewed(loginId: ID!, notes: String, reviewerId: ID!): LoginHistoryPayload!
-  markMultipleLoginsAsReviewed(loginIds: [ID!]!, notes: String, reviewerId: ID!): [LoginHistory!]!
   markNotificationAsRead(id: ID!): NotificationPayload!
   markNotificationUnread(id: ID!): NotificationPayload!
   markPantryItemExpired(id: ID!, version: Int): PantryItemPayload!
+  """Mark recipe as cooked and optionally deduct from pantry"""
   markRecipeAsCooked(deductFromPantry: Boolean!, ingredientsUsed: [IngredientUsageInput!], notes: String, recipeId: ID!, servings: Float): CookingLogPayload!
+  """
+  Move all purchased items from a shopping list to the home's default pantry.
+  Only available for shopping lists linked to a home.
+  Items without an itemId (custom items not in catalog) will be skipped.
+  """
   movePurchasedItemsToPantry(shoppingListId: ID!): MovePurchasedItemsResult!
-  moveShoppingItemToPantry(input: MoveShoppingItemToPantryInput!): PantryItem!
+  """
+  Move a shopping list item to the pantry after purchase.
+  Creates a PantryItem with full traceability back to the shopping list item.
+  Optionally removes the item from the shopping list.
+  """
+  moveShoppingItemToPantry(input: MoveShoppingItemToPantryInput!): PantryItemPayload!
   moveShoppingListItem(input: MoveShoppingListItemInput!): ShoppingListItemPayload!
   openPantryItem(id: ID!, version: Int): PantryItemPayload!
-  putUnderReview(input: PutUnderReviewInput!): UserModerationPayload!
-  recordLoginAttempt(input: LoginAttemptInput!): LoginHistoryPayload!
-  recordPantryUsage(notes: String, pantryItemId: ID!, purpose: String, quantity: Float!, unitId: ID!): PantryItemUsagePayload!
-  recordPriceObservation(input: RecordPriceObservationInput!): ItemPriceHistory!
+  """
+  Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
+  Use for all login recording — both high-level attempts and direct history creation.
+  """
+  recordLogin(input: RecordLoginInput!): LoginHistoryPayload!
+  """Manually record pantry item usage"""
+  recordPantryUsage(notes: String, pantryItemId: ID!, purpose: UsagePurpose, quantity: Float!, unitId: ID!): PantryItemUsagePayload!
+  """Record a price observation for historical tracking"""
+  recordPriceObservation(input: RecordPriceObservationInput!): ItemPriceHistoryPayload!
   refresh(token: String!): RefreshTokenPayload!
   register(input: RegisterInput!): AuthPayload!
+  """
+  Register a new device for the current user.
+  This is the primary way to add a device from mobile apps.
+  """
   registerDevice(input: DeviceRegistrationInput!): DevicePayload!
+  """Reject a user-created item"""
   rejectItem(input: RejectItemInput!): ItemPayload!
-  removeCollaborator(data: RemoveCollaboratorInput!): ShoppingListCollaboratorPayload!
   removeItemFromShoppingList(id: ID!): ShoppingListItemPayload!
   removeMember(membershipId: ID!): MembershipPayload!
-  removeProfileAvatar: UserProfilePayload!
-  removeProfileCover: UserProfilePayload!
   removeRestriction(input: RemoveRestrictionInput!): DietaryRestrictionPayload!
-  removeRestrictions(input: RemoveRestrictionsInput!): UserModerationPayload!
   removeShoppingListCollaborator(id: ID!): ShoppingListCollaboratorPayload!
+  """Remove an item from a template"""
   removeTemplateItem(id: ID!): MealTemplateItemPayload!
   removeUnitConversion(unitId: ID!): UnitPayload!
+  """
+  Reorder multiple storage locations
+  All locations must belong to the same home
+  Requires user to have edit permissions in the home
+  """
   reorderStorageLocations(input: ReorderStorageLocationsInput!): StorageLocationPayload!
   resendVerificationEmail(email: String!): UserPayload!
+  """Reset password using token from email"""
   resetPassword(newPassword: String!, token: String!): ResetPasswordResponse!
+  """
+  Restock a pantry item - adds quantity and creates a ledger record.
+  Use this when replenishing an existing pantry item.
+  """
   restockPantryItem(id: ID!, input: RestockPantryItemInput!): PantryItemUsagePayload!
+  """Restore a soft-deleted item"""
   restoreItem(id: ID!): ItemPayload!
-  reviewAppeal(input: ReviewAppealInput!): UserModerationPayload!
   revokeHomeInvite(id: ID!): HomeInvitePayload!
-  sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): NotificationPayload!
   setDefaultHome(homeId: ID!): SetDefaultHomePayload!
   setDefaultPantry(id: ID!): PantryPayload!
   setDefaultShoppingList(id: ID!): ShoppingListPayload!
+  """
+  Set a storage location as the default for its home
+  Automatically unsets the previous default location
+  Requires user to have edit permissions in the home
+  """
   setDefaultStorageLocation(id: ID!): StorageLocationPayload!
   setReminder(id: ID!, input: SetReminderInput!): ShoppingListPayload!
   setupRecurring(id: ID!, input: SetupRecurringInput!): ShoppingListPayload!
   setupUnitConversion(baseUnitId: ID!, conversionFactor: Float!, unitId: ID!): UnitPayload!
   shareShoppingList(id: ID!, input: ShareShoppingListInput!): ShoppingListPayload!
-  submitAppeal(input: SubmitAppealInput!): UserModerationPayload!
-  suspendUser(input: SuspendUserInput!): UserModerationPayload!
   syncDeletePantryItem(clientId: ID!, version: Int): SyncPantryItemResult!
   syncDeleteShoppingListItem(clientId: ID!, version: Int): SyncShoppingListItemResult!
   syncMovePantryItem(afterId: ID, beforeId: ID, clientId: ID!, version: Int): SyncPantryItemResult!
   syncMoveShoppingListItem(afterId: ID, beforeId: ID, clientId: ID!, version: Int): SyncShoppingListItemResult!
   syncPantryItem(clientId: ID!, input: SyncPantryItemInput!): SyncPantryItemResult!
   syncShoppingListItem(clientId: ID!, input: SyncShoppingListItemInput!): SyncShoppingListItemResult!
+  toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ReviewHelpfulPayload!
   toggleShoppingListItemPurchased(id: ID!, purchased: Boolean!, version: Int): ShoppingListItemPayload!
-  transferHomeOwnership(homeId: ID!, newOwnerId: ID!): HomeOwnership!
-  unbanUser(userId: ID!): UserModerationPayload!
+  transferHomeOwnership(homeId: ID!, newOwnerId: ID!): HomeOwnershipPayload!
   uncategorizeItem(categoryId: ID!, itemId: ID!): ItemCategoryPayload!
   uncompleteShoppingList(id: ID!): ShoppingListPayload!
   unfavoriteRecipe(recipeId: ID!): SavedRecipePayload!
-  unsuspendUser(userId: ID!): UserModerationPayload!
-  updateBrand(input: UpdateBrandInput!): BrandPayload!
+  updateBrand(id: ID!, input: UpdateBrandInput!): BrandPayload!
   updateCategory(id: ID!, input: UpdateCategoryInput!): CategoryPayload!
   updateCollaboratorPermissions(collaboratorId: ID!, permissions: UpdateCollaboratorPermissionsInput!, shoppingListId: ID!): ShoppingListCollaboratorPayload!
   updateCollaboratorRole(collaboratorId: ID!, role: CollaboratorRole!, shoppingListId: ID!): ShoppingListCollaboratorPayload!
   updateCookingLog(id: ID!, input: UpdateCookingLogInput!): CookingLogPayload!
   updateCurrency(id: ID!, input: UpdateCurrencyInput!): CurrencyPayload!
+  """
+  Update a device. Consolidated mutation that handles all device updates including:
+  - Status changes (trust, verify, activate/deactivate)
+  - Location updates
+  - Push token management
+  - Hardware info updates
+  - Battery info updates
+  - Peripheral updates
+  - Soft delete
+  """
   updateDevice(id: ID!, input: UpdateDeviceInput!): DevicePayload!
   updateDietaryProfile(input: UpdateDietaryProfileInput!): DietaryProfilePayload!
   updateExternalSource(id: ID!, input: UpdateExternalSourceInput!): ExternalSourceMappingPayload!
   updateFavoriteRecipe(input: UpdateFavoriteRecipeInput!, recipeId: ID!): SavedRecipePayload!
   updateHome(id: ID!, input: UpdateHomeInput!): HomePayload!
+  """
+  Update an item. Consolidated mutation that handles:
+  - Basic fields (name, description, type, etc.)
+  - Categories (set, add, remove)
+  - Brands (set, add, remove)
+  - Units (set, add, remove, default)
+  - Tags (set, add, remove)
+  - Nutrition facts, allergens, ingredients
+  - Images
+  - Metadata
+  - Price updates
+  """
   updateItem(id: ID!, input: UpdateItemInput!): ItemPayload!
+  """
+  Update a login history record. Handles:
+  - Session updates (loggedOutAt, sessionDuration, lastActivityAt)
+  - Administrative actions (marking as reviewed, flagging as risky)
+  - General field updates
+  """
   updateLoginHistory(id: ID!, input: UpdateLoginHistoryInput!): LoginHistoryPayload!
-  updateLoginSession(lastActivityAt: DateTime, loggedOutAt: DateTime, loginId: ID!, sessionDuration: Int): LoginHistoryPayload!
   updateMealPlan(id: ID!, input: UpdateMealPlanInput!): MealPlanPayload!
   updateMealPlanItem(id: ID!, input: UpdateMealPlanItemInput!): MealPlanItemPayload!
+  """Update an existing meal template"""
   updateMealTemplate(id: ID!, input: UpdateMealTemplateInput!): MealTemplatePayload!
   updateMembership(id: ID!, input: UpdateMembershipInput!): MembershipPayload!
-  updateModerationStatus(reason: String, status: ModerationStatus!, userId: ID!): UserModerationPayload!
+  """
+  Update moderation state for a user.
+  Consolidates: updateModerationStatus, updateTrustLevel, updateRiskScore,
+  banUser, unbanUser, suspendUser, unsuspendUser, putUnderReview, completeReview.
+  """
+  updateModeration(input: UpdateModerationInput!, userId: ID!): UserModerationPayload!
   updateNotification(id: ID!, input: UpdateNotificationInput!): NotificationPayload!
   updateNotificationPreferences(input: UpdateNotificationPreferencesInput!): NotificationPreferencesPayload!
   updatePantry(id: ID!, input: UpdatePantryInput!): PantryPayload!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItemPayload!
   updatePantryItemLocation(id: ID!, storageLocationId: String!, version: Int): PantryItemPayload!
+  """Update pantry item quantity (supports fractions)"""
   updatePantryItemQuantity(pantryItemId: ID!, quantity: String!, unitId: ID, version: Int): PantryItemPayload!
+  """
+  Update user profile. Handles all profile fields including avatar and cover image.
+  Set avatarUrl/coverImageUrl to null to remove them.
+  """
   updateProfile(input: UpdateUserProfileInput!): UserProfilePayload!
-  updateProfileAvatar(avatarUrl: String!): UserProfilePayload!
-  updateProfileCover(coverImageUrl: String!): UserProfilePayload!
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): PurchasePayload!
   updateRecipe(id: ID!, input: UpdateRecipeInput!): RecipePayload!
   updateRecipeIngredients(ingredients: [RecipeIngredientInput!]!, recipeId: ID!): RecipePayload!
+  updateRecipeReview(id: ID!, input: UpdateRecipeReviewInput!): RecipeReviewPayload!
   updateRestriction(input: UpdateRestrictionInput!): DietaryRestrictionPayload!
-  updateRiskScore(riskScore: Float!, userId: ID!): UserModerationPayload!
   updateSettings(input: UpdateUserSettingsInput!): UserSettingsPayload!
   updateShoppingList(id: ID!, input: UpdateShoppingListInput!): ShoppingListPayload!
   updateShoppingListItem(id: ID!, input: UpdateShoppingListItemInput!): ShoppingListItemPayload!
-  updateShoppingListItemNotes(id: ID!, notes: String, version: Int): ShoppingListItemPayload!
-  updateShoppingListItemPriority(id: ID!, priority: Int!, version: Int): ShoppingListItemPayload!
+  """Update shopping list item quantity (supports fractions)"""
   updateShoppingListItemQuantity(itemId: ID!, quantity: String!, unitId: ID, version: Int): ShoppingListItemPayload!
+  """
+  Update an existing storage location
+  Validates parent-child relationships and prevents circular references
+  Requires user to have edit permissions in the home
+  """
   updateStorageLocation(id: ID!, input: UpdateStorageLocationInput!): StorageLocationPayload!
   updateStore(id: ID!, input: UpdateStoreInput!): StorePayload!
   updateStoreInfo(email: String, hoursJSON: JSON, lat: Float, lng: Float, phone: String, storeId: ID!, website: String): StoreInfo!
-  updateStorePriceAccuracy(accuracy: Float!, id: ID!): StorePayload!
-  updateStoreQualityRating(id: ID!, rating: Float!): StorePayload!
+  """Update a template item"""
   updateTemplateItem(id: ID!, input: UpdateTemplateItemInput!): MealTemplateItemPayload!
-  updateTrustLevel(trustLevel: TrustLevel!, userId: ID!): UserModerationPayload!
   updateUnit(id: ID!, input: UpdateUnitInput!): UnitPayload!
   updateUser(id: ID!, input: UpdateUserInput!): UserPayload!
-  updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
+  updateUserAddress(id: ID!, input: UpdateUserAddressInput!): UserAddressPayload!
   upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   upsertItemByExternalSource(externalId: String!, externalType: String, itemData: CreateItemInput!, source: ExternalSource!, sourceData: JSON): UpsertItemResult!
+  """Add or update item-specific unit conversion"""
   upsertItemUnitConversion(conversionRatio: Float!, fromUnitId: ID!, itemId: ID!, notes: String, toUnitId: ID!): ItemUnitConversionPayload!
-  validateItem(deep: Boolean, id: ID!): ValidationResult!
+  """Validate if a password reset token is still valid"""
   validatePasswordResetToken(token: String!): ValidateTokenResponse!
   verifyEmail(code: String!): UserPayload!
   verifyUserEmail(id: ID!): UserPayload!
@@ -3961,7 +4306,9 @@ Standard error interface for all mutation errors.
 All error types should implement this interface.
 """
 interface MutationError {
+  """Machine-readable error code for client handling"""
   code: String!
+  """Human-readable error message"""
   message: String!
 }
 
@@ -3971,8 +4318,13 @@ Ensures every mutation response includes operation metadata.
 Domain-specific payload types implement this interface and add their entity field.
 """
 interface MutationPayload {
+  """
+  Machine-readable status code (e.g., SUCCESS, VALIDATION_ERROR, NOT_FOUND)
+  """
   code: String!
+  """Human-readable message describing the result"""
   message: String!
+  """Whether the mutation operation succeeded"""
   success: Boolean!
 }
 
@@ -3990,6 +4342,28 @@ enum MutationType {
   ITEM_UPDATED
   STATUS_CHANGED
   UPDATED
+}
+
+"""
+Limited moderation view for users checking their own status.
+Excludes internal scoring, automated flags, and moderator notes.
+"""
+type MyModerationStatus {
+  appealNotes: String
+  appealStatus: AppealStatus
+  appealedAt: DateTime
+  banReason: String
+  id: ID!
+  isBanned: Boolean!
+  isSuspended: Boolean!
+  restrictedUntil: DateTime
+  restrictionReason: String
+  restrictions: [ModerationRestriction!]!
+  status: ModerationStatus!
+  suspendedUntil: DateTime
+  suspensionReason: String
+  trustLevel: TrustLevel!
+  underReview: Boolean!
 }
 
 """Reusable sub-input for net weight with unit"""
@@ -4019,7 +4393,9 @@ interface Node {
 type NotFoundError implements MutationError {
   code: String!
   message: String!
+  """ID that was searched for"""
   resourceId: String
+  """Type of resource that was not found"""
   resourceType: String!
 }
 
@@ -4036,7 +4412,7 @@ type Notification implements Node & Timestamped {
   status: NotificationStatus!
   type: NotificationType!
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 type NotificationCategoryCount {
@@ -4068,10 +4444,16 @@ enum NotificationDeliveryStatus {
   SENT
 }
 
-"""Notification connection for pagination"""
 type NotificationEdge implements Edge {
   cursor: String!
   node: Notification!
+}
+
+type NotificationEventPayload {
+  mutation: MutationType
+  notification: Notification
+  timestamp: String
+  userId: String
 }
 
 input NotificationFilters {
@@ -4101,11 +4483,8 @@ enum NotificationOrderBy {
 type NotificationPayload implements MutationPayload {
   code: String!
   message: String!
-  mutation: MutationType
   notification: Notification
   success: Boolean!
-  timestamp: String
-  userId: String
 }
 
 """
@@ -4137,18 +4516,8 @@ type NotificationPreferences {
   smsEnabled: Boolean!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
   weeklyDigest: Boolean!
-}
-
-input NotificationPreferencesInput {
-  categories: [String!]
-  email: Boolean
-  inApp: Boolean
-  push: Boolean
-  quietHours: QuietHoursInput
-  sms: Boolean
-  types: [NotificationType!]
 }
 
 type NotificationPreferencesPayload implements MutationPayload {
@@ -4181,7 +4550,9 @@ type NotificationStats {
 }
 
 enum NotificationStatus {
-  DELIVERED
+  CLICKED
+  DISMISSED
+  EXPIRED
   FAILED
   PENDING
   READ
@@ -4209,6 +4580,8 @@ enum NotificationType {
   LOW_STOCK
   MEMBERSHIP_INVITE
   NEW_ITEM_ADDED
+  RECIPE_COOKED
+  RECIPE_SAVED
 }
 
 type NotificationTypeCount {
@@ -4237,6 +4610,10 @@ type NutritionGoalProgress {
   caloriesProgress: GoalProgress
   carbsProgress: GoalProgress
   fatProgress: GoalProgress
+  """
+  Overall score (0-100) based on how close to targets.
+  100 = all targets met perfectly.
+  """
   overallScore: Float!
   proteinProgress: GoalProgress
 }
@@ -4287,10 +4664,10 @@ type PackageBreakdown {
 }
 
 input PackageInfoInput {
+  baseDimension: BaseDimension
   displayUnitId: String
   displayUnitName: String
   netWeight: Float
-  netWeights: [ItemNetWeightInput!]
   servingSize: Float
   servingSizeUnit: String
   servingsPerPackage: Int
@@ -4301,37 +4678,49 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
-  totalCount: Int!
 }
 
-"""Offset-based pagination input"""
+"""
+Offset-based pagination input. Prefer cursor-based pagination (first/after/last/before) at the query level.
+"""
 input PaginationInput {
-  cursor: String
-  skip: Int
-  take: Int
+  cursor: String @deprecated(reason: "Use cursor-based pagination (after/before) at the query level")
+  skip: Int @deprecated(reason: "Use cursor-based pagination (first/after) at the query level")
+  take: Int @deprecated(reason: "Use cursor-based pagination (first/after) at the query level")
 }
 
 """
 Pantry/storage location for a home
 Cache: 5 minutes - updated when items added/removed
 """
-type Pantry {
+type Pantry implements Node {
   createdAt: DateTime!
   description: String
   home: Home!
-  homeId: String!
+  homeId: ID!
   id: ID!
   isDefault: Boolean!
+  """Paginated list of items in this pantry"""
   itemsConnection(after: String, before: String, first: Int, last: Int, orderBy: PantryItemOrderBy): PantryItemConnection!
+  ledgerAnalytics(filter: AnalyticsFilters, granularity: PeriodGranularity, itemId: String): LedgerAnalytics!
   location: String
   metadata: JSON
   name: String!
+  recentlyDeletedItems(limit: Int = 10): [PantryItem!]!
+  stats: PantryStats!
   storageLocationsConnection(after: String, before: String, first: Int, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
+  suggestions(expirationDays: Int = 7, limit: Int = 10, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
+  usageAnalytics(filter: AnalyticsFilters): UsageAnalytics!
+  """
+  Usage statistics for this pantry.
+  Available for all users but primarily used by admin views.
+  """
   usageStats: PantryUsageStats
   version: Int!
+  wasteAnalytics(filter: AnalyticsFilters): WasteAnalytics!
 }
 
 type PantryActivity {
@@ -4344,10 +4733,10 @@ type PantryActivity {
   newValue: String
   oldValue: String
   pantry: Pantry!
-  pantryId: String!
+  pantryId: ID!
   quantity: Float
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 enum PantryActivityType {
@@ -4362,7 +4751,7 @@ enum PantryActivityType {
   QUANTITY_UPDATED
 }
 
-type PantryConnection {
+type PantryConnection implements Connection {
   edges: [PantryEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
@@ -4380,7 +4769,7 @@ type PantryDeficit {
 }
 
 """Pantry connection for pagination"""
-type PantryEdge {
+type PantryEdge implements Edge {
   cursor: String!
   node: Pantry!
 }
@@ -4389,9 +4778,9 @@ type PantryExpiringItemsAlertPayload {
   daysUntilExpiration: Int!
   expiresAt: DateTime!
   item: PantryItem!
-  pantryId: String!
+  pantryId: ID!
   timestamp: DateTime!
-  userId: String!
+  userId: ID!
 }
 
 """
@@ -4399,19 +4788,24 @@ Filters for querying pantries.
 userId and homeId filters have different behavior for admins vs regular users.
 """
 input PantryFilters {
+  """Filter by home ID - optional for admins, required for regular users"""
   homeId: ID
+  """Filter by default status"""
   isDefault: Boolean
+  """Search by name, description, or location"""
   search: String
+  """Admin-only: Filter by specific user ID (via home membership)"""
   userId: ID
 }
 
 """Real-time collaborative type - never cache"""
-type PantryItem {
+type PantryItem implements Node {
   acquisitionMethod: AcquisitionMethod!
   addedAt: DateTime!
   addedBy: User
   brand: Brand
-  brandId: String
+  brandId: ID
+  changeHistory(after: String, before: String, first: Int, last: Int): PantryItemChangeConnection!
   condition: ItemCondition!
   costPerUnit: Float
   createdAt: DateTime!
@@ -4422,36 +4816,38 @@ type PantryItem {
   isLowStock: Boolean!
   isRecycled: Boolean!
   item: Item!
-  itemId: String!
+  itemId: ID!
   itemName: String!
   itemUpc: String
   lastModifiedBy: User
   lastUsedAt: DateTime
+  ledger(filter: AnalyticsFilters): LedgerSummary!
   lowStockAlert: Boolean!
   minQuantity: Float
   netWeight: Float
   netWeightUnit: Unit
   packageBreakdown: PackageBreakdown
   pantry: Pantry!
-  pantryId: String!
+  pantryId: ID!
   photos: [PantryItemPhoto!]!
   purchase: Purchase
-  purchaseId: String
+  purchaseId: ID
   quantity: Float!
   quantityBreakdown: QuantityBreakdown
   remainingNetWeight: Float
   restockQuantity: Float
-  sourceShoppingListItemId: String
+  sourceShoppingListItemId: ID
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
   store: Store
-  storeId: String
+  storeId: ID
   tags: [String!]!
   totalCost: Float
   unit: Unit
-  unitId: String
+  unitId: ID
   updatedAt: DateTime
+  usageHistory: [PantryItemUsage!]!
   usageRecords: [PantryItemUsage!]!
   version: Int
   wasteDate: DateTime
@@ -4459,7 +4855,7 @@ type PantryItem {
 }
 
 """Audit record of a change to a pantry item"""
-type PantryItemChange {
+type PantryItemChange implements Node {
   changeType: ChangeType!
   changedBy: User!
   changedById: ID!
@@ -4476,14 +4872,14 @@ type PantryItemChange {
 }
 
 """Connection type for paginated PantryItemChange results"""
-type PantryItemChangeConnection {
+type PantryItemChangeConnection implements Connection {
   edges: [PantryItemChangeEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Edge type for PantryItemChange pagination"""
-type PantryItemChangeEdge {
+type PantryItemChangeEdge implements Edge {
   cursor: String!
   node: PantryItemChange!
 }
@@ -4491,20 +4887,20 @@ type PantryItemChangeEdge {
 type PantryItemChangedPayload {
   item: PantryItem!
   mutation: MutationType!
-  pantryId: String!
+  pantryId: ID!
   timestamp: DateTime!
   updatedFields: [String!]!
-  userId: String!
+  userId: ID!
 }
 
-type PantryItemConnection {
+type PantryItemConnection implements Connection {
   edges: [PantryItemEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Pantry item connection for pagination"""
-type PantryItemEdge {
+type PantryItemEdge implements Edge {
   cursor: String!
   node: PantryItem!
 }
@@ -4549,31 +4945,54 @@ A suggestion for adding or restocking a pantry item.
 Combines multiple sources: low stock, expiring soon, recently deleted, frequently added, and popular items.
 """
 type PantryItemSuggestion {
+  """Primary category name"""
   category: String
+  """Current quantity in pantry (for LOW_STOCK source)"""
   currentQuantity: Float
+  """Days until expiration (for EXPIRING_SOON source)"""
   daysUntilExpiry: Int
-  defaultUnit: Unit
+  """Default unit object for one-tap add"""
+  defaultUnit: SuggestionUnit
+  """Default unit ID for one-tap add (last used or item default)"""
   defaultUnitId: ID
+  """Expiration date (for EXPIRING_SOON source)"""
   expiresAt: DateTime
+  """
+  Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)
+  """
   frequencyCount: Int
+  """Unique suggestion ID (itemId or pantryItemId depending on source)"""
   id: ID!
+  """Primary image URL"""
   imageUrl: String
-  item: Item!
+  """Full item reference"""
+  item: SuggestionItem!
+  """The catalog Item ID - always present"""
   itemId: ID!
+  """Last quantity used (for RECENTLY_DELETED source)"""
   lastQuantity: Float
+  """Last unit ID used (for RECENTLY_DELETED source)"""
   lastUnitId: ID
+  """Minimum quantity threshold (for LOW_STOCK source)"""
   minQuantity: Float
+  """Item name for display"""
   name: String!
+  """
+  Pantry item ID - present for LOW_STOCK, EXPIRING_SOON, and RECENTLY_DELETED sources
+  """
   pantryItemId: ID
+  """Popularity ranking position (for POPULAR source)"""
   popularityRank: Int
+  """Suggested restock quantity (for LOW_STOCK source)"""
   restockQuantity: Float
+  """Source of this suggestion"""
   source: PantrySuggestionSource!
 }
 
 type PantryItemUsage {
   adjustmentReason: String
   cookingLog: CookingLog
-  cookingLogId: String
+  cookingLogId: ID
   costPerUnit: Float
   id: ID!
   isComposted: Boolean
@@ -4581,23 +5000,23 @@ type PantryItemUsage {
   itemId: ID
   itemName: String
   mealPlanItem: MealPlanItem
-  mealPlanItemId: String
+  mealPlanItemId: ID
   notes: String
   pantry: Pantry
   pantryId: ID
   pantryItem: PantryItem
-  pantryItemId: String
+  pantryItemId: ID
   purpose: UsagePurpose!
   quantityUsed: Float!
   recipe: Recipe
-  recipeId: String
+  recipeId: ID
   store: Store
-  storeId: String
+  storeId: ID
   totalCost: Float
   unitName: String
   usageSource: UsageSource!
   usageUnit: Unit
-  usageUnitId: String
+  usageUnitId: ID
   usedAt: DateTime!
   usedBy: User
   wasteReason: WasteReason
@@ -4605,10 +5024,10 @@ type PantryItemUsage {
 
 type PantryItemUsageChangedPayload {
   mutation: MutationType!
-  pantryId: String!
+  pantryId: ID!
   timestamp: DateTime!
   usage: PantryItemUsage!
-  userId: String!
+  userId: ID!
 }
 
 type PantryItemUsagePayload implements MutationPayload {
@@ -4622,9 +5041,15 @@ type PantryLowStockAlertPayload {
   currentQuantity: Float!
   item: PantryItem!
   minimumQuantity: Float!
-  pantryId: String!
+  pantryId: ID!
   timestamp: DateTime!
-  userId: String!
+  userId: ID!
+}
+
+"""Order by options for pantries"""
+input PantryOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
 }
 
 type PantryPayload implements MutationPayload {
@@ -4644,10 +5069,15 @@ type PantryStats {
 
 """Source of a pantry item suggestion"""
 enum PantrySuggestionSource {
+  """Item is expiring soon - use it or replace"""
   EXPIRING_SOON
+  """User frequently adds this item to pantries"""
   FREQUENTLY_ADDED
+  """Item is below minimum stock threshold - needs restocking"""
   LOW_STOCK
+  """Globally popular pantry item"""
   POPULAR
+  """Item was recently removed from this pantry"""
   RECENTLY_DELETED
 }
 
@@ -4664,18 +5094,23 @@ Usage statistics for a Pantry.
 Included when admin requests resources with stats.
 """
 type PantryUsageStats {
+  """Total estimated value of items"""
   estimatedValue: Float
+  """Number of items expiring within 7 days"""
   expiringItemCount: Int!
+  """Total number of items"""
   itemCount: Int!
+  """Last activity timestamp"""
   lastActivityAt: DateTime
+  """Number of low stock items"""
   lowStockItemCount: Int!
 }
 
 type PantryWasteAlertPayload {
   item: PantryItem!
-  pantryId: String!
+  pantryId: ID!
   timestamp: DateTime!
-  userId: String!
+  userId: ID!
   wasteAmount: Float!
   wasteReason: String!
   wasteValue: Float
@@ -4722,12 +5157,19 @@ type PresignPayload {
 
 """Price estimate information for a shopping list item"""
 type PriceEstimate {
+  """Average price from purchase history"""
   average: Float
+  """User-provided budget limit"""
   budget: Float
+  """User-provided estimated price"""
   estimated: Float
+  """Highest price seen"""
   highest: Float
+  """Last known actual price from purchase history"""
   lastKnown: Float
+  """When price data was last updated"""
   lastUpdated: DateTime
+  """Lowest price seen"""
   lowest: Float
 }
 
@@ -4826,17 +5268,16 @@ enum ProviderType {
 }
 
 """Purchase record - contains financial and shopping data"""
-type Purchase {
+type Purchase implements Node {
   createdAt: DateTime!
   currency: Currency!
-  currencyId: String!
+  currencyId: ID!
   currencySymbol: String!
-  deletedAt: DateTime
   discountAmount: Float
   expirationDate: DateTime
   id: ID!
   item: Item!
-  itemId: String!
+  itemId: ID!
   itemName: String!
   itemUpc: String
   originalPrice: Float
@@ -4845,48 +5286,54 @@ type Purchase {
   quantity: Float!
   receiptNumber: String
   shoppingList: ShoppingList
-  shoppingListId: String
+  shoppingListId: ID
   shoppingListItem: ShoppingListItem
-  shoppingListItemId: String
+  shoppingListItemId: ID
   store: Store
-  storeId: String
+  storeId: ID
   storeName: String
   totalPrice: Float!
   transactionId: String
   unit: Unit!
-  unitId: String!
+  unitId: ID!
   unitPrice: Float!
   unitSymbol: String!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
   version: Int!
 }
 
-type PurchaseConnection {
+type PurchaseConnection implements Connection {
   edges: [PurchaseEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Purchase connection for pagination"""
-type PurchaseEdge {
+type PurchaseEdge implements Edge {
   cursor: String!
   node: Purchase!
 }
 
 input PurchaseFilters {
   endDate: DateTime
+  fromDate: DateTime
   itemId: ID
+  shoppingListId: ID
   shoppingListItemId: ID
   startDate: DateTime
   storeId: ID
+  toDate: DateTime
 }
 
 """Summary of purchase history for a shopping list item"""
 type PurchaseHistorySummary {
+  """Date of most recent purchase"""
   lastPurchaseDate: DateTime
+  """Whether this item has been purchased before"""
   previouslyPurchased: Boolean!
+  """Total number of times purchased"""
   purchaseCount: Int!
 }
 
@@ -4934,11 +5381,17 @@ input PutUnderReviewInput {
 }
 
 type QuantityBreakdown {
+  """The content unit (e.g., can)"""
   contentUnit: Unit
+  """Number of full unopened packages (e.g., 1 full case)"""
   fullPackages: Int!
+  """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
+  """Total remaining weight/volume"""
   remainingWeight: Float
+  """Unit of the remaining weight"""
   remainingWeightUnit: Unit
+  """Total expressed as content units (e.g., 21 cans)"""
   totalContentUnits: Float!
 }
 
@@ -4970,173 +5423,227 @@ input QuantityInput {
 
 type Query {
   _empty: String
-  activeModerations: [UserModeration!]!
+  activeModerations(after: String, before: String, first: Int, last: Int): UserModerationConnection!
   adminCanDeleteUser(userId: ID!): CanDeleteAccountResult!
+  """
+  Get the status of a background image deletion job.
+  
+  Use this to track progress of large batch deletions that were queued
+  instead of processed synchronously.
+  """
   adminGetImageDeletionJobStatus(jobId: String!): ImageDeletionJobStatus
+  """
+  Aggregate multiple quantities of the same item
+  Useful for calculating total needed across multiple recipes
+  """
   aggregateQuantities(itemId: ID!, quantities: [QuantityInput!]!): AggregationResult!
   autocompleteCategories(input: AutocompleteCategoryInput!): AutocompleteCategoryResponse!
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
-  autocompleteUnits(limit: Int = 10, query: String!, type: UnitType): [Unit!]!
+  """
+  Get best display unit for a quantity
+  Auto-converts to more readable units (1000mL → 1L)
+  """
+  bestDisplayUnit(currentUnitId: ID!, itemId: ID, quantity: Float!): Unit!
   brand(id: ID!): Brand
+  """
+  Get brands with filtering and cursor-based pagination.
+  Replaces: rootBrands (use filters: { isRoot: true }),
+  popularBrands (use orderBy: POPULARITY_DESC, first: N)
+  """
   brands(after: String, before: String, filters: BrandFilters, first: Int, last: Int, orderBy: BrandOrderBy): BrandConnection!
+  """
+  Calculate pantry deficit for recipe ingredients
+  Compares recipe needs against available pantry items
+  """
   calculateRecipePantryDeficit(householdId: ID!, recipeId: ID!, servings: Float): [PantryDeficit!]!
+  """
+  Check if conversion is possible between two units
+  Returns availability and confidence level
+  """
   canConvert(fromUnitId: ID!, itemId: ID, toUnitId: ID!): ConversionAvailability!
   canDeleteAccount: CanDeleteAccountResult!
-  categories(after: String, before: String, first: Int, last: Int, parentId: String, search: String, type: CategoryType): CategoryConnection!
+  """
+  Get categories with filtering and cursor-based pagination.
+  Replaces: rootCategories (use parentId: null),
+  popularCategories (use categories with appropriate sorting)
+  """
+  categories(after: String, before: String, filters: CategoryFilters, first: Int, last: Int, orderBy: CategoryOrderBy): CategoryConnection!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
   compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]
   compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
+  """
+  Convert quantity between units with item context
+  Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
+  """
   convertQuantity(fromUnitId: ID!, itemId: ID, quantity: Float!, toUnitId: ID!): ConversionResult
   convertUnit(fromUnitId: ID!, toUnitId: ID!, value: Float!): ConvertedUnitValue
+  convertibleUnits(unitId: ID!): [Unit!]!
   cookingLog(id: ID!): CookingLog
   currencies(isActive: Boolean): [Currency!]!
   currency(id: ID!): Currency
   currencyByCode(code: String!): Currency
-  defaultPantry(homeId: ID!): Pantry
-  defaultShoppingList: ShoppingList
+  """Get a single device by ID"""
   device(id: ID!): Device
+  """Get a single device by device identifier string"""
   deviceByDeviceId(deviceId: String!): Device
-  deviceCount(input: DeviceCountInput!): Int!
-  deviceStats(userId: ID!): DeviceStats!
-  devices(input: DevicesQueryInput!): DeviceConnection!
-  dietaryProfile(userId: ID!): DietaryProfile
+  """Get device count with filters"""
+  deviceCount(filters: DeviceCountFilters): Int!
+  """
+  Consolidated device query with comprehensive filtering.
+  Replaces: userDevices, myDevices, activeDevices, trustedDevices, verifiedDevices,
+  mobileDevices, tabletDevices, emulatedDevices, suspiciousDevices, devicesByPlatform,
+  devicesByManufacturer, devicesWithPeripherals, lowBatteryDevices, staleDevices
+  """
+  devices(after: String, before: String, filters: DeviceFilters, first: Int, last: Int, orderBy: DeviceSortField, orderDirection: SortOrder): DeviceConnection!
+  dietaryProfile(userId: ID): DietaryProfile
   expirationNotification(id: ID!): ExpirationNotification
-  getBestDisplayUnit(currentUnitId: ID!, itemId: ID, quantity: Float!): Unit!
-  getConvertibleUnits(unitId: ID!): [Unit!]!
-  getDefaultHome: Home @deprecated(reason: "Use the isDefault field on the Home type instead. Query homes { isDefault } to find the default.")
-  getItemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
-  hasUrgentNotifications: Boolean!
   home(id: ID!): Home
   homeByJoinCode(joinCode: String!): Home
   homeInviteByToken(token: String!): HomeInvite
-  homeInviteLogs(after: String, before: String, first: Int, homeId: String!, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
-  homeInviteStats(homeId: String!): [HomeInviteStatsGroup!]!
-  homes(filters: HomeFilters, pagination: PaginationInput): HomeConnection!
-  inviteLogs(after: String, before: String, first: Int, inviteId: String!, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
+  """
+  Get homes accessible to the current user.
+  For admins: Returns all homes with optional filters.
+  For regular users: Returns only homes where user is a member.
+  """
+  homes(after: String, before: String, filters: HomeFilters, first: Int, last: Int, orderBy: HomeOrderBy): HomeConnection!
   inviteStats(inviteId: String!): InviteStats!
-  invitesSentByMe: [HomeInvite!]!
   item(id: ID!): Item
-  itemByExternalSource(externalId: String!, source: ExternalSource!): Item
-  itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
+  """
+  Get all available conversions for an item
+  Returns both stored conversions and calculable standard conversions
+  """
+  itemConversions(includeStandard: Boolean, itemId: ID!): [ItemUnitConversion!]!
+  """
+  List items with filtering and cursor-based pagination (Relay spec).
+  Use filters for UPC, SKU, or external ID lookups:
+  - items(filters: { upc, upcFormat }) - UPC/barcode lookup
+  - items(filters: { sku, skuStoreId }) - SKU lookup
+  - items(filters: { externalId, externalProvider }) - External ID lookup
+  """
   items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, sort: ItemSortInput): ItemConnection!
-  itemsBySource(limit: Int, offset: Int, source: ExternalSource!): [Item!]!
-  loginHistories(input: LoginHistoriesInput!): LoginHistoryConnection!
+  """
+  Consolidated login history query with comprehensive filtering.
+  Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
+  """
+  loginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy, orderDirection: SortOrder): LoginHistoryConnection!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
-  lowStockItems(homeId: ID!): [LowStockItem!]!
   matchRecipeIngredientsToPantry(pantryId: ID!, recipeId: ID!, servings: Int): [RecipeIngredientMatch!]!
   me: User
   mealPlan(id: ID!): MealPlan
   mealPlans(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int, orderBy: MealPlanOrderBy): MealPlanConnection!
+  """Get a single meal template by ID"""
   mealTemplate(id: ID!): MealTemplate
-  mealTemplates(after: String, before: String, filter: MealTemplateFilters, first: Int, last: Int, orderBy: MealTemplateOrderBy): MealTemplateConnection!
-  mealTemplatesCount(filter: MealTemplateFilters): Int!
+  """List meal templates for the current user"""
+  mealTemplates(after: String, before: String, filters: MealTemplateFilters, first: Int, last: Int, orderBy: MealTemplateOrderBy): MealTemplateConnection!
   membership(id: ID!): Membership
-  membershipStats(homeId: ID!): MembershipStats!
-  myCollaboratedShoppingLists: [ShoppingList!]!
-  myCookingLogs(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
-  myCookingStats: CookingStats
-  myDietaryProfile: DietaryProfile
-  myExpirationNotifications(after: String, before: String, first: Int, input: GetExpirationNotificationsInput, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
-  myHomes: [Home!]
-  myInviteLogs(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
-  myMembershipInHome(homeId: ID!): Membership
-  myMemberships: [Membership!]
-  myModeration: UserModeration
-  myNotificationPreferences: NotificationPreferences
-  myNotifications(after: String, before: String, filter: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
-  myPendingCollaborationInvites: [ShoppingListCollaborator!]!
-  myPendingInvites: [HomeInvite!]!
-  myPurchases(after: String, before: String, filter: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
-  mySavedRecipes(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
-  myShoppingListInvites: [ShoppingListCollaborator!]!
-  nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
+  memberships(after: String, before: String, first: Int, homeId: ID!, last: Int): MembershipConnection!
+  myModeration: MyModerationStatus
   notification(id: ID!): Notification
-  notificationPreferences(userId: ID!): NotificationPreferences!
-  notificationStats(filter: NotificationFilters): NotificationStats!
-  pantries(filters: PantryFilters, homeId: ID, pagination: PaginationInput): PantryConnection!
+  notificationPreferences(userId: ID): NotificationPreferences
+  notificationStats(filters: NotificationFilters): NotificationStats!
+  """
+  Get pantries.
+  For admins: Returns all pantries with optional filters (homeId is optional).
+  For regular users: Requires homeId and returns pantries from that home only.
+  Replaces: defaultPantry (use filters: { isDefault: true })
+  """
+  pantries(after: String, before: String, filters: PantryFilters, first: Int, homeId: ID, last: Int, orderBy: PantryOrderBy): PantryConnection!
   pantry(id: ID!): Pantry
-  pantryConsumptionRate(filter: AnalyticsFilters, itemId: String, pantryId: ID!): [ConsumptionRate!]!
-  pantryEffectiveUsageRate(filter: AnalyticsFilters, itemId: String, pantryId: ID!): [EffectiveUsageRate!]!
-  pantryExpirationRisk(daysThreshold: Int = 7, pantryId: ID!): ExpirationRisk!
-  pantryItem(id: ID!): PantryItem!
-  pantryItemHistory(after: String, before: String, first: Int, last: Int, pantryItemId: ID!): PantryItemChangeConnection!
-  pantryItemLedger(filter: AnalyticsFilters, pantryItemId: ID!): LedgerSummary!
-  pantryItemSuggestions(expirationDays: Int = 7, limit: Int = 10, pantryId: ID!, sources: [PantrySuggestionSource!]): [PantryItemSuggestion!]!
-  pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
-  pantryLedgerAnalytics(filter: AnalyticsFilters, granularity: PeriodGranularity, itemId: String, pantryId: ID!): LedgerAnalytics!
-  pantryRestockingFrequency(filter: AnalyticsFilters, itemId: String, pantryId: ID!): [RestockingFrequency!]!
-  pantryStats(pantryId: ID!): PantryStats!
-  pantryUsageAnalytics(filter: AnalyticsFilters, pantryId: ID!): UsageAnalytics!
-  pantryWasteAnalytics(filter: AnalyticsFilters, pantryId: ID!): WasteAnalytics!
+  pantryItem(id: ID!): PantryItem
+  """
+  Parse fractional input string to decimal
+  Handles "1/4", "1 1/4", "0.25" formats
+  """
   parseQuantityInput(input: String!, unitId: ID!): QuantityDisplay!
-  pendingApprovalItems(after: String, first: Int, sort: ItemSortInput): ItemConnection!
-  popularBrands(limit: Int = 10): [Brand!]!
-  popularCategories(limit: Int, type: CategoryType): [Category!]!
-  popularStores(limit: Int): [Store!]!
-  popularTemplates(take: Int): [MealTemplate!]!
   purchase(id: ID!): Purchase
-  purchaseStats(userId: ID): PurchaseStats!
-  recentlyDeletedPantryItems(limit: Int = 10, pantryId: ID!): [PantryItem!]!
-  recentlyDeletedShoppingListItems(limit: Int = 10, shoppingListId: ID!): [ShoppingListItem!]!
+  purchases(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   recipe(id: ID!): Recipe
   recipeCookingLogs(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy, recipeId: ID!): CookingLogConnection!
   recipeSuggestions(after: String, before: String, first: Int, last: Int): RecipeConnection!
   recipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]
-  recommendedStores: [Store!]!
-  relatedItems(itemId: ID!): RelatedItemsResponse
-  rootBrands: [Brand!]!
-  rootCategories(type: CategoryType): [Category!]!
-  savedRecipe(recipeId: ID!): SavedRecipe
+  savedRecipe(id: ID!): SavedRecipe
   savedRecipeFolders: [String!]!
-  searchItems(input: SearchItemsInput!): ItemConnection
+  """Search items with cursor-based pagination (Relay spec)."""
+  searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, query: String!, sort: ItemSortInput): ItemConnection
   searchRecipes(after: String, before: String, first: Int, last: Int, query: String!): RecipeConnection!
-  searchShoppingLists(query: String!): [ShoppingList!]!
-  searchStores(query: String!): [Store!]!
-  searchUnits(limit: Int = 10, query: String!, type: UnitType): [Unit!]!
+  """
+  Search units by name or symbol.
+  Set prioritizeCommon to true for autocomplete behavior (common units first).
+  Default limit: 10
+  """
+  searchUnits(limit: Int = 10, prioritizeCommon: Boolean, query: String!, type: UnitType): [Unit!]!
   shoppingList(id: ID!): ShoppingList
   shoppingListByShareCode(shareCode: String!): ShoppingList
-  shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!
   shoppingListItem(id: ID!): ShoppingListItem
-  shoppingListSuggestions(limit: Int = 10, shoppingListId: ID!, sources: [SuggestionSource!]): [ShoppingListSuggestion!]!
-  shoppingLists(filters: ShoppingListFilters, pagination: PaginationInput): ShoppingListConnection!
+  """
+  Get shopping lists accessible to the current user.
+  For admins: Returns all lists with optional filters (including userId filter).
+  For regular users: Returns only user's lists (owned, collaborated, or home-based).
+  Replaces: defaultShoppingList (use filters: { isDefault: true }),
+  searchShoppingLists (use filters: { search: "query" }),
+  shoppingListCollaborators (use ShoppingList.collaboratorsConnection)
+  """
+  shoppingLists(after: String, before: String, filters: ShoppingListFilters, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
+  """
+  Get a single storage location by ID
+  Requires user to be a member of the home
+  """
   storageLocation(id: ID!): StorageLocation
+  """
+  Get hierarchical tree of storage locations for a home
+  Returns top-level locations with nested children
+  Ideal for rendering nested location pickers
+  Requires user to be a member of the home
+  """
   storageLocationTree(homeId: ID!): [StorageLocation!]!
+  """
+  Get all active storage locations for a home (flat list)
+  Returns locations ordered by sortOrder
+  Requires user to be a member of the home
+  """
   storageLocations(after: String, before: String, first: Int, homeId: ID!, last: Int, orderBy: StorageLocationOrderBy): StorageLocationConnection!
+  """Get a single store by ID"""
   store(id: ID!): Store
-  storeByName(name: String!): Store
+  """Get store statistics"""
   storeStats(id: ID!): StoreStats
-  storeWithPriceHistory(id: ID!): Store
-  storeWithPurchases(id: ID!, limit: Int): Store
-  stores: [Store!]!
+  """
+  List stores with filtering, sorting, and Relay-style pagination.
+  Replaces: stores, searchStores, storeByName, popularStores, nearbyStores, recommendedStores.
+  Use storeWithPriceHistory/storeWithPurchases via Store.priceHistory and Store.purchases field resolvers.
+  """
+  stores(after: String, before: String, filters: StoreFilters, first: Int, last: Int, orderBy: StoreOrderBy): StoreConnection!
+  """
+  Get suggested display format for a quantity
+  Based on unit rules, user preferences, and quantity value
+  """
   suggestDisplayFormat(quantity: Float!, unitId: ID!, userId: ID): QuantityDisplay!
-  suspiciousInviteActivity(timeWindowHours: Int): [InviteLog!]!
+  suspiciousInviteActivity(after: String, before: String, first: Int, last: Int, timeWindowHours: Int): InviteLogConnection!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
   unit(id: ID!): Unit
   unitBySymbol(symbol: String!): Unit
+  """
+  Get all units, optionally filtered by type and/or common flag.
+  Default limit: 50
+  """
   units(isCommon: Boolean, limit: Int = 50, type: UnitType): [Unit!]!
-  unreadNotificationCount: Int!
   user(id: ID!): User
-  userCreatedItems(after: String, first: Int, sort: ItemSortInput): ItemConnection!
   userModeration(userId: ID!): UserModeration
-  userProfile: UserProfile
   userSettings(userId: String): UserSettings
-  users(after: String, before: String, first: Int, last: Int, search: String): UserConnection!
+  users(after: String, before: String, first: Int, last: Int, orderBy: UserOrderBy, search: String): UserConnection!
+  """Validate item data integrity (read-only check)"""
+  validateItem(deep: Boolean, id: ID!): ValidationResult!
   validateUpc(upc: String!): UpcValidation!
 }
 
 """Sub-input for quiet hours config"""
 input QuietHoursInput {
-  enabled: Boolean!
-  endTime: String!
   quietHoursEnabled: Boolean
   quietHoursEnd: String
   quietHoursStart: String
   quietHoursTimezone: String
-  startTime: String!
-  timezone: String!
 }
 
 type RapidAttempt {
@@ -5147,8 +5654,10 @@ type RapidAttempt {
 """Error when rate limit is exceeded"""
 type RateLimitError implements MutationError {
   code: String!
+  """The limit that was exceeded"""
   limit: Int!
   message: String!
+  """Seconds until the limit resets"""
   retryAfter: Int!
 }
 
@@ -5156,7 +5665,7 @@ type RateLimitError implements MutationError {
 Recipe type for meal instructions and ingredients
 Cache: 30 minutes - published recipes are static content
 """
-type Recipe {
+type Recipe implements Node {
   averageRating: Float
   caloriesPerServing: Float
   category: RecipeCategory!
@@ -5165,7 +5674,6 @@ type Recipe {
   createdAt: DateTime!
   createdBy: User
   cuisine: String
-  deletedAt: DateTime
   description: String
   diets: [Diet!]!
   difficulty: Difficulty!
@@ -5240,7 +5748,7 @@ enum RecipeCategory {
   SNACK
 }
 
-type RecipeConnection {
+type RecipeConnection implements Connection {
   edges: [RecipeEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
@@ -5263,13 +5771,13 @@ input RecipeContextInput {
 }
 
 """Recipe connection for pagination"""
-type RecipeEdge {
+type RecipeEdge implements Edge {
   cursor: String!
   node: Recipe!
 }
 
 type RecipeIngredient {
-  availablePantryItemIds: [String!]!
+  availablePantryItemIds: [ID!]!
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
   image: String
@@ -5277,7 +5785,6 @@ type RecipeIngredient {
   item: Item
   name: String!
   notes: String
-  order: Int @deprecated(reason: "Use sortOrder instead")
   preparation: String
   quantity: Float!
   recipe: Recipe!
@@ -5374,6 +5881,13 @@ type RecipeReview {
   verified: Boolean!
 }
 
+type RecipeReviewPayload implements MutationPayload {
+  code: String!
+  message: String!
+  recipeReview: RecipeReview
+  success: Boolean!
+}
+
 type RecipeSourceMapping {
   createdAt: DateTime!
   data: JSON
@@ -5392,6 +5906,34 @@ enum RecipeStatus {
   DRAFT
   PRIVATE
   PUBLISHED
+}
+
+"""
+Consolidated input for recording a login event.
+Replaces both LoginAttemptInput (high-level) and CreateLoginHistoryInput (detailed).
+"""
+input RecordLoginInput {
+  attribution: AttributionInput
+  automation: ApiAutomationInput
+  behavioral: BehavioralSignalsInput
+  browserOs: BrowserOsDetailsInput
+  deviceId: ID
+  deviceType: DeviceType
+  failureDetails: String
+  failureReason: LoginFailureReason
+  ipAddress: String
+  isMobileApp: Boolean = false
+  method: LoginMethod = PASSWORD
+  network: NetworkLocationInput
+  provider: String
+  referrer: String
+  risk: RiskAssessmentInput
+  session: SessionInfoInput
+  sessionId: String
+  source: String
+  success: Boolean!
+  userAgent: String
+  userId: ID!
 }
 
 input RecordPantryItemUsageInput {
@@ -5473,7 +6015,9 @@ Input for reordering multiple storage locations
 Arrays must be the same length
 """
 input ReorderStorageLocationsInput {
+  """Array of location IDs to reorder"""
   locationIds: [ID!]!
+  """Array of new sort orders (must match locationIds length)"""
   sortOrders: [Int!]!
 }
 
@@ -5482,7 +6026,8 @@ input ResetPasswordInput {
   token: String!
 }
 
-type ResetPasswordResponse {
+type ResetPasswordResponse implements MutationPayload {
+  code: String!
   message: String!
   success: Boolean!
 }
@@ -5504,7 +6049,7 @@ input RestockPantryItemInput {
 """Restocking frequency for an item or pantry"""
 type RestockingFrequency {
   averageDaysBetweenRestocks: Float!
-  itemId: String
+  itemId: ID
   itemName: String
   lastRestockedAt: DateTime
   periodEnd: DateTime!
@@ -5532,6 +6077,13 @@ type ReviewHelpful {
   user: User!
 }
 
+type ReviewHelpfulPayload implements MutationPayload {
+  code: String!
+  message: String!
+  reviewHelpful: ReviewHelpful
+  success: Boolean!
+}
+
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
   isRisky: Boolean
@@ -5557,7 +6109,7 @@ enum RiskFactor {
   VPN_DETECTED
 }
 
-type SavedRecipe {
+type SavedRecipe implements Node {
   cookedCount: Int!
   createdAt: DateTime!
   folder: String
@@ -5566,21 +6118,21 @@ type SavedRecipe {
   notes: String
   personalRating: Int
   recipe: Recipe!
-  recipeId: String!
+  recipeId: ID!
   tags: [String!]!
   updatedAt: DateTime!
   user: User!
-  userId: String!
+  userId: ID!
 }
 
-type SavedRecipeConnection {
+type SavedRecipeConnection implements Connection {
   edges: [SavedRecipeEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Saved recipe connection for pagination"""
-type SavedRecipeEdge {
+type SavedRecipeEdge implements Edge {
   cursor: String!
   node: SavedRecipe!
 }
@@ -5623,9 +6175,12 @@ input SessionInfoInput {
   sessionId: String
 }
 
-type SetDefaultHomePayload {
+type SetDefaultHomePayload implements MutationPayload {
+  code: String!
   defaultPantry: Pantry
-  settings: UserSettings!
+  message: String!
+  settings: UserSettings
+  success: Boolean!
 }
 
 input SetReminderInput {
@@ -5648,12 +6203,20 @@ input ShareShoppingListInput {
 Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
-type ShoppingList {
+type ShoppingList implements Node {
   activitiesConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListActivityOrderBy): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
+  """
+  Available pantries for moving items (from linked home).
+  Returns empty array if not linked to a home.
+  """
   availablePantries: [Pantry!]!
   basedOnTemplate: ShoppingList
   budgetAmount: Float
+  """
+  Whether items from this list can be moved to pantry.
+  True only if the list is linked to a home.
+  """
   canMoveToPantry: Boolean!
   category: String
   collaboratorsConnection(after: String, before: String, first: Int, last: Int, orderBy: CollaboratorOrderBy): ShoppingListCollaboratorConnection!
@@ -5662,12 +6225,13 @@ type ShoppingList {
   completedShopDate: DateTime
   createdAt: DateTime!
   currency: String
+  """Default pantry for the linked home (if any)."""
   defaultPantry: Pantry
   description: String
   estimatedTotal: Float!
   generatedFromMealPlan: Boolean!
   home: Home
-  homeId: String
+  homeId: ID
   id: ID!
   isCompleted: Boolean!
   isDefault: Boolean!
@@ -5685,6 +6249,8 @@ type ShoppingList {
   plannedShopDate: DateTime
   priceTracking: Boolean!
   priority: Int!
+  """Recently deleted items for quick re-adding suggestions."""
+  recentlyDeletedItems(limit: Int = 10): [ShoppingListItem!]!
   recurringInterval: Int
   recurringPattern: RecurringPattern
   reminderDate: DateTime
@@ -5694,20 +6260,26 @@ type ShoppingList {
   smartSorting: Boolean!
   sortOrder: Int!
   status: ListStatus!
+  """Smart suggestions for adding items to this shopping list."""
+  suggestions(limit: Int = 10, sources: [SuggestionSource!]): [ShoppingListSuggestion!]!
   tags: [String!]!
   targetStore: Store
-  targetStoreId: String
+  targetStoreId: ID
   templateName: String
   totalCollaborators: Int!
   totalCost: Float!
   totalItems: Int!
   updatedAt: DateTime!
+  """
+  Usage statistics for this shopping list.
+  Available for all users but primarily used by admin views.
+  """
   usageStats: ShoppingListUsageStats
   version: Int!
   viewCount: Int!
 }
 
-type ShoppingListActivity {
+type ShoppingListActivity implements Node {
   action: ListActivityType!
   createdAt: DateTime!
   description: String!
@@ -5717,20 +6289,20 @@ type ShoppingListActivity {
   newValue: String
   oldValue: String
   shoppingList: ShoppingList!
-  shoppingListId: String!
+  shoppingListId: ID!
   source: String
   user: User!
-  userId: String!
+  userId: ID!
 }
 
-type ShoppingListActivityConnection {
+type ShoppingListActivityConnection implements Connection {
   edges: [ShoppingListActivityEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Shopping list activity connection for pagination"""
-type ShoppingListActivityEdge {
+type ShoppingListActivityEdge implements Edge {
   cursor: String!
   node: ShoppingListActivity!
 }
@@ -5741,7 +6313,7 @@ input ShoppingListActivityOrderBy {
   timestamp: SortOrder
 }
 
-type ShoppingListCollaborator {
+type ShoppingListCollaborator implements Node {
   canAddItems: Boolean!
   canEdit: Boolean!
   canEditItems: Boolean!
@@ -5751,7 +6323,7 @@ type ShoppingListCollaborator {
   canRemoveItems: Boolean!
   canViewHistory: Boolean!
   collaborator: User
-  collaboratorId: String
+  collaboratorId: ID
   email: String
   expiresAt: DateTime
   id: ID!
@@ -5765,7 +6337,7 @@ type ShoppingListCollaborator {
   notifyOnComplete: Boolean!
   role: CollaboratorRole!
   shoppingList: ShoppingList!
-  shoppingListId: String!
+  shoppingListId: ID!
   status: CollaboratorStatus!
   statusChangedAt: DateTime
   token: String
@@ -5780,14 +6352,14 @@ type ShoppingListCollaboratorChangedPayload {
   userId: ID!
 }
 
-type ShoppingListCollaboratorConnection {
+type ShoppingListCollaboratorConnection implements Connection {
   edges: [ShoppingListCollaboratorEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Shopping list collaborator connection for pagination"""
-type ShoppingListCollaboratorEdge {
+type ShoppingListCollaboratorEdge implements Edge {
   cursor: String!
   node: ShoppingListCollaborator!
 }
@@ -5799,14 +6371,14 @@ type ShoppingListCollaboratorPayload implements MutationPayload {
   success: Boolean!
 }
 
-type ShoppingListConnection {
+type ShoppingListConnection implements Connection {
   edges: [ShoppingListEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Shopping list connection for pagination"""
-type ShoppingListEdge {
+type ShoppingListEdge implements Edge {
   cursor: String!
   node: ShoppingList!
 }
@@ -5821,6 +6393,7 @@ input ShoppingListFilters {
   search: String
   status: ListStatus
   tags: [String!]
+  """Admin-only: Filter by specific user ID (owner or collaborator)"""
   userId: ID
 }
 
@@ -5828,27 +6401,26 @@ input ShoppingListFilters {
 Real-time collaborative type - never cache
 Shopping list item with focused sub-types for better organization
 """
-type ShoppingListItem {
+type ShoppingListItem implements Node {
   addedBy: User
-  addedById: String
+  addedById: ID
   brand: Brand
-  brandId: String
+  brandId: ID
   category: String
   createdAt: DateTime!
-  deletedAt: DateTime
   displayFormat: DisplayFormat!
   id: ID!
   item: Item
   itemBarcode: String
   itemName: String
   lastEditedBy: User
-  lastEditedById: String
+  lastEditedById: ID
   netWeight: Float
   netWeightUnit: Unit
-  netWeightUnitId: String
+  netWeightUnitId: ID
   normalizedQuantity: Float
   normalizedUnit: Unit
-  normalizedUnitId: String
+  normalizedUnitId: ID
   notes: String
   priceEstimate: PriceEstimate!
   priority: Int!
@@ -5877,20 +6449,21 @@ type ShoppingListItemChangedPayload {
   userId: ID!
 }
 
-type ShoppingListItemConnection {
+type ShoppingListItemConnection implements Connection {
   edges: [ShoppingListItemEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Shopping list item connection for pagination"""
-type ShoppingListItemEdge {
+type ShoppingListItemEdge implements Edge {
   cursor: String!
   node: ShoppingListItem!
 }
 
 """Filters for shopping list items pagination"""
 input ShoppingListItemFilters {
+  """Filter by purchase status"""
   isPurchased: Boolean
 }
 
@@ -5911,39 +6484,60 @@ type ShoppingListItemPayload implements MutationPayload {
 
 """Purchase state for a shopping list item"""
 type ShoppingListItemPurchaseInfo {
+  """Whether the item has been purchased"""
   isPurchased: Boolean!
+  """When the item was purchased"""
   purchaseDate: DateTime
+  """Who purchased the item"""
   purchasedBy: User
-  purchasedById: String
+  """ID of user who purchased"""
+  purchasedById: ID
+  """Actual price paid"""
   purchasedPrice: Float
+  """Actual quantity purchased (may differ from requested)"""
   purchasedQuantity: Float
 }
 
 """Source information for how a shopping list item was added"""
 type ShoppingListItemSource {
+  """Context about why item was added"""
   addedContext: String
+  """Reason for auto-add (e.g., 'low_stock', 'meal_plan')"""
   autoAddReason: String
+  """Whether item was auto-added (e.g., from low stock)"""
   isAutoAdded: Boolean!
+  """Whether item came from meal planning"""
   isFromMealPlan: Boolean!
+  """Associated meal plan"""
   mealPlan: MealPlan
-  mealPlanId: String
+  mealPlanId: ID
+  """Specific meal plan item"""
   mealPlanItem: MealPlanItem
-  mealPlanItemId: String
+  mealPlanItemId: ID
+  """Reference to meal plan (legacy)"""
   mealPlanReference: String
+  """Associated recipe"""
   recipe: Recipe
+  """Specific recipe ingredient"""
   recipeIngredient: RecipeIngredient
 }
 
 """Store and location preferences for a shopping list item"""
 type ShoppingListItemStoreInfo {
+  """Aisle location in store"""
   aisle: String
+  """Preferred store for this item"""
   preferredStore: Store
+  """Storage location after purchase"""
   storageLocation: String
+  """Section within store"""
   storeSection: String
 }
 
 type ShoppingListItemsBatchClearedPayload {
+  """Count of items cleared"""
   clearedCount: Int!
+  """IDs of items that were cleared"""
   clearedItemIds: [ID!]!
   listId: ID!
   mutation: MutationType!
@@ -5952,15 +6546,22 @@ type ShoppingListItemsBatchClearedPayload {
   userId: ID!
 }
 
+"""Order by options for shopping lists"""
+input ShoppingListOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
+  updatedAt: SortOrder
+}
+
 type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
   shoppingList: ShoppingList!
-  shoppingListId: String!
+  shoppingListId: ID!
   transferredAt: DateTime
   transferredFrom: String
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 type ShoppingListPayload implements MutationPayload {
@@ -5974,8 +6575,8 @@ type ShoppingListPayload implements MutationPayload {
 input ShoppingListPlanningInput {
   budgetAmount: Float
   currency: String
-  plannedShopDate: String
-  reminderDate: String
+  plannedShopDate: DateTime
+  reminderDate: DateTime
   reminderEnabled: Boolean
   targetStoreId: String
 }
@@ -6005,19 +6606,37 @@ A suggestion for adding an item to a shopping list.
 Combines multiple sources: recently deleted, frequently added, and popular items.
 """
 type ShoppingListSuggestion {
+  """Primary category name"""
   category: String
-  defaultUnit: Unit
+  """Default unit object for one-tap add"""
+  defaultUnit: SuggestionUnit
+  """Default unit ID for one-tap add (last used or item default)"""
   defaultUnitId: ID
+  """
+  Frequency count - times user added this item (for FREQUENTLY_ADDED source)
+  """
   frequencyCount: Int
+  """
+  Unique suggestion ID (itemId or shoppingListItemId depending on source)
+  """
   id: ID!
+  """Primary image URL"""
   imageUrl: String
-  item: Item!
+  """Full item reference"""
+  item: SuggestionItem!
+  """The catalog Item ID - always present"""
   itemId: ID!
+  """Last quantity used (for RECENTLY_DELETED source)"""
   lastQuantity: Float
+  """Last unit ID used (for RECENTLY_DELETED source)"""
   lastUnitId: ID
+  """Item name for display"""
   name: String!
+  """Popularity ranking position (for POPULAR source)"""
   popularityRank: Int
+  """Shopping list item ID - only present for RECENTLY_DELETED source"""
   shoppingListItemId: ID
+  """Source of this suggestion"""
   source: SuggestionSource!
 }
 
@@ -6035,11 +6654,17 @@ Usage statistics for a ShoppingList.
 Included when admin requests resources with stats.
 """
 type ShoppingListUsageStats {
+  """Number of active collaborators"""
   collaboratorCount: Int!
+  """Number of completed/purchased items"""
   completedItemCount: Int!
+  """Total number of items"""
   itemCount: Int!
+  """Last activity timestamp"""
   lastActivityAt: DateTime
+  """Total share count"""
   shareCount: Int!
+  """Total view count"""
   viewCount: Int!
 }
 
@@ -6059,11 +6684,10 @@ type SkippedItemInfo {
 """Item that was skipped when adding to shopping list"""
 type SkippedLowStockItem {
   itemName: String!
-  pantryItemId: String!
+  pantryItemId: ID!
   reason: String!
 }
 
-"""Sort order for ordering results"""
 enum SortOrder {
   ASC
   DESC
@@ -6096,39 +6720,63 @@ input StorageDetailsInput {
 Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
 Supports hierarchical organization with parent-child relationships
 """
-type StorageLocation {
+type StorageLocation implements Node {
+  """Maximum capacity (in capacityUnit)"""
   capacity: Float
+  """Unit of measurement for capacity (e.g., 'liters', 'cubic feet')"""
   capacityUnit: String
+  """Child locations nested within this location"""
   childLocations: [StorageLocation!]!
+  """Optional color code (hex) for UI display"""
   color: String
+  """When this storage location was created"""
   createdAt: DateTime!
+  """Current count of items stored in this location"""
   currentItemCount: Int!
-  deletedAt: DateTime
+  """Optional description or notes about this location"""
   description: String
+  """The home this storage location belongs to"""
   home: Home!
-  homeId: String!
+  """ID of the home this storage location belongs to"""
+  homeId: ID!
+  """Optional icon identifier for UI display"""
   icon: String
+  """Unique identifier for the storage location"""
   id: ID!
+  """Whether this location is active and visible"""
   isActive: Boolean!
+  """Whether this location has climate control"""
   isClimateControlled: Boolean!
+  """Whether this is the default storage location for the home"""
   isDefault: Boolean!
+  """
+  Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer')
+  """
   name: String!
+  """
+  Parent location if this is a nested location (e.g., a drawer inside a refrigerator)
+  """
   parentLocation: StorageLocation
-  parentLocationId: String
+  """ID of the parent location"""
+  parentLocationId: ID
+  """Sort order for display (lower numbers appear first)"""
   sortOrder: Int!
+  """Temperature state (FROZEN, REFRIGERATED, AMBIENT, NONE)"""
   temperature: StorageState
+  """Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.)"""
   type: StorageType!
+  """When this storage location was last updated"""
   updatedAt: DateTime!
 }
 
-type StorageLocationConnection {
+type StorageLocationConnection implements Connection {
   edges: [StorageLocationEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """Storage location connection for pagination"""
-type StorageLocationEdge {
+type StorageLocationEdge implements Edge {
   cursor: String!
   node: StorageLocation!
 }
@@ -6148,26 +6796,43 @@ type StorageLocationPayload implements MutationPayload {
 
 """Temperature state of a storage location"""
 enum StorageState {
+  """Room temperature / ambient conditions"""
   AMBIENT
+  """Below freezing temperature (typically -18°C / 0°F or below)"""
   FROZEN
+  """No specific temperature control or not applicable"""
   NONE
+  """Refrigerated temperature (typically 1-4°C / 34-39°F)"""
   REFRIGERATED
 }
 
 """Type of storage location"""
 enum StorageType {
+  """Basement storage area"""
   BASEMENT
+  """Boat storage compartment"""
   BOAT_STORAGE
+  """Kitchen or storage cabinet"""
   CABINET
+  """Closet storage"""
   CLOSET
+  """Kitchen counter or surface"""
   COUNTER
+  """Custom or other storage type"""
   CUSTOM
+  """Storage drawer"""
   DRAWER
+  """Freezer or deep freezer"""
   FREEZER
+  """Garage storage"""
   GARAGE
+  """Outdoor storage area"""
   OUTDOOR
+  """Pantry shelf or cabinet shelf"""
   PANTRY_SHELF
+  """Standard refrigerator"""
   REFRIGERATOR
+  """RV storage compartment"""
   RV_STORAGE
 }
 
@@ -6175,11 +6840,10 @@ enum StorageType {
 Store type for retail locations
 Cache: 30 minutes - store information changes rarely
 """
-type Store {
+type Store implements Node {
   address: String
   averageShelfLife: JSON
   createdAt: DateTime!
-  deletedAt: DateTime
   id: ID!
   lastPriceUpdate: DateTime
   name: String!
@@ -6194,13 +6858,25 @@ type Store {
   updatedAt: DateTime!
 }
 
+type StoreConnection implements Connection {
+  edges: [StoreEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
 """Cost breakdown by store"""
 type StoreCostBreakdown {
   averageCostPerUnit: Float!
   itemCount: Int!
-  storeId: String
+  storeId: ID
   storeName: String
   totalSpent: Float!
+}
+
+"""Store connection for Relay-style pagination"""
+type StoreEdge implements Edge {
+  cursor: String!
+  node: Store!
 }
 
 """Sub-input for store-related filters"""
@@ -6208,6 +6884,21 @@ input StoreFilterInput {
   inventoryStatus: String
   storeId: String
   storeIds: [String!]
+}
+
+"""
+Filter input for querying stores.
+Consolidates searchStores, storeByName, popularStores, nearbyStores, recommendedStores.
+"""
+input StoreFilters {
+  """Location-based filter"""
+  location: StoreLocationInput
+  """Exact name match"""
+  name: String
+  """Filter to recommended stores for current user"""
+  recommended: Boolean
+  """Text search across store name and address"""
+  search: String
 }
 
 """
@@ -6222,6 +6913,20 @@ type StoreInfo {
   lng: Float
   phone: String
   website: String
+}
+
+input StoreLocationInput {
+  lat: Float!
+  lng: Float!
+  """Radius in miles (default: 10)"""
+  radius: Float
+}
+
+enum StoreOrderBy {
+  CREATED_AT_DESC
+  NAME_ASC
+  NAME_DESC
+  POPULARITY_DESC
 }
 
 type StorePayload implements MutationPayload {
@@ -6300,10 +7005,12 @@ type Subscription {
   deviceStatusChanged(userId: ID!): Device!
   deviceTrustChanged(userId: ID!): Device!
   deviceVerified(userId: ID!): Device!
-  expirationNotificationCreated: ExpirationNotification!
-  expirationNotificationUpdated: ExpirationNotification!
-  failedLoginAttempts(userId: ID!): LoginHistory!
-  loginAttempts(userId: ID!): LoginHistory!
+  expirationNotificationCreated(pantryId: ID!): ExpirationNotification!
+  expirationNotificationUpdated(pantryId: ID!): ExpirationNotification!
+  """Subscribe to home invitation changes for a specific home"""
+  homeInviteChanged(homeId: ID!): HomeInviteChangeEvent!
+  loginAttempted(userId: ID!): LoginHistory!
+  loginFailed(userId: ID!): LoginHistory!
   memberJoined(homeId: ID!): MembershipUpdatePayload!
   memberLeft(homeId: ID!): MembershipUpdatePayload!
   membershipRoleChanged(homeId: ID!): MembershipRoleChangedPayload!
@@ -6311,14 +7018,13 @@ type Subscription {
   myShoppingListsUpdated: ShoppingListUpdatedPayload
   notificationReceived: NotificationPayload!
   notificationUpdated: NotificationPayload!
-  onHomeInviteChange(homeId: ID!): HomeInviteChangeEvent!
   pantryExpiringItemsAlert(pantryId: ID!): PantryExpiringItemsAlertPayload!
   pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload!
   pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): PantryLowStockAlertPayload!
   pantryUpdated(pantryId: ID!): PantryUpdatedPayload!
   pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload!
-  riskyLoginAlerts(userId: ID!): LoginHistory!
+  riskyLoginDetected(userId: ID!): LoginHistory!
   shoppingListCollaboratorsChanged(listId: ID!): ShoppingListCollaboratorChangedPayload
   shoppingListItemsBatchCleared(listId: ID!): ShoppingListItemsBatchClearedPayload
   shoppingListItemsChanged(listId: ID!): ShoppingListItemChangedPayload
@@ -6326,7 +7032,7 @@ type Subscription {
   shoppingListUpdated(listId: ID!): ShoppingListUpdatedPayload
   storeRatingChanged(storeId: ID): Store!
   storeUpdated(storeId: ID): Store!
-  suspiciousActivity(userId: ID!): SuspiciousActivity!
+  suspiciousActivityDetected(userId: ID!): SuspiciousActivity!
   userActivity(userId: ID): UserActivityPayload!
   userModerationChanged(userId: ID): UserModerationChangedPayload!
   userProfileChanged(userId: ID): UserProfileChangedPayload!
@@ -6334,11 +7040,34 @@ type Subscription {
   userUpdated(userId: ID): UserUpdatedPayload!
 }
 
+"""
+Lightweight item type for suggestion displays.
+Contains only the display fields needed for suggestion cards.
+"""
+type SuggestionItem {
+  id: ID!
+  imageUrl: String
+  name: String!
+}
+
 """Source of a shopping list suggestion"""
 enum SuggestionSource {
+  """User frequently adds this item to shopping lists"""
   FREQUENTLY_ADDED
+  """Globally popular item"""
   POPULAR
+  """Item was recently removed from this shopping list"""
   RECENTLY_DELETED
+}
+
+"""
+Lightweight unit type for suggestion displays.
+Contains only the fields needed for one-tap add UI.
+"""
+type SuggestionUnit {
+  id: ID!
+  name: String!
+  symbol: String!
 }
 
 input SuspendUserInput {
@@ -6371,9 +7100,13 @@ type SuspiciousInviteActivity {
 
 """Information about a sync conflict"""
 type SyncConflictInfo {
+  """The version the client had"""
   clientVersion: Int!
+  """Description of the conflict"""
   message: String!
+  """The current state of the item on the server"""
   serverItem: ShoppingListItem!
+  """The current version on the server"""
   serverVersion: Int!
 }
 
@@ -6425,35 +7158,53 @@ input SyncSettingsInput {
 input SyncShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
+  """Item reference (if linking to catalog item)"""
   itemId: String
+  """Item details (for items not in catalog)"""
   itemName: String
   netWeight: NetWeightInput
+  """User-provided information"""
   notes: String
   pricing: PricingEstimatesInput
   priority: Int
   purchaseTracking: PurchaseTrackingInput
+  """
+  Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5
+  """
   quantity: QuantityInput
   recipeContext: RecipeContextInput
+  """Required: ID of the shopping list this item belongs to"""
   shoppingListId: ID!
   sortOrder: String
   storePrefs: StorePreferencesInput
   unit: UnitSpecInput
+  """Version for optimistic locking (null if new item)"""
   version: Int
 }
 
 """Result of syncing a shopping list item"""
 type SyncShoppingListItemResult {
+  """The client-provided ID (may be temp ID like 'temp-uuid')"""
   clientId: ID!
+  """Conflict information if version mismatch occurred"""
   conflict: SyncConflictInfo
+  """The synced shopping list item (null for delete operations)"""
   item: ShoppingListItem
+  """The operation that was performed"""
   operation: SyncOperation!
+  """
+  The server-assigned database ID (null if item was deleted before reaching server)
+  """
   serverId: ID
+  """Whether this was a create (true) or update (false) operation"""
   wasCreated: Boolean!
 }
 
 """Sub-input for tag-based filters"""
 input TagFilterInput {
+  """Items that have NONE of these tags"""
   excludeTags: [String!]
+  """Items that have ALL of these tags"""
   hasTags: [String!]
   tags: [String!]
 }
@@ -6493,8 +7244,10 @@ interface Timestamped {
   createdAt: DateTime!
 }
 
-"""Result of toggling purchased status"""
-union TogglePurchasedResult = NotFoundError | ShoppingListItem | UnauthorizedError
+input ToggleReviewHelpfulInput {
+  isHelpful: Boolean!
+  reviewId: ID!
+}
 
 enum TrustLevel {
   ADMIN
@@ -6516,7 +7269,9 @@ input UiPreferencesInput {
 type UnauthorizedError implements MutationError {
   code: String!
   message: String!
+  """The permission that was required"""
   requiredPermission: String
+  """The resource being accessed"""
   resource: String
 }
 
@@ -6526,10 +7281,10 @@ Cache: 2 hours - measurement units are static reference data
 """
 type Unit {
   autoConvertThreshold: Float
-  autoConvertToUnit: Unit
-  autoConvertToUnitId: String
-  baseUnit: Unit
-  baseUnitId: String
+  autoConvertToUnit: UnitRef
+  autoConvertToUnitId: ID
+  baseUnit: UnitRef
+  baseUnitId: ID
   commonFractions: JSON
   conversionFactor: Float!
   createdAt: DateTime!
@@ -6568,6 +7323,15 @@ enum UnitRecommendation {
   STORAGE_PLANNING
 }
 
+"""Lightweight unit reference to break self-referential cycles"""
+type UnitRef {
+  id: ID!
+  isMetric: Boolean!
+  name: String!
+  symbol: String!
+  type: UnitType!
+}
+
 """Reusable sub-input for specifying a unit by ID, name, or symbol"""
 input UnitSpecInput {
   unitId: String
@@ -6603,10 +7367,15 @@ enum UnitUsageContext {
 
 """UPC/barcode format for lookup optimization"""
 enum UpcFormat {
+  """Auto-detect format based on length (default)"""
   AUTO
+  """8-digit shortened European format"""
   EAN_8
+  """13-digit European Article Number"""
   EAN_13
+  """12-digit standard UPC (US/Canada)"""
   UPC_A
+  """8-digit compressed UPC (auto-expanded to UPC-A)"""
   UPC_E
 }
 
@@ -6619,7 +7388,6 @@ type UpcValidation {
 
 input UpdateBrandInput {
   description: String
-  id: ID!
   name: String
   parentId: ID
 }
@@ -6672,11 +7440,16 @@ Handles all device updates including status changes, location, hardware info, et
 """
 input UpdateDeviceInput {
   appVersion: String
+  """Clear the push token (replaces removePushToken mutation)"""
   clearPushToken: Boolean
+  """Soft delete the device (replaces deleteDevice mutation)"""
   delete: Boolean
   details: DeviceDetailsInput
   deviceName: String
   deviceType: DeviceType
+  """
+  Increment the login count (replaces incrementDeviceLoginCount mutation)
+  """
   incrementLoginCount: Boolean
   isActive: Boolean
   isTrusted: Boolean
@@ -6684,6 +7457,7 @@ input UpdateDeviceInput {
   location: NetworkLocationInput
   platform: MobilePlatform
   pushToken: String
+  """Update lastSeenAt to now (replaces updateDeviceLastSeen mutation)"""
   touchLastSeen: Boolean
 }
 
@@ -6745,6 +7519,7 @@ input UpdateItemInput {
   description: String
   editReason: String
   healthInfo: HealthInfoInput
+  """Increment popularity counter"""
   incrementPopularity: Boolean
   media: MediaAssetsInput
   mergeMetadata: Boolean
@@ -6753,10 +7528,14 @@ input UpdateItemInput {
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
   popularity: Int
+  """Update item price"""
   price: Float
+  """Price source for tracking"""
   priceSource: String
+  """Store ID for price update"""
   priceStoreId: String
   productDetails: ProductDetailsInput
+  """Remove the item image"""
   removeImage: Boolean
   showInOnboarding: Boolean
   status: ItemStatus
@@ -6776,9 +7555,6 @@ input UpdateItemPriceInput {
   storeId: String
 }
 
-"""Result of updating an item"""
-union UpdateItemResult = Item | NotFoundError | UnauthorizedError | ValidationError | VersionMismatchError
-
 input UpdateLoginHistoryInput {
   attribution: AttributionInput
   automation: ApiAutomationInput
@@ -6788,10 +7564,13 @@ input UpdateLoginHistoryInput {
   deviceType: DeviceType
   failureDetails: String
   failureReason: LoginFailureReason
+  flaggedById: ID
   flaggedReason: String
   isMobileApp: Boolean
   network: NetworkLocationInput
+  reviewNotes: String
   reviewed: Boolean
+  reviewerId: ID
   risk: RiskAssessmentInput
   session: SessionInfoInput
 }
@@ -6800,6 +7579,7 @@ input UpdateMealPlanInput {
   actualCost: Float
   budgetAmount: Float
   description: String
+  """Link or unlink dietary profile for nutrition goal tracking"""
   dietaryProfileId: ID
   endDate: DateTime
   name: String
@@ -6810,6 +7590,7 @@ input UpdateMealPlanInput {
 
 input UpdateMealPlanItemInput {
   actualCost: Float
+  """Manual nutrition override"""
   calories: Float
   carbs: Float
   completedAt: DateTime
@@ -6843,6 +7624,26 @@ input UpdateMembershipInput {
   canViewPantry: Boolean
   displayName: String
   role: MembershipRole
+}
+
+"""
+Consolidated input for updating moderation state.
+Handles status transitions, trust level, risk score, ban/suspend/unban/unsuspend, and review operations.
+"""
+input UpdateModerationInput {
+  moderatorNotes: String
+  """Ban/suspend reason"""
+  reason: String
+  """Review notes (used when completing a review)"""
+  reviewNotes: String
+  riskScore: Float
+  """
+  New moderation status (ACTIVE, WARNED, RESTRICTED, SUSPENDED, BANNED, UNDER_REVIEW, APPEALING)
+  """
+  status: ModerationStatus
+  """Suspension end date (required when status=SUSPENDED)"""
+  suspendedUntil: DateTime
+  trustLevel: TrustLevel
 }
 
 input UpdateNotificationInput {
@@ -6894,9 +7695,6 @@ input UpdatePantryItemInput {
   wasteReason: WasteReason
 }
 
-"""Result of updating a pantry item"""
-union UpdatePantryItemResult = NotFoundError | PantryItem | UnauthorizedError | ValidationError | VersionMismatchError
-
 input UpdatePurchaseInput {
   discountAmount: Float
   expirationDate: DateTime
@@ -6918,7 +7716,6 @@ input UpdateRecipeInput {
   description: String
   dietary: DietaryTagsInput
   difficulty: Difficulty
-  externalSource: ExternalSourceShorthandInput
   imageUrl: String
   instructions: JSON
   isPublished: Boolean
@@ -6935,6 +7732,11 @@ input UpdateRecipeInput {
   timing: TimeEstimatesInput
   tips: String
   visibility: Visibility
+}
+
+input UpdateRecipeReviewInput {
+  comment: String
+  rating: Int
 }
 
 input UpdateRestrictionInput {
@@ -6963,6 +7765,7 @@ input UpdateShoppingListItemInput {
   pricing: PricingEstimatesInput
   priority: Int
   purchaseTracking: PurchaseTrackingInput
+  """Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5"""
   quantity: FlexibleQuantity
   sortOrder: String
   storePrefs: StorePreferencesInput
@@ -6970,26 +7773,36 @@ input UpdateShoppingListItemInput {
   version: Int
 }
 
-"""Result of updating a shopping list item"""
-union UpdateShoppingListItemResult = NotFoundError | ShoppingListItem | UnauthorizedError | ValidationError | VersionMismatchError
-
 """
 Input for updating an existing storage location
 All fields are optional
 """
 input UpdateStorageLocationInput {
+  """New capacity value"""
   capacity: Float
+  """New capacity unit"""
   capacityUnit: String
+  """New color code"""
   color: String
+  """New description"""
   description: String
+  """New icon identifier"""
   icon: String
+  """Activate or deactivate the location"""
   isActive: Boolean
+  """Update climate control setting"""
   isClimateControlled: Boolean
+  """Set or unset as default location"""
   isDefault: Boolean
+  """New display name"""
   name: String
+  """New parent location ID (set to null to make top-level)"""
   parentLocationId: ID
+  """New sort order"""
   sortOrder: Int
+  """New temperature state"""
   temperature: StorageState
+  """New storage type"""
   type: StorageType
 }
 
@@ -7026,7 +7839,6 @@ input UpdateUnitInput {
 input UpdateUserAddressInput {
   city: String
   country: String
-  id: ID!
   isDefault: Boolean
   label: String
   lat: Float
@@ -7073,9 +7885,6 @@ input UpdateUserProfileInput {
   website: String
 }
 
-"""Result of updating user profile"""
-union UpdateUserResult = NotFoundError | UnauthorizedError | User | ValidationError
-
 input UpdateUserSettingsInput {
   features: FeatureTogglesInput
   notifications: UserNotificationSettingsInput
@@ -7085,10 +7894,14 @@ input UpdateUserSettingsInput {
   ui: UiPreferencesInput
 }
 
-"""Result of updating user settings"""
-union UpdateUserSettingsResult = NotFoundError | UnauthorizedError | UserSettings | ValidationError
-
 scalar Upload
+
+type UploadPayload implements MutationPayload {
+  code: String!
+  message: String!
+  success: Boolean!
+  url: String
+}
 
 type UpsertExternalRecipeResult {
   created: Boolean!
@@ -7118,7 +7931,7 @@ type UsageAnalytics {
 type UsageByItem {
   count: Int!
   imageUrl: String
-  itemId: String!
+  itemId: ID!
   itemName: String!
   totalQuantity: Float!
   unitName: String
@@ -7144,7 +7957,7 @@ type UsageBySource {
 type UsageByUnit {
   count: Int!
   totalQuantity: Float!
-  unitId: String!
+  unitId: ID!
   unitName: String!
   unitSymbol: String!
 }
@@ -7174,31 +7987,49 @@ enum UsageSource {
 User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
-type User {
+type User implements Node {
   addresses: [UserAddress!]!
+  collaboratedShoppingLists: [ShoppingList!]!
+  cookingLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
+  cookingStats: CookingStats
   createdAt: DateTime!
   defaultHome: Home
-  defaultHomeId: String
-  defaultShoppingListId: String
+  defaultHomeId: ID
+  defaultShoppingListId: ID
+  deviceStats: DeviceStats!
   devices: [Device!]!
   dietaryProfile: DietaryProfile
   email: String!
   emailVerified: Boolean!
+  expirationNotificationsConnection(after: String, before: String, first: Int, input: GetExpirationNotificationsInput, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
+  hasUrgentNotifications: Boolean!
   homeOwnerships: [HomeOwnership!]!
   id: ID!
+  inviteLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
   language: String
   lastActiveAt: DateTime
   loginHistory: [LoginHistory!]!
+  membershipInHome(homeId: ID!): Membership
+  memberships: [Membership!]!
   moderation: UserModeration
   notificationPreferences: NotificationPreferences
+  notificationsConnection(after: String, before: String, filter: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
   onBoarded: Boolean!
+  pendingCollaborationInvites: [ShoppingListCollaborator!]!
+  pendingHomeInvites: [HomeInvite!]!
   preferredCurrency: String
   profile: UserProfile
+  purchaseStats: PurchaseStats!
+  purchasesConnection(after: String, before: String, filter: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   role: UserRole!
+  savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
+  sentHomeInvites: [HomeInvite!]!
   settings: UserSettings
+  shoppingListInvites: [ShoppingListCollaborator!]!
   shoppingListOwnerships: [ShoppingListOwnership!]!
   statistics: UserStatistics
   timezone: String
+  unreadNotificationCount: Int!
   updatedAt: DateTime!
 }
 
@@ -7254,19 +8085,19 @@ type UserAuthPayload {
   userId: String!
 }
 
-type UserConnection {
+type UserConnection implements Connection {
   edges: [UserEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
 }
 
 """User connection for pagination (admin only)"""
-type UserEdge {
+type UserEdge implements Edge {
   cursor: String!
   node: User!
 }
 
-type UserModeration {
+type UserModeration implements Node {
   abuseScore: Float!
   appealNotes: String
   appealStatus: AppealStatus
@@ -7277,7 +8108,6 @@ type UserModeration {
   createdAt: DateTime!
   createdBy: User
   createdById: String
-  deletedAt: DateTime
   deletedBy: User
   deletedById: String
   id: ID!
@@ -7316,6 +8146,17 @@ type UserModerationChangedPayload {
   userId: String!
 }
 
+type UserModerationConnection implements Connection {
+  edges: [UserModerationEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserModerationEdge implements Edge {
+  cursor: String!
+  node: UserModeration!
+}
+
 type UserModerationPayload {
   code: String!
   message: String!
@@ -7333,6 +8174,12 @@ input UserNotificationSettingsInput {
   shoppingListUpdates: Boolean
   smsNotifications: Boolean
   weeklyDigest: Boolean
+}
+
+"""Order by options for users"""
+input UserOrderBy {
+  createdAt: SortOrder
+  username: SortOrder
 }
 
 type UserPayload implements MutationPayload {
@@ -7362,7 +8209,7 @@ type UserProfile {
   showEmail: Boolean!
   showPhone: Boolean!
   updatedAt: DateTime!
-  userId: String!
+  userId: ID!
   website: String
 }
 
@@ -7452,7 +8299,7 @@ type UserStatistics {
   totalShoppingLists: Int!
   totalWasteReduced: Float!
   user: User!
-  userId: String!
+  userId: ID!
 }
 
 type UserStatusChangedPayload {
@@ -7473,28 +8320,32 @@ enum UserStatusType {
 }
 
 type UserUpdatedPayload {
-  mutation: String!
+  mutation: MutationType!
   node: User!
   timestamp: DateTime!
   updatedFields: [String!]
   userId: String!
 }
 
-type ValidateTokenResponse {
-  email: String
-  valid: Boolean!
+type ValidateTokenResponse implements MutationPayload {
+  code: String!
+  message: String!
+  success: Boolean!
+  userId: String
 }
 
 """Generic validation error for invalid input data"""
 type ValidationError implements MutationError {
   code: String!
+  """Validation constraint that was violated"""
   constraint: String
-  field: String!
+  """The field that failed validation (if applicable)"""
+  field: String
   message: String!
 }
 
 type ValidationResult {
-  errors: [ValidationError!]!
+  errors: [ItemValidationError!]!
   isValid: Boolean!
   warnings: [ValidationWarning!]!
 }
@@ -7522,10 +8373,13 @@ type VariationImage {
 
 """Error when optimistic locking version mismatch occurs"""
 type VersionMismatchError implements MutationError {
+  """Actual current version on server"""
   actualVersion: Int!
   code: String!
+  """Expected version from client"""
   expectedVersion: Int!
   message: String!
+  """The resource that had the version mismatch"""
   resourceId: ID!
 }
 
@@ -7556,7 +8410,7 @@ type WasteByItem {
   count: Int!
   estimatedValue: Float
   imageUrl: String
-  itemId: String!
+  itemId: ID!
   itemName: String!
   totalQuantity: Float!
   unitName: String
@@ -7588,7 +8442,10 @@ enum WasteReason {
 
 """Sub-input for workflow/approval filters"""
 input WorkflowFilterInput {
+  """Filter by creator user ID"""
   createdById: ID
+  """Filter user-created items"""
   isUserCreated: Boolean
+  """Filter items that need admin approval"""
   needsApproval: Boolean
 }

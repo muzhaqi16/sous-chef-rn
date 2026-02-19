@@ -10,28 +10,30 @@ query GetMyNotifications(
   $before: String
   $orderBy: NotificationOrderBy
 ) {
-  myNotifications(
-    filter: $filter
-    first: $first
-    after: $after
-    last: $last
-    before: $before
-    orderBy: $orderBy
-  ) {
-    edges {
-      node {
-        ...NotificationFragment
+  me {
+    notificationsConnection(
+      filter: $filter
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      orderBy: $orderBy
+    ) {
+      edges {
+        node {
+          ...NotificationFragment
+        }
+        cursor
       }
-      cursor
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+      unreadCount
     }
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    totalCount
-    unreadCount
   }
 }
 

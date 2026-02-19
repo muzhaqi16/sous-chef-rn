@@ -309,16 +309,19 @@ export function useRecipeDetail() {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.map(edge =>
-                edge.node.id === updatedSavedRecipe.id
-                  ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
-                  : edge,
-              ),
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.map(edge =>
+                  edge.node.id === updatedSavedRecipe.id
+                    ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
+                    : edge,
+                ),
+              },
             },
           };
         },
@@ -335,19 +338,22 @@ export function useRecipeDetail() {
     update: (cache, { data }, { variables }) => {
       if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 
-      // 1. Remove from mySavedRecipes connection
+      // 1. Remove from savedRecipesConnection
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.filter(
-                edge => edge.node.recipe.id !== variables.recipeId,
-              ),
-              totalCount: existing.mySavedRecipes.totalCount - 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.filter(
+                  edge => edge.node.recipe.id !== variables.recipeId,
+                ),
+                totalCount: existing.me.savedRecipesConnection.totalCount - 1,
+              },
             },
           };
         },

@@ -3,7 +3,7 @@
 # ============================================
 
 subscription LoginAttempts($userId: ID!) {
-  loginAttempts(userId: $userId) {
+  loginAttempted(userId: $userId) {
     id
     userId
     success
@@ -19,9 +19,7 @@ subscription LoginAttempts($userId: ID!) {
     osVersion
     deviceType
     isMobileApp
-    riskScore
     isRisky
-    riskFactors
     failureReason
     failureDetails
     isNewLocation
@@ -36,15 +34,14 @@ subscription LoginAttempts($userId: ID!) {
 }
 
 subscription SuspiciousActivity($userId: ID!) {
-  suspiciousActivity(userId: $userId) {
+  suspiciousActivityDetected(userId: $userId) {
     rapidAttempts {
       hour
       count
     }
     riskyLogins {
       id
-      riskScore
-      riskFactors
+      isRisky
       loggedInAt
     }
     newLocationLogins {
@@ -68,7 +65,7 @@ subscription SuspiciousActivity($userId: ID!) {
 }
 
 subscription FailedLoginAttempts($userId: ID!) {
-  failedLoginAttempts(userId: $userId) {
+  loginFailed(userId: $userId) {
     id
     userId
     method
@@ -80,11 +77,9 @@ subscription FailedLoginAttempts($userId: ID!) {
 }
 
 subscription RiskyLoginAlerts($userId: ID!) {
-  riskyLoginAlerts(userId: $userId) {
+  riskyLoginDetected(userId: $userId) {
     id
     userId
-    riskScore
-    riskFactors
     isVpn
     isTor
     isProxy

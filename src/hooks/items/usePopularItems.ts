@@ -57,8 +57,6 @@ export function usePopularItems(limit = 10) {
         category: primaryCategory ? {
           id: primaryCategory.id,
           name: primaryCategory.name,
-          color: primaryCategory.color,
-          icon: primaryCategory.icon,
         } : null,
       };
     });

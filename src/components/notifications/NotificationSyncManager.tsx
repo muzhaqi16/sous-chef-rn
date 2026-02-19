@@ -30,9 +30,9 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
 
   // Sync server notifications to local store using server-first approach
   useEffect(() => {
-    if (serverNotifications?.myNotifications?.edges) {
-      const serverNotifs = serverNotifications.myNotifications.edges.map(
-        edge => {
+    if (serverNotifications?.me?.notificationsConnection?.edges) {
+      const serverNotifs = serverNotifications.me.notificationsConnection.edges.map(
+        (edge: any) => {
           const node = edge.node;
           return {
             id: node.id,

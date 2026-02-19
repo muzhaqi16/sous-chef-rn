@@ -33,7 +33,7 @@ export function useFolderActions() {
       setLoading(true);
       try {
         const result = await deleteRecipeFolderMutation({
-          variables: { folder: oldName, moveTo: newName },
+          variables: { input: { folder: oldName, moveTo: newName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
               query: SavedRecipeFoldersDocument,
@@ -51,8 +51,8 @@ export function useFolderActions() {
             }
           },
         });
-        const count = result.data?.deleteRecipeFolder ?? 0;
-        toastService.success(`Renamed "${oldName}" to "${newName}" (${count} recipes)`);
+        const payload = result.data?.deleteRecipeFolder;
+        toastService.success(`Renamed "${oldName}" to "${newName}"${payload?.message ? ` - ${payload.message}` : ''}`);
         return true;
       } catch (error) {
         console.error('Failed to rename folder:', error);
@@ -76,7 +76,7 @@ export function useFolderActions() {
       setLoading(true);
       try {
         const result = await deleteRecipeFolderMutation({
-          variables: { folder: folderName },
+          variables: { input: { folder: folderName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
               query: SavedRecipeFoldersDocument,
@@ -94,10 +94,10 @@ export function useFolderActions() {
             }
           },
         });
-        const count = result.data?.deleteRecipeFolder ?? 0;
-        if (count > 0) {
+        const payload = result.data?.deleteRecipeFolder;
+        if (payload?.success) {
           toastService.success(
-            `Deleted "${folderName}". ${count} recipe${count > 1 ? 's' : ''} moved to No Folder.`,
+            `Deleted "${folderName}"${payload.message ? ` - ${payload.message}` : ''}`,
           );
         } else {
           toastService.success(`Deleted "${folderName}"`);

@@ -11,8 +11,8 @@ export function useRecipeTags() {
   });
 
   const savedRecipes = useMemo(
-    () => data?.mySavedRecipes?.edges?.map(e => e.node) ?? [],
-    [data?.mySavedRecipes],
+    () => data?.me?.savedRecipesConnection?.edges?.map(e => e.node) ?? [],
+    [data?.me?.savedRecipesConnection],
   );
 
   const tags = useMemo<string[]>(() => {

@@ -3,7 +3,7 @@
 # ============================================
 
 query GetNotificationPreferences {
-  myNotificationPreferences {
+  notificationPreferences {
     id
     userId
     emailEnabled
@@ -31,7 +31,7 @@ query GetNotificationPreferences {
 }
 
 query GetDietaryProfile {
-  myDietaryProfile {
+  dietaryProfile {
     id
     userId
     preferredCuisines

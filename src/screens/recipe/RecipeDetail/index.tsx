@@ -25,6 +25,8 @@ import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet/SaveRecipeS
 import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
+import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
+import { ReviewSection } from '#/components/recipe/ReviewSection';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -85,6 +87,12 @@ const RecipeDetailScreen: React.FC = () => {
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
+
+  // Recipe reviews
+  const recipeReviews = useRecipeReviews({
+    recipeId: recipeId ?? '',
+    backendRecipe: backendRecipe ?? null,
+  });
 
   // Derive icon visibility state
   const isInFavorites = isSaved && savedFolder === 'Favorites';
@@ -535,6 +543,11 @@ const RecipeDetailScreen: React.FC = () => {
               </View>
             );
           })()}
+
+          {/* Reviews Section */}
+          {isBackendRecipe && recipeId && (
+            <ReviewSection {...recipeReviews} />
+          )}
 
           {/* Source Attribution */}
           {(displayData.sourceName || displayData.sourceUrl) && (

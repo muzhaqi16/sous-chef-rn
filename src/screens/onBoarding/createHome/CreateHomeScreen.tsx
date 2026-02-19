@@ -97,7 +97,7 @@ const CreateHomeScreenComponent = () => {
   // Extract nodes from connection types (homes and pantries return Connection types)
   const homes = normalizeHomes(extractNodes(homesData?.homes));
   const pantries = extractNodes(pantriesData?.pantries);
-  const pendingInvites = pendingInvitesData?.myPendingInvites || [];
+  const pendingInvites = pendingInvitesData?.me?.pendingHomeInvites || [];
   const existingHome = homes[0];
   const existingPantry = pantries.find(p => p.isDefault) || pantries[0];
   const needsHome = !existingHome;

@@ -3,39 +3,41 @@
 # ============================================
 
 query MyShoppingListInvites {
-  myShoppingListInvites {
-    id
-    token
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    expiresAt
-    shoppingList {
+  me {
+    pendingCollaborationInvites {
       id
-      name
-      description
-    }
-    collaborator {
-      id
+      token
+      shoppingListId
+      collaboratorId
       email
-      profile {
-        displayName
-        avatar
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canMarkPurchased
+      canInviteOthers
+      invitedAt
+      expiresAt
+      shoppingList {
+        id
+        name
+        description
       }
-    }
-    invitedBy {
-      id
-      email
-      profile {
-        displayName
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+      invitedBy {
+        id
+        email
+        profile {
+          displayName
+        }
       }
     }
   }

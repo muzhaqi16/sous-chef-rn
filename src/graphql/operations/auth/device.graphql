@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query GetMyDevices($input: DevicesQueryInput!) {
-  devices(input: $input) {
+query GetMyDevices($filters: DeviceFilters, $first: Int, $after: String) {
+  devices(filters: $filters, first: $first, after: $after) {
     edges {
       node {
         id

@@ -196,15 +196,18 @@ export const RecipeMain: React.FC = React.memo(() => {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.filter(
-                edge => edge.node.recipe.id !== variables.recipeId,
-              ),
-              totalCount: existing.mySavedRecipes.totalCount - 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.filter(
+                  edge => edge.node.recipe.id !== variables.recipeId,
+                ),
+                totalCount: existing.me.savedRecipesConnection.totalCount - 1,
+              },
             },
           };
         },

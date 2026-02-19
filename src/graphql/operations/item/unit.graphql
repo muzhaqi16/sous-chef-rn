@@ -41,8 +41,8 @@ query GetUnitBySymbol($symbol: String!) {
     baseUnit {
       id
       name
-      conversionFactor
-      baseUnitId
+      symbol
+      type
     }
   }
 }
@@ -80,7 +80,7 @@ query GetCommonUnits($type: UnitType, $limit: Int) {
 }
 
 query GetConvertibleUnits($unitId: ID!) {
-  getConvertibleUnits(unitId: $unitId) {
+  convertibleUnits(unitId: $unitId) {
     id
     name
     symbol

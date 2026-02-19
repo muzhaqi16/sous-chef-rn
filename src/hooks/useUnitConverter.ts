@@ -212,7 +212,7 @@ export const useUnitConverter = () => {
           variables: params,
         });
 
-        return data?.getItemConversions || [];
+        return data?.itemConversions || [];
       } catch (err: any) {
         setError(err.message || 'Failed to get item conversions');
         return [];

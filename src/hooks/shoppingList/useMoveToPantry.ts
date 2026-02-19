@@ -57,7 +57,7 @@ export function useMoveToPantry({
           addToPantryCache(
             cache,
             moveToPantryIdRef.current,
-            data.moveShoppingItemToPantry,
+            data.moveShoppingItemToPantry.pantryItem!,
           );
 
           const selectedItem = selectedItemRef.current;

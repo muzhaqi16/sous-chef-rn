@@ -11,7 +11,7 @@ import {
   useRestockPantryItemMutation,
   useGetPantryQuery,
   GetPantryItemSuggestionsDocument,
-  GetPantryItemSuggestionsQuery,
+  type GetPantryItemSuggestionsQuery,
   ItemSuggestion,
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -80,7 +80,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     : null;
   const storageLocations = normalizedPantry?.storageLocations || [];
 
-  // Helper to optimistically remove item from suggestions cache
   const removeFromSuggestionsCache = useCallback(
     (itemId: string) => {
       client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
@@ -89,12 +88,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
           variables: { pantryId: pantryId!, limit: 15 },
         },
         data => {
-          if (!data) return data;
+          if (!data?.pantry) return data;
           return {
             ...data,
-            pantryItemSuggestions: data.pantryItemSuggestions.filter(
-              s => s.itemId !== itemId,
-            ),
+            pantry: {
+              ...data.pantry,
+              suggestions: data.pantry.suggestions.filter(
+                s => s.itemId !== itemId,
+              ),
+            },
           };
         },
       );
@@ -203,7 +205,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const handleQuickAddSuggestion = useCallback(
     (item: BaseSuggestionItem) => {
       // Cast to PantryItemSuggestion for full type info
-      const pantryItem = item as PantryItemSuggestion;
+      const pantryItem = item as unknown as PantryItemSuggestion;
       if (!pantryId || creating || state.exitingItems.has(pantryItem.itemId)) return;
 
       // Also check pendingItemIds to prevent rapid-fire duplicates

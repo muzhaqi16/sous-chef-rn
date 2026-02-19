@@ -69,29 +69,31 @@ query GetRecipe($id: ID!) {
 }
 
 query MySavedRecipes($folder: String) {
-  mySavedRecipes(folder: $folder) {
-    edges {
-      node {
-        id
-        folder
-        tags
-        notes
-        personalRating
-        cookedCount
-        lastCookedAt
-        createdAt
-        updatedAt
-        recipe {
-          ...BasicRecipeFragment
+  me {
+    savedRecipesConnection(folder: $folder) {
+      edges {
+        node {
+          id
+          folder
+          tags
+          notes
+          personalRating
+          cookedCount
+          lastCookedAt
+          createdAt
+          updatedAt
+          recipe {
+            ...BasicRecipeFragment
+          }
         }
+        cursor
       }
-      cursor
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
   }
 }
 
@@ -188,8 +190,12 @@ mutation UnfavoriteRecipe($recipeId: ID!) {
   }
 }
 
-mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
-  deleteRecipeFolder(folder: $folder, moveTo: $moveTo)
+mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
+  deleteRecipeFolder(input: $input) {
+    success
+    message
+    code
+  }
 }
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
@@ -346,7 +352,7 @@ mutation RecordPantryUsage(
   $pantryItemId: ID!
   $quantity: Float!
   $unitId: ID!
-  $purpose: String
+  $purpose: UsagePurpose
   $notes: String
 ) {
   recordPantryUsage(

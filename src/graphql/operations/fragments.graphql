@@ -156,7 +156,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   priority
   sortOrder
   createdAt
-  deletedAt
   # User reference
   addedBy {
     ...UserSummary
@@ -411,7 +410,6 @@ fragment ItemFragment on Item {
   metadata
   ingredients
   createdAt
-  deletedAt
   density
   preferredTrackingUnitId
   preferredTrackingUnit {
@@ -443,7 +441,9 @@ fragment ItemFragment on Item {
 }
 
 fragment NotificationSubscription on NotificationPayload {
-  mutation
+  success
+  code
+  message
   notification {
     id
     type
@@ -453,8 +453,6 @@ fragment NotificationSubscription on NotificationPayload {
     readAt
     createdAt
   }
-  userId
-  timestamp
 }
 
 # ============================================
@@ -1004,6 +1002,21 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   section
 }
 
+fragment RecipeReviewFragment on RecipeReview {
+  id
+  rating
+  comment
+  helpful
+  verified
+  createdAt
+  updatedAt
+  user { ...UserSummary }
+  helpfulVotes {
+    id
+    user { id }
+  }
+}
+
 fragment BasicRecipeFragment on Recipe {
   id
   name
@@ -1059,6 +1072,13 @@ fragment RecipeFragment on Recipe {
   isPublished
   publishedAt
   averageRating
+  totalReviews
+  rating1Count
+  rating2Count
+  rating3Count
+  rating4Count
+  rating5Count
+  reviews { ...RecipeReviewFragment }
   matchPercentage
 
   # Relations
@@ -1070,5 +1090,4 @@ fragment RecipeFragment on Recipe {
     ...RecipeIngredientFragment
   }
 
-  deletedAt
 }

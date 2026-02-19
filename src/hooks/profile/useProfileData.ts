@@ -17,7 +17,7 @@ export const useProfileData = () => {
     notifyOnNetworkStatusChange: false,
   });
 
-  const profile = data?.userProfile || null;
+  const profile = data?.me?.profile || null;
 
   return {
     user,

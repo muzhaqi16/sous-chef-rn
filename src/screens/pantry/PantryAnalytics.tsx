@@ -1,3 +1,4 @@
+// TODO: Analytics queries removed from API - this screen is non-functional until replacement endpoints are available
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -83,24 +84,26 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     usageError,
     wasteError,
     ledgerError,
-    consumptionRateData,
-    consumptionRateLoading,
-    consumptionRateError,
-    restockingFrequencyData,
-    restockingFrequencyLoading,
-    restockingFrequencyError,
-    expirationRiskData,
-    expirationRiskLoading,
-    expirationRiskError,
-    effectiveUsageRateData,
-    effectiveUsageRateLoading,
-    effectiveUsageRateError,
     dateRange,
     setDateRange,
     ledgerGranularity,
     setLedgerGranularity,
     refetch,
   } = usePantryAnalytics({ pantryId });
+
+  // These analytics endpoints have been removed from the API
+  const consumptionRateData = null as any;
+  const consumptionRateLoading = false;
+  const consumptionRateError = undefined as Error | undefined;
+  const restockingFrequencyData = null as any;
+  const restockingFrequencyLoading = false;
+  const restockingFrequencyError = undefined as Error | undefined;
+  const expirationRiskData = null as any;
+  const expirationRiskLoading = false;
+  const expirationRiskError = undefined as Error | undefined;
+  const effectiveUsageRateData = null as any;
+  const effectiveUsageRateLoading = false;
+  const effectiveUsageRateError = undefined as Error | undefined;
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -125,7 +128,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   // Memoize transformed data at component level
   const usagePurposeData = useMemo(() => {
     if (!usageData?.usageByPurpose) return [];
-    return usageData.usageByPurpose.map(item => ({
+    return usageData.usageByPurpose.map((item: any) => ({
       label: formatPurpose(item.purpose),
       value: item.count,
       percentage: item.percentage,
@@ -134,7 +137,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const usageSourceData = useMemo(() => {
     if (!usageData?.usageBySource) return [];
-    return usageData.usageBySource.map(item => ({
+    return usageData.usageBySource.map((item: any) => ({
       label: formatSource(item.source),
       value: item.count,
       percentage: item.percentage,
@@ -143,7 +146,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const topUsedItemsData = useMemo(() => {
     if (!usageData?.topUsedItems) return [];
-    return usageData.topUsedItems.map(item => ({
+    return usageData.topUsedItems.map((item: any) => ({
       label: item.itemName,
       value: item.count,
     }));
@@ -151,7 +154,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const wasteReasonData = useMemo(() => {
     if (!wasteData?.wasteByReason) return [];
-    return wasteData.wasteByReason.map(item => ({
+    return wasteData.wasteByReason.map((item: any) => ({
       label: formatReason(item.reason),
       value: item.count,
       percentage: item.percentage,
@@ -160,7 +163,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const topWastedItemsData = useMemo(() => {
     if (!wasteData?.topWastedItems) return [];
-    return wasteData.topWastedItems.map(item => ({
+    return wasteData.topWastedItems.map((item: any) => ({
       label: item.itemName,
       value: item.count,
       secondaryValue: item.estimatedValue ?? undefined,
@@ -170,7 +173,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   // Ledger data transformations
   const ledgerPeriodData = useMemo(() => {
     if (!ledgerData?.periodData) return [];
-    return ledgerData.periodData.map(period => ({
+    return ledgerData.periodData.map((period: any) => ({
       date: period.periodLabel || period.periodStart,
       added: period.added,
       consumed: period.consumed,
@@ -181,7 +184,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const topRestockedItemsData = useMemo(() => {
     if (!ledgerData?.topRestockedItems) return [];
-    return ledgerData.topRestockedItems.map(item => ({
+    return ledgerData.topRestockedItems.map((item: any) => ({
       label: item.itemName,
       value: item.totalQuantity,
     }));
@@ -545,7 +548,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           </View>
           {ledgerPeriodData.length > 0 && (
             <View style={styles.periodDataList}>
-              {ledgerPeriodData.slice(0, 7).map((period, index) => (
+              {ledgerPeriodData.slice(0, 7).map((period: any, index: number) => (
                 <View key={index} style={styles.periodRow}>
                   <Text style={styles.periodLabel}>{period.date}</Text>
                   <View style={styles.periodValues}>
@@ -574,7 +577,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             isEmpty={false}
           >
             <View style={styles.unitBreakdownList}>
-              {ledgerData.summary.additionsByUnit.map((unit, index) => (
+              {ledgerData.summary.additionsByUnit.map((unit: any, index: number) => (
                 <View key={unit.unitId || index} style={styles.unitBreakdownItem}>
                   <Text style={styles.unitBreakdownQuantity}>
                     {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
@@ -595,7 +598,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             isEmpty={false}
           >
             <View style={styles.unitBreakdownList}>
-              {ledgerData.summary.consumptionByUnit.map((unit, index) => (
+              {ledgerData.summary.consumptionByUnit.map((unit: any, index: number) => (
                 <View key={unit.unitId || index} style={styles.unitBreakdownItem}>
                   <Text style={styles.unitBreakdownQuantity}>
                     {unit.totalQuantity} {unit.unitSymbol || unit.unitName}
@@ -661,7 +664,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             value={
               consumptionRateData && consumptionRateData.length > 0
                 ? (
-                    consumptionRateData.reduce((sum, r) => sum + r.averageDailyConsumption, 0) /
+                    consumptionRateData.reduce((sum: any, r: any) => sum + r.averageDailyConsumption, 0) /
                     consumptionRateData.length
                   ).toFixed(1)
                 : '0'
@@ -674,7 +677,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             value={
               effectiveUsageRateData && effectiveUsageRateData.length > 0
                 ? `${(
-                    (effectiveUsageRateData.reduce((sum, r) => sum + r.effectiveRate, 0) /
+                    (effectiveUsageRateData.reduce((sum: any, r: any) => sum + r.effectiveRate, 0) /
                       effectiveUsageRateData.length) *
                     100
                   ).toFixed(0)}%`
@@ -694,7 +697,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           isEmpty={!consumptionRateData?.length}
         >
           <View style={styles.periodDataList}>
-            {consumptionRateData?.slice(0, 10).map((item, index) => (
+            {consumptionRateData?.slice(0, 10).map((item: any, index: number) => (
               <View key={item.itemId || index} style={styles.periodRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.periodLabel}>{item.itemName || 'Unknown'}</Text>
@@ -716,7 +719,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           isEmpty={!effectiveUsageRateData?.length}
         >
           <View style={styles.periodDataList}>
-            {effectiveUsageRateData?.slice(0, 10).map((item, index) => (
+            {effectiveUsageRateData?.slice(0, 10).map((item: any, index: number) => (
               <View key={item.itemId || index} style={styles.periodRow}>
                 <Text style={[styles.periodLabel, { flex: 1 }]}>
                   {item.itemName || 'Unknown'}
@@ -742,7 +745,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           isEmpty={!consumptionRateData?.length}
         >
           <TopItemsBarChart
-            data={(consumptionRateData || []).slice(0, 5).map(item => ({
+            data={(consumptionRateData || []).slice(0, 5).map((item: any) => ({
               label: item.itemName || 'Unknown',
               value: item.averageDailyConsumption,
             }))}
@@ -801,7 +804,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           isEmpty={!expirationRiskData?.items?.length}
         >
           <View style={styles.periodDataList}>
-            {expirationRiskData?.items?.map((item, index) => {
+            {expirationRiskData?.items?.map((item: any, index: number) => {
               const urgencyColor =
                 item.daysUntilExpiry <= 2
                   ? theme.colors.error
@@ -864,7 +867,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
               restockingFrequencyData && restockingFrequencyData.length > 0
                 ? `${(
                     restockingFrequencyData.reduce(
-                      (sum, r) => sum + r.averageDaysBetweenRestocks,
+                      (sum: any, r: any) => sum + r.averageDaysBetweenRestocks,
                       0,
                     ) / restockingFrequencyData.length
                   ).toFixed(0)}d`
@@ -883,7 +886,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           isEmpty={!restockingFrequencyData?.length}
         >
           <View style={styles.periodDataList}>
-            {restockingFrequencyData?.slice(0, 10).map((item, index) => (
+            {restockingFrequencyData?.slice(0, 10).map((item: any, index: number) => (
               <View key={item.itemId || index} style={styles.periodRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.periodLabel}>{item.itemName || 'Unknown'}</Text>

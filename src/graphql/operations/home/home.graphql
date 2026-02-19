@@ -14,8 +14,8 @@ query GetHomeBasic($homeId: ID!) {
   }
 }
 
-query GetHomes($pagination: PaginationInput) {
-  homes(pagination: $pagination) {
+query GetHomes($first: Int, $after: String) {
+  homes(first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -31,8 +31,10 @@ query GetHomes($pagination: PaginationInput) {
 }
 
 query GetMyPendingInvites {
-  myPendingInvites {
-    ...HomeInviteFragment
+  me {
+    pendingHomeInvites {
+      ...HomeInviteFragment
+    }
   }
 }
 
