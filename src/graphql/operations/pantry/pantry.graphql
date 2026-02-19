@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query GetPantries($homeId: ID!) {
-  pantries(homeId: $homeId) {
+query GetPantries($homeId: ID!, $first: Int, $after: String) {
+  pantries(homeId: $homeId, first: $first, after: $after) {
     edges {
       node {
         id
@@ -477,6 +477,80 @@ mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInpu
 
 mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!) {
   correctPantryItemWeight(id: $id, input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation AddLowStockItemsToShoppingList($homeId: ID!, $shoppingListId: ID) {
+  addLowStockItemsToShoppingList(homeId: $homeId, shoppingListId: $shoppingListId) {
+    addedCount
+    addedItems {
+      pantryItemId
+      shoppingListItemId
+      itemName
+      quantity
+    }
+    skippedCount
+    skippedItems {
+      pantryItemId
+      itemName
+      reason
+    }
+  }
+}
+
+mutation AddPantryItemToShoppingList(
+  $pantryItemId: ID!
+  $shoppingListId: ID!
+  $quantity: Float
+) {
+  addPantryItemToShoppingList(
+    pantryItemId: $pantryItemId
+    shoppingListId: $shoppingListId
+    quantity: $quantity
+  ) {
+    shoppingListItemId
+  }
+}
+
+mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
+  movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
+    movedCount
+    movedItems {
+      shoppingListItemId
+      pantryItemId
+      itemName
+      quantity
+    }
+    skippedCount
+    skippedItems {
+      shoppingListItemId
+      itemName
+      reason
+    }
+    targetPantryId
+    targetPantryName
+  }
+}
+
+mutation OpenPantryItem($id: ID!, $version: Int) {
+  openPantryItem(id: $id, version: $version) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation MarkPantryItemExpired($id: ID!, $version: Int) {
+  markPantryItemExpired(id: $id, version: $version) {
     success
     message
     code

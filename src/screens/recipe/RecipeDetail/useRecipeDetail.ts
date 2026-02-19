@@ -26,6 +26,7 @@ import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
+import { useRecipeIngredientMatching } from '#/hooks/recipe/useRecipeIngredientMatching';
 
 type RecipeDetailParams = {
   recipeId?: string;
@@ -145,6 +146,9 @@ export function useRecipeDetail() {
   // State for mark as cooked modal
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
+
+  // Ingredient matching for granular deduction
+  const ingredientMatching = useRecipeIngredientMatching(recipeId);
 
   // State for folder/tag editing
   const [showFolderPicker, setShowFolderPicker] = useState(false);
@@ -806,6 +810,7 @@ export function useRecipeDetail() {
     async (input: {
       servings: number;
       deductFromPantry: boolean;
+      useGranularDeduction: boolean;
       notes?: string;
     }) => {
       if (!recipeId) {
@@ -815,6 +820,33 @@ export function useRecipeDetail() {
         return;
       }
 
+      // Granular deduction: load ingredient matches and open review sheet
+      if (input.useGranularDeduction) {
+        setMarkingAsCooked(true);
+        try {
+          const loaded = await ingredientMatching.loadMatches(input.servings);
+          if (!loaded) {
+            // Fallback to simple deduction if matching fails
+            await markRecipeAsCookedMutation({
+              variables: {
+                recipeId,
+                servings: input.servings,
+                deductFromPantry: input.deductFromPantry,
+                notes: input.notes,
+              },
+            });
+            toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
+          }
+          // If loaded successfully, the sheet is now visible - user will confirm from there
+        } catch {
+          // Error handled by mutation onError
+        } finally {
+          setMarkingAsCooked(false);
+        }
+        return;
+      }
+
+      // Simple deduction path
       setMarkingAsCooked(true);
 
       try {
@@ -840,8 +872,29 @@ export function useRecipeDetail() {
         setMarkingAsCooked(false);
       }
     },
-    [recipeId, markRecipeAsCookedMutation],
+    [recipeId, markRecipeAsCookedMutation, ingredientMatching],
   );
+
+  // Skip review handler - falls back to simple markRecipeAsCooked with deductFromPantry: true
+  const handleSkipReview = useCallback(async () => {
+    if (!recipeId) return;
+    ingredientMatching.closeSheet();
+    setMarkingAsCooked(true);
+    try {
+      await markRecipeAsCookedMutation({
+        variables: {
+          recipeId,
+          servings: undefined,
+          deductFromPantry: true,
+        },
+      });
+      toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
+    } catch {
+      // Error handled by mutation onError
+    } finally {
+      setMarkingAsCooked(false);
+    }
+  }, [recipeId, markRecipeAsCookedMutation, ingredientMatching]);
 
   // Update recipe folder
   const handleUpdateFolder = useCallback(
@@ -1064,6 +1117,8 @@ export function useRecipeDetail() {
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
+    handleSkipReview,
+    ingredientMatching,
 
     // Folder/tag editing
     showFolderPicker,

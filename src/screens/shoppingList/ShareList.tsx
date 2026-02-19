@@ -2,12 +2,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   Pressable,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -295,7 +295,7 @@ export const ShareList: React.FC = () => {
         {collaborators.length > 0 && (
           <View style={styles.membersSection}>
             <Text style={styles.sectionTitle}>Current Members</Text>
-            <FlatList
+            <FlashList
               data={collaborators}
               keyExtractor={member => member.id}
               renderItem={renderMemberItem}

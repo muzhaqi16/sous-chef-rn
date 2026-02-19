@@ -226,17 +226,6 @@ subscription UserActivity($userId: ID) {
   }
 }
 
-subscription UserModerationChanged($userId: ID) {
-  userModerationChanged(userId: $userId) {
-    userId
-    moderationType
-    moderationStatus
-    reason
-    moderatedBy
-    timestamp
-  }
-}
-
 subscription UserProfileChanged($userId: ID) {
   userProfileChanged(userId: $userId) {
     userId

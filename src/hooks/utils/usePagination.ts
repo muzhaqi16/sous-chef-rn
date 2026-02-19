@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 /**
  * Configuration for pagination from normalized data
@@ -75,6 +75,17 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const hasMore = pageInfo?.hasNextPage || false;
   const endCursor = pageInfo?.endCursor;
 
+  // Stabilize fetchMoreVariables using a ref with serialization-based comparison
+  // This prevents loadMore from being recreated on every render when callers
+  // pass inline objects as fetchMoreVariables
+  const fetchMoreVariablesRef = useRef(fetchMoreVariables);
+  const serialized = JSON.stringify(fetchMoreVariables);
+  const prevSerializedRef = useRef(serialized);
+  if (prevSerializedRef.current !== serialized) {
+    prevSerializedRef.current = serialized;
+    fetchMoreVariablesRef.current = fetchMoreVariables;
+  }
+
   const loadMore = useCallback(async () => {
     // Don't load if:
     // - No more items to load
@@ -87,7 +98,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     try {
       await fetchMore({
         variables: {
-          ...fetchMoreVariables,
+          ...fetchMoreVariablesRef.current,
           [cursorVariableName]: endCursor,
         },
       });
@@ -95,7 +106,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
       console.error('Failed to load more items:', error);
       // Fail silently - user can try scrolling again
     }
-  }, [hasMore, loading, endCursor, fetchMore, fetchMoreVariables, cursorVariableName]);
+  }, [hasMore, loading, endCursor, fetchMore, cursorVariableName]);
 
   // Loading more = loading but already have items (not initial load)
   const isLoadingMore = loading && itemCount > 0;

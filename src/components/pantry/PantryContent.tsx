@@ -134,6 +134,8 @@ interface PantryContentProps {
   onAvatarPress?: () => void;
   onHomePress?: () => void;
   onSettingsPress?: () => void;
+  onLowStockPress?: () => void;
+  lowStockLoading?: boolean;
 
   // List actions
   onRefresh?: () => void;
@@ -202,6 +204,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onAvatarPress,
   onHomePress,
   onSettingsPress,
+  onLowStockPress,
+  lowStockLoading = false,
   totalCount,
   onAddItem,
   onRefresh,
@@ -508,6 +512,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             notificationCount={notificationCount}
             onAvatarPress={onAvatarPress}
             onHomePress={onHomePress}
+            onLowStockPress={onLowStockPress}
+            lowStockLoading={lowStockLoading}
           />
 
           {/* Search Bar */}

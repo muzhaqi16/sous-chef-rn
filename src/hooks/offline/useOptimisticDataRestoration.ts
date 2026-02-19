@@ -1,7 +1,16 @@
 import { useEffect, startTransition, useMemo } from 'react';
+import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useAuth } from '#/hooks/auth/useAuth';
+
+/** Minimal fragment for reading entity version from cache */
+const VERSION_FRAGMENT = gql`
+  fragment VersionCheck on Node {
+    id
+    version
+  }
+`;
 
 /**
  * Generic hook to restore optimistic data on app launch
@@ -100,7 +109,7 @@ export function useOptimisticDataRestorationMultiple(
   // Serialize array for stable dependency comparison
   // This allows consumers to pass inline arrays without causing infinite loops
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableEntityTypes = useMemo(() => entityTypes, [entityTypes.join(',')]);
+  const stableEntityTypes = useMemo(() => entityTypes, [JSON.stringify(entityTypes)]);
 
   useEffect(() => {
     if (!user?.id || !enabled || stableEntityTypes.length === 0) return;
@@ -127,18 +136,12 @@ export function useOptimisticDataRestorationMultiple(
               // Version guard: Only restore if cache version < persisted version
               // This ensures API data (source of truth) is never overwritten by stale optimistic data
               if (cacheId && fields.version) {
-                // Read the current version directly from cache
-                let currentVersion: number | undefined;
-                cache.modify({
+                // Read the current version from cache using readFragment (avoids unnecessary cache broadcasts)
+                const cached = cache.readFragment({
                   id: cacheId,
-                  fields: {
-                    version(existingVersion) {
-                      currentVersion = existingVersion;
-                      return existingVersion; // Don't modify, just read
-                    },
-                  },
-                  optimistic: false,
+                  fragment: VERSION_FRAGMENT,
                 });
+                const currentVersion = (cached as any)?.version as number | undefined;
 
                 // If cache has newer or equal version, skip restoration
                 if (currentVersion !== undefined && currentVersion >= fields.version) {

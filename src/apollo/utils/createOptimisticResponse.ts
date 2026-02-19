@@ -10,8 +10,8 @@
  */
 export interface VersionedEntity {
   id: string;
-  version: number;
-  updatedAt: string;
+  version: number | null;
+  updatedAt: string | null;
   __typename?: string;
 }
 

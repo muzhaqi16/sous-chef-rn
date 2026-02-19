@@ -7,8 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
-  FlatList,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters/roleFormatters';
 
@@ -347,15 +347,15 @@ const CreateHomeScreenComponent = () => {
     ],
   );
 
-  const handleAcceptInvite = async (token: string) => {
+  const handleAcceptInvite = useCallback(async (token: string) => {
     try {
       await acceptHomeInvite({ variables: { token } });
     } catch {
       // Error handled by onError in mutation
     }
-  };
+  }, [acceptHomeInvite]);
 
-  const handleDeclineInvite = (token: string, homeNameParam: string) => {
+  const handleDeclineInvite = useCallback((token: string, homeNameParam: string) => {
     Alert.alert(
       'Decline Invitation',
       `Are you sure you want to decline the invitation to join ${homeNameParam}?`,
@@ -374,7 +374,70 @@ const CreateHomeScreenComponent = () => {
         },
       ],
     );
-  };
+  }, [declineHomeInvite]);
+
+  const renderInviteItem = useCallback(
+    ({ item: invite }: { item: (typeof pendingInvites)[number] }) => {
+      const inviterName =
+        invite.inviter?.profile?.displayName ||
+        invite.inviter?.email ||
+        'Someone';
+      const inviteHomeName = invite.home?.name || 'Unknown Home';
+
+      return (
+        <View style={styles.inviteCard}>
+          <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
+
+          <View style={styles.inviteDetailsContainer}>
+            <Text style={styles.inviteDetail}>
+              <Text style={styles.inviteDetailLabel}>From: </Text>
+              <Text style={styles.inviteDetailValue}>
+                {inviterName}
+              </Text>
+            </Text>
+
+            <Text style={styles.inviteDetail}>
+              <Text style={styles.inviteDetailLabel}>Role: </Text>
+              <Text style={styles.inviteRoleText}>
+                {formatRole(invite.role)}
+              </Text>
+            </Text>
+          </View>
+
+          <View style={styles.inviteActions}>
+            <Pressable
+              style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
+              onPress={() =>
+                handleDeclineInvite(invite.id, inviteHomeName)
+              }
+              disabled={accepting}
+            >
+              <Text style={styles.inviteDeclineButtonText}>
+                Decline
+              </Text>
+            </Pressable>
+            <Pressable
+              style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
+              onPress={() => handleAcceptInvite(invite.id)}
+              disabled={accepting}
+            >
+              {accepting ? (
+                <ActivityIndicator
+                  size="small"
+                  color={theme.colors.white}
+                />
+              ) : (
+                <Text style={styles.inviteAcceptButtonText}>
+                  Accept
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      );
+    },
+    [accepting, handleAcceptInvite, handleDeclineInvite, theme.colors.white],
+  );
 
   // Loading state
   if (
@@ -411,71 +474,10 @@ const CreateHomeScreenComponent = () => {
       >
         <View style={styles.invitesContainer}>
           <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-          <FlatList
+          <FlashList
             data={pendingInvites}
             keyExtractor={invite => invite.id}
-            renderItem={({ item: invite }) => {
-              const inviterName =
-                invite.inviter?.profile?.displayName ||
-                invite.inviter?.email ||
-                'Someone';
-              const inviteHomeName = invite.home?.name || 'Unknown Home';
-
-              return (
-                <View style={styles.inviteCard}>
-                  {/* Home name - prominent */}
-                  <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
-
-                  {/* Invitation details */}
-                  <View style={styles.inviteDetailsContainer}>
-                    <Text style={styles.inviteDetail}>
-                      <Text style={styles.inviteDetailLabel}>From: </Text>
-                      <Text style={styles.inviteDetailValue}>
-                        {inviterName}
-                      </Text>
-                    </Text>
-
-                    <Text style={styles.inviteDetail}>
-                      <Text style={styles.inviteDetailLabel}>Role: </Text>
-                      <Text style={styles.inviteRoleText}>
-                        {formatRole(invite.role)}
-                      </Text>
-                    </Text>
-                  </View>
-
-                  {/* Actions */}
-                  <View style={styles.inviteActions}>
-                    <Pressable
-                      style={({pressed}) => [styles.button, styles.inviteDeclineButton, pressed && styles.pressed]}
-                      onPress={() =>
-                        handleDeclineInvite(invite.id, inviteHomeName)
-                      }
-                      disabled={accepting}
-                    >
-                      <Text style={styles.inviteDeclineButtonText}>
-                        Decline
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={({pressed}) => [styles.button, styles.inviteAcceptButton, pressed && styles.pressed]}
-                      onPress={() => handleAcceptInvite(invite.id)}
-                      disabled={accepting}
-                    >
-                      {accepting ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={theme.colors.white}
-                        />
-                      ) : (
-                        <Text style={styles.inviteAcceptButtonText}>
-                          Accept
-                        </Text>
-                      )}
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            }}
+            renderItem={renderInviteItem}
           />
         </View>
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text, Image} from 'react-native';
+import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {CachedImage} from '#components/atoms/CachedImage';
 
 interface Item {
   id: string;
@@ -29,10 +30,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
   return (
     <View style={styles.itemCard}>
       {item.imageUrl ? (
-        <Image
-          source={{uri: item.imageUrl}}
+        <CachedImage
+          uri={item.imageUrl}
           style={styles.itemImage}
-          resizeMode="cover"
         />
       ) : (
         <View style={styles.placeholderImage}>

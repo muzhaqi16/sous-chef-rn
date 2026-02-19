@@ -19,6 +19,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 
@@ -111,20 +112,15 @@ export function useUpdatePantryItemQuantity({
         unitId: unitId,
         version: currentItem.version ?? undefined,
       },
-      optimisticResponse: {
-        __typename: 'Mutation',
-        updatePantryItemQuantity: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          pantryItem: enhanceWithVersion(currentItem as any, {
-            quantity: newQuantity,
-            unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
-            unitId: unitId || currentItem.unit?.id,
-          }),
-        },
-      },
+      optimisticResponse: buildOptimisticMutationResponse(
+        'updatePantryItemQuantity',
+        'PantryItemPayload',
+        'pantryItem',
+        enhanceWithVersion(currentItem, {
+          quantity: newQuantity,
+          unit: buildOptimisticUnit(trackingUnit, currentItem.unit),
+        }),
+      ),
     }).catch(error => {
       console.error('Quantity update failed:', error);
       // Error already handled by mutation's onError

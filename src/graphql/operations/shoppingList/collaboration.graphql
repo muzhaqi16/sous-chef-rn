@@ -48,70 +48,20 @@ query MyShoppingListInvites {
 # MUTATIONS
 # ============================================
 
-mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
-  inviteToShoppingList(input: $input) {
-    success
-    message
-    code
-    collaborator {
-      id
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
-      canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
-      canInviteOthers
-      invitedAt
-      expiresAt
-      shoppingList {
-        id
-        name
-      }
-      invitedBy {
-        id
-        email
-        profile {
-          displayName
-        }
-      }
-    }
-  }
-}
-
 mutation AcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
     success
     message
     code
     collaborator {
-      id
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
       canInviteOthers
       invitedAt
       shoppingList {
         id
         name
         description
-      }
-      collaborator {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
       }
     }
   }

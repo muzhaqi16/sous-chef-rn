@@ -222,6 +222,61 @@ query GetPopularItems($first: Int = 10) {
   }
 }
 
+query GetRecommendedItems($limit: Int, $userId: String) {
+  recommendedItems(limit: $limit, userId: $userId) {
+    id
+    name
+    type
+    imageUrl
+    netWeight
+    displayUnit
+    defaultUnit {
+      id
+      name
+      symbol
+      type
+      isDefault
+      isPreferred
+    }
+    brands {
+      id
+      name
+    }
+    category {
+      id
+      name
+      type
+      isPrimary
+    }
+  }
+}
+
+query GetPurchases(
+  $filters: PurchaseFilters
+  $first: Int
+  $after: String
+  $orderBy: PurchaseOrderBy
+) {
+  purchases(
+    filters: $filters
+    first: $first
+    after: $after
+    orderBy: $orderBy
+  ) {
+    edges {
+      node {
+        ...PurchaseFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================

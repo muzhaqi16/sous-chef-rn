@@ -135,7 +135,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       <AnimatedPressable
         {...props}
         disabled={disabled || loading}
-        style={[{ flex: 1, alignItems: 'center', justifyContent: 'center' }, animatedButtonStyle]}
+        style={[styles.pressableInner, animatedButtonStyle]}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={loading ? `Loading ${defaultLabel}` : defaultLabel}
@@ -171,6 +171,11 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     opacity: isDisabled ? 0.5 : 1,
   }),
+  pressableInner: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
   text: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.medium,

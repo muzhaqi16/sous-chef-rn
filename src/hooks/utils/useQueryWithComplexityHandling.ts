@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { handleQueryComplexityError, isQueryComplexityError } from '#/utils/errors/queryComplexity';
 import { validatePagination } from '#/constants/pagination';
 import { Alert } from 'react-native';
@@ -7,7 +8,7 @@ import { Alert } from 'react-native';
  *
  * Features:
  * - Detects QUERY_TOO_COMPLEX and PAGINATION_LIMIT_EXCEEDED errors
- * - Shows user-friendly error messages
+ * - Shows user-friendly error messages (once per error instance)
  * - Provides retry functionality
  *
  * @param queryHookResult - Result from a generated useQuery hook
@@ -17,38 +18,53 @@ import { Alert } from 'react-native';
  * @example
  * ```typescript
  * const baseQuery = useGetShoppingListsQuery({ variables: { first: 50 } });
- * const { data, loading, error } = withQueryComplexityHandling(baseQuery, () => {
+ * const result = useQueryWithComplexityHandling(baseQuery, () => {
  *   // Retry with reduced pagination
  *   refetch({ first: 25 });
  * });
  * ```
  */
-export function withQueryComplexityHandling<T extends { error?: any; refetch?: any }>(
+export function useQueryWithComplexityHandling<T extends { error?: any; refetch?: any }>(
   queryHookResult: T,
   onRetry?: () => void
 ): T & { handleComplexityError: () => void } {
+  const hasShownAlertRef = useRef(false);
+  const lastErrorRef = useRef<any>(null);
+
   const handleComplexityError = () => {
     const error = queryHookResult.error;
 
     if (error && isQueryComplexityError(error)) {
       handleQueryComplexityError(error, onRetry);
 
-      // Show user-friendly alert
       Alert.alert(
         'Request Too Large',
         'The request was too complex. Please try with fewer items or simplify your request.',
         [
           { text: 'Cancel', style: 'cancel' },
           onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
-        ].filter(Boolean) as any
+        ].filter(Boolean) as any[]
       );
     }
   };
 
-  // Auto-handle on error if it's a complexity issue
-  if (queryHookResult.error && isQueryComplexityError(queryHookResult.error)) {
-    handleComplexityError();
-  }
+  // Show alert once per unique error instance via useEffect
+  useEffect(() => {
+    if (
+      queryHookResult.error &&
+      isQueryComplexityError(queryHookResult.error) &&
+      queryHookResult.error !== lastErrorRef.current
+    ) {
+      lastErrorRef.current = queryHookResult.error;
+      hasShownAlertRef.current = true;
+      handleComplexityError();
+    } else if (!queryHookResult.error) {
+      // Reset when error clears
+      hasShownAlertRef.current = false;
+      lastErrorRef.current = null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryHookResult.error]);
 
   return {
     ...queryHookResult,

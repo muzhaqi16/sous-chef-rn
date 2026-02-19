@@ -12,6 +12,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 
+const TagListSeparator = () => <View style={styles.tagSeparator} />;
+
 export interface TagPickerProps {
   visible: boolean;
   tags: string[];
@@ -175,7 +177,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             showsVerticalScrollIndicator={false}
             style={styles.tagList}
             contentContainerStyle={styles.tagListContent}
-            ItemSeparatorComponent={() => <View style={styles.tagSeparator} />}
+            ItemSeparatorComponent={TagListSeparator}
           />
         ) : tags.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>

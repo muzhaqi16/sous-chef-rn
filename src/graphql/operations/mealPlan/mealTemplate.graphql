@@ -1,0 +1,154 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetMealTemplates(
+  $filters: MealTemplateFilters
+  $first: Int
+  $after: String
+  $orderBy: MealTemplateOrderBy
+) {
+  mealTemplates(
+    filters: $filters
+    first: $first
+    after: $after
+    orderBy: $orderBy
+  ) {
+    edges {
+      node {
+        ...MealTemplateDisplay
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query GetMealTemplate($id: ID!) {
+  mealTemplate(id: $id) {
+    ...MealTemplateDisplay
+    items {
+      ...MealTemplateItemFragment
+    }
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
+  createMealTemplate(input: $input) {
+    success
+    message
+    code
+    mealTemplate {
+      ...MealTemplateDisplay
+      items {
+        ...MealTemplateItemFragment
+      }
+    }
+  }
+}
+
+mutation UpdateMealTemplate($id: ID!, $input: UpdateMealTemplateInput!) {
+  updateMealTemplate(id: $id, input: $input) {
+    success
+    message
+    code
+    mealTemplate {
+      ...MealTemplateDisplay
+      items {
+        ...MealTemplateItemFragment
+      }
+    }
+  }
+}
+
+mutation DeleteMealTemplate($id: ID!) {
+  deleteMealTemplate(id: $id) {
+    success
+    message
+    code
+    mealTemplate {
+      id
+      name
+    }
+  }
+}
+
+mutation DuplicateTemplate($id: ID!, $newName: String!) {
+  duplicateTemplate(id: $id, newName: $newName) {
+    success
+    message
+    code
+    mealTemplate {
+      ...MealTemplateDisplay
+      items {
+        ...MealTemplateItemFragment
+      }
+    }
+  }
+}
+
+mutation AddTemplateItem($input: AddTemplateItemInput!) {
+  addTemplateItem(input: $input) {
+    success
+    message
+    code
+    mealTemplateItem {
+      ...MealTemplateItemFragment
+    }
+  }
+}
+
+mutation UpdateTemplateItem($id: ID!, $input: UpdateTemplateItemInput!) {
+  updateTemplateItem(id: $id, input: $input) {
+    success
+    message
+    code
+    mealTemplateItem {
+      ...MealTemplateItemFragment
+    }
+  }
+}
+
+mutation RemoveTemplateItem($id: ID!) {
+  removeTemplateItem(id: $id) {
+    success
+    message
+    code
+    mealTemplateItem {
+      id
+    }
+  }
+}
+
+mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
+  createMealPlanFromTemplate(input: $input) {
+    success
+    message
+    code
+    mealPlan {
+      ...MealPlanFull
+    }
+  }
+}
+
+mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
+  createTemplateFromMealPlan(input: $input) {
+    success
+    message
+    code
+    mealTemplate {
+      ...MealTemplateDisplay
+      items {
+        ...MealTemplateItemFragment
+      }
+    }
+  }
+}

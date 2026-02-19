@@ -11,30 +11,15 @@ query GetMyDevices($filters: DeviceFilters, $first: Int, $after: String) {
         deviceName
         deviceType
         platform
-        osName
-        osVersion
-        appVersion
-        userAgent
-        browserName
-        browserVersion
-        screenResolution
-        timezone
-        language
         isActive
         isTrusted
-        isVerified
-        loginCount
-        lastLoginAt
         lastSeenAt
         createdAt
-        updatedAt
       }
       cursor
     }
     pageInfo {
       hasNextPage
-      hasPreviousPage
-      startCursor
       endCursor
     }
     totalCount
@@ -71,20 +56,10 @@ mutation RegisterDevice($input: DeviceRegistrationInput!) {
       deviceName
       deviceType
       platform
-      osName
-      osVersion
-      appVersion
-      userAgent
-      browserName
-      browserVersion
-      screenResolution
-      timezone
-      language
       isActive
       isTrusted
-      isVerified
+      lastSeenAt
       createdAt
-      updatedAt
     }
   }
 }

@@ -10,7 +10,7 @@ query GetHome($homeId: ID!) {
 
 query GetHomeBasic($homeId: ID!) {
   home(id: $homeId) {
-    ...HomeWithPantriesFragment
+    ...HomeFragment
   }
 }
 
@@ -167,5 +167,21 @@ mutation LeaveHome($homeId: ID!) {
     membership {
       id
     }
+  }
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription HomeInviteChanged($homeId: ID!) {
+  homeInviteChanged(homeId: $homeId) {
+    mutation
+    homeId
+    homeInvite {
+      ...HomeInviteFragment
+    }
+    userId
+    timestamp
   }
 }

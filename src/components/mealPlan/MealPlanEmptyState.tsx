@@ -5,10 +5,12 @@ import { Icon } from '#utils/iconUtils';
 
 interface MealPlanEmptyStateProps {
   onCreatePlan: () => void;
+  onCreateFromTemplate?: () => void;
 }
 
 export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = React.memo(({
   onCreatePlan,
+  onCreateFromTemplate,
 }) => {
   return (
     <View style={styles.container}>
@@ -29,6 +31,15 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = React.memo(
         <Icon library="Ionicons" name="add" size={20} color={styles.buttonIcon.color} />
         <Text style={styles.buttonText}>Create Your First Meal Plan</Text>
       </Pressable>
+      {onCreateFromTemplate && (
+        <Pressable
+          onPress={onCreateFromTemplate}
+          style={({ pressed }) => [styles.templateButton, pressed && styles.pressed]}
+        >
+          <Icon library="Ionicons" name="document-text-outline" size={20} color={styles.templateButtonIcon.color} />
+          <Text style={styles.templateButtonText}>Create from Template</Text>
+        </Pressable>
+      )}
     </View>
   );
 });
@@ -78,5 +89,24 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
+  },
+  templateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  templateButtonIcon: {
+    color: theme.colors.primary,
+  },
+  templateButtonText: {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.primary,
   },
 }));

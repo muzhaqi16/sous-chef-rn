@@ -658,12 +658,35 @@ fragment HomeInviteFragment on HomeInvite {
   }
 }
 
+# DISPLAY: Lightweight invite fragment for list views
+# Contains only fields needed for invite list rendering
+# Used in: HomeDisplay fragment's invitesConnection
+fragment HomeInviteDisplay on HomeInvite {
+  id
+  email
+  recipientName
+  role
+  status
+  expiresAt
+  message
+  home {
+    id
+    name
+  }
+  inviter {
+    ...BasicUser
+    profile {
+      displayName
+    }
+  }
+}
+
 fragment MemberShipFragment on Membership {
   id
   homeId
   userId
   user {
-    ...PartialUser
+    ...UserSummary
   }
   role
   status
@@ -681,12 +704,6 @@ fragment MemberShipFragment on Membership {
   updatedAt
 }
 
-# NOTE: PantryFragment no longer includes itemsConnection.
-# Queries that need pantry items should specify their own pagination args.
-fragment PantryFragment on Pantry {
-  ...BasicPantryFragment
-}
-
 fragment BasicPantryFragment on Pantry {
   id
   homeId
@@ -700,66 +717,6 @@ fragment BasicPantryFragment on Pantry {
   version
   createdAt
   updatedAt
-}
-
-fragment HomeWithPantriesFragment on Home {
-  id
-  name
-  type
-  description
-  timezone
-  currency
-  isPublic
-  joinCode
-  allowJoinCode
-  maxMembers
-  tags
-  metadata
-  version
-  createdAt
-  updatedAt
-
-  invitesConnection(first: 50) {
-    edges {
-      node {
-        ...HomeInviteFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-
-  membersConnection(first: 100) {
-    edges {
-      node {
-        ...MemberShipFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-
-  pantriesConnection(first: 50) {
-    edges {
-      node {
-        ...BasicPantryFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
 }
 
 # ============================================
@@ -794,7 +751,7 @@ fragment HomeDisplay on Home {
   invitesConnection(first: 10) {
     edges {
       node {
-        ...HomeInviteFragment
+        ...HomeInviteDisplay
       }
       cursor
     }
@@ -977,6 +934,38 @@ fragment MealPlanFull on MealPlan {
     totalMeals
     mealsWithNutrition
     coveragePercentage
+  }
+}
+
+# ============================================
+# MEAL TEMPLATE FRAGMENTS
+# ============================================
+
+# DISPLAY: Template list views
+fragment MealTemplateDisplay on MealTemplate {
+  id
+  name
+  description
+  category
+  durationDays
+  defaultServings
+  tags
+  usageCount
+  lastUsedAt
+  createdAt
+  updatedAt
+}
+
+# Template item fragment
+fragment MealTemplateItemFragment on MealTemplateItem {
+  id
+  dayOffset
+  mealType
+  customMealName
+  servings
+  notes
+  recipe {
+    ...BasicRecipeFragment
   }
 }
 

@@ -5,8 +5,9 @@
  */
 
 import React from 'react';
-import {View, Text, Image} from 'react-native';
+import {View, Text} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {CachedImage} from '#components/atoms/CachedImage';
 import {Icon} from '#utils/iconUtils';
 import {getInitials} from '#utils/ownershipHelpers';
 
@@ -37,7 +38,6 @@ export const Avatar: React.FC<AvatarProps> = ({
   textColor,
 }) => {
   const {theme} = useUnistyles();
-  const [imageError, setImageError] = React.useState(false);
 
   const containerStyle = {
     width: size,
@@ -47,18 +47,17 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const fontSize = size * 0.4; // 40% of container size
 
-  // Show image if URI is provided and not errored
-  if (uri && !imageError) {
+  // Show image if URI is provided (CachedImage handles error fallback internally)
+  if (uri) {
     return (
       <View style={[styles.container, containerStyle]}>
-        <Image
-          source={{uri}}
+        <CachedImage
+          uri={uri}
           style={{
             width: size,
             height: size,
             borderRadius: size / 2,
           }}
-          onError={() => setImageError(true)}
         />
       </View>
     );

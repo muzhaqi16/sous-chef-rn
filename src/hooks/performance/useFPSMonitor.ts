@@ -221,10 +221,12 @@ export function useSimpleFPS(): number {
   useEffect(() => {
     if (!__DEV__) return;
 
+    let cancelled = false;
     let frames = 0;
     let lastTime = Date.now();
 
     const countFrame = () => {
+      if (cancelled) return;
       frames++;
       const now = Date.now();
       if (now - lastTime >= 1000) {
@@ -235,8 +237,8 @@ export function useSimpleFPS(): number {
       requestAnimationFrame(countFrame);
     };
 
-    const rafId = requestAnimationFrame(countFrame);
-    return () => cancelAnimationFrame(rafId);
+    requestAnimationFrame(countFrame);
+    return () => { cancelled = true; };
   }, []);
 
   return fps;

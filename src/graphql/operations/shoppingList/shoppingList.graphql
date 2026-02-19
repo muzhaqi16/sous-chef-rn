@@ -61,10 +61,6 @@ query GetShoppingList($id: ID!) {
         node {
           ...ShoppingListCollaboratorFragment
           canEdit
-          canAddItems
-          canRemoveItems
-          canEditItems
-          canMarkPurchased
           canInviteOthers
           invitedAt
           lastViewedAt
@@ -86,8 +82,8 @@ query GetShoppingList($id: ID!) {
 
 # Lightweight query for list selector - metadata only, no items/collaborators
 # Use this for dashboard/list views. Use GetShoppingList for full details.
-query GetShoppingListsLite($homeId: String) {
-  shoppingLists(filters: { homeId: $homeId }) {
+query GetShoppingListsLite($homeId: String, $first: Int, $after: String) {
+  shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -141,12 +137,7 @@ query GetDefaultShoppingList {
         itemsConnection(first: 50, orderBy: { sortOrder: ASC }) {
           edges {
             node {
-              id
-              itemName
-              quantity
-              purchaseInfo {
-                isPurchased
-              }
+              ...ShoppingListItemCore
               item {
                 id
                 name
@@ -457,17 +448,6 @@ mutation RemoveItemFromShoppingList($id: ID!) {
     code
     shoppingListItem {
       id
-    }
-  }
-}
-
-mutation MarkItemPurchased($id: ID!, $status: Boolean!) {
-  toggleShoppingListItemPurchased(id: $id, purchased: $status) {
-    success
-    message
-    code
-    shoppingListItem {
-      ...ShoppingListItemDisplayFragment
     }
   }
 }

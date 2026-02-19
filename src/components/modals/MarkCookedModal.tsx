@@ -21,8 +21,10 @@ interface MarkCookedModalProps {
   onConfirm: (input: {
     servings: number;
     deductFromPantry: boolean;
+    useGranularDeduction: boolean;
     notes?: string;
   }) => void;
+  hasPantry?: boolean;
 }
 
 export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
@@ -31,6 +33,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   defaultServings,
   onClose,
   onConfirm,
+  hasPantry = false,
 }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
@@ -40,6 +43,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   // Form state
   const [servingsInput, setServingsInput] = useState('');
   const [deductFromPantry, setDeductFromPantry] = useState(true);
+  const [useGranularDeduction, setUseGranularDeduction] = useState(true);
   const [notes, setNotes] = useState('');
 
   // Control bottom sheet visibility based on visible prop
@@ -49,6 +53,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       // Reset form when modal opens
       setServingsInput(defaultServings?.toString() || '1');
       setDeductFromPantry(true);
+      setUseGranularDeduction(true);
       setNotes('');
     } else {
       bottomSheetRef.current?.dismiss();
@@ -64,10 +69,11 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     onConfirm({
       servings: finalServings,
       deductFromPantry,
+      useGranularDeduction: deductFromPantry && hasPantry && useGranularDeduction,
       notes: notes || undefined,
     });
     onClose();
-  }, [servingsInput, deductFromPantry, notes, defaultServings, onConfirm, onClose]);
+  }, [servingsInput, deductFromPantry, useGranularDeduction, hasPantry, notes, defaultServings, onConfirm, onClose]);
 
   return (
     <BottomSheetModal
@@ -140,6 +146,24 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             thumbColor={theme.colors.white}
           />
         </View>
+
+        {/* Deduction Mode - only shown when deductFromPantry is ON and user has a pantry */}
+        {deductFromPantry && hasPantry && (
+          <View style={styles.toggleSection}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Smart Deduction</Text>
+              <Text style={styles.toggleDescription}>
+                Review and adjust ingredient quantities before deducting
+              </Text>
+            </View>
+            <Switch
+              value={useGranularDeduction}
+              onValueChange={setUseGranularDeduction}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+        )}
 
         {/* Notes (Optional) */}
         <View style={styles.section}>

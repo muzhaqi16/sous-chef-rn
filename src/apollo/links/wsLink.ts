@@ -212,9 +212,8 @@ export const wsLink = new GraphQLWsLink(wsClient);
 
 // Function to reconnect WebSocket with new token
 // Uses terminate() to force-close the connection, which triggers the `closed`
-// handler in createWsClient. The `closed` handler calls scheduleReconnect(),
-// which creates a new client via createWsClient() that picks up the latest
-// token via the connectionParams function.
+// handler in createWsClient. The library's lazy reconnection then re-establishes
+// the connection, picking up the latest token via the connectionParams function.
 export const reconnectWebSocket = () => {
   const now = Date.now();
 

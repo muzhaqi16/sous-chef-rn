@@ -7,7 +7,6 @@ export function useMealPlan(id: string | null) {
     skip: !id,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
 

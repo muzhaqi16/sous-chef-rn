@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query GetUnits {
-  units {
+query GetUnits($isCommon: Boolean, $type: UnitType, $limit: Int) {
+  units(isCommon: $isCommon, type: $type, limit: $limit) {
     id
     name
     symbol

@@ -20,6 +20,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import { buildDirtyUpdateInput } from './utils';
 import type { FormDataInput } from './types';
 
@@ -108,14 +109,6 @@ export function useUpdatePantryItem({
       selectedBrandId,
     );
 
-    // Debug brand removal
-    console.log('[DEBUG] Brand update check:', {
-      dirtyBrand: dirtyFields.brand,
-      inputBrand: input.brand,
-      selectedBrandId,
-      updateInput,
-    });
-
     // Only fire mutation if there are changes
     if (Object.keys(updateInput).length === 0) {
       onSuccess?.();
@@ -131,19 +124,12 @@ export function useUpdatePantryItem({
     // Fire mutation asynchronously - don't await to allow immediate navigation
     updateMutation({
       variables: { id: itemId, input: updateInput },
-      optimisticResponse: {
-        __typename: 'Mutation',
-        updatePantryItem: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          pantryItem: enhanceWithVersion(
-            currentItem as any,
-            optimisticUpdate,
-          ),
-        },
-      },
+      optimisticResponse: buildOptimisticMutationResponse(
+        'updatePantryItem',
+        'PantryItemPayload',
+        'pantryItem',
+        enhanceWithVersion(currentItem, optimisticUpdate),
+      ),
     }).catch(error => {
       console.error('Pantry item update failed:', error);
       // Error already handled by mutation's onError

@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 
 /**
  * Preserves the last successful query data when subsequent queries fail
@@ -30,16 +30,19 @@ export function usePreservedQueryData<T>(
   // Store the last successful (non-undefined) value
   const lastSuccessfulValue = useRef<T>(initialValue);
 
-  return useMemo(() => {
-    // If we have current data, update our reference and return it
+  // Update the ref in useEffect (not useMemo) for React concurrent mode compatibility
+  useEffect(() => {
     if (currentData !== undefined) {
       lastSuccessfulValue.current = currentData;
-      return currentData;
     }
-
-    // If current data is undefined (query failed), return last known good value
-    return lastSuccessfulValue.current;
   }, [currentData]);
+
+  // Return current data if available, otherwise last known good value
+  if (currentData !== undefined) {
+    return currentData;
+  }
+
+  return lastSuccessfulValue.current;
 }
 
 /**

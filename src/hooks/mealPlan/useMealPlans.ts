@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useGetMealPlansQuery, type MealPlanFilters } from '#generated';
+import { useGetMealPlansQuery, SortOrder, type MealPlanFilters } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 
 export function useMealPlans(filters?: MealPlanFilters) {
@@ -9,12 +9,11 @@ export function useMealPlans(filters?: MealPlanFilters) {
     variables: {
       first: 20,
       filters: filters ?? undefined,
-      orderBy: { startDate: 'DESC' as any },
+      orderBy: { startDate: SortOrder.Desc },
     },
     skip: isLoggedOut,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
 
