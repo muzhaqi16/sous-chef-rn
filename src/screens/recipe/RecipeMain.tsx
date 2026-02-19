@@ -124,8 +124,8 @@ export const RecipeMain: React.FC = React.memo(() => {
     }
   }, [recipes.length, randomRecipes.length]);
 
-  // Register add button action - navigate to recipe search
-  useTabBarAddButton(() => navigate('RecipeSearch'));
+  // Register add button action - navigate to recipe creation
+  useTabBarAddButton(() => navigate('RecipeCreate'));
 
   // Manual refresh to get new random recipes
   const handleRefreshRandom = useCallback(async () => {
@@ -468,7 +468,8 @@ export const RecipeMain: React.FC = React.memo(() => {
         title="Recipes"
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
-        onAvatarPress={() => navigate('Notifications')}
+        onAvatarPress={() => navigate('Profile')}
+        onNotificationPress={() => navigate('Notifications')}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar

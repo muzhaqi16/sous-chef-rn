@@ -85,6 +85,35 @@ export function useAppNavigation() {
           },
         }),
       profile: () => navigate('Profile'),
+      mealPlanMain: () =>
+        navigate('Home', {
+          screen: 'MealPlan',
+          params: {
+            screen: 'MealPlanMain',
+          },
+        }),
+      createMealPlan: () =>
+        navigate('Home', {
+          screen: 'MealPlan',
+          params: {
+            screen: 'CreateMealPlan',
+          },
+        }),
+      createRecipe: () =>
+        navigate('Home', {
+          screen: 'Recipe',
+          params: {
+            screen: 'RecipeCreate',
+          },
+        }),
+      editRecipe: (params: { recipeId: string }) =>
+        navigate('Home', {
+          screen: 'Recipe',
+          params: {
+            screen: 'RecipeEdit',
+            params,
+          },
+        }),
 
       // Root level screens
       homeManagement: (params?: any) => navigate('HomeManagement', params),

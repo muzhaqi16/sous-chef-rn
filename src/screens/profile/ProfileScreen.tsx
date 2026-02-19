@@ -10,16 +10,13 @@ import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useConfigurableSettings } from '#hooks/profile/useConfigurableSettings';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { ActionTray } from '#/components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#/components/templates/ActionTray/types';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { getTabBarBottomPadding } from '#constants/layout';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
 
 export const ProfileScreen = () => {
@@ -29,7 +26,6 @@ export const ProfileScreen = () => {
   const { sections, BiometricModal, biometricLoading } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { setOverlayOpen } = useTabBarSetters();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
 
@@ -40,14 +36,6 @@ export const ProfileScreen = () => {
       has_avatar: !!profile?.avatar,
     });
   }, [profile]);
-
-  // Register add button - opens quick actions tray on Profile screen
-  useTabBarAddButton(() => {
-    Telemetry.trackEvent('profile_quick_actions_opened', {
-      source: 'tab_bar',
-    });
-    actionTrayRef.current?.open();
-  });
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
@@ -79,12 +67,12 @@ export const ProfileScreen = () => {
   }, [navigate]);
 
   const handleOverlayOpen = useCallback(() => {
-    setOverlayOpen(true);
-  }, [setOverlayOpen]);
+    // No-op: Profile is no longer in tab bar context
+  }, []);
 
   const handleOverlayClose = useCallback(() => {
-    setOverlayOpen(false);
-  }, [setOverlayOpen]);
+    // No-op: Profile is no longer in tab bar context
+  }, []);
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
@@ -111,7 +99,7 @@ export const ProfileScreen = () => {
         testID="profile-scroll-view"
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: getTabBarBottomPadding(safeBottom) },
+          { paddingBottom: safeBottom + 16 },
         ]}
       >
         {sections

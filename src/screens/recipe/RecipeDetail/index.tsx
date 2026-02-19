@@ -28,10 +28,14 @@ import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useAuth } from '#hooks/auth/useAuth';
 
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
   const { theme } = useUnistyles();
+  const { navigate } = useAppNavigation();
+  const { user } = useAuth();
   const {
     goBack,
     recipeId,
@@ -87,6 +91,15 @@ const RecipeDetailScreen: React.FC = () => {
   const isInOtherFolder = isSaved && !!savedFolder && savedFolder !== 'Favorites';
   const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
   const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
+
+  // Check if user is recipe creator (can edit)
+  const isOwner = isBackendRecipe && backendRecipe?.createdBy?.id === user?.id;
+
+  const handleEditRecipe = useCallback(() => {
+    if (recipeId) {
+      navigate('RecipeEdit', { recipeId });
+    }
+  }, [recipeId, navigate]);
 
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
@@ -209,6 +222,15 @@ const RecipeDetailScreen: React.FC = () => {
             </Pressable>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
+              {/* Edit button - shown when user is recipe creator */}
+              {isOwner && (
+                <Pressable
+                  onPress={handleEditRecipe}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
               {showFolderIcon && (
                 <Pressable
@@ -312,26 +334,30 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Folder, Tags, Notes, Rating Section - Only for saved recipes */}
           {isBackendRecipe && recipeId && isSaved && (
             <View style={styles.folderTagsSection}>
-              {/* Rating */}
-              {savedRating !== null && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Rating</Text>
-                  <View style={styles.ratingStars}>
-                    {[1, 2, 3, 4, 5].map(star => (
+              {/* Rating - interactive */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Rating</Text>
+                <View style={styles.ratingStars}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Pressable
+                      key={star}
+                      onPress={() => handleUpdateRating(star === savedRating ? null : star)}
+                      hitSlop={4}
+                      disabled={updatingFolderTags}
+                    >
                       <Ionicons
-                        key={star}
-                        name={star <= savedRating ? 'star' : 'star-outline'}
-                        size={14}
+                        name={savedRating !== null && star <= savedRating ? 'star' : 'star-outline'}
+                        size={18}
                         color={
-                          star <= savedRating
+                          savedRating !== null && star <= savedRating
                             ? theme.colors.rating
                             : theme.colors.textSecondary
                         }
                       />
-                    ))}
-                  </View>
+                    </Pressable>
+                  ))}
                 </View>
-              )}
+              </View>
 
               {/* Folder - read-only display */}
               <View style={styles.detailRow}>

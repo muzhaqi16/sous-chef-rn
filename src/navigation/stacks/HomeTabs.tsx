@@ -6,7 +6,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
 import {RecipeStack} from './RecipeStack';
-import {ProfileScreen} from '#screens/profile/ProfileScreen';
+import {MealPlanStack} from './MealPlanStack';
 import {TabBarActionsProvider} from '#/context/TabBarActionsContext';
 import {FloatingTabBar} from '#components/navigation/FloatingTabBar/FloatingTabBar';
 
@@ -64,12 +64,15 @@ export const HomeTabs = createBottomTabNavigator({
         };
       },
     },
-    Profile: {
-      screen: ProfileScreen,
-      options: {
-        title: 'Profile',
+    MealPlan: {
+      screen: MealPlanStack,
+      options: ({route}: {route: any}) => {
+        const routeName = getFocusedRouteNameFromRoute(route) ?? 'MealPlanMain';
+        return {
+          title: 'Meal Plan',
+          tabBarStyle: routeName !== 'MealPlanMain' ? {display: 'none' as const} : undefined,
+        };
       },
-      linking: 'profile',
     },
   },
 });

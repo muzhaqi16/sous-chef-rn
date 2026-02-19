@@ -57,6 +57,7 @@
       "ItemPriceHistoryPayload",
       "ItemUnitConversionPayload",
       "LoginHistoryPayload",
+      "MealPlanItemPayload",
       "MealPlanPayload",
       "MealTemplateItemPayload",
       "MealTemplatePayload",

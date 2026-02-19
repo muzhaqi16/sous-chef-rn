@@ -111,7 +111,7 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
   // Define which tabs should show buttons
   const allowedScannerTabs = ['Pantry', 'ShoppingList'];
   // Add button shown on all main tabs to avoid layout shift/empty space
-  const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'Profile'];
+  const allowedAddTabs = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
 
   // Store handlers per tab so we don't lose them during transitions
   // This prevents the add button from flickering when navigating between allowed tabs
@@ -208,8 +208,8 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
     switch (activeTab) {
       case 'Recipe':
         return { icon: 'search', iconLibrary: 'Feather' };
-      case 'Profile':
-        return { icon: 'dots-horizontal', iconLibrary: 'MaterialDesignIcons' };
+      case 'MealPlan':
+        return { icon: 'add', iconLibrary: 'MaterialIcons' };
       default:
         // Pantry, ShoppingList use the default add icon
         return { icon: 'add', iconLibrary: 'MaterialIcons' };

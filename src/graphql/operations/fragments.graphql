@@ -918,6 +918,70 @@ fragment PurchaseFragment on Purchase {
   # "Cannot read properties of undefined (reading 'shoppingLists')" error
 }
 
+# ============================================
+# MEAL PLAN FRAGMENTS
+# ============================================
+
+fragment MealPlanItemFragment on MealPlanItem {
+  id
+  date
+  mealType
+  isCompleted
+  completedAt
+  customMealName
+  servings
+  notes
+  calories
+  protein
+  carbs
+  fat
+  estimatedCost
+  actualCost
+  nutritionSource
+  recipe {
+    ...BasicRecipeFragment
+  }
+}
+
+fragment MealPlanDisplay on MealPlan {
+  id
+  name
+  description
+  planType
+  startDate
+  endDate
+  servings
+  totalCalories
+  totalProtein
+  totalCarbs
+  totalFat
+  actualCost
+  budgetAmount
+  version
+  createdAt
+  updatedAt
+}
+
+fragment MealPlanFull on MealPlan {
+  ...MealPlanDisplay
+  mealPlanItems {
+    ...MealPlanItemFragment
+  }
+  nutritionSummary {
+    totalCalories
+    totalProtein
+    totalCarbs
+    totalFat
+    avgDailyCalories
+    avgDailyProtein
+    avgDailyCarbs
+    avgDailyFat
+    totalMeals
+    mealsWithNutrition
+    coveragePercentage
+  }
+}
+
 fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name

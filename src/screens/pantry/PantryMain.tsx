@@ -339,7 +339,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   );
 
   const handleAvatarPress = useCallback(
-    () => navigate('Notifications'),
+    () => navigate('Profile'),
     [navigate],
   );
 

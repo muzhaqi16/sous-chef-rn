@@ -136,6 +136,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
             Pantry: 'PantryMain',
             ShoppingList: 'ShoppingListMain',
             Recipe: 'RecipeMain',
+            MealPlan: 'MealPlanMain',
           };
 
           const mainScreen = mainScreenMap[route.name];

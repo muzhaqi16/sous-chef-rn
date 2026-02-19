@@ -335,6 +335,23 @@ export function makeCache(): InMemoryCache {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
       },
+      MealPlan: {
+        keyFields: ['id'],
+        merge: true,
+        fields: {
+          mealPlanItems: {
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+        },
+      },
+      MealPlanItem: {
+        keyFields: ['id'],
+        merge: true,
+      },
       User: {
         keyFields: ['id'],
         fields: {
@@ -442,6 +459,10 @@ export function makeCache(): InMemoryCache {
           recipes: {
             ...mergeConnectionByNodeId('cursor'),
             keyArgs: ['category', 'difficulty'],
+          },
+          mealPlans: {
+            ...mergeConnectionByNodeId('after'),
+            keyArgs: ['filters'],
           },
         },
       },

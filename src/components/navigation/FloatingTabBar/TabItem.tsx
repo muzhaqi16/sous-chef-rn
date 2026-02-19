@@ -17,7 +17,7 @@ const TAB_ICON_MAP: Record<string, [string, string]> = {
   Pantry: ['home', 'home-outline'],
   ShoppingList: ['list', 'list-outline'],
   Recipe: ['book', 'book-outline'],
-  Profile: ['person', 'person-outline'],
+  MealPlan: ['calendar', 'calendar-outline'],
 };
 
 interface TabItemProps {

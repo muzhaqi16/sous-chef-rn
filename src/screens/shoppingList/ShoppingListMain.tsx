@@ -392,7 +392,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
             title="Shopping List"
             avatarUrl={profile?.avatar}
             notificationCount={unreadCount}
-            onAvatarPress={() => navigateTo.notificationList()}
+            onAvatarPress={() => navigate('Profile')}
+          onNotificationPress={() => navigateTo.notificationList()}
           />
           <ListTemplate
             items={[]}
@@ -419,7 +420,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           title={currentList?.name || 'Shopping List'}
           avatarUrl={profile?.avatar}
           notificationCount={unreadCount}
-          onAvatarPress={() => navigateTo.notificationList()}
+          onAvatarPress={() => navigate('Profile')}
+          onNotificationPress={() => navigateTo.notificationList()}
         />
         <View style={styles.searchBarContainer}>
           <SearchBar

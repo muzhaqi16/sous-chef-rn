@@ -10,6 +10,7 @@ interface TabScreenHeaderProps {
   avatarUrl?: string | null;
   notificationCount?: number;
   onAvatarPress?: () => void;
+  onNotificationPress?: () => void;
 }
 
 export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
@@ -18,6 +19,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   avatarUrl,
   notificationCount = 0,
   onAvatarPress,
+  onNotificationPress,
 }) => {
   return (
     <View style={styles.header}>
@@ -29,6 +31,26 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
       </View>
 
       <View style={styles.headerActions}>
+        {/* Notification bell icon */}
+        <Pressable
+          onPress={onNotificationPress}
+          style={styles.notificationButton}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          accessibilityHint="Open notifications"
+        >
+          <Icon
+            library="Ionicons"
+            name="notifications-outline"
+            size={24}
+            color={styles.notificationIcon.color}
+          />
+          {notificationCount > 0 && (
+            <View style={styles.notificationBadge} />
+          )}
+        </Pressable>
+
+        {/* Avatar - navigates to Profile */}
         <Pressable
           onPress={onAvatarPress}
           style={styles.avatarPressable}
@@ -51,10 +73,6 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
                   color={styles.avatarIcon.color}
                 />
               </View>
-            )}
-
-            {notificationCount > 0 && (
-              <View style={styles.avatarNotification} />
             )}
           </View>
         </Pressable>
@@ -91,6 +109,25 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: theme.spacing.xs,
+  },
+  notificationIcon: {
+    color: theme.colors.textSecondary,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: theme.spacing.xs,
+    right: theme.spacing.xs,
+    width: 10,
+    height: 10,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.error,
+    borderWidth: 2,
+    borderColor: theme.colors.background,
   },
   avatarPressable: {
     borderRadius: theme.radii.xl,
@@ -99,15 +136,15 @@ const styles = StyleSheet.create(theme => ({
     position: 'relative',
   },
   avatarImg: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: theme.radii.xl - 2,
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: theme.radii.xl - 2,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -117,16 +154,5 @@ const styles = StyleSheet.create(theme => ({
   },
   avatarIcon: {
     color: theme.colors.textSecondary,
-  },
-  avatarNotification: {
-    position: 'absolute',
-    borderRadius: theme.radii.full,
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-    top: 0,
-    right: -2,
-    width: 14,
-    height: 14,
-    backgroundColor: theme.colors.error,
   },
 }));
