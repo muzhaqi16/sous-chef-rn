@@ -163,14 +163,14 @@ export function BottomSheetAutocompleteInput<T>({
     onSearchChange?.(text);
   };
 
-  const handleSelectItem = (item: T) => {
+  const handleSelectItem = useCallback((item: T) => {
     userDismissedRef.current = true; // Mark as user-dismissed
     hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
     onModalClose?.();
-  };
+  }, [onSelectItem, onModalClose]);
 
   const handleDismiss = useCallback(() => {
     userDismissedRef.current = true; // Mark as user-dismissed
@@ -231,6 +231,18 @@ export function BottomSheetAutocompleteInput<T>({
     );
   };
 
+  const renderAutocompleteItem = useCallback(
+    ({ item }: { item: T }) => (
+      <Pressable
+        onPress={() => handleSelectItem(item)}
+        style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
+      >
+        {renderItem(item)}
+      </Pressable>
+    ),
+    [handleSelectItem, renderItem, theme.opacity.pressed],
+  );
+
   const defaultLoadingComponent = () => (
     <BottomSheetView
       style={styles.messageContainer}
@@ -285,14 +297,7 @@ export function BottomSheetAutocompleteInput<T>({
           <BottomSheetFlatList
             data={data}
             keyExtractor={keyExtractor}
-            renderItem={({ item }: { item: T }) => (
-              <Pressable
-                onPress={() => handleSelectItem(item)}
-                style={({ pressed }) => ({ opacity: pressed ? theme.opacity.pressed : 1 })}
-              >
-                {renderItem(item)}
-              </Pressable>
-            )}
+            renderItem={renderAutocompleteItem}
             ItemSeparatorComponent={AutocompleteSeparator}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}

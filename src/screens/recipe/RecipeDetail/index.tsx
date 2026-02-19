@@ -4,9 +4,9 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
-  FlatList,
   Linking,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -21,17 +21,26 @@ import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
+import { IngredientMatchingSheet } from '#/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
+import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
+import { ReviewSection } from '#/components/recipe/ReviewSection';
 import { useRecipeDetail } from './useRecipeDetail';
 import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useAuth } from '#hooks/auth/useAuth';
+
+const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
 const RecipeDetailScreen: React.FC = () => {
   useScreenTransition('RecipeDetail');
   const { theme } = useUnistyles();
+  const { navigate } = useAppNavigation();
+  const { user } = useAuth();
   const {
     goBack,
     recipeId,
@@ -63,6 +72,8 @@ const RecipeDetailScreen: React.FC = () => {
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
+    handleSkipReview,
+    ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
     updatingFolderTags,
@@ -82,11 +93,26 @@ const RecipeDetailScreen: React.FC = () => {
   const { folders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
 
+  // Recipe reviews
+  const recipeReviews = useRecipeReviews({
+    recipeId: recipeId ?? '',
+    backendRecipe: backendRecipe ?? null,
+  });
+
   // Derive icon visibility state
   const isInFavorites = isSaved && savedFolder === 'Favorites';
   const isInOtherFolder = isSaved && !!savedFolder && savedFolder !== 'Favorites';
   const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
   const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
+
+  // Check if user is recipe creator (can edit)
+  const isOwner = isBackendRecipe && backendRecipe?.createdBy?.id === user?.id;
+
+  const handleEditRecipe = useCallback(() => {
+    if (recipeId) {
+      navigate('RecipeEdit', { recipeId });
+    }
+  }, [recipeId, navigate]);
 
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
@@ -140,6 +166,86 @@ const RecipeDetailScreen: React.FC = () => {
   const handleCloseManageSheet = useCallback(() => {
     setShowManageSheet(false);
   }, []);
+
+  // Render callbacks for list components
+  const renderIngredientItem = useCallback(
+    ({ item: ingredient }: { item: NonNullable<typeof displayData>['ingredients'][number] }) => (
+      <IngredientCard
+        ingredient={ingredient}
+        isAdded={addedIngredients.has(ingredient.id)}
+        onPress={() => handleAddSingleIngredient(ingredient)}
+      />
+    ),
+    [addedIngredients, handleAddSingleIngredient],
+  );
+
+  const renderSelectableIngredientItem = useCallback(
+    ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
+      const isSelected = selectedIngredients.has(item.id);
+      return (
+        <Pressable
+          style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
+          onPress={() => toggleIngredient(item.id)}
+        >
+          <Ionicons
+            name={isSelected ? 'checkbox' : 'square-outline'}
+            size={24}
+            color={
+              isSelected
+                ? theme.colors.primary
+                : theme.colors.textSecondary
+            }
+          />
+          <View style={styles.ingredientInfo}>
+            <Text style={styles.ingredientName}>{item.name}</Text>
+            <Text style={styles.ingredientAmount}>
+              {item.quantity ?? ''} {item.unit?.symbol || ''}
+            </Text>
+          </View>
+        </Pressable>
+      );
+    },
+    [selectedIngredients, toggleIngredient, theme.colors.primary, theme.colors.textSecondary],
+  );
+
+  const renderShoppingListItem = useCallback(
+    ({ item }: { item: (typeof shoppingLists)[number] }) => (
+      <Pressable
+        style={({pressed}) => [styles.listPickerItem, pressed && styles.pressed]}
+        onPress={() => handleListSelected(item.id)}
+      >
+        <View style={styles.listPickerInfo}>
+          <Text style={styles.listPickerName}>{item.name}</Text>
+          <Text style={styles.listPickerCount}>
+            {item.totalItems ?? 0} items
+          </Text>
+        </View>
+        {item.isDefault && (
+          <View
+            style={[
+              styles.defaultBadge,
+              { backgroundColor: theme.colors.primary + '20' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.defaultBadgeText,
+                { color: theme.colors.primary },
+              ]}
+            >
+              Default
+            </Text>
+          </View>
+        )}
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={theme.colors.textSecondary}
+        />
+      </Pressable>
+    ),
+    [handleListSelected, theme.colors.primary, theme.colors.textSecondary],
+  );
 
   // Scroll animation for parallax effect
   const scrollY = useSharedValue(0);
@@ -209,6 +315,15 @@ const RecipeDetailScreen: React.FC = () => {
             </Pressable>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
+              {/* Edit button - shown when user is recipe creator */}
+              {isOwner && (
+                <Pressable
+                  onPress={handleEditRecipe}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
               {showFolderIcon && (
                 <Pressable
@@ -312,26 +427,30 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Folder, Tags, Notes, Rating Section - Only for saved recipes */}
           {isBackendRecipe && recipeId && isSaved && (
             <View style={styles.folderTagsSection}>
-              {/* Rating */}
-              {savedRating !== null && (
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Rating</Text>
-                  <View style={styles.ratingStars}>
-                    {[1, 2, 3, 4, 5].map(star => (
+              {/* Rating - interactive */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Rating</Text>
+                <View style={styles.ratingStars}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <Pressable
+                      key={star}
+                      onPress={() => handleUpdateRating(star === savedRating ? null : star)}
+                      hitSlop={4}
+                      disabled={updatingFolderTags}
+                    >
                       <Ionicons
-                        key={star}
-                        name={star <= savedRating ? 'star' : 'star-outline'}
-                        size={14}
+                        name={savedRating !== null && star <= savedRating ? 'star' : 'star-outline'}
+                        size={18}
                         color={
-                          star <= savedRating
+                          savedRating !== null && star <= savedRating
                             ? theme.colors.rating
                             : theme.colors.textSecondary
                         }
                       />
-                    ))}
-                  </View>
+                    </Pressable>
+                  ))}
                 </View>
-              )}
+              </View>
 
               {/* Folder - read-only display */}
               <View style={styles.detailRow}>
@@ -434,20 +553,14 @@ const RecipeDetailScreen: React.FC = () => {
                   </Text>
                 </Pressable>
               </View>
-              <FlatList
+              <FlashList
                 horizontal
                 data={displayData.ingredients}
                 keyExtractor={(item, index) => `${item.id}-${index}`}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.ingredientsList}
-                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-                renderItem={({ item: ingredient }) => (
-                  <IngredientCard
-                    ingredient={ingredient}
-                    isAdded={addedIngredients.has(ingredient.id)}
-                    onPress={() => handleAddSingleIngredient(ingredient)}
-                  />
-                )}
+                ItemSeparatorComponent={IngredientSeparator}
+                renderItem={renderIngredientItem}
               />
             </View>
           )}
@@ -509,6 +622,11 @@ const RecipeDetailScreen: React.FC = () => {
               </View>
             );
           })()}
+
+          {/* Reviews Section */}
+          {isBackendRecipe && recipeId && (
+            <ReviewSection {...recipeReviews} />
+          )}
 
           {/* Source Attribution */}
           {(displayData.sourceName || displayData.sourceUrl) && (
@@ -587,34 +705,10 @@ const RecipeDetailScreen: React.FC = () => {
         sheetTitle="Select Ingredients"
         snapPoints={['50%', '75%', '90%']}
       >
-        <FlatList
+        <FlashList
           data={backendRecipe?.ingredients || []}
           keyExtractor={(item, index) => `${item.id}-${index}`}
-          renderItem={({ item }) => {
-            const isSelected = selectedIngredients.has(item.id);
-            return (
-              <Pressable
-                style={({pressed}) => [styles.ingredientItem, pressed && styles.pressed]}
-                onPress={() => toggleIngredient(item.id)}
-              >
-                <Ionicons
-                  name={isSelected ? 'checkbox' : 'square-outline'}
-                  size={24}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
-                />
-                <View style={styles.ingredientInfo}>
-                  <Text style={styles.ingredientName}>{item.name}</Text>
-                  <Text style={styles.ingredientAmount}>
-                    {item.quantity ?? ''} {item.unit?.symbol || ''}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          }}
+          renderItem={renderSelectableIngredientItem}
           ListEmptyComponent={
             <Text style={styles.emptyText}>No ingredients available</Text>
           }
@@ -651,41 +745,7 @@ const RecipeDetailScreen: React.FC = () => {
           keyExtractor={(item: (typeof shoppingLists)[number]) => item.id}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing['2xl'] }}
-          renderItem={({ item }: { item: (typeof shoppingLists)[number] }) => (
-            <Pressable
-              style={({pressed}) => [styles.listPickerItem, pressed && styles.pressed]}
-              onPress={() => handleListSelected(item.id)}
-            >
-              <View style={styles.listPickerInfo}>
-                <Text style={styles.listPickerName}>{item.name}</Text>
-                <Text style={styles.listPickerCount}>
-                  {item.totalItems ?? 0} items
-                </Text>
-              </View>
-              {item.isDefault && (
-                <View
-                  style={[
-                    styles.defaultBadge,
-                    { backgroundColor: theme.colors.primary + '20' },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.defaultBadgeText,
-                      { color: theme.colors.primary },
-                    ]}
-                  >
-                    Default
-                  </Text>
-                </View>
-              )}
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={theme.colors.textSecondary}
-              />
-            </Pressable>
-          )}
+          renderItem={renderShoppingListItem}
           ListEmptyComponent={
             <View style={styles.emptyListPicker}>
               <Text style={styles.emptyText}>No shopping lists found</Text>
@@ -704,6 +764,19 @@ const RecipeDetailScreen: React.FC = () => {
         defaultServings={displayData.servings || 1}
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
+        hasPantry={ingredientMatching.hasPantry}
+      />
+
+      {/* Ingredient Matching Sheet */}
+      <IngredientMatchingSheet
+        visible={ingredientMatching.isSheetVisible}
+        editableMatches={ingredientMatching.editableMatches}
+        matchSummary={ingredientMatching.matchSummary}
+        onUpdate={ingredientMatching.updateMatch}
+        onConfirm={ingredientMatching.confirmConsumption}
+        onSkip={handleSkipReview}
+        onClose={ingredientMatching.closeSheet}
+        confirmLoading={ingredientMatching.confirmLoading}
       />
 
       {/* Folder Picker Modal - for editing existing saved recipe folder */}

@@ -95,7 +95,7 @@ query GetItemConversions(
   $itemId: ID!
   $includeStandard: Boolean
 ) {
-  getItemConversions(
+  itemConversions(
     itemId: $itemId
     includeStandard: $includeStandard
   ) {
@@ -126,7 +126,7 @@ query GetBestDisplayUnit(
   $currentUnitId: ID!
   $itemId: ID
 ) {
-  getBestDisplayUnit(
+  bestDisplayUnit(
     quantity: $quantity
     currentUnitId: $currentUnitId
     itemId: $itemId

@@ -3,7 +3,7 @@
 # ============================================
 
 subscription LoginAttempts($userId: ID!) {
-  loginAttempts(userId: $userId) {
+  loginAttempted(userId: $userId) {
     id
     userId
     success
@@ -19,9 +19,7 @@ subscription LoginAttempts($userId: ID!) {
     osVersion
     deviceType
     isMobileApp
-    riskScore
     isRisky
-    riskFactors
     failureReason
     failureDetails
     isNewLocation
@@ -32,69 +30,5 @@ subscription LoginAttempts($userId: ID!) {
       id
       email
     }
-  }
-}
-
-subscription SuspiciousActivity($userId: ID!) {
-  suspiciousActivity(userId: $userId) {
-    rapidAttempts {
-      hour
-      count
-    }
-    riskyLogins {
-      id
-      riskScore
-      riskFactors
-      loggedInAt
-    }
-    newLocationLogins {
-      id
-      loggedInAt
-    }
-    newDeviceLogins {
-      id
-      deviceType
-      browserName
-      osName
-      loggedInAt
-    }
-    suspiciousActivity
-    unusualTimeLogins {
-      id
-      loggedInAt
-      timezoneDiff
-    }
-  }
-}
-
-subscription FailedLoginAttempts($userId: ID!) {
-  failedLoginAttempts(userId: $userId) {
-    id
-    userId
-    method
-    userAgent
-    failureReason
-    failureDetails
-    loggedInAt
-  }
-}
-
-subscription RiskyLoginAlerts($userId: ID!) {
-  riskyLoginAlerts(userId: $userId) {
-    id
-    userId
-    riskScore
-    riskFactors
-    isVpn
-    isTor
-    isProxy
-    requiresMfa
-    mfaCompleted
-    loggedInAt
-    flaggedBy {
-      id
-      email
-    }
-    flaggedReason
   }
 }

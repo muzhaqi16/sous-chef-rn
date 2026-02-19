@@ -9,7 +9,7 @@ import { toastService } from '#/services/toastService';
 import {
   useAddItemToShoppingListMutation,
   GetShoppingListSuggestionsDocument,
-  GetShoppingListSuggestionsQuery,
+  type GetShoppingListSuggestionsQuery,
   ItemSuggestion,
 } from '#generated';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -60,21 +60,23 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     refetch: suggestionsResult.refetch,
   }), [suggestionsResult]);
 
-  // Helper to optimistically remove item from suggestions cache
   const removeFromSuggestionsCache = useCallback(
     (itemId: string) => {
       client.cache.updateQuery<GetShoppingListSuggestionsQuery>(
         {
           query: GetShoppingListSuggestionsDocument,
-          variables: { shoppingListId: shoppingListId!, limit: 15 },
+          variables: { id: shoppingListId!, limit: 15 },
         },
         data => {
-          if (!data) return data;
+          if (!data?.shoppingList) return data;
           return {
             ...data,
-            shoppingListSuggestions: data.shoppingListSuggestions.filter(
-              s => s.itemId !== itemId,
-            ),
+            shoppingList: {
+              ...data.shoppingList,
+              suggestions: data.shoppingList.suggestions.filter(
+                s => s.itemId !== itemId,
+              ),
+            },
           };
         },
       );
@@ -161,7 +163,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const handleQuickAddSuggestion = useCallback(
     (item: BaseSuggestionItem) => {
       // Cast to ShoppingListSuggestionItem for full type info
-      const shoppingItem = item as ShoppingListSuggestionItem;
+      const shoppingItem = item as unknown as ShoppingListSuggestionItem;
       if (!shoppingListId || adding || state.exitingItems.has(shoppingItem.itemId)) return;
 
       // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId

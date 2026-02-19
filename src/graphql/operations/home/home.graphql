@@ -10,12 +10,12 @@ query GetHome($homeId: ID!) {
 
 query GetHomeBasic($homeId: ID!) {
   home(id: $homeId) {
-    ...HomeWithPantriesFragment
+    ...HomeFragment
   }
 }
 
-query GetHomes($pagination: PaginationInput) {
-  homes(pagination: $pagination) {
+query GetHomes($first: Int, $after: String) {
+  homes(first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -31,8 +31,10 @@ query GetHomes($pagination: PaginationInput) {
 }
 
 query GetMyPendingInvites {
-  myPendingInvites {
-    ...HomeInviteFragment
+  me {
+    pendingHomeInvites {
+      ...HomeInviteFragment
+    }
   }
 }
 
@@ -165,5 +167,21 @@ mutation LeaveHome($homeId: ID!) {
     membership {
       id
     }
+  }
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription HomeInviteChanged($homeId: ID!) {
+  homeInviteChanged(homeId: $homeId) {
+    mutation
+    homeId
+    homeInvite {
+      ...HomeInviteFragment
+    }
+    userId
+    timestamp
   }
 }

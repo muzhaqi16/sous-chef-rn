@@ -156,7 +156,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   priority
   sortOrder
   createdAt
-  deletedAt
   # User reference
   addedBy {
     ...UserSummary
@@ -411,7 +410,6 @@ fragment ItemFragment on Item {
   metadata
   ingredients
   createdAt
-  deletedAt
   density
   preferredTrackingUnitId
   preferredTrackingUnit {
@@ -443,7 +441,9 @@ fragment ItemFragment on Item {
 }
 
 fragment NotificationSubscription on NotificationPayload {
-  mutation
+  success
+  code
+  message
   notification {
     id
     type
@@ -453,8 +453,6 @@ fragment NotificationSubscription on NotificationPayload {
     readAt
     createdAt
   }
-  userId
-  timestamp
 }
 
 # ============================================
@@ -660,12 +658,35 @@ fragment HomeInviteFragment on HomeInvite {
   }
 }
 
+# DISPLAY: Lightweight invite fragment for list views
+# Contains only fields needed for invite list rendering
+# Used in: HomeDisplay fragment's invitesConnection
+fragment HomeInviteDisplay on HomeInvite {
+  id
+  email
+  recipientName
+  role
+  status
+  expiresAt
+  message
+  home {
+    id
+    name
+  }
+  inviter {
+    ...BasicUser
+    profile {
+      displayName
+    }
+  }
+}
+
 fragment MemberShipFragment on Membership {
   id
   homeId
   userId
   user {
-    ...PartialUser
+    ...UserSummary
   }
   role
   status
@@ -683,12 +704,6 @@ fragment MemberShipFragment on Membership {
   updatedAt
 }
 
-# NOTE: PantryFragment no longer includes itemsConnection.
-# Queries that need pantry items should specify their own pagination args.
-fragment PantryFragment on Pantry {
-  ...BasicPantryFragment
-}
-
 fragment BasicPantryFragment on Pantry {
   id
   homeId
@@ -702,66 +717,6 @@ fragment BasicPantryFragment on Pantry {
   version
   createdAt
   updatedAt
-}
-
-fragment HomeWithPantriesFragment on Home {
-  id
-  name
-  type
-  description
-  timezone
-  currency
-  isPublic
-  joinCode
-  allowJoinCode
-  maxMembers
-  tags
-  metadata
-  version
-  createdAt
-  updatedAt
-
-  invitesConnection(first: 50) {
-    edges {
-      node {
-        ...HomeInviteFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-
-  membersConnection(first: 100) {
-    edges {
-      node {
-        ...MemberShipFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-
-  pantriesConnection(first: 50) {
-    edges {
-      node {
-        ...BasicPantryFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
 }
 
 # ============================================
@@ -796,7 +751,7 @@ fragment HomeDisplay on Home {
   invitesConnection(first: 10) {
     edges {
       node {
-        ...HomeInviteFragment
+        ...HomeInviteDisplay
       }
       cursor
     }
@@ -918,6 +873,102 @@ fragment PurchaseFragment on Purchase {
   # "Cannot read properties of undefined (reading 'shoppingLists')" error
 }
 
+# ============================================
+# MEAL PLAN FRAGMENTS
+# ============================================
+
+fragment MealPlanItemFragment on MealPlanItem {
+  id
+  date
+  mealType
+  isCompleted
+  completedAt
+  customMealName
+  servings
+  notes
+  calories
+  protein
+  carbs
+  fat
+  estimatedCost
+  actualCost
+  nutritionSource
+  recipe {
+    ...BasicRecipeFragment
+  }
+}
+
+fragment MealPlanDisplay on MealPlan {
+  id
+  name
+  description
+  planType
+  startDate
+  endDate
+  servings
+  totalCalories
+  totalProtein
+  totalCarbs
+  totalFat
+  actualCost
+  budgetAmount
+  version
+  createdAt
+  updatedAt
+}
+
+fragment MealPlanFull on MealPlan {
+  ...MealPlanDisplay
+  mealPlanItems {
+    ...MealPlanItemFragment
+  }
+  nutritionSummary {
+    totalCalories
+    totalProtein
+    totalCarbs
+    totalFat
+    avgDailyCalories
+    avgDailyProtein
+    avgDailyCarbs
+    avgDailyFat
+    totalMeals
+    mealsWithNutrition
+    coveragePercentage
+  }
+}
+
+# ============================================
+# MEAL TEMPLATE FRAGMENTS
+# ============================================
+
+# DISPLAY: Template list views
+fragment MealTemplateDisplay on MealTemplate {
+  id
+  name
+  description
+  category
+  durationDays
+  defaultServings
+  tags
+  usageCount
+  lastUsedAt
+  createdAt
+  updatedAt
+}
+
+# Template item fragment
+fragment MealTemplateItemFragment on MealTemplateItem {
+  id
+  dayOffset
+  mealType
+  customMealName
+  servings
+  notes
+  recipe {
+    ...BasicRecipeFragment
+  }
+}
+
 fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name
@@ -938,6 +989,21 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   preparation
   sortOrder
   section
+}
+
+fragment RecipeReviewFragment on RecipeReview {
+  id
+  rating
+  comment
+  helpful
+  verified
+  createdAt
+  updatedAt
+  user { ...UserSummary }
+  helpfulVotes {
+    id
+    user { id }
+  }
 }
 
 fragment BasicRecipeFragment on Recipe {
@@ -995,6 +1061,13 @@ fragment RecipeFragment on Recipe {
   isPublished
   publishedAt
   averageRating
+  totalReviews
+  rating1Count
+  rating2Count
+  rating3Count
+  rating4Count
+  rating5Count
+  reviews { ...RecipeReviewFragment }
   matchPercentage
 
   # Relations
@@ -1006,5 +1079,4 @@ fragment RecipeFragment on Recipe {
     ...RecipeIngredientFragment
   }
 
-  deletedAt
 }

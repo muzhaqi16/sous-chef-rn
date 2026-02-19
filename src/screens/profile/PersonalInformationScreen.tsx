@@ -24,14 +24,17 @@ export const PersonalInformationScreen: React.FC = () => {
         });
 
         // Optimistically update the cache immediately
-        if (cache?.userProfile) {
+        if (cache?.me?.profile) {
           client.writeQuery<GetUserProfileQuery>({
             query: GetUserProfileDocument,
             data: {
               __typename: 'Query' as const,
-              userProfile: {
-                ...cache.userProfile,
-                ...input,
+              me: {
+                ...cache.me,
+                profile: {
+                  ...cache.me.profile,
+                  ...input,
+                },
               },
             },
           });

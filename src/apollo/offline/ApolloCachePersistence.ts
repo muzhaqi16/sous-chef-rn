@@ -32,6 +32,7 @@ const CURRENT_CACHE_VERSION = '1.1.3'; // Bumped to clear stale itemsConnection 
  */
 class ApolloCachePersistence {
   private saveTimeout: NodeJS.Timeout | null = null;
+  private idleCallbackId: number | null = null;
   private readonly debounceMs = 1000; // Wait 1s before saving to reduce writes
 
   /**
@@ -130,10 +131,10 @@ class ApolloCachePersistence {
         typeof globalThis !== 'undefined' &&
         'requestIdleCallback' in globalThis
       ) {
-        (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
+        this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
       } else if (typeof requestAnimationFrame === 'function') {
         // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
-        requestAnimationFrame(() => {
+        this.idleCallbackId = requestAnimationFrame(() => {
           setTimeout(serialize, 0);
         });
       } else {
@@ -151,6 +152,14 @@ class ApolloCachePersistence {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
       this.saveTimeout = null;
+    }
+    if (this.idleCallbackId != null) {
+      if (typeof globalThis !== 'undefined' && 'cancelIdleCallback' in globalThis) {
+        (globalThis as any).cancelIdleCallback(this.idleCallbackId);
+      } else if (typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(this.idleCallbackId);
+      }
+      this.idleCallbackId = null;
     }
   }
 

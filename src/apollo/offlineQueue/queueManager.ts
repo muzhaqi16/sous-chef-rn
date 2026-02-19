@@ -19,6 +19,16 @@ import {
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 
+/** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
+const QUEUE_ITEM_DATA_FRAGMENT = gql`
+  fragment QueueItemData on ShoppingListItem {
+    id
+    shoppingList {
+      id
+    }
+  }
+`;
+
 /**
  * Default configuration for the queue manager
  */
@@ -182,10 +192,29 @@ export class QueueManager {
         break;
       }
 
-      // Process batch concurrently
-      const results = await Promise.allSettled(
-        batch.map(mutation => this.processMutation(mutation))
+      // Group mutations by entity ID to process same-entity operations sequentially
+      // This prevents race conditions like create-then-update on the same entity
+      const { independent, entityGroups } = this.groupByEntity(batch);
+
+      // Process independent mutations (different entities) concurrently
+      const independentResults = await Promise.allSettled(
+        independent.map(mutation => this.processMutation(mutation))
       );
+
+      // Process same-entity groups sequentially
+      const sequentialResults: PromiseSettledResult<ProcessingResult>[] = [];
+      for (const group of entityGroups) {
+        for (const mutation of group) {
+          try {
+            const result = await this.processMutation(mutation);
+            sequentialResults.push({ status: 'fulfilled', value: result });
+          } catch (error) {
+            sequentialResults.push({ status: 'rejected', reason: error });
+          }
+        }
+      }
+
+      const results = [...independentResults, ...sequentialResults];
 
       // Log batch results - check actual mutation success, not promise resolution
       const succeeded = results.filter(
@@ -376,14 +405,7 @@ export class QueueManager {
             __typename: 'ShoppingListItem',
             id: itemId,
           }),
-          fragment: gql`
-            fragment QueueItemData on ShoppingListItem {
-              id
-              shoppingList {
-                id
-              }
-            }
-          `,
+          fragment: QUEUE_ITEM_DATA_FRAGMENT,
         }) as { id: string; shoppingList: { id: string } } | null;
 
         if (!itemData?.shoppingList?.id) {
@@ -655,6 +677,52 @@ export class QueueManager {
     const exponentialDelay = baseDelay * Math.pow(2, retryCount);
     const jitter = Math.random() * 500; // Add jitter to prevent thundering herd
     return Math.min(exponentialDelay + jitter, 30000); // Max 30 seconds
+  }
+
+  /**
+   * Group mutations by entity ID for safe ordering.
+   * Same-entity mutations must be processed sequentially to prevent race conditions
+   * (e.g., create followed by update on the same temp-id entity).
+   * Mutations targeting different entities can run concurrently.
+   */
+  private groupByEntity(mutations: QueuedMutation[]): {
+    independent: QueuedMutation[];
+    entityGroups: QueuedMutation[][];
+  } {
+    const entityMap = new Map<string, QueuedMutation[]>();
+
+    for (const mutation of mutations) {
+      const entityId =
+        mutation.variables?.id ||
+        mutation.variables?.input?.id ||
+        mutation.variables?.clientId ||
+        mutation.variables?.input?.pantryItemId ||
+        mutation.variables?.input?.itemId ||
+        mutation.variables?.itemId;
+
+      if (entityId) {
+        const group = entityMap.get(entityId) || [];
+        group.push(mutation);
+        entityMap.set(entityId, group);
+      } else {
+        // No entity ID identifiable — treat as independent
+        const key = `__no_entity_${mutation.id}`;
+        entityMap.set(key, [mutation]);
+      }
+    }
+
+    const independent: QueuedMutation[] = [];
+    const entityGroups: QueuedMutation[][] = [];
+
+    for (const group of entityMap.values()) {
+      if (group.length === 1) {
+        independent.push(group[0]);
+      } else {
+        entityGroups.push(group);
+      }
+    }
+
+    return { independent, entityGroups };
   }
 
   /**

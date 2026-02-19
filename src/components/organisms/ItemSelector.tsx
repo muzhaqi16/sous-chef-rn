@@ -2,10 +2,10 @@ import React, {useCallback, useMemo, memo} from 'react';
 import {
   Pressable,
   Text,
-  FlatList,
   ActivityIndicator,
   View,
 } from 'react-native';
+import {FlashList} from '@shopify/flash-list';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 // Memoized separator component to prevent re-renders
@@ -97,7 +97,7 @@ export function ItemSelector<T extends SelectableItem>({
   }
 
   return (
-    <FlatList
+    <FlashList
       data={data}
       keyExtractor={getKey}
       renderItem={renderItem}
@@ -105,12 +105,6 @@ export function ItemSelector<T extends SelectableItem>({
       showsVerticalScrollIndicator={false}
       style={listStyle}
       ItemSeparatorComponent={ItemSeparator}
-      // Performance optimizations
-      maxToRenderPerBatch={10}
-      windowSize={5}
-      removeClippedSubviews={true}
-      initialNumToRender={10}
-      updateCellsBatchingPeriod={50}
     />
   );
 }

@@ -136,11 +136,6 @@ export function useCrudOperations() {
 
           const result = await mutation({ variables });
 
-          // DEBUG: Log the full result to understand its structure
-          console.log('CRUD createAddOperation result:', JSON.stringify(result, null, 2));
-          console.log('result.data:', result.data);
-          console.log('result.errors:', result.errors);
-
           // Handle GraphQL errors returned with errorPolicy: 'all'
           // Check errors FIRST because result.data may be { mutationName: null } even on error
           if (result.errors && result.errors.length > 0) {

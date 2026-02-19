@@ -3,56 +3,10 @@
 # ============================================
 
 query MyShoppingListInvites {
-  myShoppingListInvites {
-    id
-    token
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    expiresAt
-    shoppingList {
+  me {
+    pendingCollaborationInvites {
       id
-      name
-      description
-    }
-    collaborator {
-      id
-      email
-      profile {
-        displayName
-        avatar
-      }
-    }
-    invitedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-  }
-}
-
-
-# ============================================
-# MUTATIONS
-# ============================================
-
-mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
-  inviteToShoppingList(input: $input) {
-    success
-    message
-    code
-    collaborator {
-      id
+      token
       shoppingListId
       collaboratorId
       email
@@ -68,6 +22,15 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
       shoppingList {
         id
         name
+        description
+      }
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
       }
       invitedBy {
         id
@@ -80,36 +43,25 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
   }
 }
 
+
+# ============================================
+# MUTATIONS
+# ============================================
+
 mutation AcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
     success
     message
     code
     collaborator {
-      id
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
       canInviteOthers
       invitedAt
       shoppingList {
         id
         name
         description
-      }
-      collaborator {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
       }
     }
   }

@@ -1,0 +1,250 @@
+import React, { useRef, useEffect, useCallback } from 'react';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import {
+  BottomSheetModal,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
+import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
+import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
+import type {
+  EditableMatch,
+  MatchSummary,
+} from '#hooks/recipe/useRecipeIngredientMatching';
+
+interface IngredientMatchingSheetProps {
+  visible: boolean;
+  editableMatches: EditableMatch[];
+  matchSummary: MatchSummary;
+  onUpdate: (
+    index: number,
+    updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded'>>,
+  ) => void;
+  onConfirm: () => void;
+  onSkip: () => void;
+  onClose: () => void;
+  confirmLoading: boolean;
+}
+
+export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
+  ({
+    visible,
+    editableMatches,
+    matchSummary,
+    onUpdate,
+    onConfirm,
+    onSkip,
+    onClose,
+    confirmLoading,
+  }) => {
+    const { theme } = useUnistyles();
+    const insets = useSafeAreaInsets();
+    const bottomSheetRef = useRef<BottomSheetModal>(null);
+    const animationConfigs = useSharedBottomSheetConfigs();
+
+    useEffect(() => {
+      if (visible) {
+        bottomSheetRef.current?.present();
+      } else {
+        bottomSheetRef.current?.dismiss();
+      }
+    }, [visible]);
+
+    const renderItem = useCallback(
+      ({ item, index }: { item: EditableMatch; index: number }) => (
+        <IngredientMatchRow
+          editableMatch={item}
+          index={index}
+          onUpdate={onUpdate}
+        />
+      ),
+      [onUpdate],
+    );
+
+    const keyExtractor = useCallback(
+      (item: EditableMatch) => item.match.ingredient.id,
+      [],
+    );
+
+    return (
+      <BottomSheetModal
+        ref={bottomSheetRef}
+        snapPoints={['80%']}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+        topInset={insets.top}
+        onDismiss={onClose}
+        animationConfigs={animationConfigs}
+        backgroundStyle={{ backgroundColor: theme.colors.background }}
+        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+        backdropComponent={props => (
+          <GlobalBottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+            onClose={() => bottomSheetRef.current?.dismiss()}
+          />
+        )}
+      >
+        <BottomSheetView
+          style={[styles.container, { paddingBottom: insets.bottom + 16 }]}
+        >
+          <BottomSheetHeader
+            title="Review Ingredients"
+            onCancel={onClose}
+            onConfirm={onConfirm}
+            confirmLabel={confirmLoading ? 'Deducting...' : 'Confirm & Deduct'}
+            confirmDisabled={confirmLoading || matchSummary.included === 0}
+            confirmColor="success"
+          />
+
+          {/* Summary bar */}
+          <View style={styles.summaryBar}>
+            <SummaryPill
+              label="Available"
+              count={matchSummary.available}
+              color={theme.colors.success}
+            />
+            <SummaryPill
+              label="Partial"
+              count={matchSummary.partial}
+              color={theme.colors.warning}
+            />
+            <SummaryPill
+              label="Missing"
+              count={matchSummary.missing}
+              color={theme.colors.error}
+            />
+            <Text style={styles.includedText}>
+              {matchSummary.included}/{matchSummary.total} included
+            </Text>
+          </View>
+
+          {/* Ingredient list */}
+          <FlashList
+            data={editableMatches}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            style={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+
+          {/* Bottom actions */}
+          <View style={styles.bottomActions}>
+            <Pressable
+              onPress={onSkip}
+              style={({ pressed }) => [
+                styles.skipButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.skipText}>Skip Review</Text>
+            </Pressable>
+            <Pressable
+              onPress={onConfirm}
+              disabled={confirmLoading || matchSummary.included === 0}
+              style={({ pressed }) => [
+                styles.confirmButton,
+                pressed && styles.buttonPressed,
+                (confirmLoading || matchSummary.included === 0) &&
+                  styles.buttonDisabled,
+              ]}
+            >
+              {confirmLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.white} />
+              ) : (
+                <Text style={styles.confirmText}>
+                  Confirm & Deduct ({matchSummary.included})
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
+    );
+  };
+
+const SummaryPill: React.FC<{
+  label: string;
+  count: number;
+  color: string;
+}> = ({ label, count, color }) => (
+  <View style={[styles.pill, { backgroundColor: color + '20' }]}>
+    <Text style={[styles.pillText, { color }]}>
+      {count} {label}
+    </Text>
+  </View>
+);
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
+  },
+  summaryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    flexWrap: 'wrap',
+  },
+  pill: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 3,
+    borderRadius: theme.radii.sm,
+  },
+  pillText: {
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  includedText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textSecondary,
+    marginLeft: 'auto',
+  },
+  list: {
+    flex: 1,
+  },
+  bottomActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+  },
+  skipButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+  },
+  skipText: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+  },
+  confirmButton: {
+    flex: 2,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmText: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.white,
+  },
+  buttonPressed: {
+    opacity: theme.opacity.pressed,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+}));

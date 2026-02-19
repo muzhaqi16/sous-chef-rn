@@ -20,6 +20,10 @@ import {
   createOptimisticEntity,
 } from '#/apollo/utils/createOptimisticResponse';
 import {
+  buildOptimisticMutationResponse,
+  buildOptimisticDeleteResponse,
+} from '#/apollo/utils/optimisticTypes';
+import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
@@ -27,10 +31,11 @@ import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
 import type { PantryItemInput, PantryItemUpdate } from './types';
+import type { PantryItemDisplayFragment } from '#generated';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
-  pantryItems: any[];
+  pantryItems: PantryItemDisplayFragment[];
   refetch: () => Promise<void>;
 }
 
@@ -65,37 +70,33 @@ export function usePantryItemMutations({
     },
     optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
-      return {
-        __typename: 'Mutation' as const,
-        createPantryItem: {
-          __typename: 'PantryItemPayload' as const,
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          pantryItem: {
-            ...createOptimisticEntity('PantryItem', tempId, {
-              itemName: variables.input.itemName,
-              quantity: variables.input.quantity || variables.input.initialQuantity,
-              storageState: variables.input.storageState,
-              storageLocation: variables.input.storageLocation || null,
-              storageNotes: variables.input.storageNotes || null,
-              expiresAt: variables.input.expiresAt || null,
-              autoReorderPoint: variables.input.autoReorderPoint || null,
-              pantry: {
-                __typename: 'Pantry',
-                id: pantryId || '',
-              },
-              unit: variables.input.unitId
-                ? {
-                    __typename: 'Unit',
-                    id: variables.input.unitId,
-                  }
-                : null,
-            }),
-            __typename: 'PantryItem' as const,
-          },
-        } as any,
-      };
+      return buildOptimisticMutationResponse(
+        'createPantryItem',
+        'PantryItemPayload',
+        'pantryItem',
+        {
+          ...createOptimisticEntity('PantryItem', tempId, {
+            itemName: variables.input.itemName,
+            quantity: variables.input.quantity || variables.input.initialQuantity,
+            storageState: variables.input.storageState,
+            storageLocation: variables.input.storageLocation || null,
+            storageNotes: variables.input.storageNotes || null,
+            expiresAt: variables.input.expiresAt || null,
+            autoReorderPoint: variables.input.autoReorderPoint || null,
+            pantry: {
+              __typename: 'Pantry',
+              id: pantryId || '',
+            },
+            unit: variables.input.unitId
+              ? {
+                  __typename: 'Unit',
+                  id: variables.input.unitId,
+                }
+              : null,
+          }),
+          __typename: 'PantryItem' as const,
+        },
+      );
     },
     update: (cache: any, { data }: any) => {
       const pantryItem = data?.createPantryItem?.pantryItem;
@@ -131,63 +132,50 @@ export function usePantryItemMutations({
       const currentItem = pantryItems.find(item => item.id === variables.id);
 
       if (!currentItem) {
-        return {
-          __typename: 'Mutation',
-          updatePantryItem: {
-            __typename: 'PantryItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
-            pantryItem: {
-              __typename: 'PantryItem',
-              id: variables.id,
-              version: 1,
-              updatedAt: new Date().toISOString(),
-              ...variables.input,
-            },
-          } as any,
-        };
+        return buildOptimisticMutationResponse(
+          'updatePantryItem',
+          'PantryItemPayload',
+          'pantryItem',
+          {
+            __typename: 'PantryItem' as const,
+            id: variables.id,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            ...variables.input,
+          },
+        );
       }
 
       const optimisticUpdate = enhanceWithVersion(
         {
           ...currentItem,
           updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
-        } as any,
-        {
-          ...variables.input,
         },
+        // Input types use InputMaybe (T | null | undefined) while fragment types
+        // don't accept null — safe to cast since this is an optimistic prediction
+        variables.input as Partial<typeof currentItem>,
       );
 
-      return {
-        __typename: 'Mutation',
-        updatePantryItem: {
-          __typename: 'PantryItemPayload',
-          success: true,
-          message: '',
-          code: 'SUCCESS',
-          pantryItem: optimisticUpdate,
-        } as any,
-      };
+      return buildOptimisticMutationResponse(
+        'updatePantryItem',
+        'PantryItemPayload',
+        'pantryItem',
+        optimisticUpdate,
+      );
     },
   });
 
   // REMOVE MUTATION
   const [removeItemMutation] = useDeletePantryItemMutation({
     errorPolicy: 'all',
-    optimisticResponse: variables => ({
-      __typename: 'Mutation',
-      deletePantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: {
-          __typename: 'PantryItem',
-          id: variables.id,
-        },
-      },
-    } as any),
+    optimisticResponse: variables =>
+      buildOptimisticDeleteResponse(
+        'deletePantryItem',
+        'PantryItemPayload',
+        'pantryItem',
+        'PantryItem',
+        variables.id,
+      ),
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',

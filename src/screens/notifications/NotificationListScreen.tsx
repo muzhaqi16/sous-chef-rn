@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, SectionList, RefreshControl } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -161,58 +161,73 @@ export const NotificationListScreen: React.FC = () => {
     />
   );
 
+  const notificationActionRef = useRef<((notification: NotificationType) => void) | null>(null);
+
+  const renderNotificationItem = useCallback(
+    ({ item }: { item: NotificationType }) => (
+      <NotificationItem
+        notification={item}
+        onPress={notification =>
+          handleNotificationPress(
+            notification,
+            notificationActionRef.current ?? undefined,
+          )
+        }
+        onDismiss={handleRemoveNotification}
+      />
+    ),
+    [handleNotificationPress, handleRemoveNotification],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: { title: string } }) => (
+      <NotificationGroupHeader title={section.title} />
+    ),
+    [],
+  );
+
   return (
     <NotificationActionHandler>
-      {({ handleNotificationAction }) => (
-        <View style={styles.container}>
-          <UrgentNotificationsBanner
-            urgentNotifications={filteredGroups.urgent}
-          />
+      {({ handleNotificationAction }) => {
+        notificationActionRef.current = handleNotificationAction;
+        return (
+          <View style={styles.container}>
+            <UrgentNotificationsBanner
+              urgentNotifications={filteredGroups.urgent}
+            />
 
-          <NotificationHeader
-            onMarkAllRead={handleMarkAllAsRead}
-            onClearAll={clearAll}
-            hasNotifications={hasNotifications}
-          />
+            <NotificationHeader
+              onMarkAllRead={handleMarkAllAsRead}
+              onClearAll={clearAll}
+              hasNotifications={hasNotifications}
+            />
 
-          {renderHeader()}
+            {renderHeader()}
 
-          <NotificationFilters
-            selectedCategory={filterCategory}
-            onCategoryChange={setFilterCategory}
-          />
+            <NotificationFilters
+              selectedCategory={filterCategory}
+              onCategoryChange={setFilterCategory}
+            />
 
-          <SectionList
-            sections={sections}
-            keyExtractor={keyExtractor}
-            renderItem={({ item }) => (
-              <NotificationItem
-                notification={item}
-                onPress={notification =>
-                  handleNotificationPress(
-                    notification,
-                    handleNotificationAction,
-                  )
-                }
-                onDismiss={handleRemoveNotification}
-              />
-            )}
-            renderSectionHeader={({ section }) => (
-              <NotificationGroupHeader title={section.title} />
-            )}
-            ListEmptyComponent={<EmptyNotifications />}
-            contentContainerStyle={
-              !hasNotifications ? styles.emptyContainer : undefined
-            }
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-          />
-        </View>
-      )}
+            <SectionList
+              sections={sections}
+              keyExtractor={keyExtractor}
+              renderItem={renderNotificationItem}
+              renderSectionHeader={renderSectionHeader}
+              ListEmptyComponent={<EmptyNotifications />}
+              contentContainerStyle={
+                !hasNotifications ? styles.emptyContainer : undefined
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+            />
+          </View>
+        );
+      }}
     </NotificationActionHandler>
   );
 };

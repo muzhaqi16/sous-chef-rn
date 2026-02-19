@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, Pressable, ListRenderItem } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -137,7 +138,7 @@ export const PurchaseHistoryScreen: React.FC<{
       </View>
 
       {/* Purchase List */}
-      <FlatList
+      <FlashList
         data={purchases}
         keyExtractor={item => item.id}
         renderItem={renderPurchaseItem}
@@ -145,11 +146,6 @@ export const PurchaseHistoryScreen: React.FC<{
         ListEmptyComponent={renderEmptyComponent}
         contentContainerStyle={styles.content}
         style={styles.scrollView}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={10}
-        windowSize={5}
       />
     </View>
   );

@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query SearchItems($input: SearchItemsInput!) {
-  searchItems(input: $input) {
+query SearchItems($query: String!, $filters: ItemFilters, $sort: ItemSortInput, $first: Int, $after: String) {
+  searchItems(query: $query, filters: $filters, sort: $sort, first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -158,9 +158,6 @@ query AutocompleteItems($input: AutocompleteInput!) {
         name
         type
         isPrimary
-        color
-        icon
-        slug
       }
     }
     totalCount
@@ -217,12 +214,64 @@ query GetPopularItems($first: Int = 10) {
             id
             name
             type
-            color
-            icon
-            slug
           }
         }
       }
+    }
+    totalCount
+  }
+}
+
+query GetRecommendedItems($limit: Int, $userId: String) {
+  recommendedItems(limit: $limit, userId: $userId) {
+    id
+    name
+    type
+    imageUrl
+    netWeight
+    displayUnit
+    defaultUnit {
+      id
+      name
+      symbol
+      type
+      isDefault
+      isPreferred
+    }
+    brands {
+      id
+      name
+    }
+    category {
+      id
+      name
+      type
+      isPrimary
+    }
+  }
+}
+
+query GetPurchases(
+  $filters: PurchaseFilters
+  $first: Int
+  $after: String
+  $orderBy: PurchaseOrderBy
+) {
+  purchases(
+    filters: $filters
+    first: $first
+    after: $after
+    orderBy: $orderBy
+  ) {
+    edges {
+      node {
+        ...PurchaseFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
     totalCount
   }

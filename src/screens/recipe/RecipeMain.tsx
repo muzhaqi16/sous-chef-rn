@@ -124,8 +124,8 @@ export const RecipeMain: React.FC = React.memo(() => {
     }
   }, [recipes.length, randomRecipes.length]);
 
-  // Register add button action - navigate to recipe search
-  useTabBarAddButton(() => navigate('RecipeSearch'));
+  // Register add button action - navigate to recipe creation
+  useTabBarAddButton(() => navigate('RecipeCreate'));
 
   // Manual refresh to get new random recipes
   const handleRefreshRandom = useCallback(async () => {
@@ -196,15 +196,18 @@ export const RecipeMain: React.FC = React.memo(() => {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.filter(
-                edge => edge.node.recipe.id !== variables.recipeId,
-              ),
-              totalCount: existing.mySavedRecipes.totalCount - 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.filter(
+                  edge => edge.node.recipe.id !== variables.recipeId,
+                ),
+                totalCount: existing.me.savedRecipesConnection.totalCount - 1,
+              },
             },
           };
         },
@@ -468,7 +471,8 @@ export const RecipeMain: React.FC = React.memo(() => {
         title="Recipes"
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
-        onAvatarPress={() => navigate('Notifications')}
+        onAvatarPress={() => navigate('Profile')}
+        onNotificationPress={() => navigate('Notifications')}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar

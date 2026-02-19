@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text, Pressable, Image} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {CachedImage} from '#components/atoms/CachedImage';
 import {useProfileData} from '#hooks/profile/useProfileData';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 import {Icon} from '#utils/iconUtils';
@@ -30,9 +31,8 @@ export const UserHeader: React.FC = () => {
           style={({pressed}) => pressed && styles.pressed}>
           <View style={styles.avatar}>
             {profile?.avatar ? (
-              <Image
-                alt=""
-                source={{uri: profile.avatar}}
+              <CachedImage
+                uri={profile.avatar}
                 style={styles.avatarImg}
               />
             ) : (

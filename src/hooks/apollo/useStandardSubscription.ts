@@ -103,9 +103,11 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
   const shouldProcessUpdate = useSubscriptionDeduplication(userId);
 
   // Memoize handlers so Apollo subscription doesn't restart on every render
+  // Always provide onData when userId is set (for deduplication) or when customOnData is provided
+  const needsOnData = !!customOnData || !!userId;
   const onData = useMemo(
     () =>
-      customOnData
+      needsOnData
         ? ({ data }: any) => {
             // Check deduplication if userId provided
             if (userId && data?.data) {
@@ -131,7 +133,7 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
         : undefined,
     // Only recreate when subscription identity changes, not when callbacks change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, operation, entityId, enableLogging, shouldProcessUpdate, !!customOnData],
+    [userId, operation, entityId, enableLogging, shouldProcessUpdate, needsOnData],
   );
 
   // Standardized onError handler

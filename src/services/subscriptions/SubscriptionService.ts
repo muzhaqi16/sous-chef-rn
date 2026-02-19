@@ -342,14 +342,19 @@ export class SubscriptionService {
 
   /**
    * Create unified onComplete handler
+   * Also removes the subscription entry from the registry when the subscription ends
    */
   private createOnCompleteHandler<TData>(
     config: SubscriptionConfig<TData>,
   ): () => void {
+    const key = this.getSubscriptionKey(config);
     return () => {
-      this.log(config, LogLevel.INFO, 'Subscription connected', {
+      this.log(config, LogLevel.INFO, 'Subscription completed', {
         entityId: config.entityId,
       });
+
+      // Remove from registry when subscription completes to prevent memory leak
+      this.subscriptions.delete(key);
 
       // Call custom complete handler if provided
       if (config.customOnComplete && typeof config.customOnComplete === 'function') {

@@ -2,10 +2,9 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   overwrite: true, // Add this for v6
-  schema: 'src/graphql/generated/schema.graphql',
+  schema: process.env.SCHEMA_PATH || 'src/graphql/generated/schema.graphql',
 
   documents: [
-    'src/graphql/operations/fragments.graphql',
     'src/graphql/operations/**/*.{graphql,gql}',
     '!src/graphql/generated/**/*.{ts,tsx}',
     '!src/**/node_modules/**',
@@ -112,13 +111,6 @@ const config: CodegenConfig = {
         includeIntrospectionTypes: false,
       },
     },
-  },
-
-  // Updated config structure for v6
-  config: {
-    skipDocumentsValidation: false,
-    silent: false,
-    errorsOnly: false,
   },
 
   // Watch mode - moved outside config in v6

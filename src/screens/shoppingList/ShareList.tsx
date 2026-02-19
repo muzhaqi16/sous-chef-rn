@@ -2,12 +2,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   Pressable,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -116,7 +116,7 @@ export const ShareList: React.FC = () => {
   };
 
   const handleRemoveMember = useCallback(
-    (memberEmail: string) => {
+    (memberId: string) => {
       Alert.alert(
         'Remove Member',
         'Are you sure you want to remove this member?',
@@ -128,9 +128,7 @@ export const ShareList: React.FC = () => {
             onPress: async () => {
               try {
                 await removeMember({
-                  variables: {
-                    input: { shoppingListId: listId, email: memberEmail },
-                  },
+                  variables: { id: memberId },
                 });
                 refetch();
               } catch {
@@ -141,7 +139,7 @@ export const ShareList: React.FC = () => {
         ],
       );
     },
-    [listId, removeMember, refetch],
+    [removeMember, refetch],
   );
 
   const handleLeaveList = useCallback(() => {
@@ -166,17 +164,15 @@ export const ShareList: React.FC = () => {
           text: 'Leave',
           style: 'destructive',
           onPress: async () => {
-            if (!currentUser?.email) {
-              Alert.alert('Error', 'Could not determine your email');
+            if (!currentUserCollaborator?.id) {
+              Alert.alert('Error', 'Could not determine your membership');
               return;
             }
 
             setLeaving(true);
             try {
               await removeMember({
-                variables: {
-                  input: { shoppingListId: listId, email: currentUser.email },
-                },
+                variables: { id: currentUserCollaborator.id },
               });
               navigation.goBack();
             } catch {
@@ -188,7 +184,7 @@ export const ShareList: React.FC = () => {
         },
       ],
     );
-  }, [isOwner, listName, currentUser?.email, listId, removeMember, navigation]);
+  }, [isOwner, listName, currentUserCollaborator?.id, removeMember, navigation]);
 
   // PERFORMANCE: Memoized renderItem to avoid recreating on every render
   const renderMemberItem = useCallback(
@@ -235,8 +231,8 @@ export const ShareList: React.FC = () => {
           <Pressable
             onPress={e => {
               e?.stopPropagation?.();
-              if (member.email) {
-                handleRemoveMember(member.email);
+              if (member.id) {
+                handleRemoveMember(member.id);
               }
             }}
             style={({pressed}) => pressed && styles.pressed}
@@ -299,7 +295,7 @@ export const ShareList: React.FC = () => {
         {collaborators.length > 0 && (
           <View style={styles.membersSection}>
             <Text style={styles.sectionTitle}>Current Members</Text>
-            <FlatList
+            <FlashList
               data={collaborators}
               keyExtractor={member => member.id}
               renderItem={renderMemberItem}

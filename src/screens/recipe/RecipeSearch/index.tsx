@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
@@ -14,8 +15,6 @@ import { useRecipeSearch } from './useRecipeSearch';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
-
-const INGREDIENT_ITEM_HEIGHT = 56;
 
 const IngredientItem = React.memo(
   ({
@@ -224,20 +223,12 @@ export const RecipeSearch: React.FC = () => {
           </Pressable>
         }
       >
-        <FlatList
+        <FlashList
           data={pantryItems}
           keyExtractor={ingredientKeyExtractor}
           renderItem={renderIngredientItem}
-          getItemLayout={(_data, index) => ({
-            length: INGREDIENT_ITEM_HEIGHT,
-            offset: INGREDIENT_ITEM_HEIGHT * index,
-            index,
-          })}
           style={styles.ingredientList}
           contentContainerStyle={styles.ingredientListContent}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews
           ListEmptyComponent={<Text style={styles.emptyText}>No pantry items available</Text>}
         />
       </BottomSheetAction>

@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
   Pressable,
   RefreshControl,
   Alert,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils/iconUtils';
@@ -48,7 +48,7 @@ export const LowStockItems: React.FC = () => {
     setRefreshing(false);
   };
 
-  const handleAddToList = async (itemId: string) => {
+  const handleAddToList = useCallback(async (itemId: string) => {
     try {
       await addToShoppingList({
         variables: { input: { shoppingListId: '', itemId } },
@@ -56,13 +56,41 @@ export const LowStockItems: React.FC = () => {
     } catch {
       Alert.alert('Error', 'Failed to add to shopping list');
     }
-  };
+  }, [addToShoppingList]);
+
+  const renderLowStockItem = useCallback(
+    ({ item }: { item: (typeof lowStockItems)[number] }) => (
+      <SwipeableItem
+        onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
+      >
+        <View style={[commonStyles.card, styles.itemCard]}>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.itemName}</Text>
+            <Text style={[commonStyles.caption, styles.itemDetails]}>
+              {item.quantity} {item.unit?.symbol} remaining
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => handleAddToList(item.id)}
+            style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+          >
+            <Icon
+              name="add-shopping-cart"
+              size={20}
+              color={theme.colors.primary}
+            />
+          </Pressable>
+        </View>
+      </SwipeableItem>
+    ),
+    [navigateTo, handleAddToList, theme.colors.primary],
+  );
 
   return (
     <View style={commonStyles.container}>
       <Header title="Low Stock Items" onBack={goBack} centerTitle />
 
-      <FlatList
+      <FlashList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         data={lowStockItems}
@@ -91,30 +119,7 @@ export const LowStockItems: React.FC = () => {
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <SwipeableItem
-            onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
-          >
-            <View style={[commonStyles.card, styles.itemCard]}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.itemName}</Text>
-                <Text style={[commonStyles.caption, styles.itemDetails]}>
-                  {item.quantity} {item.unit?.symbol} remaining
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => handleAddToList(item.id)}
-                style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
-              >
-                <Icon
-                  name="add-shopping-cart"
-                  size={20}
-                  color={theme.colors.primary}
-                />
-              </Pressable>
-            </View>
-          </SwipeableItem>
-        )}
+        renderItem={renderLowStockItem}
       />
     </View>
   );

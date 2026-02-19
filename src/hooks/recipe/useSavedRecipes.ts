@@ -50,9 +50,9 @@ export function useSavedRecipes(folder?: string | null) {
 
   // Normalize saved recipes to flatten the recipe data
   const recipes = useMemo<SavedRecipe[]>(() => {
-    if (!data?.mySavedRecipes?.edges) return [];
+    if (!data?.me?.savedRecipesConnection?.edges) return [];
 
-    return data.mySavedRecipes.edges.map(edge => edge.node).map(savedRecipe => ({
+    return data.me.savedRecipesConnection.edges.map(edge => edge.node).map(savedRecipe => ({
       // Use saved recipe ID as the primary ID for list operations
       id: savedRecipe.id,
       recipeId: savedRecipe.recipe.id,
@@ -77,7 +77,7 @@ export function useSavedRecipes(folder?: string | null) {
       createdAt: savedRecipe.createdAt,
       updatedAt: savedRecipe.updatedAt,
     }));
-  }, [data?.mySavedRecipes]);
+  }, [data?.me?.savedRecipesConnection]);
 
   const totalCount = recipes.length;
 

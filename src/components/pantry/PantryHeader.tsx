@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -17,6 +17,10 @@ interface PantryHeaderProps {
   onAvatarPress?: () => void;
   /** Callback when household badge is pressed */
   onHomePress?: () => void;
+  /** Callback when low stock button is pressed */
+  onLowStockPress?: () => void;
+  /** Whether the low stock action is loading */
+  lowStockLoading?: boolean;
 }
 
 /**
@@ -35,6 +39,8 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
     notificationCount = 0,
     onAvatarPress,
     onHomePress,
+    onLowStockPress,
+    lowStockLoading = false,
   }) => {
     const { theme } = useUnistyles();
 
@@ -59,6 +65,29 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
             />
           </Pressable>
         </View>
+
+        {/* Low Stock to Shopping List */}
+        {onLowStockPress && (
+          <Pressable
+            onPress={onLowStockPress}
+            disabled={lowStockLoading}
+            style={styles.lowStockButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add low stock items to shopping list"
+          >
+            {lowStockLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Icon
+                name="add-shopping-cart"
+                library="MaterialIcons"
+                size={24}
+                color={theme.colors.primary}
+              />
+            )}
+          </Pressable>
+        )}
 
         {/* Avatar */}
         <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
@@ -118,6 +147,10 @@ const styles = StyleSheet.create(theme => ({
   householdName: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
+  },
+  lowStockButton: {
+    padding: theme.spacing.xs,
+    marginRight: theme.spacing.sm,
   },
   avatarContainer: {
     position: 'relative',

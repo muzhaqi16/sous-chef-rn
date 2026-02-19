@@ -2,12 +2,11 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
   ActivityIndicator,
   RefreshControl,
-  ListRenderItem,
   Pressable,
 } from 'react-native';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -409,7 +408,7 @@ export const HomeManagement: React.FC = () => {
           layout={LinearTransition.duration(300)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
-          <FlatList
+          <FlashList
             data={sortedHomes}
             keyExtractor={item => item.id}
             renderItem={renderHomeItem}
@@ -424,16 +423,6 @@ export const HomeManagement: React.FC = () => {
               />
             }
             contentContainerStyle={{ flexGrow: 1 }}
-            removeClippedSubviews={true}
-            maxToRenderPerBatch={10}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={10}
-            windowSize={5}
-            getItemLayout={(data, index) => ({
-              length: 128, // HomeCard height (~120px) + marginVertical (8px)
-              offset: 128 * index,
-              index,
-            })}
           />
         </Animated.View>
       </View>

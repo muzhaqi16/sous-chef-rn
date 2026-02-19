@@ -1,30 +1,19 @@
 import { useState, useCallback } from 'react';
 import {
-  useGetPantryLedgerAnalyticsQuery,
   useGetPantryUsageAnalyticsQuery,
   useGetPantryWasteAnalyticsQuery,
-  useGetPantryConsumptionRateQuery,
-  useGetPantryRestockingFrequencyQuery,
-  useGetPantryExpirationRiskQuery,
-  useGetPantryEffectiveUsageRateQuery,
+  useGetPantryLedgerAnalyticsQuery,
   PeriodGranularity,
   DateRange,
   type AnalyticsFilters,
   type GetPantryUsageAnalyticsQuery,
   type GetPantryWasteAnalyticsQuery,
-  type GetPantryConsumptionRateQuery,
-  type GetPantryRestockingFrequencyQuery,
-  type GetPantryExpirationRiskQuery,
-  type GetPantryEffectiveUsageRateQuery,
+  type GetPantryLedgerAnalyticsQuery,
 } from '#generated';
 
-// Type aliases for cleaner usage
-type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantryUsageAnalytics']>;
-type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantryWasteAnalytics']>;
-type ConsumptionRateData = GetPantryConsumptionRateQuery['pantryConsumptionRate'];
-type RestockingFrequencyData = GetPantryRestockingFrequencyQuery['pantryRestockingFrequency'];
-type ExpirationRiskData = NonNullable<GetPantryExpirationRiskQuery['pantryExpirationRisk']>;
-type EffectiveUsageRateData = GetPantryEffectiveUsageRateQuery['pantryEffectiveUsageRate'];
+type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantry']>['usageAnalytics'];
+type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantry']>['wasteAnalytics'];
+type LedgerAnalytics = NonNullable<GetPantryLedgerAnalyticsQuery['pantry']>['ledgerAnalytics'];
 
 interface UsePantryAnalyticsOptions {
   pantryId: string | undefined;
@@ -32,113 +21,21 @@ interface UsePantryAnalyticsOptions {
   ledgerGranularity?: PeriodGranularity;
 }
 
-// Ledger summary type based on API
-interface LedgerSummary {
-  totalAdded: number;
-  totalConsumed: number;
-  totalWasted: number;
-  netQuantity: number;
-  additionCount: number;
-  consumptionCount: number;
-  wasteCount: number;
-  additionsByUnit: Array<{
-    unitId: string;
-    unitName: string;
-    unitSymbol: string;
-    totalQuantity: number;
-    count: number;
-  }>;
-  consumptionByUnit: Array<{
-    unitId: string;
-    unitName: string;
-    unitSymbol: string;
-    totalQuantity: number;
-    count: number;
-  }>;
-}
-
-interface LedgerPeriodData {
-  periodStart: string;
-  periodEnd: string;
-  periodLabel: string;
-  added: number;
-  consumed: number;
-  wasted: number;
-  net: number;
-  additionCost: number | null;
-}
-
-interface CostAnalytics {
-  totalSpent: number;
-  averageCostPerUnit: number;
-  costByStore: Array<{
-    storeId: string;
-    storeName: string;
-    totalSpent: number;
-    itemCount: number;
-  }>;
-}
-
-interface LedgerAnalytics {
-  summary: LedgerSummary;
-  periodData: LedgerPeriodData[];
-  costAnalytics: CostAnalytics | null;
-  topRestockedItems: Array<{
-    itemId: string;
-    itemName: string;
-    totalQuantity: number;
-  }>;
-  granularity: PeriodGranularity;
-}
-
 interface UsePantryAnalyticsReturn {
-  // Usage data
   usageData: UsageAnalytics | null;
   usageLoading: boolean;
   usageError: Error | undefined;
-
-  // Waste data
   wasteData: WasteAnalytics | null;
   wasteLoading: boolean;
   wasteError: Error | undefined;
-
-  // Ledger data
   ledgerData: LedgerAnalytics | null;
   ledgerLoading: boolean;
   ledgerError: Error | undefined;
-
-  // Consumption rate data
-  consumptionRateData: ConsumptionRateData | null;
-  consumptionRateLoading: boolean;
-  consumptionRateError: Error | undefined;
-
-  // Restocking frequency data
-  restockingFrequencyData: RestockingFrequencyData | null;
-  restockingFrequencyLoading: boolean;
-  restockingFrequencyError: Error | undefined;
-
-  // Expiration risk data
-  expirationRiskData: ExpirationRiskData | null;
-  expirationRiskLoading: boolean;
-  expirationRiskError: Error | undefined;
-
-  // Effective usage rate data
-  effectiveUsageRateData: EffectiveUsageRateData | null;
-  effectiveUsageRateLoading: boolean;
-  effectiveUsageRateError: Error | undefined;
-
-  // Combined loading state
   loading: boolean;
-
-  // Filter state
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
-
-  // Ledger granularity
   ledgerGranularity: PeriodGranularity;
   setLedgerGranularity: (granularity: PeriodGranularity) => void;
-
-  // Actions
   refetch: () => Promise<void>;
 }
 
@@ -199,96 +96,24 @@ export function usePantryAnalytics({
     errorPolicy: 'all',
   });
 
-  const {
-    data: consumptionRateQueryData,
-    loading: consumptionRateLoading,
-    error: consumptionRateError,
-    refetch: refetchConsumptionRate,
-  } = useGetPantryConsumptionRateQuery({
-    variables: { pantryId: pantryId ?? '', filter },
-    skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
-
-  const {
-    data: restockingFrequencyQueryData,
-    loading: restockingFrequencyLoading,
-    error: restockingFrequencyError,
-    refetch: refetchRestockingFrequency,
-  } = useGetPantryRestockingFrequencyQuery({
-    variables: { pantryId: pantryId ?? '', filter },
-    skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
-
-  const {
-    data: expirationRiskQueryData,
-    loading: expirationRiskLoading,
-    error: expirationRiskError,
-    refetch: refetchExpirationRisk,
-  } = useGetPantryExpirationRiskQuery({
-    variables: { pantryId: pantryId ?? '', daysThreshold: 7 },
-    skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
-
-  const {
-    data: effectiveUsageRateQueryData,
-    loading: effectiveUsageRateLoading,
-    error: effectiveUsageRateError,
-    refetch: refetchEffectiveUsageRate,
-  } = useGetPantryEffectiveUsageRateQuery({
-    variables: { pantryId: pantryId ?? '', filter },
-    skip: !hasValidPantryId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
-
   const refetch = useCallback(async () => {
     await Promise.all([
       refetchUsage(),
       refetchWaste(),
       refetchLedger(),
-      refetchConsumptionRate(),
-      refetchRestockingFrequency(),
-      refetchExpirationRisk(),
-      refetchEffectiveUsageRate(),
     ]);
-  }, [
-    refetchUsage,
-    refetchWaste,
-    refetchLedger,
-    refetchConsumptionRate,
-    refetchRestockingFrequency,
-    refetchExpirationRisk,
-    refetchEffectiveUsageRate,
-  ]);
+  }, [refetchUsage, refetchWaste, refetchLedger]);
 
   return {
-    usageData: usageQueryData?.pantryUsageAnalytics ?? null,
+    usageData: usageQueryData?.pantry?.usageAnalytics ?? null,
     usageLoading,
     usageError: usageError as Error | undefined,
-    wasteData: wasteQueryData?.pantryWasteAnalytics ?? null,
+    wasteData: wasteQueryData?.pantry?.wasteAnalytics ?? null,
     wasteLoading,
     wasteError: wasteError as Error | undefined,
-    ledgerData: (ledgerQueryData?.pantryLedgerAnalytics as LedgerAnalytics) ?? null,
+    ledgerData: ledgerQueryData?.pantry?.ledgerAnalytics ?? null,
     ledgerLoading,
     ledgerError: ledgerError as Error | undefined,
-    consumptionRateData: consumptionRateQueryData?.pantryConsumptionRate ?? null,
-    consumptionRateLoading,
-    consumptionRateError: consumptionRateError as Error | undefined,
-    restockingFrequencyData: restockingFrequencyQueryData?.pantryRestockingFrequency ?? null,
-    restockingFrequencyLoading,
-    restockingFrequencyError: restockingFrequencyError as Error | undefined,
-    expirationRiskData: expirationRiskQueryData?.pantryExpirationRisk ?? null,
-    expirationRiskLoading,
-    expirationRiskError: expirationRiskError as Error | undefined,
-    effectiveUsageRateData: effectiveUsageRateQueryData?.pantryEffectiveUsageRate ?? null,
-    effectiveUsageRateLoading,
-    effectiveUsageRateError: effectiveUsageRateError as Error | undefined,
     loading: usageLoading || wasteLoading || ledgerLoading,
     dateRange,
     setDateRange,

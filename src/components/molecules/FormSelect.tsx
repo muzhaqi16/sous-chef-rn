@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {View, Text, Pressable, FlatList, Modal, ViewStyle} from 'react-native';
+import {View, Text, Pressable, Modal, ViewStyle} from 'react-native';
+import {FlashList} from '@shopify/flash-list';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
@@ -84,16 +85,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         <View style={styles.modal}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{label}</Text>
-            <FlatList
+            <FlashList
               data={options}
               renderItem={renderOption}
               keyExtractor={item => item.value}
               showsVerticalScrollIndicator={false}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              removeClippedSubviews={true}
-              initialNumToRender={10}
-              updateCellsBatchingPeriod={50}
             />
             <Pressable
               style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}

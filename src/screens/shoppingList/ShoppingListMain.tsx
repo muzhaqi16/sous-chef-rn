@@ -26,6 +26,7 @@ import { useProfileData } from '#hooks/profile/useProfileData';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
+import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
@@ -125,6 +126,10 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       refetchItems,
       setSearchQuery,
     });
+
+    // --- Batch Move to Pantry Hook ---
+    const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
+      useBatchMoveToPantry({ currentListId });
 
     // --- Reordering Hook ---
     const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -272,6 +277,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         canMarkPurchased: permissions.canMarkPurchased,
         canReorderItems: permissions.canEditItems,
         isTransitioning,
+        onBatchMoveToPantry: batchMoveToPantry,
+        batchMoveToPantryLoading,
       }),
       [
         isLoadingInitial,
@@ -298,6 +305,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         isLoadingMorePurchased,
         permissions,
         isTransitioning,
+        batchMoveToPantry,
+        batchMoveToPantryLoading,
       ],
     );
 
@@ -392,7 +401,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
             title="Shopping List"
             avatarUrl={profile?.avatar}
             notificationCount={unreadCount}
-            onAvatarPress={() => navigateTo.notificationList()}
+            onAvatarPress={() => navigate('Profile')}
+          onNotificationPress={() => navigateTo.notificationList()}
           />
           <ListTemplate
             items={[]}
@@ -419,7 +429,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           title={currentList?.name || 'Shopping List'}
           avatarUrl={profile?.avatar}
           notificationCount={unreadCount}
-          onAvatarPress={() => navigateTo.notificationList()}
+          onAvatarPress={() => navigate('Profile')}
+          onNotificationPress={() => navigateTo.notificationList()}
         />
         <View style={styles.searchBarContainer}>
           <SearchBar

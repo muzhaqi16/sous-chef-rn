@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query GetPantries($homeId: ID!) {
-  pantries(homeId: $homeId) {
+query GetPantries($homeId: ID!, $first: Int, $after: String) {
+  pantries(homeId: $homeId, first: $first, after: $after) {
     edges {
       node {
         id
@@ -97,312 +97,191 @@ query GetPantryItem($id: ID!) {
 }
 
 query GetDefaultPantry($homeId: ID!) {
-  defaultPantry(homeId: $homeId) {
-    id
-    name
-    isDefault
-  }
-}
-
-query GetRecentlyDeletedPantryItems($pantryId: ID!, $limit: Int) {
-  recentlyDeletedPantryItems(pantryId: $pantryId, limit: $limit) {
-    id
-    itemName
-    itemId
-    item {
-      id
-      name
-      imageUrl
-    }
-    createdAt
-  }
-}
-
-query GetPantryItemSuggestions(
-  $pantryId: ID!
-  $limit: Int = 10
-  $sources: [PantrySuggestionSource!]
-  $expirationDays: Int = 7
-) {
-  pantryItemSuggestions(
-    pantryId: $pantryId
-    limit: $limit
-    sources: $sources
-    expirationDays: $expirationDays
-  ) {
-    id
-    itemId
-    name
-    imageUrl
-    category
-    source
-    defaultUnitId
-    defaultUnit {
-      id
-      name
-      symbol
-    }
-    item {
-      id
-      imageUrl
-      images
-    }
-    currentQuantity
-    minQuantity
-    restockQuantity
-    daysUntilExpiry
-    expiresAt
-    lastQuantity
-    lastUnitId
-    frequencyCount
-    popularityRank
-    pantryItemId
-  }
-}
-
-# ============================================
-# ANALYTICS QUERIES
-# ============================================
-
-query GetPantryLedgerAnalytics(
-  $pantryId: ID!
-  $itemId: String
-  $filter: AnalyticsFilters
-  $granularity: PeriodGranularity
-) {
-  pantryLedgerAnalytics(
-    pantryId: $pantryId
-    itemId: $itemId
-    filter: $filter
-    granularity: $granularity
-  ) {
-    summary {
-      totalAdded
-      totalConsumed
-      totalWasted
-      netQuantity
-      additionCount
-      consumptionCount
-      wasteCount
-      unitName
-      additionsByUnit {
-        unitId
-        unitName
-        unitSymbol
-        totalQuantity
-        count
-      }
-      consumptionByUnit {
-        unitId
-        unitName
-        unitSymbol
-        totalQuantity
-        count
+  pantries(homeId: $homeId, filters: { isDefault: true }, first: 1) {
+    edges {
+      node {
+        id
+        name
+        isDefault
       }
     }
-    periodData {
+  }
+}
+
+# Suggestions are now a field on Pantry type
+query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 10) {
+  pantry(id: $pantryId) {
+    id
+    suggestions(limit: $limit) {
+      id
+      itemId
+      name
+      source
+      imageUrl
+      category
+      defaultUnitId
+      defaultUnit {
+        id
+        name
+        symbol
+      }
+      item {
+        id
+        name
+        imageUrl
+      }
+      currentQuantity
+      minQuantity
+      restockQuantity
+      daysUntilExpiry
+      expiresAt
+      lastQuantity
+      lastUnitId
+      frequencyCount
+      popularityRank
+      pantryItemId
+    }
+  }
+}
+
+# Analytics are now fields on Pantry type
+query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
+  pantry(id: $pantryId) {
+    id
+    usageAnalytics(filter: $filter) {
+      totalUsageCount
+      totalQuantityUsed
+      averageUsagePerDay
       periodStart
       periodEnd
-      periodLabel
-      added
-      consumed
-      wasted
-      net
-      additionCost
-    }
-    costAnalytics {
-      totalSpent
-      averageCostPerUnit
-      costByStore {
-        storeId
-        storeName
-        totalSpent
-        itemCount
-        averageCostPerUnit
+      usageByPurpose {
+        purpose
+        count
+        totalQuantity
+        percentage
       }
-    }
-    topRestockedItems {
-      itemId
-      itemName
-      totalQuantity
-      count
-      unitName
-      imageUrl
-    }
-    periodStart
-    periodEnd
-    granularity
-  }
-}
-
-query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilters) {
-  pantryItemLedger(pantryItemId: $pantryItemId, filter: $filter) {
-    totalAdded
-    totalConsumed
-    totalWasted
-    netQuantity
-    additionCount
-    consumptionCount
-    wasteCount
-    unitName
-    additionsByUnit {
-      unitId
-      unitName
-      totalQuantity
-    }
-    consumptionByUnit {
-      unitId
-      unitName
-      totalQuantity
-    }
-  }
-}
-
-query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
-  pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
-    totalUsageCount
-    totalQuantityUsed
-    averageUsagePerDay
-    periodStart
-    periodEnd
-    usageTrend {
-      date
-      value
-      count
-    }
-    usageByPurpose {
-      purpose
-      totalQuantity
-      count
-      percentage
-    }
-    usageBySource {
-      source
-      totalQuantity
-      count
-      percentage
-    }
-    topUsedItems {
-      itemId
-      itemName
-      totalQuantity
-      count
-      unitName
-      imageUrl
+      usageBySource {
+        source
+        count
+        totalQuantity
+        percentage
+      }
+      topUsedItems {
+        itemId
+        itemName
+        imageUrl
+        count
+        totalQuantity
+        unitName
+      }
+      usageTrend {
+        date
+        value
+        count
+      }
     }
   }
 }
 
 query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
-  pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
-    totalWasteCount
-    totalWasteQuantity
-    totalWasteValue
-    wasteRate
-    averageWastePerDay
-    composted
-    recycled
-    periodStart
-    periodEnd
-    wasteTrend {
-      date
-      value
-      count
-    }
-    wasteByReason {
-      reason
-      totalQuantity
-      count
-      percentage
-      estimatedValue
-    }
-    topWastedItems {
-      itemId
-      itemName
-      totalQuantity
-      count
-      estimatedValue
-      unitName
-      imageUrl
+  pantry(id: $pantryId) {
+    id
+    wasteAnalytics(filter: $filter) {
+      totalWasteCount
+      totalWasteQuantity
+      totalWasteValue
+      averageWastePerDay
+      wasteRate
+      composted
+      recycled
+      periodStart
+      periodEnd
+      wasteByReason {
+        reason
+        count
+        totalQuantity
+        percentage
+        estimatedValue
+      }
+      topWastedItems {
+        itemId
+        itemName
+        imageUrl
+        count
+        totalQuantity
+        unitName
+        estimatedValue
+      }
+      wasteTrend {
+        date
+        value
+        count
+      }
     }
   }
 }
 
-query GetPantryConsumptionRate(
+query GetPantryLedgerAnalytics(
   $pantryId: ID!
-  $itemId: String
   $filter: AnalyticsFilters
+  $granularity: PeriodGranularity
 ) {
-  pantryConsumptionRate(
-    pantryId: $pantryId
-    itemId: $itemId
-    filter: $filter
-  ) {
-    itemId
-    itemName
-    averageDailyConsumption
-    daysUntilEmpty
-    dataPoints
-    unitName
-    periodStart
-    periodEnd
-  }
-}
-
-query GetPantryRestockingFrequency(
-  $pantryId: ID!
-  $itemId: String
-  $filter: AnalyticsFilters
-) {
-  pantryRestockingFrequency(
-    pantryId: $pantryId
-    itemId: $itemId
-    filter: $filter
-  ) {
-    itemId
-    itemName
-    averageDaysBetweenRestocks
-    totalRestocks
-    lastRestockedAt
-    periodStart
-    periodEnd
-  }
-}
-
-query GetPantryExpirationRisk($pantryId: ID!, $daysThreshold: Int = 7) {
-  pantryExpirationRisk(pantryId: $pantryId, daysThreshold: $daysThreshold) {
-    totalAtRisk
-    daysThreshold
-    items {
-      pantryItemId
-      itemName
-      quantity
-      unitName
-      expiresAt
-      daysUntilExpiry
-      condition
+  pantry(id: $pantryId) {
+    id
+    ledgerAnalytics(filter: $filter, granularity: $granularity) {
+      granularity
+      periodStart
+      periodEnd
+      summary {
+        totalAdded
+        totalConsumed
+        totalWasted
+        netQuantity
+        additionCount
+        consumptionCount
+        wasteCount
+        additionsByUnit {
+          unitId
+          unitName
+          unitSymbol
+          totalQuantity
+          count
+        }
+        consumptionByUnit {
+          unitId
+          unitName
+          unitSymbol
+          totalQuantity
+          count
+        }
+      }
+      periodData {
+        periodStart
+        periodEnd
+        periodLabel
+        added
+        consumed
+        wasted
+        net
+        additionCost
+      }
+      costAnalytics {
+        totalSpent
+        averageCostPerUnit
+        costByStore {
+          storeId
+          storeName
+          totalSpent
+          itemCount
+        }
+      }
+      topRestockedItems {
+        itemId
+        itemName
+        totalQuantity
+        count
+      }
     }
-  }
-}
-
-query GetPantryEffectiveUsageRate(
-  $pantryId: ID!
-  $itemId: String
-  $filter: AnalyticsFilters
-) {
-  pantryEffectiveUsageRate(
-    pantryId: $pantryId
-    itemId: $itemId
-    filter: $filter
-  ) {
-    itemId
-    itemName
-    effectiveRate
-    totalConsumed
-    totalWasted
-    unitName
-    periodStart
-    periodEnd
   }
 }
 
@@ -598,6 +477,80 @@ mutation AdjustPantryItemQuantity($id: ID!, $input: AdjustPantryItemQuantityInpu
 
 mutation CorrectPantryItemWeight($id: ID!, $input: CorrectPantryItemWeightInput!) {
   correctPantryItemWeight(id: $id, input: $input) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation AddLowStockItemsToShoppingList($homeId: ID!, $shoppingListId: ID) {
+  addLowStockItemsToShoppingList(homeId: $homeId, shoppingListId: $shoppingListId) {
+    addedCount
+    addedItems {
+      pantryItemId
+      shoppingListItemId
+      itemName
+      quantity
+    }
+    skippedCount
+    skippedItems {
+      pantryItemId
+      itemName
+      reason
+    }
+  }
+}
+
+mutation AddPantryItemToShoppingList(
+  $pantryItemId: ID!
+  $shoppingListId: ID!
+  $quantity: Float
+) {
+  addPantryItemToShoppingList(
+    pantryItemId: $pantryItemId
+    shoppingListId: $shoppingListId
+    quantity: $quantity
+  ) {
+    shoppingListItemId
+  }
+}
+
+mutation MovePurchasedItemsToPantry($shoppingListId: ID!) {
+  movePurchasedItemsToPantry(shoppingListId: $shoppingListId) {
+    movedCount
+    movedItems {
+      shoppingListItemId
+      pantryItemId
+      itemName
+      quantity
+    }
+    skippedCount
+    skippedItems {
+      shoppingListItemId
+      itemName
+      reason
+    }
+    targetPantryId
+    targetPantryName
+  }
+}
+
+mutation OpenPantryItem($id: ID!, $version: Int) {
+  openPantryItem(id: $id, version: $version) {
+    success
+    message
+    code
+    pantryItem {
+      ...PantryItemDisplay
+    }
+  }
+}
+
+mutation MarkPantryItemExpired($id: ID!, $version: Int) {
+  markPantryItemExpired(id: $id, version: $version) {
     success
     message
     code

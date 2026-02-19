@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query SearchRecipes($query: String!) {
-  searchRecipes(query: $query) {
+query SearchRecipes($query: String!, $first: Int, $after: String) {
+  searchRecipes(query: $query, first: $first, after: $after) {
     edges {
       node {
         ...BasicRecipeFragment
@@ -18,8 +18,8 @@ query SearchRecipes($query: String!) {
   }
 }
 
-query SuggestedRecipes {
-  recipeSuggestions {
+query SuggestedRecipes($first: Int, $after: String) {
+  recipeSuggestions(first: $first, after: $after) {
     edges {
       node {
         ...BasicRecipeFragment
@@ -69,29 +69,31 @@ query GetRecipe($id: ID!) {
 }
 
 query MySavedRecipes($folder: String) {
-  mySavedRecipes(folder: $folder) {
-    edges {
-      node {
-        id
-        folder
-        tags
-        notes
-        personalRating
-        cookedCount
-        lastCookedAt
-        createdAt
-        updatedAt
-        recipe {
-          ...BasicRecipeFragment
+  me {
+    savedRecipesConnection(folder: $folder) {
+      edges {
+        node {
+          id
+          folder
+          tags
+          notes
+          personalRating
+          cookedCount
+          lastCookedAt
+          createdAt
+          updatedAt
+          recipe {
+            ...BasicRecipeFragment
+          }
         }
+        cursor
       }
-      cursor
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
   }
 }
 
@@ -188,8 +190,12 @@ mutation UnfavoriteRecipe($recipeId: ID!) {
   }
 }
 
-mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
-  deleteRecipeFolder(folder: $folder, moveTo: $moveTo)
+mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
+  deleteRecipeFolder(input: $input) {
+    success
+    message
+    code
+  }
 }
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
@@ -312,6 +318,104 @@ mutation AddRecipeToShoppingList(
   }
 }
 
+query MatchRecipeIngredientsToPantry(
+  $pantryId: ID!
+  $recipeId: ID!
+  $servings: Int
+) {
+  matchRecipeIngredientsToPantry(
+    pantryId: $pantryId
+    recipeId: $recipeId
+    servings: $servings
+  ) {
+    ingredient {
+      ...RecipeIngredientFragment
+    }
+    isAvailable
+    matchConfidence
+    availableQuantity
+    suggestedQuantity
+    shortfall
+    suggestedUnit {
+      id
+      name
+      symbol
+    }
+    matchedPantryItem {
+      id
+      itemName
+      quantity
+      unit {
+        id
+        name
+        symbol
+      }
+    }
+  }
+}
+
+query CompatibleUnitsForItem($itemId: ID!, $currentUnitId: ID) {
+  compatibleUnitsForItem(itemId: $itemId, currentUnitId: $currentUnitId) {
+    unit {
+      id
+      name
+      symbol
+      type
+    }
+    isDefault
+    isConfigured
+    conversionRatio
+    conversionConfidence
+    source
+    usageContexts
+  }
+}
+
+query GetRecipeCookingLogs($recipeId: ID!, $first: Int, $after: String) {
+  recipeCookingLogs(recipeId: $recipeId, first: $first, after: $after) {
+    edges {
+      node {
+        id
+        servingsMade
+        notes
+        cookedAt
+        recipe {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+mutation ConfirmRecipeConsumption(
+  $recipeId: ID!
+  $pantryId: ID!
+  $consumptions: [ConfirmedIngredientConsumptionInput!]!
+) {
+  confirmRecipeConsumption(
+    recipeId: $recipeId
+    pantryId: $pantryId
+    consumptions: $consumptions
+  ) {
+    success
+    totalConsumed
+    totalFailed
+    cookingLog {
+      id
+      servingsMade
+      notes
+      cookedAt
+    }
+  }
+}
+
 mutation MarkRecipeAsCooked(
   $recipeId: ID!
   $servings: Float
@@ -342,34 +446,3 @@ mutation MarkRecipeAsCooked(
   }
 }
 
-mutation RecordPantryUsage(
-  $pantryItemId: ID!
-  $quantity: Float!
-  $unitId: ID!
-  $purpose: String
-  $notes: String
-) {
-  recordPantryUsage(
-    pantryItemId: $pantryItemId
-    quantity: $quantity
-    unitId: $unitId
-    purpose: $purpose
-    notes: $notes
-  ) {
-    success
-    message
-    code
-    pantryItemUsage {
-      id
-      quantityUsed
-      usedAt
-      purpose
-      notes
-      pantryItem {
-        id
-        itemName
-        quantity
-      }
-    }
-  }
-}

@@ -24,6 +24,7 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
+import { ProfileScreen } from '#screens/profile/ProfileScreen';
 import { HomeManagement } from '#screens/home/HomeManagement';
 import { HomeDetailScreen } from '#screens/home/HomeDetailScreen';
 import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
@@ -123,6 +124,10 @@ const RootStack = createNativeStackNavigator({
       if: useIsMainApp,
       screens: {
         Home: { screen: HomeTabs },
+        Profile: {
+          screen: ProfileScreen,
+          options: { animation: 'fade', animationDuration: 150 },
+        },
         HomeManagement: {
           screen: HomeManagement,
           linking: 'home-management/:selectedHomeId?',

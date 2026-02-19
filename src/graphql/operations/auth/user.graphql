@@ -34,24 +34,26 @@ query GetUserSettings {
 }
 
 query GetUserProfile {
-  userProfile {
-    id
-    userId
-    firstName
-    lastName
-    displayName
-    bio
-    avatar
-    coverImage
-    phone
-    website
-    dateOfBirth
-    gender
-    profileVisibility
-    showEmail
-    showPhone
-    createdAt
-    updatedAt
+  me {
+    profile {
+      id
+      userId
+      firstName
+      lastName
+      displayName
+      bio
+      avatar
+      coverImage
+      phone
+      website
+      dateOfBirth
+      gender
+      profileVisibility
+      showEmail
+      showPhone
+      createdAt
+      updatedAt
+    }
   }
 }
 
@@ -220,17 +222,6 @@ subscription UserActivity($userId: ID) {
     activityType
     description
     metadata
-    timestamp
-  }
-}
-
-subscription UserModerationChanged($userId: ID) {
-  userModerationChanged(userId: $userId) {
-    userId
-    moderationType
-    moderationStatus
-    reason
-    moderatedBy
     timestamp
   }
 }

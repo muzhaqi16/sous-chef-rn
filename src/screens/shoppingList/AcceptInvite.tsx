@@ -55,11 +55,11 @@ export const AcceptInvite: React.FC = () => {
   // Note: Tokens are no longer exposed in query responses for security.
   // When navigating via deep link, token comes from route params.
   // When navigating via in-app UI, inviteId is used to match.
-  const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(
+  const shoppingListInvite = shoppingListData?.me?.pendingCollaborationInvites?.find(
     inv => (inviteId ? inv.id === inviteId : false),
   );
 
-  const homeInvite = homeInviteData?.myPendingInvites?.find(inv =>
+  const homeInvite = homeInviteData?.me?.pendingHomeInvites?.find(inv =>
     inviteId ? inv.id === inviteId : false,
   );
 

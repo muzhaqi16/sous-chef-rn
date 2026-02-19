@@ -1,5 +1,6 @@
-import React, {useMemo} from 'react';
-import {View, Text, FlatList, Pressable} from 'react-native';
+import React, {useCallback, useMemo} from 'react';
+import {View, Text, Pressable} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import {Icon} from '#utils/iconUtils';
 import {useNavigation} from '@react-navigation/native';
 import {usePantryManagement} from '#hooks/home/pantry/usePantryManagement';
@@ -34,6 +35,27 @@ export const CategoryManagement: React.FC = () => {
 
   const categories = Object.keys(categorizedItems).sort();
 
+  const renderCategoryItem = useCallback(
+    ({ item: category }: { item: string }) => (
+      <Pressable
+        style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
+        onPress={() => {}}>
+        <View style={styles.categoryInfo}>
+          <Text style={styles.categoryName}>{category}</Text>
+          <Text style={[commonStyles.caption, styles.categoryDetails]}>
+            {categorizedItems[category].length} items
+          </Text>
+        </View>
+        <Icon
+          name="chevron-right"
+          size={24}
+          color={theme.colors.textSecondary}
+        />
+      </Pressable>
+    ),
+    [categorizedItems, theme.colors.textSecondary],
+  );
+
   return (
     <View style={commonStyles.container}>
       <View style={styles.header}>
@@ -44,28 +66,12 @@ export const CategoryManagement: React.FC = () => {
         <View style={styles.placeholder} />
       </View>
 
-      <FlatList
+      <FlashList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         data={categories}
         keyExtractor={(category) => category}
-        renderItem={({ item: category }) => (
-          <Pressable
-            style={({pressed}) => [commonStyles.card, styles.categoryCard, pressed && styles.pressed]}
-            onPress={() => {}}>
-            <View style={styles.categoryInfo}>
-              <Text style={styles.categoryName}>{category}</Text>
-              <Text style={[commonStyles.caption, styles.categoryDetails]}>
-                {categorizedItems[category].length} items
-              </Text>
-            </View>
-            <Icon
-              name="chevron-right"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
-          </Pressable>
-        )}
+        renderItem={renderCategoryItem}
       />
     </View>
   );
