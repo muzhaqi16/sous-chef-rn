@@ -5,6 +5,7 @@ import {
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import {
@@ -54,14 +55,14 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   const appStateRef = useRef(AppState.currentState);
 
   // PERFORMANCE: Use grouped selectors with useShallow to reduce subscriptions (7 → 2)
-  const { notifications, user } = useStore(useShallow(selectNotificationState));
+  const { notifications, user } = useAppStore(useShallow(selectNotificationState));
   const {
     addNotification,
     markAsRead,
     removeNotification,
     clearAll,
     getNotificationsByCategory,
-  } = useStore(useShallow(selectNotificationActions));
+  } = useAppStore(useShallow(selectNotificationActions));
 
   // Fetch user notification preferences
   const { settings: userPreferences, isQuietTime } = useNotificationSettings();

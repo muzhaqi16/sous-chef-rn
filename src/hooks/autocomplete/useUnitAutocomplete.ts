@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchUnitsQuery } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
 export interface UnitItem {
@@ -13,7 +13,7 @@ export interface UnitItem {
 
 export function useUnitAutocomplete() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const cachedUnits = useStore(state => state.cachedUnits);
+  const cachedUnits = useAppStore(state => state.cachedUnits);
 
   // Skip-based query (not lazy)
   const { data: searchData, loading } = useSearchUnitsQuery({

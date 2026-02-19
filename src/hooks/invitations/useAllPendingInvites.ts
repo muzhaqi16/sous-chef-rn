@@ -19,7 +19,7 @@ import {
   useGetMyPendingInvitesLazyQuery,
   NotificationType,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   NotificationCategory,
   NotificationPriority,
@@ -39,7 +39,7 @@ import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
  * ```
  */
 export function useAllPendingInvites(userId?: string) {
-  const addMultipleNotifications = useStore(
+  const addMultipleNotifications = useAppStore(
     state => state.addMultipleNotifications,
   );
 

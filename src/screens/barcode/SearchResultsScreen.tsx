@@ -32,7 +32,7 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
 
   // PERFORMANCE: Group bottom sheet state with useShallow (Zustand v5 API)
   const {
-    bottomSheetVisible,
+    scannerSheetVisible,
     searchError,
     isSearching,
     hideBottomSheet,
@@ -51,19 +51,19 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
   // Hide bottom sheet when search results are found or barcode changes
   // This prevents the AddItemForm from showing when there's already a match
   useEffect(() => {
-    if (searchResults.length > 0 && bottomSheetVisible) {
+    if (searchResults.length > 0 && scannerSheetVisible) {
       hideBottomSheet();
     }
-  }, [searchResults.length, bottomSheetVisible, hideBottomSheet]);
+  }, [searchResults.length, scannerSheetVisible, hideBottomSheet]);
 
   // Handle bottom sheet changes
   useEffect(() => {
-    if (bottomSheetVisible) {
+    if (scannerSheetVisible) {
       bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [bottomSheetVisible]);
+  }, [scannerSheetVisible]);
 
   const handleScanAnother = () => {
     clearSearch();

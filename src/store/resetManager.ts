@@ -102,6 +102,8 @@ export const createResetManager = (
         searchResults: [],
         searchError: null,
         recentlyScanned: [],
+        scannerSheetVisible: false,
+        scannerSheetIndex: 0,
       });
     }
 

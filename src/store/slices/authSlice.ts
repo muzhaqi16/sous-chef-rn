@@ -104,7 +104,7 @@ export interface AuthState {
   refreshToken: string | null;
 
   // Auth preferences
-  rememberMe: boolean | undefined;
+  // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
 
   // Auto-login state
@@ -120,7 +120,6 @@ export interface AuthState {
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
-  setRememberMe: (remember: boolean) => void;
   setHasStoredCredentials: (has: boolean | null) => void;
   setIsAutoLoggingIn: (loading: boolean) => void;
 }
@@ -129,7 +128,6 @@ const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  rememberMe: true, // Default to true for simplified flow
   hasStoredCredentials: null,
   isAutoLoggingIn: false,
 };
@@ -222,12 +220,6 @@ export const createAuthSlice: StateCreator<
       state.refreshToken = null;
       state.isAutoLoggingIn = false;
       // Keep rememberMe preference
-    });
-  },
-
-  setRememberMe: remember => {
-    set(state => {
-      state.rememberMe = remember;
     });
   },
 

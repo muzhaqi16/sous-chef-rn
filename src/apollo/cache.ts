@@ -156,6 +156,40 @@ function mergeConnectionByNodeId(cursorArgName: string) {
 }
 
 /**
+ * Shared field policy for paginated itemsConnection fields.
+ *
+ * Used by both ShoppingList.itemsConnection and Pantry.itemsConnection
+ * to avoid duplicating the same merge logic. Deduplicates edges by node ID,
+ * uses 'filters' as keyArgs for separate cache entries, and handles
+ * initial load vs. pagination (cursor-based) correctly.
+ */
+function itemsConnectionFieldPolicy() {
+  return {
+    keyArgs: ['filters'],
+    merge(existing: any, incoming: any, { args, readField }: any) {
+      if (!incoming) return existing;
+      if (!existing || !args?.after) return incoming;
+
+      // Pagination: merge edges with deduplication by node ID
+      const edgeMap = new Map();
+      (existing.edges || []).forEach((edge: any) => {
+        const id = readField('id', edge?.node);
+        if (id) edgeMap.set(id, edge);
+      });
+      (incoming.edges || []).forEach((edge: any) => {
+        const id = readField('id', edge?.node);
+        if (id) edgeMap.set(id, edge);
+      });
+
+      return {
+        ...incoming,
+        edges: Array.from(edgeMap.values()),
+      };
+    },
+  };
+}
+
+/**
  * Apollo InMemoryCache with intelligent merge functions
  *
  * Uses version-based conflict resolution to properly handle:
@@ -211,48 +245,7 @@ export function makeCache(): InMemoryCache {
               });
             },
           },
-          itemsConnection: {
-            // Include filters in keyArgs so purchased/unpurchased have separate cache entries
-            keyArgs: ['filters'],
-            merge(existing, incoming, { args, readField }) {
-              // Always preserve existing data if incoming is missing
-              if (!incoming) return existing;
-
-              // If no existing data or this is an initial load (no cursor), return incoming
-              // This prevents stale items from persisting when items move between connections
-              if (!existing || !args?.after) {
-                return incoming;
-              }
-
-              // This is pagination (cursor provided) - merge edges with deduplication
-              const existingEdges = existing.edges || [];
-              const incomingEdges = incoming.edges || [];
-
-              // Deduplicate by node ID to prevent duplicates during pagination
-              const edgeMap = new Map();
-
-              // Add existing edges first
-              existingEdges.forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id && !edgeMap.has(id)) {
-                  edgeMap.set(id, edge);
-                }
-              });
-
-              // Add incoming edges (will overwrite existing with same ID)
-              incomingEdges.forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) {
-                  edgeMap.set(id, edge);
-                }
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
+          itemsConnection: itemsConnectionFieldPolicy(),
         },
       },
       Home: {
@@ -275,46 +268,7 @@ export function makeCache(): InMemoryCache {
               });
             },
           },
-          itemsConnection: {
-            // Include filters in keyArgs so purchased/unpurchased have separate cache entries
-            keyArgs: ['filters'],
-            merge(existing, incoming, { args, readField }) {
-              // If no incoming data, preserve existing
-              if (!incoming) return existing;
-
-              // If no existing data or this is an initial load (no cursor), return incoming
-              if (!existing || !args?.after) {
-                return incoming;
-              }
-
-              // This is pagination (cursor provided) - merge edges
-              const existingEdges = existing.edges || [];
-              const incomingEdges = incoming.edges || [];
-
-              // Deduplicate by node ID, overwriting existing with incoming
-              const edgeMap = new Map();
-
-              existingEdges.forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) {
-                  edgeMap.set(id, edge);
-                }
-              });
-
-              // Incoming edges overwrite existing (newer data wins)
-              incomingEdges.forEach((edge: any) => {
-                const id = readField('id', edge?.node);
-                if (id) {
-                  edgeMap.set(id, edge);
-                }
-              });
-
-              return {
-                ...incoming,
-                edges: Array.from(edgeMap.values()),
-              };
-            },
-          },
+          itemsConnection: itemsConnectionFieldPolicy(),
           storageLocationsConnection: mergeConnectionByNodeId('after'),
         },
       },

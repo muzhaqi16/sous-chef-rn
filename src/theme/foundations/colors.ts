@@ -85,6 +85,7 @@ export const colors = {
 
   // Pantry expiration colors - for item status display
   expiration: {
+    // Light mode
     expiredBg: '#FEF2F2',
     expiredBorder: '#FECACA',
     expiredText: '#DC2626',
@@ -92,10 +93,19 @@ export const colors = {
     warningText: '#EA580C',
     warningBg: '#FFFBEB',
     warningBorder: '#FDE68A',
+    // Dark mode (solid colors to prevent swipeable container background bleed-through)
+    darkExpiredBg: '#3D2A2A',
+    darkExpiredBorder: '#5C3A3A',
+    darkExpiredText: '#FCA5A5',
+    darkExpiredIconBg: '#4A3030',
+    darkWarningText: '#FDBA74',
+    darkWarningBg: '#3D3225',
+    darkWarningBorder: '#5C4A35',
   },
 
   // Filter tab colors
   filterTab: {
+    // Light mode
     activeBg: '#F97316',
     activeText: '#FFFFFF',
     inactiveBg: '#F3F4F6',
@@ -105,6 +115,13 @@ export const colors = {
     countBg: '#D1D5DB',
     countText: '#000000',
     activeCountBg: 'rgba(255,255,255,0.25)',
+    // Dark mode
+    darkInactiveBg: '#3F4553',
+    darkInactiveText: '#D1D5DB',
+    darkFilteredBg: 'rgba(249, 115, 22, 0.15)',
+    darkFilteredText: '#FB923C',
+    darkCountBg: '#4B5563',
+    darkCountText: '#D1D5DB',
   },
 
   // Avatar gradient colors

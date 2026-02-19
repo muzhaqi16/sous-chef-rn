@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetDietaryProfileQuery,
@@ -46,7 +46,7 @@ export interface DietaryProfileData {
 }
 
 export const useDietaryProfile = () => {
-  const user = useStore(state => state.user);
+  const user = useAppStore(state => state.user);
   const { handleApolloError } = useErrorHandler();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes

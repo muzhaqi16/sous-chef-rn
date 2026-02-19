@@ -12,7 +12,7 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   usePantryItemsChangedSubscription,
   usePantryUpdatedSubscription,
@@ -53,8 +53,8 @@ const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
 export function usePantrySubscriptions(userId?: string) {
   // Get selected pantry from global store
   const selectedPantryId =
-    useStore(state => state.selectedPantryId) || undefined;
-  const isHomeSelectionReady = useStore(state => state.isHomeSelectionReady);
+    useAppStore(state => state.selectedPantryId) || undefined;
+  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   //
   // Pantry Items Changed Subscription

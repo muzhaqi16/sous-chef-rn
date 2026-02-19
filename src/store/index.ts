@@ -195,6 +195,8 @@ export const useStore = create<RootState>()(
             // UI state (temporary, session-only)
             bottomSheetVisible,
             bottomSheetIndex,
+            scannerSheetVisible,
+            scannerSheetIndex,
             globalLoading,
             isLoading,
             isError,

@@ -3,6 +3,7 @@ import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import packageJson from '../../package.json';
 
 // Load Apollo dev messages in development for better error reporting
 if (__DEV__) {
@@ -45,7 +46,7 @@ function initializeClient() {
     cache,
     clientAwareness: {
       name: 'sous-chef-app',
-      version: require('../../package.json').version,
+      version: packageJson.version,
     },
     defaultOptions: {
       query: {

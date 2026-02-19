@@ -4,12 +4,12 @@ import {StyleSheet} from 'react-native-unistyles';
 import {useProfileData} from '#hooks/profile/useProfileData';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 import {Icon} from '#utils/iconUtils';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 
 export const UserHeader: React.FC = () => {
   const {navigateTo} = useAppNavigation();
   const {profile} = useProfileData();
-  const unreadCount = useStore(state => state.unreadCount);
+  const unreadCount = useAppStore(state => state.unreadCount);
 
   return (
     <View style={styles.header}>

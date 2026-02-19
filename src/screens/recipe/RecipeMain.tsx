@@ -30,7 +30,7 @@ import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
 import { useProfileData } from '#hooks/profile/useProfileData';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -51,7 +51,7 @@ export const RecipeMain: React.FC = React.memo(() => {
 
   // Get user profile and notification data for header
   const { profile } = useProfileData();
-  const unreadCount = useStore(state => state.unreadCount);
+  const unreadCount = useAppStore(state => state.unreadCount);
 
   // Fetch folders and tags for filtering
   const { folders } = useRecipeFolders();

@@ -41,6 +41,7 @@ jest.mock('react-native-unistyles', () => {
       theme: lightTheme,
     })),
     useInitialTheme: jest.fn(),
+    withUnistyles: jest.fn((component) => component),
     UnistylesRuntime: {
       setTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),
@@ -326,6 +327,12 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
+// Sub-path imports within gesture-handler that bypass the main mock
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const View = require('react-native').View;
+  return { __esModule: true, default: View };
+});
+
 // ---------------------------------------------------------------------------
 // @gorhom/bottom-sheet
 // ---------------------------------------------------------------------------
@@ -565,6 +572,61 @@ jest.mock('react-native-turbo-image', () => {
 });
 
 // ---------------------------------------------------------------------------
+// @react-native-vector-icons
+// ---------------------------------------------------------------------------
+const MockIcon = 'Icon';
+jest.mock('@react-native-vector-icons/material-icons', () => ({
+  MaterialIcons: MockIcon,
+}));
+jest.mock('@react-native-vector-icons/material-design-icons', () => ({
+  MaterialDesignIcons: MockIcon,
+}));
+jest.mock('@react-native-vector-icons/ionicons', () => ({
+  __esModule: true,
+  default: MockIcon,
+  Ionicons: MockIcon,
+}));
+jest.mock('@react-native-vector-icons/feather', () => ({
+  Feather: MockIcon,
+}));
+
+// ---------------------------------------------------------------------------
+// @react-native-community/image-editor
+// ---------------------------------------------------------------------------
+jest.mock('@react-native-community/image-editor', () => ({
+  __esModule: true,
+  default: {
+    cropImage: jest.fn(() => Promise.resolve('cropped-image-uri')),
+  },
+}));
+
+// ---------------------------------------------------------------------------
+// @react-native-community/netinfo
+// ---------------------------------------------------------------------------
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    addEventListener: jest.fn(() => jest.fn()),
+    fetch: jest.fn(() =>
+      Promise.resolve({ isConnected: true, isInternetReachable: true }),
+    ),
+  },
+  useNetInfo: jest.fn(() => ({
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'wifi',
+  })),
+  NetInfoStateType: { wifi: 'wifi', cellular: 'cellular', none: 'none' },
+}));
+
+// ---------------------------------------------------------------------------
+// react-native-launch-arguments
+// ---------------------------------------------------------------------------
+jest.mock('react-native-launch-arguments', () => ({
+  LaunchArguments: { value: jest.fn(() => ({})) },
+}));
+
+// ---------------------------------------------------------------------------
 // Suppress noisy warnings in test output
 // ---------------------------------------------------------------------------
 const originalConsoleWarn = console.warn;
@@ -574,9 +636,24 @@ console.warn = (...args) => {
   if (
     message.includes('Animated: `useNativeDriver`') ||
     message.includes('componentWillReceiveProps') ||
-    message.includes('componentWillMount')
+    message.includes('componentWillMount') ||
+    message.includes('Query complexity error') ||
+    message.includes('Invalid date format')
   ) {
     return;
   }
   originalConsoleWarn(...args);
+};
+
+const originalConsoleLog = console.log;
+console.log = (...args) => {
+  const message = typeof args[0] === 'string' ? args[0] : '';
+  if (
+    message.includes('Retrying with reduced pagination') ||
+    message.includes('Cache: Version mismatch') ||
+    message.includes('Cache: Cleared persisted cache')
+  ) {
+    return;
+  }
+  originalConsoleLog(...args);
 };

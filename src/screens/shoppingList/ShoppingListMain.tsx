@@ -2,6 +2,7 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
+  useRef,
   useState,
 } from 'react';
 import { View, Pressable } from 'react-native';
@@ -30,7 +31,7 @@ import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
@@ -49,8 +50,11 @@ interface ShoppingListMainContentProps {
   screenData: ReturnType<typeof useShoppingListScreen>;
 }
 
+// NOTE: Not wrapped in React.memo — the screenData prop is a new object each render
+// from useShoppingListScreen(), which defeats shallow comparison. The parent
+// ShoppingListMainScreen is React.memo'd, which is the effective optimization boundary.
 const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
-  React.memo(({ screenData }) => {
+  ({ screenData }) => {
     const {
       lists,
       listDataWithOwnership,
@@ -98,7 +102,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
 
     // Get profile data for header
     const { profile } = useProfileData();
-    const unreadCount = useStore(state => state.unreadCount);
+    const unreadCount = useAppStore(state => state.unreadCount);
 
     // Get current user for permission calculations
     const { user } = useAuth();
@@ -300,11 +304,14 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Use stable ref to track currentListId for scanner
     const currentListIdRef = useStableRef(currentListId);
 
-    // Set up scanner and telemetry
+    // Track screen view once on mount (avoid re-firing on every item/list change)
+    const telemetryFiredRef = useRef(false);
     useEffect(() => {
+      if (telemetryFiredRef.current) return;
+      telemetryFiredRef.current = true;
       const telemetryTimer = setTimeout(() => {
         Telemetry.trackScreen('ShoppingListMain', {
-          list_id: currentListId,
+          list_id: currentListIdRef.current,
           item_count: itemsRef.current.length,
           purchased_count: itemsRef.current.filter(
             item => item.purchaseInfo?.isPurchased,
@@ -312,7 +319,11 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           has_lists: lists.length > 0,
         });
       }, 500);
+      return () => clearTimeout(telemetryTimer);
+    }, [currentListIdRef, itemsRef, lists.length]);
 
+    // Set up scanner button
+    useEffect(() => {
       const handleScanPress = () => {
         Telemetry.trackEvent('barcode_scanner_opened', {
           source: 'shopping_list',
@@ -327,18 +338,9 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       setScannerProps(handleScanPress, true);
 
       return () => {
-        clearTimeout(telemetryTimer);
         setScannerProps(undefined, false);
       };
-    }, [
-      setScannerProps,
-      navigateTo,
-      currentListId,
-      items.length,
-      lists.length,
-      currentListIdRef,
-      itemsRef,
-    ]);
+    }, [setScannerProps, navigateTo, currentListIdRef]);
 
     // Register add button action
     // Button visibility is automatic on allowed tabs; we just register handler and disabled state
@@ -461,7 +463,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         {/* Modals are rendered inside ShoppingListModalsProvider */}
       </View>
     );
-  });
+  };
 
 /**
  * Outer screen component that:

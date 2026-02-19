@@ -55,19 +55,8 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
         name
       }
     }
-    units {
-      id
-      isDefault
-      isPreferred
-      # Item-specific unit display names for better UX
-      displayNameSingular
-      displayNamePlural
-      unit {
-        id
-        name
-        symbol
-      }
-    }
+    # NOTE: Full `units` array omitted from Display tier — list views don't need all unit details.
+    # Use ShoppingListItemFragment (FULL tier) for detail views that need units.
   }
 }
 
@@ -499,7 +488,8 @@ fragment PantryItemDisplay on PantryItem {
   item {
     id
     imageUrl
-    images
+    # NOTE: `images` array omitted — list views only need `imageUrl` for thumbnails.
+    # Use PantryItemFragment (FULL tier) for detail views that need full images.
     name
     netWeight
     displayUnit {
@@ -693,32 +683,10 @@ fragment MemberShipFragment on Membership {
   updatedAt
 }
 
+# NOTE: PantryFragment no longer includes itemsConnection.
+# Queries that need pantry items should specify their own pagination args.
 fragment PantryFragment on Pantry {
-  id
-  homeId
-  name
-  description
-  isDefault
-  location
-  temperature
-  tags
-  metadata
-  version
-  createdAt
-  updatedAt
-  itemsConnection(first: 50) {
-    edges {
-      node {
-        ...PantryItemDisplay
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
+  ...BasicPantryFragment
 }
 
 fragment BasicPantryFragment on Pantry {
@@ -821,21 +789,7 @@ fragment HomeDisplay on Home {
         status
         userId
         displayName
-        user {
-          id
-          email
-          profile {
-            firstName
-            lastName
-            displayName
-          }
-        }
       }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
     totalCount
   }

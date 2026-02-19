@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 
 interface NotificationBadgeProps {
@@ -18,7 +18,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 }) => {
   const {navigateTo} = useAppNavigation();
   const {theme} = useUnistyles();
-  const unreadCount = useStore(state => state.unreadCount);
+  const unreadCount = useAppStore(state => state.unreadCount);
 
   const handlePress = () => {
     if (onPress) {

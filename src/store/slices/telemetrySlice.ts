@@ -16,7 +16,7 @@ export interface TelemetryState {
   setConsoleInDevEnabled: (enabled: boolean) => void;
   setUserConsent: (consent: boolean) => void;
   getTelemetryConfig: () => Partial<TelemetryConfig>;
-  reset: () => void;
+  resetTelemetry: () => void;
 }
 
 export const initialTelemetryState = {
@@ -79,5 +79,5 @@ export const createTelemetrySlice: StateCreator<
     };
   },
 
-  reset: () => set(initialTelemetryState),
+  resetTelemetry: () => set(initialTelemetryState),
 });

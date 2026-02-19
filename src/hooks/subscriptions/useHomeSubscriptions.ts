@@ -11,7 +11,7 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   useMembershipUpdatedSubscription,
   useMemberJoinedSubscription,
@@ -31,8 +31,8 @@ import { CacheStrategy } from '#/services/subscriptions/types';
  */
 export function useHomeSubscriptions(userId?: string) {
   // Get selected home from global store
-  const selectedHomeId = useStore(state => state.selectedHomeId) || undefined;
-  const isHomeSelectionReady = useStore(state => state.isHomeSelectionReady);
+  const selectedHomeId = useAppStore(state => state.selectedHomeId) || undefined;
+  const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   //
   // Membership Updated Subscription

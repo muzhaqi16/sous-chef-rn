@@ -197,26 +197,26 @@ export const darkTheme = {
     validation: colors.validation,
 
     // Pantry redesign colors - dark mode specific expiration colors
-    // Using solid colors to prevent swipeable container background bleed-through
+    // Using solid colors from foundations to prevent swipeable container background bleed-through
     expiration: {
-      expiredBg: '#3D2A2A',                       // Solid dark red (not transparent)
-      expiredBorder: '#5C3A3A',                   // Solid red border
-      expiredText: '#FCA5A5',                     // Lighter red for readability
-      expiredIconBg: '#4A3030',                   // Solid red for icon bg
-      warningText: '#FDBA74',                     // Lighter orange for readability
-      warningBg: '#3D3225',                       // Solid dark orange (not transparent)
-      warningBorder: '#5C4A35',                   // Solid orange border
+      expiredBg: colors.expiration.darkExpiredBg,
+      expiredBorder: colors.expiration.darkExpiredBorder,
+      expiredText: colors.expiration.darkExpiredText,
+      expiredIconBg: colors.expiration.darkExpiredIconBg,
+      warningText: colors.expiration.darkWarningText,
+      warningBg: colors.expiration.darkWarningBg,
+      warningBorder: colors.expiration.darkWarningBorder,
     },
     filterTab: {
-      activeBg: '#F97316',              // Keep orange for active
-      activeText: '#FFFFFF',            // Keep white for active
-      inactiveBg: '#3F4553',            // Dark gray background for inactive
-      inactiveText: '#D1D5DB',          // Light gray text for contrast
-      filteredBg: 'rgba(249, 115, 22, 0.15)', // Subtle orange tint
-      filteredText: '#FB923C',          // Lighter orange for dark mode
-      countBg: '#4B5563',               // Darker badge background
-      countText: '#D1D5DB',             // Light text for badge
-      activeCountBg: 'rgba(255,255,255,0.25)', // Keep semi-transparent white
+      activeBg: colors.filterTab.activeBg,
+      activeText: colors.filterTab.activeText,
+      inactiveBg: colors.filterTab.darkInactiveBg,
+      inactiveText: colors.filterTab.darkInactiveText,
+      filteredBg: colors.filterTab.darkFilteredBg,
+      filteredText: colors.filterTab.darkFilteredText,
+      countBg: colors.filterTab.darkCountBg,
+      countText: colors.filterTab.darkCountText,
+      activeCountBg: colors.filterTab.activeCountBg,
     },
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
@@ -240,4 +240,5 @@ export const darkTheme = {
 
 // Type exports
 export type Theme = typeof lightTheme;
+export type AnyTheme = typeof lightTheme | typeof darkTheme;
 export type ThemeColors = Theme['colors'];

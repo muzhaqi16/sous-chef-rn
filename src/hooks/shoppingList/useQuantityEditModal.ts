@@ -119,20 +119,21 @@ export function useQuantityEditModal(
             category: selectedItemRaw.category || null,
             imageUrl: resolveImageUrl(selectedItemRaw) || null,
             version: selectedItemRaw.version,
-            itemUnits:
-              selectedItemRaw.item?.units
-                ?.map(iu => ({
-                  id: iu.unit?.id || iu.id,
-                  symbol: iu.unit?.symbol || '',
-                  name: iu.unit?.name || '',
-                  isDefault: iu.isDefault,
-                  isPreferred: iu.isPreferred,
-                  displayNameSingular: iu.displayNameSingular,
-                  displayNamePlural: iu.displayNamePlural,
-                }))
-                .filter(
-                  u => u.symbol && u.symbol.toLowerCase() !== 'undetermined',
-                ) || [],
+            // Units are available on the Full fragment (detail view) but not the Display
+            // fragment used in list views. Provide the current unit as the only option.
+            itemUnits: selectedItemRaw.unit
+              ? [
+                  {
+                    id: selectedItemRaw.unit.id,
+                    symbol: selectedItemRaw.unit.symbol,
+                    name: selectedItemRaw.unit.name,
+                    isDefault: true,
+                    isPreferred: true,
+                    displayNameSingular: null,
+                    displayNamePlural: null,
+                  },
+                ]
+              : [],
           }
         : null,
     [selectedItemRaw],

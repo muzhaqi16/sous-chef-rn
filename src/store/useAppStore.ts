@@ -88,12 +88,12 @@ export const selectNavigationState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
 });
 
-// PERFORMANCE: Bottom sheet state selector for SearchResultsScreen
+// PERFORMANCE: Scanner bottom sheet state selector for SearchResultsScreen
 // Reduces 6 individual subscriptions to 1 grouped subscription
 export const selectBottomSheetState = (state: RootState) => ({
-  bottomSheetVisible: state.bottomSheetVisible,
+  scannerSheetVisible: state.scannerSheetVisible,
   searchError: state.searchError,
-  bottomSheetIndex: state.bottomSheetIndex,
+  scannerSheetIndex: state.scannerSheetIndex,
   isSearching: state.isSearching,
   hideBottomSheet: state.hideBottomSheet,
   showBottomSheet: state.showBottomSheet,

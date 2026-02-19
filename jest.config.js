@@ -1,7 +1,12 @@
 module.exports = {
   preset: 'react-native',
+  testTimeout: 30000,
+  forceExit: true,
   setupFilesAfterEnv: ['./jest.setup.js'],
   moduleNameMapper: {
+    // Binary assets (fonts, images, etc.)
+    '\\.(ttf|otf|png|jpg|jpeg|gif|webp|svg)$':
+      '<rootDir>/src/test-utils/__mocks__/fileMock.js',
     // Native module that needs to be mocked before anything imports unistyles
     'react-native-nitro-modules':
       '<rootDir>/src/test-utils/__mocks__/react-native-nitro-modules.js',

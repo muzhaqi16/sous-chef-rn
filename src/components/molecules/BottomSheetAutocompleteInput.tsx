@@ -14,8 +14,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Input } from '#components/base/Input';
-import { useStore } from '#store';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { useAppStore } from '#store/useAppStore';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { Icon } from '#utils/iconUtils';
 
@@ -109,7 +109,7 @@ export function BottomSheetAutocompleteInput<T>({
   const animationConfigs = useSharedBottomSheetConfigs();
 
   // Check online status to prevent autocomplete when offline
-  const isOnline = useStore(state => state.isOnline);
+  const isOnline = useAppStore(state => state.isOnline);
 
   // Sync searchTerm with external value changes only when modal is closed
   // When modal is open, searchTerm is the source of truth to avoid cursor jumping
@@ -241,13 +241,12 @@ export function BottomSheetAutocompleteInput<T>({
 
   return (
     <View>
-      <Input
-        label={label}
+      <BaseInput
+        label={required ? `${label} *` : label}
         value={value}
         onChangeText={handleTextChange}
         placeholder={placeholder}
-        required={required}
-        error={error}
+        errorMessage={error}
         testID={testID}
         autoCapitalize={autoCapitalize}
       />

@@ -206,7 +206,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     handleDeleteItem,
   } = usePantryItemActions({
     pantryItems,
-    refetch,
     removeItem,
     navigateTo: stableNavigateTo,
   });
@@ -295,22 +294,19 @@ const PantryMainScreen: React.FC = React.memo(() => {
     setAddSheetVisible(true);
   }, []);
 
-  // Track screen view (deferred — telemetry not needed during initial render)
+  // Track screen view once on mount (deferred — telemetry not needed during initial render)
+  // Uses refs to avoid re-firing on every filter/sort/data change
+  const telemetryFiredRef = useRef(false);
   useEffect(() => {
-    if (!isInteractive) return;
+    if (!isInteractive || telemetryFiredRef.current) return;
+    telemetryFiredRef.current = true;
     Telemetry.trackScreen('PantryMain', {
       home_id: selectedHomeId,
       pantry_id: pantry?.id,
       item_count: locationFilteredItems.length,
       has_pantries: pantries.length > 0,
     });
-  }, [
-    isInteractive,
-    selectedHomeId,
-    pantry?.id,
-    locationFilteredItems.length,
-    pantries.length,
-  ]);
+  }, [isInteractive, selectedHomeId, pantry?.id, locationFilteredItems.length, pantries.length]);
 
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)

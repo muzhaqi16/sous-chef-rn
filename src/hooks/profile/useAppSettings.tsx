@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo} from 'react';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {
   useGetUserSettingsQuery,
   useUpdateUserPreferencesMutation,
@@ -20,7 +20,7 @@ export interface AppSettings {
 }
 
 export const useAppSettings = () => {
-  const user = useStore(state => state.user);
+  const user = useAppStore(state => state.user);
   const {data, loading, refetch} = useGetUserSettingsQuery({
     skip: !user?.id,
   });

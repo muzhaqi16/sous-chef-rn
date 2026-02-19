@@ -11,7 +11,7 @@
  * deduplication to prevent self-echo and duplicate updates.
  */
 
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   useShoppingListItemsChangedSubscription,
   useShoppingListUpdatedSubscription,
@@ -68,7 +68,7 @@ export function useShoppingListSubscriptions(
 ) {
   // Get selected shopping list from global store
   // This allows subscriptions to follow the user's current context
-  const selectedShoppingListId = useStore(state => state.selectedShoppingListId) || undefined;
+  const selectedShoppingListId = useAppStore(state => state.selectedShoppingListId) || undefined;
 
   //
   // Shopping List Items Changed Subscription

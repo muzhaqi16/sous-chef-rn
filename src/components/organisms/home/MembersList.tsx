@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { HomeInviteFragment } from '#generated';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { formatInviteStatus, getInviteStatusColor, getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
@@ -33,7 +33,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   members,
   invites = [],
 }) => {
-  const currentUser = useStore(state => state.user);
+  const currentUser = useAppStore(state => state.user);
   const { theme } = useUnistyles();
 
   // API now only returns pending invites, so no client-side filtering needed
