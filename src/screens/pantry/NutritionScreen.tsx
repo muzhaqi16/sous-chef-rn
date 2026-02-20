@@ -1,22 +1,23 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useRoute } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { NutritionDetailList } from '#components/molecules/NutritionDetailList';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';
 
-export const NutritionScreen: React.FC = () => {
+type NutritionScreenParams = {
+  itemId: string;
+  itemName: string;
+  nutritions: unknown;
+  actualServingGrams?: number;
+};
+
+export const NutritionScreen: React.FC<StaticScreenProps<NutritionScreenParams>> = ({ route }) => {
   const { goBack } = useAppNavigation();
-  const route = useRoute();
-  const { itemName, nutritions, actualServingGrams } = route.params as {
-    itemId: string;
-    itemName: string;
-    nutritions: unknown;
-    actualServingGrams?: number;
-  };
+  const { itemName, nutritions, actualServingGrams } = route.params;
 
   return (
     <View style={commonStyles.container}>

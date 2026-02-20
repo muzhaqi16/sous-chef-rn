@@ -6,14 +6,13 @@ import {
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
+import { formatQuantity } from '#/utils/formatQuantity';
 
 interface ItemUnit {
   id: string;
@@ -99,21 +98,22 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   onSave,
   loading = false,
 }) => {
-  const { theme } = useUnistyles();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, theme } = useStandardBottomSheet({
+    visible: visible && !!item,
+    onDismiss: onClose,
+    snapPoints: ['55%', '95%'],
+  });
 
   // Snap back to initial position when keyboard dismisses
   // keyboardBlurBehavior="restore" is unreliable with "extend", so handle manually
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidHide', () => {
       if (visible) {
-        bottomSheetRef.current?.snapToIndex(0);
+        ref.current?.snapToIndex(0);
       }
     });
     return () => sub.remove();
-  }, [visible]);
+  }, [visible, ref]);
 
   // Local state for editing
   const [quantityInput, setQuantityInput] = useState('');
@@ -167,25 +167,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally skip item prop changes to prevent flash-back
   }, [visible, item?.id]);
 
-  // Handle sheet visibility
   useEffect(() => {
-    if (visible && item) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-      // Reset edit mode when sheet closes
+    if (!visible || !item) {
       setIsEditing(false);
     }
   }, [visible, item]);
-
-  // Format quantity for display (max 2 decimal places, no trailing zeros)
-  const formatQuantity = useCallback((value: number): string => {
-    const rounded = Math.round(value * 100) / 100;
-    if (rounded % 1 === 0) {
-      return rounded.toString();
-    }
-    return rounded.toFixed(2).replace(/\.?0+$/, '');
-  }, []);
 
   // Handle quantity changes (with hybrid mode support)
   const handleIncrement = useCallback(() => {
@@ -196,7 +182,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     if (isEditing) {
       setInputValue(formatted);
     }
-  }, [quantityInput, isEditing, formatQuantity]);
+  }, [quantityInput, isEditing]);
 
   const handleDecrement = useCallback(() => {
     const parsed = parseFractionInput(quantityInput) ?? 0;
@@ -206,7 +192,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     if (isEditing) {
       setInputValue(formatted);
     }
-  }, [quantityInput, isEditing, formatQuantity]);
+  }, [quantityInput, isEditing]);
 
   // Handle unit chip selection
   const handleUnitChipPress = useCallback((unit: ItemUnit) => {
@@ -248,40 +234,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     onSave(quantityInput, unitName, unitId);
   }, [quantityInput, unitName, unitId, onSave]);
 
-  // Render backdrop
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   // Check if values changed
   const originalQuantityInput = item?.quantityInput || formatQuantity(item?.quantity ?? 0);
   const hasChanges =
     item && (quantityInput !== originalQuantityInput || unitName !== item.unitName);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['55%', '95%']}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      enableDynamicSizing={false}
-      android_keyboardInputMode="adjustResize"
-      animationConfigs={animationConfigs}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetKeyboardAwareScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -358,14 +317,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               disabled={(parseFractionInput(quantityInput) ?? 0) <= 0}
             >
               <Icon
-                name="remove"
+                name="remove-outline"
                 size={24}
                 color={
                   (parseFractionInput(quantityInput) ?? 0) <= 0
                     ? theme.colors.textTertiary
                     : theme.colors.textPrimary
                 }
-                library="MaterialIcons"
               />
             </Pressable>
 
@@ -419,7 +377,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 name="add"
                 size={24}
                 color={theme.colors.white}
-                library="MaterialIcons"
               />
             </Pressable>
           </View>

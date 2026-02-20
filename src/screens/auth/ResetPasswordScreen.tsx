@@ -149,7 +149,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="x-circle" size={64} color={theme.colors.error} />
+            <Icon name="close-circle-outline" size={64} color={theme.colors.error} />
           </View>
           <Text style={styles.title}>Invalid Reset Link</Text>
           <Text style={styles.subtitle}>
@@ -177,7 +177,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="lock" size={64} color={theme.colors.primary} />
+          <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
         </View>
 
         <Text style={styles.title}>Reset Your Password</Text>

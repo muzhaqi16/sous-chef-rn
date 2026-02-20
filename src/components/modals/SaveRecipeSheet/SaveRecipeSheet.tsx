@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,8 @@ import {
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 import { Icon } from '#utils/iconUtils';
 
@@ -37,11 +34,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   saving = false,
   recipeName,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['75%', '95%'],
+  });
 
   // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>('Favorites');
@@ -54,15 +51,12 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   // Reset form when sheet opens
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
       setSelectedFolder('Favorites');
       setTags([]);
       setNotes('');
       setShowNewFolder(false);
       setNewFolderName('');
       setLocalFolders([]);
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible]);
 
@@ -104,34 +98,12 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   }, [folders, localFolders]);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['75%', '95%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -156,7 +128,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               {saving ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
-                <Icon name="checkmark" size={24} color={theme.colors.primary} library="Ionicons" />
+                <Icon name="checkmark" size={24} color={theme.colors.primary} />
               )}
             </Pressable>
             <Pressable
@@ -164,7 +136,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={({pressed}) => pressed && styles.pressed}
             >
-              <Icon name="close" size={24} color={theme.colors.textPrimary} library="Ionicons" />
+              <Icon name="close" size={24} color={theme.colors.textPrimary} />
             </Pressable>
           </View>
         </View>
@@ -194,8 +166,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                       ? theme.colors.primary
                       : theme.colors.textSecondary
                   }
-                  library="Ionicons"
-                />
+                                 />
                 <Text
                   style={[
                     styles.folderOptionText,
@@ -209,8 +180,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                     name="checkmark"
                     size={18}
                     color={theme.colors.primary}
-                    library="Ionicons"
-                  />
+                                     />
                 )}
               </Pressable>
             );
@@ -254,7 +224,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             style={({pressed}) => [styles.newFolderButton, pressed && styles.pressed]}
             onPress={() => setShowNewFolder(true)}
           >
-            <Icon name="add" size={18} color={theme.colors.primary} library="Ionicons" />
+            <Icon name="add" size={18} color={theme.colors.primary} />
             <Text style={styles.newFolderButtonText}>Create New Folder</Text>
           </Pressable>
         )}

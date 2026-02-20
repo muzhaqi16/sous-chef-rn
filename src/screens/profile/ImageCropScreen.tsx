@@ -15,7 +15,7 @@ import Animated, {
   withSpring,
   clamp,
 } from 'react-native-reanimated';
-import { useRoute } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -28,10 +28,9 @@ import { errorService } from '#/services/errorService';
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 
-export const ImageCropScreen = () => {
+export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile }>> = ({ route }) => {
   const { goBack } = useSafeNavigation();
-  const route = useRoute();
-  const { imageFile } = route.params as { imageFile: ImageFile };
+  const { imageFile } = route.params;
   const { theme } = useUnistyles();
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -269,9 +268,8 @@ export const ImageCropScreen = () => {
         >
           <Icon
             color={theme.colors.textPrimary}
-            name="chevron-left"
+            name="chevron-back"
             size={24}
-            library="Feather"
           />
         </Pressable>
 
@@ -290,9 +288,8 @@ export const ImageCropScreen = () => {
         >
           <Icon
             color={theme.colors.textPrimary}
-            name="refresh-cw"
+            name="refresh"
             size={20}
-            library="Feather"
           />
         </Pressable>
       </View>
@@ -351,9 +348,8 @@ export const ImageCropScreen = () => {
                 <View style={styles.loadingIconContainer}>
                   <Icon
                     color={theme.colors.textSecondary}
-                    name="image"
+                    name="image-outline"
                     size={40}
-                    library="Feather"
                   />
                 </View>
               </View>

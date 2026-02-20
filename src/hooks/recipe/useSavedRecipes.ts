@@ -66,7 +66,7 @@ export function useSavedRecipes(folder?: string | null) {
       description: savedRecipe.recipe.description,
       category: savedRecipe.recipe.category,
       difficulty: savedRecipe.recipe.difficulty,
-      cuisine: (savedRecipe.recipe as any).cuisine,
+      cuisine: savedRecipe.recipe.cuisine,
       // Saved recipe metadata
       folder: savedRecipe.folder,
       tags: savedRecipe.tags ?? [],

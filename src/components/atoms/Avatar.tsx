@@ -21,7 +21,7 @@ interface AvatarProps {
   /** Icon to show if no image/name available */
   fallbackIcon?: string;
   /** Icon library for fallback icon */
-  fallbackIconLibrary?: 'MaterialIcons' | 'Ionicons' | 'Feather';
+  fallbackIconLibrary?: string;
   /** Background color override */
   backgroundColor?: string;
   /** Text color override */
@@ -33,7 +33,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   name,
   size = 40,
   fallbackIcon = 'person',
-  fallbackIconLibrary = 'MaterialIcons',
+  fallbackIconLibrary,
   backgroundColor,
   textColor,
 }) => {

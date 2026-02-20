@@ -1,15 +1,15 @@
 import React from 'react';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { PantryItemForm } from '#components/forms/PantryItemForm';
 
 type PantryItemScreenParams = {
   itemId?: string;
 };
 
-export const PantryItemScreen: React.FC = () => {
-  const route = useRoute();
+export const PantryItemScreen: React.FC<StaticScreenProps<PantryItemScreenParams | undefined>> = ({ route }) => {
   const navigation = useNavigation();
-  const params = route.params as PantryItemScreenParams | undefined;
+  const params = route.params;
 
   const handleSuccess = () => {
     navigation.goBack();

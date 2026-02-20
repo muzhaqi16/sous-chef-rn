@@ -6,10 +6,10 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSequence,
-  Easing,
   interpolate,
 } from 'react-native-reanimated';
 import IconButton from './IconButton';
+import { standardEasing, TIMING } from '#/constants/animations';
 
 type AnimatedActionButtonProps = {
   onPress: () => void;
@@ -43,12 +43,12 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     if (isHighlighted) {
       // Pulse animation with rotation
       scale.value = withSequence(
-        withTiming(1.1, { duration: 200 }),
-        withTiming(1, { duration: 200 }),
+        withTiming(1.1, { duration: TIMING.STANDARD }),
+        withTiming(1, { duration: TIMING.STANDARD }),
       );
       rotation.value = withSequence(
-        withTiming(1, { duration: 200 }),
-        withTiming(0, { duration: 200 }),
+        withTiming(1, { duration: TIMING.STANDARD }),
+        withTiming(0, { duration: TIMING.STANDARD }),
       );
     }
   }, [isHighlighted, scale, rotation]);
@@ -58,8 +58,8 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
 
     return {
       backgroundColor: withTiming(backgroundColor || theme.colors.surface, {
-        duration: 150,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        duration: TIMING.FAST,
+        easing: standardEasing,
       }),
       transform: [{ scale: scale.value }, { rotate: `${rotate}deg` }],
     };
@@ -74,7 +74,6 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
           size={size}
           color={color || theme.colors.primary}
           onPress={onPress}
-          library="Ionicons"
           accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
         />
       </Animated.View>

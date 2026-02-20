@@ -5,7 +5,6 @@ import {
   ShoppingListItemDisplayFragment,
 } from '#generated';
 import { Telemetry } from '#/services/telemetry';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -94,9 +93,6 @@ export function useQuantityEditModal(
     useState<ShoppingListItemDisplayFragment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Store items in stable ref to avoid recreating callbacks on every items change
-  const itemsRef = useStableRef(items);
-
   // Update mutation
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
@@ -140,12 +136,12 @@ export function useQuantityEditModal(
   );
 
   const openForItem = useCallback((itemId: string) => {
-    const item = itemsRef.current.find(i => i.id === itemId);
+    const item = items.find(i => i.id === itemId);
     if (item) {
       setSelectedItemRaw(item as ShoppingListItemDisplayFragment);
       setVisible(true);
     }
-  }, [itemsRef]);
+  }, [items]);
 
   const close = useCallback(() => {
     setVisible(false);

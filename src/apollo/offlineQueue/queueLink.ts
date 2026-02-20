@@ -1,6 +1,7 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { generateId } from '#/utils/generateId';
+import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import { queueStore } from './queueStore';
 import { QueuedMutation, QueueStatus } from './types';
@@ -56,7 +57,7 @@ export const createQueueLink = () => {
     }
 
     // Offline - queue the mutation
-    console.log(`📴 Queue Link: Offline, queuing mutation ${operation.operationName}`);
+    logger.info(`Queue Link: Offline, queuing mutation ${operation.operationName}`);
 
     return new Observable((observer) => {
       try {
@@ -102,8 +103,8 @@ export const createQueueLink = () => {
         });
         observer.complete();
 
-        console.log(
-          `✅ Queue Link: Queued ${operationName}, ${optimisticResponse ? 'with optimistic response' : 'without optimistic response'}`
+        logger.info(
+          `Queue Link: Queued ${operationName}, ${optimisticResponse ? 'with optimistic response' : 'without optimistic response'}`
         );
       } catch (error) {
         observer.error(error);

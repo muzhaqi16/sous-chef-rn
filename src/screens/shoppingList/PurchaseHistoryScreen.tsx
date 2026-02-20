@@ -61,7 +61,6 @@ export const PurchaseHistoryScreen: React.FC<{
             <Icon
               name="cube-outline"
               size={18}
-              library="Ionicons"
               color={theme.colors.iconSecondary}
             />
             <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
@@ -112,7 +111,7 @@ export const PurchaseHistoryScreen: React.FC<{
           name="receipt-outline"
           size={64}
           color={theme.colors.iconDisabled}
-          library="Ionicons"
+
         />
         <Text style={styles.emptyText}>No purchase history</Text>
         <Text style={styles.emptySubtext}>

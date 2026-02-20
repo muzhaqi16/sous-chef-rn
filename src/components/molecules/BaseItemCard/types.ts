@@ -76,7 +76,7 @@ export interface CardLeftSlotProps {
   /** Icon name (for type='icon') */
   icon?: string;
   /** Icon library (for type='icon') */
-  iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  iconLibrary?: string;
   /** Background color override */
   backgroundColor?: string;
   /** Card variant for dynamic styling */

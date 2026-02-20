@@ -214,8 +214,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
         {showAddButton && (
           <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
             <Icon
-              library="Feather"
-              name="plus"
+              name="add"
               size={20}
               color={theme.colors.primary}
             />
@@ -235,8 +234,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               onPress={() => handleRemove(item)}
             >
               <Icon
-                library="Feather"
-                name="x-circle"
+                name="close-circle-outline"
                 size={18}
                 color={theme.colors.error}
               />

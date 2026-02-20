@@ -52,7 +52,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
         name="add-circle-outline"
         size={20}
         color={theme.colors.primary}
-        library="MaterialIcons"
       />
       <Text style={styles.addManuallyText}>
         {hasResults
@@ -79,7 +78,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
                 name={placeholderIcon}
                 size={20}
                 color={theme.colors.primary}
-                library="MaterialIcons"
               />
             </View>
           )}
@@ -107,7 +105,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
             name="add"
             size={20}
             color={theme.colors.primary}
-            library="MaterialIcons"
           />
         </Pressable>
       </View>

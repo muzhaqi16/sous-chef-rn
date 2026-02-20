@@ -105,7 +105,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Text style={styles.nameValue}>{value}</Text>
       </View>
       <Pressable style={({pressed}) => [styles.editIconButton, pressed && styles.pressed]} onPress={handleStartEdit}>
-        <Icon name="edit" size={20} />
+        <Icon name="create-outline" size={20} />
       </Pressable>
     </View>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
   View,
@@ -223,7 +223,7 @@ const CreateHomeScreenComponent = () => {
 
   // Form Setup
   const form = useForm<FormValues>({
-    resolver: yupResolver(getCreateHomeSchema(needsHome)) as any,
+    resolver: yupResolver(getCreateHomeSchema(needsHome)) as Resolver<FormValues>,
     defaultValues: {
       homeName: '',
       pantryName: 'Kitchen Pantry',

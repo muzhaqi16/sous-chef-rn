@@ -182,7 +182,6 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             <>
               <Icon
                 name="calendar-outline"
-                library="Ionicons"
                 size={20}
                 color={theme.colors.white}
               />

@@ -457,8 +457,8 @@ export function makeCache(): InMemoryCache {
             keyArgs: ['filters'],
           },
           recipes: {
-            ...mergeConnectionByNodeId('cursor'),
             keyArgs: ['category', 'difficulty'],
+            merge: mergeConnectionByNodeId('cursor').merge,
           },
           mealPlans: {
             ...mergeConnectionByNodeId('after'),

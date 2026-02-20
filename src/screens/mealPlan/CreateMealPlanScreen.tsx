@@ -163,7 +163,6 @@ export const CreateMealPlanScreen: React.FC = () => {
       >
         <Icon
           name="document-text-outline"
-          library="Ionicons"
           size={18}
           color={createFromTemplateStyles.linkIcon.color}
         />

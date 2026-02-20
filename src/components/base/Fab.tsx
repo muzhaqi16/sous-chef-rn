@@ -10,6 +10,7 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
 import {HapticService} from '#services/haptic/HapticService';
 import {getTabBarBottomPadding} from '#constants/layout';
+import {SPRING} from '#/constants/animations';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -25,7 +26,7 @@ interface FABProps {
 export const FAB: React.FC<FABProps> = ({
   onPress = () => {},
   icon = 'add',
-  library = 'MaterialIcons',
+  library,
   position = {bottom: 20, right: 20},
   accessibilityLabel = 'Add',
   accessibilityHint = 'Tap to add a new item',
@@ -39,11 +40,11 @@ export const FAB: React.FC<FABProps> = ({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.9, {damping: 15, stiffness: 300});
+    scale.value = withSpring(0.9, SPRING.PRESS);
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, {damping: 15, stiffness: 300});
+    scale.value = withSpring(1, SPRING.PRESS);
   }, [scale]);
 
   const handlePress = useCallback(() => {

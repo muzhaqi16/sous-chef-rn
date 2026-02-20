@@ -1,3 +1,4 @@
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useStore, RootState } from './index';
 
 /**
@@ -27,9 +28,7 @@ export function useAppStore<T>(
   selector: (state: RootState) => T,
   equalityFn?: (a: T, b: T) => boolean,
 ): T {
-  // Zustand's useStore supports an optional equality function as second parameter
-  // Cast to any to work around TypeScript middleware type inference limitations
-  return (useStore as any)(selector, equalityFn);
+  return useStoreWithEqualityFn(useStore, selector, equalityFn);
 }
 
 // Common selectors for frequently accessed state

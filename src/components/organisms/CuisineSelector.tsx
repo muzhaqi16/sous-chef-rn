@@ -67,8 +67,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             disabled={isAdding}
           >
             <Icon
-              library="Feather"
-              name="plus-circle"
+              name="add-circle-outline"
               size={18}
               color={theme.colors.primary}
             />
@@ -83,8 +82,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             disabled={isAdding}
           >
             <Icon
-              library="Feather"
-              name="minus-circle"
+              name="remove-circle-outline"
               size={18}
               color={theme.colors.textSecondary}
             />

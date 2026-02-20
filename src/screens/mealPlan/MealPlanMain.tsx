@@ -27,7 +27,7 @@ import { MealType, type MealTemplateDisplayFragment } from '#generated';
 
 const VIEW_OPTIONS = ['Week', 'Month'] as const;
 
-export const MealPlanMain: React.FC = React.memo(() => {
+export const MealPlanMain: React.FC = () => {
   const { profile } = useProfileData();
   const { theme } = useUnistyles();
   const unreadCount = useAppStore(state => state.unreadCount);
@@ -258,7 +258,6 @@ export const MealPlanMain: React.FC = React.memo(() => {
           >
             <Icon
               name="bookmark-outline"
-              library="Ionicons"
               size={22}
               color={theme.colors.primary}
             />
@@ -343,7 +342,7 @@ export const MealPlanMain: React.FC = React.memo(() => {
       />
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -165,7 +165,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {onPress && (
         <View style={styles.actionRow}>
           <Text style={styles.actionText}>View Details</Text>
-          <Icon name="chevron-forward" size={20} library="Ionicons" />
+          <Icon name="chevron-forward" size={20} />
         </View>
       )}
     </View>

@@ -9,7 +9,7 @@ interface TemplateCardProps {
   onPress: (template: MealTemplateDisplayFragment) => void;
 }
 
-export const TemplateCard: React.FC<TemplateCardProps> = React.memo(
+export const TemplateCard: React.FC<TemplateCardProps> =
   ({ template, onPress }) => {
     return (
       <Pressable
@@ -35,11 +35,11 @@ export const TemplateCard: React.FC<TemplateCardProps> = React.memo(
 
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Icon name="calendar-outline" library="Ionicons" size={14} color={styles.metaIcon.color} />
+            <Icon name="calendar-outline" size={14} color={styles.metaIcon.color} />
             <Text style={styles.metaText}>{template.durationDays} days</Text>
           </View>
           <View style={styles.metaItem}>
-            <Icon name="people-outline" library="Ionicons" size={14} color={styles.metaIcon.color} />
+            <Icon name="people-outline" size={14} color={styles.metaIcon.color} />
             <Text style={styles.metaText}>{template.defaultServings} servings</Text>
           </View>
           <View style={styles.categoryBadge}>
@@ -63,8 +63,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = React.memo(
         )}
       </Pressable>
     );
-  },
-);
+  };
 
 TemplateCard.displayName = 'TemplateCard';
 

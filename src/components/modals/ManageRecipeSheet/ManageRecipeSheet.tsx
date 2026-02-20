@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,10 @@ import {
   BottomSheetModal,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 
 export interface ManageRecipeSheetProps {
@@ -53,11 +50,11 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   updating = false,
   recipeName,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%', '95%'],
+  });
 
   // Local state for editing
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
@@ -73,7 +70,6 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   // Sync local state when props change
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
       setSelectedFolder(currentFolder ?? null);
       setTags(currentTags);
       setNotes(currentNotes ?? '');
@@ -81,8 +77,6 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setShowNewFolder(false);
       setNewFolderName('');
       setLocalFolders([]);
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
 
@@ -144,34 +138,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const displayFolders = ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['85%', '95%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetKeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

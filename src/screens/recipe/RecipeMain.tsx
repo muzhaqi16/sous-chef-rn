@@ -35,8 +35,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
-export const RecipeMain: React.FC = React.memo(() => {
+export const RecipeMain: React.FC = () => {
   useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
@@ -206,7 +205,7 @@ export const RecipeMain: React.FC = React.memo(() => {
                 edges: existing.me.savedRecipesConnection.edges.filter(
                   edge => edge.node.recipe.id !== variables.recipeId,
                 ),
-                totalCount: existing.me.savedRecipesConnection.totalCount - 1,
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
               },
             },
           };
@@ -284,7 +283,6 @@ export const RecipeMain: React.FC = React.memo(() => {
           name="search"
           size={18}
           color={theme.colors.primary}
-          library="Feather"
         />
       </Pressable>
     ),
@@ -342,7 +340,7 @@ export const RecipeMain: React.FC = React.memo(() => {
             color={
               loadingRandom ? theme.colors.textSecondary : theme.colors.primary
             }
-            library="Ionicons"
+
           />
         </Pressable>
       </View>
@@ -373,7 +371,6 @@ export const RecipeMain: React.FC = React.memo(() => {
         id: 'folder',
         label: selectedFolder || 'Folders',
         icon: 'folder',
-        iconLibrary: 'MaterialIcons',
         onPress: () => setShowFolderPicker(true),
         showDropdownIndicator: true,
       });
@@ -387,8 +384,7 @@ export const RecipeMain: React.FC = React.memo(() => {
           selectedTags.length > 0
             ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
             : 'Tags',
-        icon: 'label',
-        iconLibrary: 'MaterialIcons',
+        icon: 'pricetag-outline',
         onPress: () => setShowTagPicker(true),
         showDropdownIndicator: true,
       });
@@ -530,7 +526,7 @@ export const RecipeMain: React.FC = React.memo(() => {
       />
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

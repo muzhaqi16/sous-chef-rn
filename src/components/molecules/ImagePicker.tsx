@@ -188,7 +188,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onPress={showImagePicker}
         disabled={disabled}
       >
-        <Icon name="add-a-photo" size={24} color={theme.colors.primary} />
+        <Icon name="camera-outline" size={24} color={theme.colors.primary} />
         <Text style={styles.pickerButtonText}>Add Photo</Text>
       </Pressable>
       {renderSheet()}

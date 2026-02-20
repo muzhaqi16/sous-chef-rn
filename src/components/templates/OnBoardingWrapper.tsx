@@ -68,8 +68,7 @@ export const OnBoardingWrapper = ({
             testID={testID ? `${testID}-back-button` : undefined}
           >
             <Icon
-              library="Feather"
-              name="arrow-left"
+              name="arrow-back"
               size={24}
               color={theme.colors.primary}
             />

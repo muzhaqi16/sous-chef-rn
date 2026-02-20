@@ -74,14 +74,14 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
           style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
           onPress={onEdit}
         >
-          <Icon name="edit" size={18} />
+          <Icon name="create-outline" size={18} />
           <Text style={styles.actionText}>Edit</Text>
         </Pressable>
         <Pressable
           style={({pressed}) => [commonStyles.row, styles.actionButton, styles.deleteButton, pressed && styles.pressed]}
           onPress={onDelete}
         >
-          <Icon name="delete" size={18} color="#F44336" />
+          <Icon name="trash-outline" size={18} color="#F44336" />
           <Text style={styles.deleteText}>Delete</Text>
         </Pressable>
       </View>

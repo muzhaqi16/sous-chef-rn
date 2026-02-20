@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 
 /**
  * Options for useAddItemSheet hook
@@ -55,9 +54,6 @@ export function useAddItemSheet(
 
   const [visible, setVisible] = useState(false);
 
-  // Use stable ref for callback to avoid recreating open() on every render
-  const onNavigateToListSettingsRef = useStableRef(onNavigateToListSettings);
-
   const open = useCallback(() => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
@@ -70,7 +66,7 @@ export function useAddItemSheet(
             text: 'Create List',
             onPress: () => {
               Telemetry.trackEvent('create_list_from_add_item');
-              onNavigateToListSettingsRef.current?.();
+              onNavigateToListSettings?.();
             },
           },
         ],
@@ -79,7 +75,7 @@ export function useAddItemSheet(
     }
     Telemetry.trackEvent('add_item_clicked', { list_id: currentListId });
     setVisible(true);
-  }, [currentListId, onNavigateToListSettingsRef]);
+  }, [currentListId, onNavigateToListSettings]);
 
   const close = useCallback(() => {
     setVisible(false);

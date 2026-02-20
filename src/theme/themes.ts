@@ -187,14 +187,37 @@ export const darkTheme = {
     iconOnPrimary: colors.neutral[900],
     iconOnSurface: colors.neutral[50],
 
-    // Status colors - for invites, tasks, etc.
-    status: colors.status,
+    // Status colors — dark-adapted for visibility on dark surfaces
+    status: {
+      pending: '#FFB74D',
+      accepted: '#81C784',
+      declined: '#EF5350',
+      expired: '#9E9E9E',
+      active: '#64B5F6',
+      inactive: '#757575',
+    },
 
-    // Role colors - for user roles
-    roles: colors.roles,
+    // Role colors — brighter for dark backgrounds
+    roles: {
+      owner: '#FF8A65',
+      admin: '#81C784',
+      member: '#64B5F6',
+      guest: '#BDBDBD',
+    },
 
-    // Validation colors - for forms
-    validation: colors.validation,
+    // Validation colors — solid dark backgrounds (no light-mode pastels)
+    validation: {
+      error: '#EF5350',
+      errorText: '#EF9A9A',
+      errorBg: '#3D2A2A',
+      errorBorder: '#5C3A3A',
+      success: '#81C784',
+      successBg: '#2A3D2A',
+      warning: '#FFB74D',
+      warningBg: '#3D3225',
+      info: '#64B5F6',
+      infoBg: '#2A303D',
+    },
 
     // Pantry redesign colors - dark mode specific expiration colors
     // Using solid colors from foundations to prevent swipeable container background bleed-through
@@ -220,7 +243,33 @@ export const darkTheme = {
     },
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
-    alertBanner: colors.alertBanner,
+    // Alert banner — solid dark backgrounds instead of light-mode pastels
+    alertBanner: {
+      error: {
+        bg: '#3D2A2A',
+        border: '#5C3A3A',
+        text: '#EF9A9A',
+        iconBg: '#4A3030',
+      },
+      warning: {
+        bg: '#3D3225',
+        border: '#5C4A35',
+        text: '#FDBA74',
+        iconBg: '#4A3D2A',
+      },
+      info: {
+        bg: '#2A303D',
+        border: '#3A4A5C',
+        text: '#90CAF9',
+        iconBg: '#303D4A',
+      },
+      success: {
+        bg: '#2A3D2A',
+        border: '#3A5C3A',
+        text: '#A5D6A7',
+        iconBg: '#304A30',
+      },
+    },
 
     // Overlay
     overlay: colors.overlay,

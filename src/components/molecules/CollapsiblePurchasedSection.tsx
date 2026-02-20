@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { SPRING } from '#/constants/animations';
 import type { SortableShoppingListItem } from '../organisms/SortableShoppingList/types';
 import { SortableShoppingList } from '../organisms/SortableShoppingList/SortableList';
 
@@ -86,10 +87,7 @@ export const CollapsiblePurchasedSection: React.FC<
 
   // Update chevron rotation when expanded state changes
   useEffect(() => {
-    chevronRotation.value = withSpring(expanded ? 180 : 0, {
-      damping: 20,
-      stiffness: 200,
-    });
+    chevronRotation.value = withSpring(expanded ? 180 : 0, SPRING.EXPAND);
   }, [expanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => {
@@ -139,7 +137,7 @@ export const CollapsiblePurchasedSection: React.FC<
         }}
       >
         <View style={styles.headerLeft}>
-          <Icon name="check-circle" size={20} color={theme.colors.success} />
+          <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
           <Text
             style={[styles.headerText, { color: theme.colors.textPrimary }]}
           >
@@ -169,7 +167,7 @@ export const CollapsiblePurchasedSection: React.FC<
           )}
           <Animated.View style={animatedChevronStyle}>
             <Icon
-              name="expand-more"
+              name="chevron-down"
               size={24}
               color={theme.colors.textSecondary}
             />

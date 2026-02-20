@@ -1,17 +1,14 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
+import { StyleSheet } from 'react-native-unistyles';
 import { StarRatingInput } from './StarRatingInput';
 import type { RecipeReviewFragment } from '#generated';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 interface WriteReviewSheetProps {
   visible: boolean;
@@ -28,25 +25,25 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   onClose,
   submitting,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    onDismiss: onClose,
+    snapPoints: ['55%'],
+    keyboardBehavior: 'fillParent',
+  });
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  // Reset / populate form when sheet opens
+  // Reset / populate form when sheet opens (complex: resets form state)
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
+      ref.current?.present();
       setRating(existingReview?.rating ?? 0);
       setComment(existingReview?.comment ?? '');
     } else {
-      bottomSheetRef.current?.dismiss();
+      ref.current?.dismiss();
     }
-  }, [visible, existingReview]);
+  }, [visible, existingReview]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = useCallback(async () => {
     if (submitting || rating === 0) return;
@@ -57,22 +54,9 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   const isEditing = !!existingReview;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      index={0}
-      snapPoints={['55%']}
-      enablePanDownToClose
-      keyboardBehavior="fillParent"
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backdropComponent={GlobalBottomSheetBackdrop}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-    >
+    <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        contentContainerStyle={[styles.content, contentContainerStyle]}
       >
         <Text style={styles.title}>
           {isEditing ? 'Edit Review' : 'Write a Review'}

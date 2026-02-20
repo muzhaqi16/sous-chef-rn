@@ -38,7 +38,6 @@ export const UserHeader: React.FC = () => {
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Icon
-                  library="Ionicons"
                   name="person"
                   size={24}
                   color={styles.avatarIcon.color}

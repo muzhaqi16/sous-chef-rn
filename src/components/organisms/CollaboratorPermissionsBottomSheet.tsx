@@ -303,14 +303,13 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       {roleInfo.permissions.map((permission, index) => (
                         <View key={index} style={styles.permissionItem}>
                           <Icon
-                            name={permission.granted ? 'check' : 'close'}
+                            name={permission.granted ? 'checkmark' : 'close'}
                             size={14}
                             color={
                               permission.granted
                                 ? theme.colors.success
                                 : theme.colors.textSecondary
                             }
-                            library="MaterialIcons"
                           />
                           <Text
                             style={[

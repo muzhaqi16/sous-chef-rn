@@ -20,7 +20,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
   value,
   subtitle,
   icon,
-  iconLibrary = 'MaterialIcons',
+  iconLibrary = 'Ionicons',
   color,
   trend,
   trendValue,
@@ -46,7 +46,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
       case 'down':
         return 'trending-down';
       default:
-        return 'trending-flat';
+        return 'remove-outline';
     }
   };
 
@@ -69,7 +69,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
         )}
         {trend && trendValue && (
           <View style={styles.trendContainer}>
-            <Icon name={getTrendIcon()} size={14} color={getTrendColor()} library="MaterialIcons" />
+            <Icon name={getTrendIcon()} size={14} color={getTrendColor()} />
             <Text style={[styles.trendText, { color: getTrendColor() }]}>{trendValue}</Text>
           </View>
         )}

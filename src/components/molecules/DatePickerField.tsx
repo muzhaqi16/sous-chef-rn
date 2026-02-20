@@ -74,10 +74,9 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         onPress={handlePress}
       >
         <Icon
-          name="event"
+          name="calendar-outline"
           size={20}
           color={theme.colors.textSecondary}
-          library="MaterialIcons"
         />
         <Text style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}

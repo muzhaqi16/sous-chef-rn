@@ -92,8 +92,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
       <Icon
-        library="Feather"
-        name="alert-circle"
+        name="alert-circle-outline"
         size={48}
         color={theme.colors.error}
       />
@@ -117,8 +116,7 @@ export const DeleteAccountScreen: React.FC = () => {
     >
       <View style={styles.blockedWarningContainer}>
         <Icon
-          library="Feather"
-          name="alert-circle"
+          name="alert-circle-outline"
           size={48}
           color={theme.colors.warning}
         />
@@ -133,8 +131,7 @@ export const DeleteAccountScreen: React.FC = () => {
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
             <Icon
-              library="Feather"
-              name="home"
+              name="home-outline"
               size={20}
               color={theme.colors.primary}
             />
@@ -173,8 +170,7 @@ export const DeleteAccountScreen: React.FC = () => {
       >
         <View style={styles.warningContainer}>
           <Icon
-            library="Feather"
-            name="alert-triangle"
+            name="warning-outline"
             size={48}
             color={theme.colors.error}
           />
@@ -185,8 +181,7 @@ export const DeleteAccountScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>What will be deleted:</Text>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -196,8 +191,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -207,8 +201,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -216,8 +209,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />

@@ -8,14 +8,14 @@ interface MealPlanEmptyStateProps {
   onCreateFromTemplate?: () => void;
 }
 
-export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = React.memo(({
+export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   onCreatePlan,
   onCreateFromTemplate,
 }) => {
   return (
     <View style={styles.container}>
       <Icon
-        library="Ionicons"
+
         name="calendar-outline"
         size={64}
         color={styles.icon.color}
@@ -28,7 +28,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = React.memo(
         onPress={onCreatePlan}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
-        <Icon library="Ionicons" name="add" size={20} color={styles.buttonIcon.color} />
+        <Icon name="add" size={20} color={styles.buttonIcon.color} />
         <Text style={styles.buttonText}>Create Your First Meal Plan</Text>
       </Pressable>
       {onCreateFromTemplate && (
@@ -36,13 +36,13 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = React.memo(
           onPress={onCreateFromTemplate}
           style={({ pressed }) => [styles.templateButton, pressed && styles.pressed]}
         >
-          <Icon library="Ionicons" name="document-text-outline" size={20} color={styles.templateButtonIcon.color} />
+          <Icon name="document-text-outline" size={20} color={styles.templateButtonIcon.color} />
           <Text style={styles.templateButtonText}>Create from Template</Text>
         </Pressable>
       )}
     </View>
   );
-});
+};
 
 MealPlanEmptyState.displayName = 'MealPlanEmptyState';
 

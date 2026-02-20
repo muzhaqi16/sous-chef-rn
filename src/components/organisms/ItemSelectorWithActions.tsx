@@ -80,10 +80,9 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
         </Text>
         {isSelected && (
           <Icon
-            name="check-circle"
+            name="checkmark-circle"
             size={20}
             color={theme.colors.primary}
-            library="MaterialIcons"
           />
         )}
       </Pressable>

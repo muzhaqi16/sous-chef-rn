@@ -37,7 +37,7 @@ export const FormModal: React.FC<FormModalProps> = ({
         ]}
         rightActions={[
           {
-            icon: 'check',
+            icon: 'checkmark',
             onPress: onSave,
             loading: loading,
             disabled: loading,

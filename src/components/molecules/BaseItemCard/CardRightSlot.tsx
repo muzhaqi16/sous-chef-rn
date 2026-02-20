@@ -30,7 +30,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
   if (type === 'dragHandle' && onDrag) {
     return (
       <Pressable onLongPress={onDrag} style={styles.dragHandle}>
-        <Icon name="drag-indicator" size={24} color={theme.colors.textTertiary} />
+        <Icon name="reorder-three" size={24} color={theme.colors.textTertiary} />
       </Pressable>
     );
   }
@@ -47,7 +47,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
           ]}
         >
           <Icon
-            name="remove"
+            name="remove-outline"
             size={18}
             color={disabled || quantity === 0 ? theme.colors.textTertiary : theme.colors.primary}
           />

@@ -3,7 +3,6 @@ import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
-import type { IconLibrary } from '#utils/iconUtils';
 
 export interface FeatureHintConfig {
   /** Title of the hint */
@@ -13,7 +12,7 @@ export interface FeatureHintConfig {
   /** Icon to display */
   icon?: {
     name: string;
-    library: IconLibrary;
+    library?: string;
     size?: number;
   };
   /** Custom animated element (overrides icon) */

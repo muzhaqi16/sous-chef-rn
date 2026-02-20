@@ -58,7 +58,9 @@ export function useRecipeDetail() {
   const route = useRoute();
   const params = route.params as RecipeDetailParams | undefined;
   const { goBack } = useAppNavigation();
-  const { recipeId, externalSource, externalId } = params ?? {};
+  const recipeId = params?.recipeId;
+  const externalSource = params?.externalSource;
+  const externalId = params?.externalId;
 
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } =
@@ -356,7 +358,7 @@ export function useRecipeDetail() {
                 edges: existing.me.savedRecipesConnection.edges.filter(
                   edge => edge.node.recipe.id !== variables.recipeId,
                 ),
-                totalCount: existing.me.savedRecipesConnection.totalCount - 1,
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
               },
             },
           };

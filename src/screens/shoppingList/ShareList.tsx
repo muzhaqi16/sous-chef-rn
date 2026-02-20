@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useRemoveCollaboratorMutation,
@@ -57,11 +58,10 @@ const formatStatus = (status: string) => {
   }
 };
 
-export const ShareList: React.FC = () => {
+export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ route }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
-  const route = useRoute();
-  const { listId } = route.params as { listId: string };
+  const { listId } = route.params;
 
   const [email, setEmail] = useState('');
   const [sharing, setSharing] = useState(false);

@@ -139,7 +139,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal as any,
+    lineHeight: theme.typography.lineHeight.normal,
   },
 
   details: {

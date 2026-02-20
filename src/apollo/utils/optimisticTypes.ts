@@ -33,7 +33,7 @@ export function buildOptimisticMutationResponse<TEntity, TResult = any>(
       code: 'SUCCESS',
       [entityField]: entity,
     },
-  } as any;
+  } as any; // justified: dynamic computed property [mutationField] can't satisfy specific generated mutation types
 }
 
 /**
@@ -70,7 +70,7 @@ export function buildOptimisticDeleteResponse<TResult = any>(
         id: entityId,
       },
     },
-  } as any;
+  } as any; // justified: dynamic computed property [mutationField] can't satisfy specific generated mutation types
 }
 
 /**
@@ -84,5 +84,5 @@ export function buildOptimisticRemoveItemResponse<TEntity extends { __typename: 
   return {
     __typename: 'Mutation' as const,
     [mutationField]: entity,
-  } as any;
+  } as any; // justified: dynamic computed property [mutationField] can't satisfy specific generated mutation types
 }

@@ -41,8 +41,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Icon
-              library="Feather"
-              name="user"
+              name="person"
               size={32}
               color={theme.colors.textSecondary}
             />
@@ -50,16 +49,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         )}
         <View style={styles.profileAction}>
           <Icon
-            library="Feather"
             color={theme.colors.iconOnPrimary}
-            name="edit-3"
+            name="create"
             size={15}
           />
         </View>
       </Pressable>
       <IconButton
-        name="more-vertical"
-        library="Feather"
+        name="ellipsis-vertical"
         onPress={onMore}
         color={theme.colors.textPrimary}
         accessibilityLabel="More options"

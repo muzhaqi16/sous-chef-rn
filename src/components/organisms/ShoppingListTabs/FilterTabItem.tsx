@@ -38,7 +38,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
   );
 };
 
-export const FilterTabItem = React.memo(FilterTabItemComponent);
+export const FilterTabItem = FilterTabItemComponent;
 FilterTabItem.displayName = 'FilterTabItem';
 
 const styles = StyleSheet.create(theme => ({

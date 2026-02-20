@@ -2,7 +2,6 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
-  useRef,
   useState,
 } from 'react';
 import { View, Pressable } from 'react-native';
@@ -34,9 +33,9 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
 import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -165,19 +164,13 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Local state
     const [refreshing, setRefreshing] = useState(false);
 
-    // PERFORMANCE: Store items in stable ref to avoid recreating callbacks on every items change
-    const itemsRef = useStableRef(items);
-
-    // Stable ref to store addItemSheet.open to avoid dependency instability in useEffect
-    const addItemSheetOpenRef = useStableRef(addItemSheet.open);
-
     // Coordinate swipeable items so only one is open at a time
     const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
     // Show swipe hint after items load
     useEffect(() => {
       if (items.length > 0 && !swipeHint.hasBeenShown) {
-        const unpurchasedForHint = itemsRef.current.filter(
+        const unpurchasedForHint = items.filter(
           (item: any) => !item.purchaseInfo?.isPurchased,
         );
         if (unpurchasedForHint.length > 0) {
@@ -187,7 +180,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           return () => clearTimeout(timer);
         }
       }
-    }, [items.length, swipeHint.hasBeenShown, swipeHint.actions, itemsRef]);
+    }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
     const handleRefresh = useCallback(async () => {
@@ -239,7 +232,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
               name="list"
               size={18}
               color={theme.colors.textTertiary}
-              library="Ionicons"
+
             />
           </Pressable>
         ) : undefined,
@@ -310,37 +303,26 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       ],
     );
 
-    // Use stable ref to track currentListId for scanner
-    const currentListIdRef = useStableRef(currentListId);
-
     // Track screen view once on mount (avoid re-firing on every item/list change)
-    const telemetryFiredRef = useRef(false);
-    useEffect(() => {
-      if (telemetryFiredRef.current) return;
-      telemetryFiredRef.current = true;
-      const telemetryTimer = setTimeout(() => {
-        Telemetry.trackScreen('ShoppingListMain', {
-          list_id: currentListIdRef.current,
-          item_count: itemsRef.current.length,
-          purchased_count: itemsRef.current.filter(
-            item => item.purchaseInfo?.isPurchased,
-          ).length,
-          has_lists: lists.length > 0,
-        });
-      }, 500);
-      return () => clearTimeout(telemetryTimer);
-    }, [currentListIdRef, itemsRef, lists.length]);
+    useScreenTelemetry('ShoppingListMain', () => ({
+      list_id: currentListId,
+      item_count: items.length,
+      purchased_count: items.filter(
+        (item: { purchaseInfo?: { isPurchased?: boolean } }) => item.purchaseInfo?.isPurchased,
+      ).length,
+      has_lists: lists.length > 0,
+    }));
 
     // Set up scanner button
     useEffect(() => {
       const handleScanPress = () => {
         Telemetry.trackEvent('barcode_scanner_opened', {
           source: 'shopping_list',
-          list_id: currentListIdRef.current,
+          list_id: currentListId,
         });
         navigateTo.barcode({
           source: 'shoppingList',
-          shoppingListId: currentListIdRef.current,
+          shoppingListId: currentListId,
         });
       };
 
@@ -349,7 +331,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       return () => {
         setScannerProps(undefined, false);
       };
-    }, [setScannerProps, navigateTo, currentListIdRef]);
+    }, [setScannerProps, navigateTo, currentListId]);
 
     // Register add button action
     // Button visibility is automatic on allowed tabs; we just register handler and disabled state
@@ -358,7 +340,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         Telemetry.trackEvent('add_item_from_tab_bar', {
           list_id: currentListId,
         });
-        addItemSheetOpenRef.current();
+        addItemSheet.open();
       },
       !permissions.canAddItems,
       permissions.canAddItems
@@ -482,7 +464,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
  * 2. Fetches screen data
  * 3. Wraps content with ShoppingListModalsProvider
  */
-const ShoppingListMainScreen: React.FC = React.memo(() => {
+const ShoppingListMainScreen: React.FC = () => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   // Hook handles array stability internally - inline array is fine
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
@@ -503,7 +485,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       <ShoppingListMainContent screenData={screenData} />
     </ShoppingListModalsProvider>
   );
-});
+};
 
 // Screen-level error boundary prevents full app reset on mutation failures
 export const ShoppingListMain: React.FC = () => (

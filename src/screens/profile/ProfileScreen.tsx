@@ -162,8 +162,7 @@ export const ProfileScreen = () => {
       >
         <Pressable style={({pressed}) => [styles.menuItem, pressed && styles.pressed]} onPress={handleDeleteAccount}>
           <Icon
-            library="Feather"
-            name="trash-2"
+            name="trash-outline"
             size={20}
             color={theme.colors.error}
           />

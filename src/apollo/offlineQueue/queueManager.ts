@@ -325,7 +325,7 @@ export class QueueManager {
       throw result.error;
     }
 
-    // Extract sync result (first field in response)
+    // justified: dynamic payload extraction — mutation field name varies per queued operation
     const syncResult = Object.values(result.data || {})[0] as any;
 
     // Handle ID mapping for creates

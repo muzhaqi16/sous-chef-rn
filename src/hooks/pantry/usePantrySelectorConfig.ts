@@ -3,7 +3,6 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector/types';
-import { IconLibrary } from '#/utils/iconUtils';
 
 interface UsePantrySelectorConfigOptions {
   /**
@@ -95,10 +94,9 @@ export function usePantrySelectorConfig(
             selectorRef.current?.close();
             navigate('PantrySettings', { pantryId: undefined });
           },
-          iconLibrary: 'MaterialIcons' as IconLibrary,
         },
         {
-          icon: 'settings',
+          icon: 'settings-outline',
           label: 'Edit Selected Pantry',
           onPress: () => {
             selectorRef.current?.close();
@@ -106,11 +104,10 @@ export function usePantrySelectorConfig(
               navigate('PantrySettings', { pantryId: selectedPantryId });
             }
           },
-          iconLibrary: 'MaterialIcons' as IconLibrary,
           disabled: !selectedPantryId,
         },
         {
-          icon: 'bar-chart',
+          icon: 'bar-chart-outline',
           label: 'View Analytics',
           onPress: () => {
             selectorRef.current?.close();
@@ -118,7 +115,6 @@ export function usePantrySelectorConfig(
               navigate('PantryAnalytics', { pantryId: selectedPantryId });
             }
           },
-          iconLibrary: 'MaterialIcons' as IconLibrary,
           disabled: !selectedPantryId,
         },
       ],

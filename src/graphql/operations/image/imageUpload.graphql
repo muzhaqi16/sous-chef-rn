@@ -42,7 +42,7 @@ mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
 }
 
 mutation RemoveItemImage($id: ID!) {
-  updateItem(id: $id, input: { removeImage: true }) {
+  removeItemImage(id: $id) {
     success
     message
     code

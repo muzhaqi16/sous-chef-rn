@@ -19,11 +19,11 @@ import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
-import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
+import { useGetHomeQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
-import { Telemetry } from '#/services/telemetry';
+import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import type { LocationFilter } from '#/utils/pantryFilters';
@@ -40,8 +40,7 @@ import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary'
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
-// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
-const PantryMainScreen: React.FC = React.memo(() => {
+const PantryMainScreen: React.FC = () => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
@@ -137,7 +136,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // - before interactions complete (isInteractive) — not needed during initial mount
   const shouldFetchHome =
     isInteractive && isFocused && isReady && !!selectedHomeId && !currentHome;
-  const { refetch: refetchHome } = useGetHomeBasicQuery({
+  const { refetch: refetchHome } = useGetHomeQuery({
     variables: { homeId: selectedHomeId! },
     skip: !shouldFetchHome,
     fetchPolicy: 'cache-and-network',
@@ -271,9 +270,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
     // Default temperature-based tabs
     const defaultTabs: FilterTabConfig<LocationFilter>[] = [
       { id: 'all', label: 'All' },
-      { id: 'fridge', label: 'Fridge', icon: 'kitchen', iconLibrary: 'MaterialIcons' },
-      { id: 'freezer', label: 'Freezer', icon: 'ac-unit', iconLibrary: 'MaterialIcons' },
-      { id: 'pantry', label: 'Pantry', icon: 'inventory-2', iconLibrary: 'MaterialIcons' },
+      { id: 'fridge', label: 'Fridge', icon: 'water-outline' },
+      { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+      { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
     ];
 
     // Add custom storage locations as tabs
@@ -300,18 +299,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
   }, []);
 
   // Track screen view once on mount (deferred — telemetry not needed during initial render)
-  // Uses refs to avoid re-firing on every filter/sort/data change
-  const telemetryFiredRef = useRef(false);
-  useEffect(() => {
-    if (!isInteractive || telemetryFiredRef.current) return;
-    telemetryFiredRef.current = true;
-    Telemetry.trackScreen('PantryMain', {
-      home_id: selectedHomeId,
-      pantry_id: pantry?.id,
-      item_count: locationFilteredItems.length,
-      has_pantries: pantries.length > 0,
-    });
-  }, [isInteractive, selectedHomeId, pantry?.id, locationFilteredItems.length, pantries.length]);
+  useScreenTelemetry('PantryMain', () => ({
+    home_id: selectedHomeId,
+    pantry_id: pantry?.id,
+    item_count: locationFilteredItems.length,
+    has_pantries: pantries.length > 0,
+  }), isInteractive);
 
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
@@ -481,7 +474,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       )}
     </View>
   );
-});
+};
 
 // PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
 export const PantryMain: React.FC = () => (

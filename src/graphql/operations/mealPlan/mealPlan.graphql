@@ -39,7 +39,7 @@ mutation CreateMealPlan($input: CreateMealPlanInput!) {
     message
     code
     mealPlan {
-      ...MealPlanFull
+      ...MealPlanDisplay
     }
   }
 }
@@ -50,7 +50,7 @@ mutation UpdateMealPlan($id: ID!, $input: UpdateMealPlanInput!) {
     message
     code
     mealPlan {
-      ...MealPlanFull
+      ...MealPlanDisplay
     }
   }
 }

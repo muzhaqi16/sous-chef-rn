@@ -76,6 +76,8 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             style={({pressed}) => [styles.iconWrapper, pressed && styles.pressed]}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear input"
           >
             <Icon name="close" size={18} color={theme.colors.textSecondary} />
           </Pressable>

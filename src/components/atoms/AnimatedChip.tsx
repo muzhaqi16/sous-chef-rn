@@ -3,13 +3,13 @@ import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import Animated, {
-  Easing,
   FadeIn,
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
+import { standardEasing, SPRING, TIMING } from '#/constants/animations';
 
 type AnimatedChipProps = {
   label: string;
@@ -56,7 +56,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   return (
     <View style={styles.container}>
       <Animated.View
-        layout={LinearTransition.springify().mass(0.8).damping(20).stiffness(200)}
+        layout={LinearTransition.springify().mass(0.8).damping(SPRING.EXPAND.damping).stiffness(SPRING.EXPAND.stiffness)}
         onTouchEnd={disabled ? undefined : onPress}
         style={[styles.chip, animatedContainerStyle]}
       >
@@ -73,15 +73,15 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
           <Animated.View
             style={styles.iconContainer}
             layout={LinearTransition}
-            entering={FadeIn.duration(200).easing(
-              Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
+            entering={FadeIn.duration(TIMING.STANDARD).easing(
+              standardEasing.factory(),
             )}
-            exiting={FadeOut.duration(150).easing(
-              Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
+            exiting={FadeOut.duration(TIMING.FAST).easing(
+              standardEasing.factory(),
             )}
           >
             <Icon
-              name="check-circle"
+              name="checkmark-circle"
               size={18}
               color={theme.colors.chipSelectedText}
             />

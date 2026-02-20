@@ -184,7 +184,7 @@ export const StorageLocationsScreen: React.FC<{
                 ]}
                 onPress={() => setViewMode('tree')}
               >
-                <Icon name="git-network" size={20} library="Ionicons" />
+                <Icon name="git-network" size={20} />
                 <Text
                   style={[
                     styles.toggleText,
@@ -200,7 +200,7 @@ export const StorageLocationsScreen: React.FC<{
           {locations.length === 0 ? (
             <View style={commonStyles.emptyState}>
               <Icon
-                name="storage"
+                name="server-outline"
                 size={64}
                 color={theme.colors.textSecondary}
               />

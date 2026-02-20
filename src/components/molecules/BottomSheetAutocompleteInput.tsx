@@ -12,12 +12,11 @@ import {
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { useAppStore } from '#store/useAppStore';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
 import { Icon } from '#utils/iconUtils';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 // Memoized separator component to prevent re-renders
 const AutocompleteSeparator = memo(() => <View style={styles.separator} />);
@@ -100,13 +99,22 @@ export function BottomSheetAutocompleteInput<T>({
   onModalOpen,
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
-  const { theme } = useUnistyles();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const userDismissedRef = useRef(false);
   const hasInteractedRef = useRef(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
-  const animationConfigs = useSharedBottomSheetConfigs();
+
+  const handleDismiss = useCallback(() => {
+    userDismissedRef.current = true; // Mark as user-dismissed
+    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
+    setShowAutocomplete(false);
+    onModalClose?.();
+  }, [onModalClose]);
+
+  const { ref: bottomSheetRef, modalProps, theme } = useStandardBottomSheet({
+    onDismiss: handleDismiss,
+    snapPoints: [snapPoint],
+  });
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useAppStore(state => state.isOnline);
@@ -142,6 +150,7 @@ export function BottomSheetAutocompleteInput<T>({
     isOnline,
     showAutocomplete,
     onModalOpen,
+    bottomSheetRef,
   ]);
 
   // Modal only closes via explicit user action:
@@ -170,14 +179,7 @@ export function BottomSheetAutocompleteInput<T>({
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
     onModalClose?.();
-  }, [onSelectItem, onModalClose]);
-
-  const handleDismiss = useCallback(() => {
-    userDismissedRef.current = true; // Mark as user-dismissed
-    hasInteractedRef.current = false; // Reset interaction flag to prevent auto-reopen
-    setShowAutocomplete(false);
-    onModalClose?.();
-  }, [onModalClose]);
+  }, [onSelectItem, onModalClose, bottomSheetRef]);
 
   const handleSubmitCustomValue = useCallback(() => {
     // Accept the current searchTerm as the custom value
@@ -190,20 +192,7 @@ export function BottomSheetAutocompleteInput<T>({
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onModalClose?.();
-  }, [searchTerm, onChangeText, onModalClose]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
+  }, [searchTerm, onChangeText, onModalClose, bottomSheetRef]);
 
   const defaultEmptyComponent = () => {
     // Show offline-specific message when not online
@@ -212,7 +201,7 @@ export function BottomSheetAutocompleteInput<T>({
         <BottomSheetView
           style={styles.messageContainer}
         >
-          <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
+          <Icon name="cloud-offline-outline" size={48} />
           <Text style={styles.emptyText}>Search unavailable offline</Text>
           <Text style={styles.emptySubtext}>
             You can still type a custom value and press done
@@ -265,16 +254,9 @@ export function BottomSheetAutocompleteInput<T>({
 
       <BottomSheetModal
         ref={bottomSheetRef}
-        snapPoints={[snapPoint]}
-        onDismiss={handleDismiss}
-        backdropComponent={renderBackdrop}
-        keyboardBehavior="extend"
-        enableDynamicSizing={false}
+        {...modalProps}
         keyboardBlurBehavior="none"
-        android_keyboardInputMode="adjustResize"
-        enablePanDownToClose={true}
         enableContentPanningGesture={false}
-        animationConfigs={animationConfigs}
         handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         backgroundStyle={{ backgroundColor: theme.colors.surface }}
       >

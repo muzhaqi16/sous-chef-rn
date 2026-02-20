@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, type AlertButton } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
@@ -229,7 +229,7 @@ export function useHomeDetailManagement(homeId: string) {
         { label: 'Guest', value: MembershipRole.Guest },
       ];
 
-      const buttons = roles.map(role => ({
+      const buttons: AlertButton[] = roles.map(role => ({
         text: role.label,
         onPress: () => {
           if (role.value === currentRole) return;
@@ -259,7 +259,7 @@ export function useHomeDetailManagement(homeId: string) {
         text: 'Cancel',
         onPress: () => {},
         style: 'cancel',
-      } as any);
+      });
 
       Alert.alert(
         'Select Role',

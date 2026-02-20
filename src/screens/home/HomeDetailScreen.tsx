@@ -158,7 +158,7 @@ export const HomeDetailScreen: React.FC<{
                   color={
                     copied ? theme.colors.success : theme.colors.textPrimary
                   }
-                  library="Ionicons"
+
                 />
               </Pressable>
             </View>

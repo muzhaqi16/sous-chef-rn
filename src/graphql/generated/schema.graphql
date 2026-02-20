@@ -494,7 +494,7 @@ input BehavioralSignalsInput {
 Brand type for product manufacturers and retailers
 Cache: 1 hour - brand catalog is relatively stable
 """
-type Brand implements Node {
+type Brand {
   children: [Brand!]!
   createdAt: DateTime!
   description: String
@@ -510,7 +510,7 @@ type Brand implements Node {
 type BrandConnection implements Connection {
   edges: [BrandEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Brand connection for pagination"""
@@ -717,7 +717,7 @@ input CategorizeItemInput {
 Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
-type Category implements Node {
+type Category {
   children: [Category!]!
   color: String
   createdAt: DateTime!
@@ -742,7 +742,7 @@ type Category implements Node {
 type CategoryConnection implements Connection {
   edges: [CategoryEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Category connection for pagination (Relay spec)"""
@@ -925,7 +925,7 @@ input ConfirmedIngredientConsumptionInput {
 interface Connection {
   edges: [Edge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Sub-input for connectivity info"""
@@ -1004,7 +1004,7 @@ type ConvertedValue {
 }
 
 """Cooking activity log - personal user data"""
-type CookingLog implements Node {
+type CookingLog {
   actualCookTime: Int
   actualPrepTime: Int
   cookedAt: DateTime!
@@ -1026,7 +1026,7 @@ type CookingLog implements Node {
 type CookingLogConnection implements Connection {
   edges: [CookingLogEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Cooking log connection for pagination"""
@@ -1515,7 +1515,7 @@ input CurationFilterInput {
 Currency type for price information
 Cache: 2 hours - currency definitions are static reference data
 """
-type Currency implements Node {
+type Currency {
   code: String!
   createdAt: DateTime!
   decimalPlaces: Int!
@@ -1605,7 +1605,7 @@ enum DeletionBlockerType {
 """
 User device information - contains sensitive device fingerprinting data
 """
-type Device implements Node {
+type Device {
   apiLevel: Int
   appVersion: String
   availableLocationProviders: String
@@ -1725,7 +1725,7 @@ type DeviceCleanupResult implements MutationPayload {
 type DeviceConnection implements Connection {
   edges: [DeviceEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Filter input for device count query"""
@@ -2028,7 +2028,6 @@ enum DisplayFormat {
 
 interface Edge {
   cursor: String!
-  node: Node!
 }
 
 """Effective usage rate: consumed / (consumed + wasted)"""
@@ -2067,7 +2066,7 @@ input ExpirationNotifConfigInput {
   expirationNotifications: Boolean
 }
 
-type ExpirationNotification implements Node {
+type ExpirationNotification {
   actionAt: DateTime
   actionTaken: ExpirationAction
   batchId: String
@@ -2105,7 +2104,7 @@ enum ExpirationNotificationChangeType {
 type ExpirationNotificationConnection implements Connection {
   edges: [ExpirationNotificationEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Expiration notification connection for pagination"""
@@ -2358,7 +2357,7 @@ input HealthInfoInput {
 Home/household for managing pantries and shopping lists
 Cache: 5 minutes - metadata changes occasionally
 """
-type Home implements Node {
+type Home {
   allowJoinCode: Boolean!
   createdAt: DateTime!
   currency: String
@@ -2398,7 +2397,7 @@ type Home implements Node {
 type HomeConnection implements Connection {
   edges: [HomeEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Home connection for pagination"""
@@ -2422,7 +2421,7 @@ input HomeFilters {
   userId: ID
 }
 
-type HomeInvite implements Node {
+type HomeInvite {
   acceptedAt: DateTime
   createdAt: DateTime!
   customPermissions: HomePermissions
@@ -2460,7 +2459,7 @@ type HomeInviteChangeEvent {
 type HomeInviteConnection implements Connection {
   edges: [HomeInviteEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Home invite connection for pagination"""
@@ -2771,7 +2770,7 @@ type InviteActionStats {
   inviteViewed: Int
 }
 
-type InviteLog implements Node {
+type InviteLog {
   action: InviteAction!
   actor: User
   actorId: ID
@@ -2788,7 +2787,7 @@ type InviteLog implements Node {
 type InviteLogConnection implements Connection {
   edges: [InviteLogEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Invite log connection for pagination"""
@@ -2848,7 +2847,7 @@ input InviteToShoppingListInput {
 Item/Product catalog type
 Cache: 30 minutes - catalog items are relatively static
 """
-type Item implements Node {
+type Item {
   allergens: [AllergenInfo!]!
   alternateUpcs: [String!]!
   approvedAt: DateTime
@@ -2966,7 +2965,7 @@ enum ItemCondition {
 type ItemConnection implements Connection {
   edges: [ItemEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 type ItemCreation {
@@ -3029,7 +3028,7 @@ input ItemFilters {
 }
 
 """Typed image record for items (replaces JSON images field)"""
-type ItemImage implements Node {
+type ItemImage {
   createdAt: DateTime
   featured: Boolean
   hash: String
@@ -3085,7 +3084,7 @@ type ItemPayload implements MutationPayload {
 }
 
 """Price history for items - may contain user-specific pricing data"""
-type ItemPriceHistory implements Node {
+type ItemPriceHistory {
   createdAt: DateTime!
   id: ID!
   item: Item!
@@ -3097,7 +3096,7 @@ type ItemPriceHistory implements Node {
 type ItemPriceHistoryConnection implements Connection {
   edges: [ItemPriceHistoryEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Item price history connection for pagination"""
@@ -3145,7 +3144,7 @@ enum ItemStatus {
 Store SKU mapping for items
 Cache: 10 minutes - SKU mappings can change but not frequently
 """
-type ItemStoreSku implements Node {
+type ItemStoreSku {
   createdAt: DateTime!
   id: ID!
   item: Item!
@@ -3160,7 +3159,7 @@ type ItemStoreSku implements Node {
 type ItemStoreSkuConnection implements Connection {
   edges: [ItemStoreSkuEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Item store SKU connection for pagination"""
@@ -3420,7 +3419,7 @@ enum LoginFailureReason {
 }
 
 """Security audit log for login attempts - NEVER cache"""
-type LoginHistory implements Node {
+type LoginHistory {
   apiClient: String
   browserName: String
   browserVersion: String
@@ -3493,7 +3492,7 @@ type LoginHistoryBreakdown {
 type LoginHistoryConnection implements Connection {
   edges: [LoginHistoryEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Login history connection for pagination"""
@@ -3648,7 +3647,7 @@ enum MatchType {
 Meal plan for organizing meals over a period
 Cache: 5 minutes - plans change occasionally
 """
-type MealPlan implements Node {
+type MealPlan {
   actualCost: Float!
   budgetAmount: Float
   createdAt: DateTime!
@@ -3684,7 +3683,7 @@ type MealPlan implements Node {
 type MealPlanConnection implements Connection {
   edges: [MealPlanEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Meal plan connection for pagination"""
@@ -3771,7 +3770,7 @@ Reusable meal template for quick meal plan creation.
 Templates store meal patterns that can be applied to create meal plans.
 Cache: 5 minutes - templates change occasionally
 """
-type MealTemplate implements Node {
+type MealTemplate {
   category: TemplateCategory!
   createdAt: DateTime!
   defaultServings: Int!
@@ -3790,7 +3789,7 @@ type MealTemplate implements Node {
 type MealTemplateConnection implements Connection {
   edges: [MealTemplateEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Meal template connection for pagination"""
@@ -3884,7 +3883,7 @@ input MediaAssetsInput {
   images: [ImageInput!]
 }
 
-type Membership implements Node {
+type Membership {
   canAddItems: Boolean!
   canEditPantry: Boolean!
   canInviteOthers: Boolean!
@@ -3927,7 +3926,7 @@ enum MembershipChangeType {
 type MembershipConnection implements Connection {
   edges: [MembershipEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Membership connection for pagination"""
@@ -4416,6 +4415,8 @@ type Mutation {
   importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
   """Import items from external provider (USDA, Spoonacular, etc.)"""
   importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
+  """Increment an item's popularity counter"""
+  incrementItemPopularity(amount: Int, id: ID!): ItemPayload!
   """Increment the cooked count for a saved recipe."""
   incrementRecipeCookedCount(recipeId: ID!): SavedRecipePayload!
   """Send an invitation for a user to join a home."""
@@ -4496,6 +4497,8 @@ type Mutation {
   rejectItem(input: RejectItemInput!): ItemPayload!
   """Remove an item from a shopping list."""
   removeItemFromShoppingList(id: ID!): ShoppingListItemPayload!
+  """Remove the primary image from an item (deletes from S3)"""
+  removeItemImage(id: ID!): ItemPayload!
   """Remove a member from a home (owner/admin only)."""
   removeMember(membershipId: ID!): MembershipPayload!
   """Remove a dietary restriction from the user's profile."""
@@ -4612,7 +4615,6 @@ type Mutation {
   - Nutrition facts, allergens, ingredients
   - Images
   - Metadata
-  - Price updates
   """
   updateItem(id: ID!, input: UpdateItemInput!): ItemPayload!
   """
@@ -4787,15 +4789,11 @@ input NetworkLocationInput {
   timezone: String
 }
 
-interface Node {
-  id: ID!
-}
-
 """
 Notification type for user alerts and messages
 Cache: None - notifications must be real-time
 """
-type Notification implements Node & Timestamped {
+type Notification implements Timestamped {
   createdAt: DateTime!
   id: ID!
   payload: JSON!
@@ -4834,7 +4832,7 @@ input NotificationChannelsInput {
 type NotificationConnection implements Connection {
   edges: [NotificationEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
   unreadCount: Int!
 }
 
@@ -5104,7 +5102,7 @@ type PageInfo {
 Pantry/storage location for a home
 Cache: 5 minutes - updated when items added/removed
 """
-type Pantry implements Node {
+type Pantry {
   createdAt: DateTime!
   description: String
   home: Home!
@@ -5204,7 +5202,7 @@ enum PantryChangeType {
 type PantryConnection implements Connection {
   edges: [PantryEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Deficit calculation for recipe ingredients"""
@@ -5249,7 +5247,7 @@ input PantryFilters {
 }
 
 """Real-time collaborative type - never cache"""
-type PantryItem implements Node {
+type PantryItem {
   acquisitionMethod: AcquisitionMethod!
   addedAt: DateTime!
   addedBy: User
@@ -5298,13 +5296,13 @@ type PantryItem implements Node {
   unitId: ID
   updatedAt: DateTime
   usageRecords(after: String, first: Int, orderBy: PantryItemUsageOrderBy): PantryItemUsageConnection!
-  version: Int
+  version: Int!
   wasteDate: DateTime
   wasteReason: WasteReason
 }
 
 """Audit record of a change to a pantry item"""
-type PantryItemChange implements Node {
+type PantryItemChange {
   changeType: ChangeType!
   changedBy: User!
   changedById: ID!
@@ -5324,7 +5322,7 @@ type PantryItemChange implements Node {
 type PantryItemChangeConnection implements Connection {
   edges: [PantryItemChangeEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Edge type for PantryItemChange pagination"""
@@ -5345,7 +5343,7 @@ type PantryItemChangedPayload {
 type PantryItemConnection implements Connection {
   edges: [PantryItemEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Pantry item connection for pagination"""
@@ -5438,7 +5436,7 @@ type PantryItemSuggestion {
   source: PantrySuggestionSource!
 }
 
-type PantryItemUsage implements Node {
+type PantryItemUsage {
   adjustmentReason: String
   cookingLog: CookingLog
   cookingLogId: ID
@@ -5482,7 +5480,7 @@ type PantryItemUsageChangedPayload {
 type PantryItemUsageConnection implements Connection {
   edges: [PantryItemUsageEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Pantry item usage connection for pagination"""
@@ -5741,7 +5739,7 @@ enum ProviderType {
 }
 
 """Purchase record - contains financial and shopping data"""
-type Purchase implements Node {
+type Purchase {
   createdAt: DateTime!
   currency: Currency!
   currencyId: ID!
@@ -5780,7 +5778,7 @@ type Purchase implements Node {
 type PurchaseConnection implements Connection {
   edges: [PurchaseEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Purchase connection for pagination"""
@@ -6044,8 +6042,6 @@ type Query {
   """List memberships for a home with cursor-based pagination."""
   memberships(after: String, before: String, first: Int, homeId: ID!, last: Int): MembershipConnection!
   myModeration: MyModerationStatus
-  """Fetch any node by its globally unique ID."""
-  node(id: ID!): Node
   """Fetch a single notification by its ID."""
   notification(id: ID!): Notification
   """Fetch notification statistics with optional filtering."""
@@ -6175,7 +6171,7 @@ type RapidAttempt {
 Recipe type for meal instructions and ingredients
 Cache: 30 minutes - published recipes are static content
 """
-type Recipe implements Node {
+type Recipe {
   averageRating: Float
   caloriesPerServing: Float
   category: RecipeCategory!
@@ -6263,7 +6259,7 @@ enum RecipeCategory {
 type RecipeConnection implements Connection {
   edges: [RecipeEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 type RecipeConsumptionResult {
@@ -6380,7 +6376,7 @@ type RecipePayload implements MutationPayload {
   success: Boolean!
 }
 
-type RecipeReview implements Node {
+type RecipeReview {
   comment: String
   createdAt: DateTime!
   helpful: Int!
@@ -6396,7 +6392,7 @@ type RecipeReview implements Node {
 type RecipeReviewConnection implements Connection {
   edges: [RecipeReviewEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Recipe review connection for pagination"""
@@ -6647,7 +6643,7 @@ enum RiskFactor {
   VPN_DETECTED
 }
 
-type SavedRecipe implements Node {
+type SavedRecipe {
   cookedCount: Int!
   createdAt: DateTime!
   folder: String
@@ -6666,7 +6662,7 @@ type SavedRecipe implements Node {
 type SavedRecipeConnection implements Connection {
   edges: [SavedRecipeEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Saved recipe connection for pagination"""
@@ -6742,7 +6738,7 @@ input ShareShoppingListInput {
 Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
-type ShoppingList implements Node {
+type ShoppingList {
   activitiesConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListActivityOrderBy): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
   """
@@ -6818,7 +6814,7 @@ type ShoppingList implements Node {
   viewCount: Int!
 }
 
-type ShoppingListActivity implements Node {
+type ShoppingListActivity {
   action: ListActivityType!
   createdAt: DateTime!
   description: String!
@@ -6837,7 +6833,7 @@ type ShoppingListActivity implements Node {
 type ShoppingListActivityConnection implements Connection {
   edges: [ShoppingListActivityEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Shopping list activity connection for pagination"""
@@ -6878,7 +6874,7 @@ enum ShoppingListChangeType {
   STATUS_CHANGED
 }
 
-type ShoppingListCollaborator implements Node {
+type ShoppingListCollaborator {
   canAddItems: Boolean!
   canEdit: Boolean!
   canEditItems: Boolean!
@@ -6920,7 +6916,7 @@ type ShoppingListCollaboratorChangedPayload {
 type ShoppingListCollaboratorConnection implements Connection {
   edges: [ShoppingListCollaboratorEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Shopping list collaborator connection for pagination"""
@@ -6939,7 +6935,7 @@ type ShoppingListCollaboratorPayload implements MutationPayload {
 type ShoppingListConnection implements Connection {
   edges: [ShoppingListEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Shopping list connection for pagination"""
@@ -6966,7 +6962,7 @@ input ShoppingListFilters {
 Real-time collaborative type - never cache
 Shopping list item with focused sub-types for better organization
 """
-type ShoppingListItem implements Node {
+type ShoppingListItem {
   addedBy: User
   addedById: ID
   brand: Brand
@@ -7017,7 +7013,7 @@ type ShoppingListItemChangedPayload {
 type ShoppingListItemConnection implements Connection {
   edges: [ShoppingListItemEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Shopping list item connection for pagination"""
@@ -7285,7 +7281,7 @@ input StorageDetailsInput {
 Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
 Supports hierarchical organization with parent-child relationships
 """
-type StorageLocation implements Node {
+type StorageLocation {
   """Maximum capacity (in capacityUnit)"""
   capacity: Float
   """Unit of measurement for capacity (e.g., 'liters', 'cubic feet')"""
@@ -7337,7 +7333,7 @@ type StorageLocation implements Node {
 type StorageLocationConnection implements Connection {
   edges: [StorageLocationEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Storage location connection for pagination"""
@@ -7405,7 +7401,7 @@ enum StorageType {
 Store type for retail locations
 Cache: 30 minutes - store information changes rarely
 """
-type Store implements Node {
+type Store {
   address: String
   averageShelfLife: JSON
   createdAt: DateTime!
@@ -7438,7 +7434,7 @@ enum StoreChangeType {
 type StoreConnection implements Connection {
   edges: [StoreEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """Cost breakdown by store"""
@@ -7504,7 +7500,7 @@ input StoreHoursInput {
 Store information and contact details
 Cache: 30 minutes - store metadata changes rarely
 """
-type StoreInfo implements Node {
+type StoreInfo {
   email: String
   hours: StoreHours
   id: ID!
@@ -8105,8 +8101,6 @@ input UpdateItemInput {
   description: String
   editReason: String
   healthInfo: HealthInfoInput
-  """Increment popularity counter"""
-  incrementPopularity: Boolean
   media: MediaAssetsInput
   mergeMetadata: Boolean
   metadata: JSON
@@ -8114,15 +8108,7 @@ input UpdateItemInput {
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
   popularity: Int
-  """Update item price"""
-  price: Float
-  """Price source for tracking"""
-  priceSource: String
-  """Store ID for price update"""
-  priceStoreId: ID
   productDetails: ProductDetailsInput
-  """Remove the item image"""
-  removeImage: Boolean
   showInOnboarding: Boolean
   status: ItemStatus
   storeSkuOps: StoreSkuOpsInput
@@ -8604,7 +8590,7 @@ enum UsageSource {
 User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
-type User implements Node {
+type User {
   addresses: [UserAddress!]!
   collaboratedShoppingLists: [ShoppingList!]!
   cookingLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
@@ -8677,7 +8663,7 @@ enum UserActivityType {
 User address information
 Cache: 10 minutes - addresses rarely change, always private
 """
-type UserAddress implements Node {
+type UserAddress {
   city: String!
   country: String!
   id: ID!
@@ -8724,7 +8710,7 @@ enum UserChangeType {
 type UserConnection implements Connection {
   edges: [UserEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 """User connection for pagination (admin only)"""
@@ -8733,7 +8719,7 @@ type UserEdge implements Edge {
   node: User!
 }
 
-type UserModeration implements Node {
+type UserModeration {
   abuseScore: Float!
   appealNotes: String
   appealStatus: AppealStatus
@@ -8785,7 +8771,7 @@ type UserModerationChangedPayload {
 type UserModerationConnection implements Connection {
   edges: [UserModerationEdge!]!
   pageInfo: PageInfo!
-  totalCount: Int!
+  totalCount: Int
 }
 
 type UserModerationEdge implements Edge {
@@ -8829,7 +8815,7 @@ type UserPayload implements MutationPayload {
 User profile information
 Cache: 10 minutes - profile data rarely changes, always private
 """
-type UserProfile implements Node {
+type UserProfile {
   avatar: String
   bio: String
   coverImage: String
@@ -8875,7 +8861,7 @@ enum UserRole {
 User settings and preferences
 Cache: 10 minutes - settings rarely change, always private
 """
-type UserSettings implements Node {
+type UserSettings {
   alwaysShowFractions: Boolean!
   autoSync: Boolean!
   betaFeatures: [String!]!
@@ -8918,7 +8904,7 @@ type UserSocialPayload {
 User activity statistics
 Cache: 3 minutes - stats update with user activity, always private
 """
-type UserStatistics implements Node {
+type UserStatistics {
   averageRatingGiven: Float
   helpfulVotesReceived: Int!
   id: ID!

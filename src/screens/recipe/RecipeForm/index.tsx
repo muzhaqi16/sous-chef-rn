@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -18,9 +18,8 @@ import { RecipeStepEditor, type RecipeStepEditorRef } from './components/RecipeS
 import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
 
-export const RecipeFormScreen: React.FC = () => {
-  const route = useRoute();
-  const recipeId = (route.params as any)?.recipeId as string | undefined;
+export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } | undefined>> = ({ route }) => {
+  const recipeId = route.params?.recipeId;
   const isEditMode = !!recipeId;
 
   const { goBack } = useAppNavigation();
@@ -76,8 +75,9 @@ export const RecipeFormScreen: React.FC = () => {
           Alert.alert('Error', result.data?.createRecipe?.message ?? 'Failed to create recipe.');
         }
       }
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'An unexpected error occurred.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      Alert.alert('Error', message);
     }
   }, [form, isEditMode, recipeId, createRecipeMutation, updateRecipeMutation, goBack]);
 

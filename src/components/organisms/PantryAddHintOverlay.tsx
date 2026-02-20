@@ -30,7 +30,6 @@ export const PantryAddHintOverlay: React.FC<PantryAddHintOverlayProps> = ({
         subtitle: 'Tap the + button to add items to your pantry',
         icon: {
           name: 'add-circle',
-          library: 'Ionicons',
           size: 40,
         },
         onDismiss,

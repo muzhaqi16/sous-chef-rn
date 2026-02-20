@@ -294,8 +294,7 @@ export const DietaryProfileScreen: React.FC = () => {
               style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
             >
               <Icon
-                library="Feather"
-                name="edit"
+                name="create-outline"
                 size={20}
                 color={theme.colors.primary}
               />
@@ -347,8 +346,7 @@ export const DietaryProfileScreen: React.FC = () => {
                 style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
               >
                 <Icon
-                  library="Feather"
-                  name="edit"
+                  name="create-outline"
                   size={20}
                   color={theme.colors.primary}
                 />

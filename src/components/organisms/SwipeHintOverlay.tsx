@@ -46,8 +46,7 @@ const DualSwipeHint: React.FC = () => {
       <View style={styles.swipeAction}>
         <AnimatedSwipeIcon
           direction="left"
-          icon="edit"
-          library="MaterialIcons"
+          icon="create-outline"
           delay={500}
         />
         <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
@@ -57,8 +56,7 @@ const DualSwipeHint: React.FC = () => {
       <View style={styles.swipeAction}>
         <AnimatedSwipeIcon
           direction="right"
-          icon="delete"
-          library="MaterialIcons"
+          icon="trash-outline"
           delay={500}
         />
         <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>

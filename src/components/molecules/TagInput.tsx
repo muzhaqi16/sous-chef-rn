@@ -89,8 +89,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={({pressed}) => pressed && styles.pressed}>
                 <Icon
-                  library="Feather"
-                  name="x"
+                  name="close"
                   size={14}
                   color={theme.colors.primary}
                 />

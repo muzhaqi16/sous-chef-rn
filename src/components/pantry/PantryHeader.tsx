@@ -31,8 +31,7 @@ interface PantryHeaderProps {
  * - Household badge with name and navigation
  * - Avatar with optional notification badge
  */
-export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
-  ({
+export const PantryHeader: React.FC<PantryHeaderProps> = ({
     userName,
     householdName,
     avatarUrl,
@@ -53,13 +52,12 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
           <Pressable onPress={onHomePress} style={styles.householdBadge}>
             <Icon
               size={theme.typography.fontSize.lg}
-              name="home-switch-outline"
-              library="MaterialDesignIcons"
+              name="swap-horizontal-outline"
               color={theme.colors.primary}
             />
             <Text style={styles.householdName}>{householdName}</Text>
             <Icon
-              name="chevron-right"
+              name="chevron-forward"
               size={theme.typography.fontSize.lg}
               color={theme.colors.textTertiary}
             />
@@ -80,8 +78,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
               <ActivityIndicator size="small" color={theme.colors.primary} />
             ) : (
               <Icon
-                name="add-shopping-cart"
-                library="MaterialIcons"
+                name="cart-outline"
                 size={24}
                 color={theme.colors.primary}
               />
@@ -96,7 +93,6 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon
-                library="Ionicons"
                 name="person"
                 size={24}
                 color={theme.colors.textSecondary}
@@ -113,8 +109,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
         </Pressable>
       </View>
     );
-  },
-);
+  };
 
 PantryHeader.displayName = 'PantryHeader';
 

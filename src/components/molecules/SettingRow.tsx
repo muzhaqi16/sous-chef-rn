@@ -1,16 +1,12 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BottomSheetModal,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
   getInputLabelForField,
@@ -19,6 +15,7 @@ import {
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 export interface SettingRowProps {
   item: any;
@@ -31,26 +28,25 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isFirst,
   isLast,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
-  useBottomSheetBackHandler(bottomSheetRef, modalVisible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    onDismiss: () => setModalVisible(false),
+    snapPoints: [],
+    enableDynamicSizing: true,
+  });
 
-  // Sync bottom sheet visibility with state
+  // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
     if (item.type === 'modal') {
       if (modalVisible) {
-        bottomSheetRef.current?.present();
+        ref.current?.present();
       } else {
-        bottomSheetRef.current?.dismiss();
+        ref.current?.dismiss();
       }
     }
-  }, [modalVisible, item.type]);
+  }, [modalVisible, item.type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);
@@ -95,19 +91,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const handleTextEditClose = useCallback(() => {
     setTextEditVisible(false);
   }, []);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
 
   // Build accessibility label based on setting type
   const getAccessibilityLabel = () => {
@@ -170,8 +153,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <>
               <ValueText>{item.value as string}</ValueText>
               <Icon
-                library="Feather"
-                name="edit-2"
+                name="pencil"
                 size={16}
                 color={theme.colors.textSecondary}
               />
@@ -213,8 +195,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   ?.label || 'Select'}
               </Text>
               <Icon
-                library="Feather"
-                name="chevron-right"
+                name="chevron-forward"
                 size={20}
                 color={theme.colors.textSecondary}
               />
@@ -223,8 +204,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'action' && (
             <Icon
-              library="Feather"
-              name="chevron-right"
+              name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
             />
@@ -232,8 +212,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'navigation' && (
             <Icon
-              library="Feather"
-              name="chevron-right"
+              name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
             />
@@ -260,17 +239,12 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       {/* Selection Bottom Sheet */}
       {item.type === 'modal' && item.options && (
         <BottomSheetModal
-          ref={bottomSheetRef}
-          enableDynamicSizing
-          enablePanDownToClose
-          backdropComponent={renderBackdrop}
-          onDismiss={() => setModalVisible(false)}
-          animationConfigs={animationConfigs}
+          ref={ref}
+          {...modalProps}
           handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-          backgroundStyle={{ backgroundColor: theme.colors.background }}
         >
           <BottomSheetView
-            style={[styles.sheetContent, { paddingBottom: insets.bottom + 16 }]}
+            style={[styles.sheetContent, contentContainerStyle]}
           >
             <Text style={styles.sheetTitle}>{item.label}</Text>
             <View style={styles.sheetDivider} />
@@ -287,8 +261,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 <Text style={styles.sheetOptionText}>{opt.label}</Text>
                 {item.value === opt.value && (
                   <Icon
-                    library="Feather"
-                    name="check"
+                    name="checkmark"
                     size={20}
                     color={theme.colors.primary}
                   />

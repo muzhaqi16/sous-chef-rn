@@ -312,16 +312,16 @@ export const useSearchResults = (barcode: string, format?: string) => {
   // Handle errors from both queries (including network errors and timeouts)
   useEffect(() => {
     if (upcError || skuError) {
-      const error = (upcError || skuError) as any;
-      const isNetworkError = error?.networkError;
-      const errorMessage = error?.message || error?.networkError?.message || '';
+      const error = upcError || skuError;
+      const hasNetworkError = error && 'networkError' in error;
+      const errorMessage = error?.message || '';
       const isTimeoutError = errorMessage.toLowerCase().includes('timeout');
 
       setSearching(false);
 
       if (isTimeoutError) {
         setSearchError('Search timed out. Please try again.');
-      } else if (isNetworkError) {
+      } else if (hasNetworkError) {
         setSearchError(
           'Unable to search. Please check your connection and try again.',
         );

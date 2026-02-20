@@ -34,7 +34,7 @@ interface TabItemProps {
   tabIndex: number;
 }
 
-export const TabItem: React.FC<TabItemProps> = React.memo(({
+export const TabItem: React.FC<TabItemProps> = ({
   route,
   isFocused,
   options,
@@ -79,7 +79,6 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
 
   const renderIcon = () => (
     <Icon
-      library="Ionicons"
       name={isFocused ? activeIcon : inactiveIcon}
       size={24}
       color={iconColor}
@@ -99,13 +98,13 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
         {renderIcon()}
       </Animated.View>
       {showLabel && (
-        <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+        <Text maxFontSizeMultiplier={1.2} style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
           {label}
         </Text>
       )}
     </Pressable>
   );
-});
+};
 
 TabItem.displayName = 'TabItem';
 

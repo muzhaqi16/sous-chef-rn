@@ -64,7 +64,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
             style={styles.activityIndicator}
           />
         )}
-        <Text style={styles.footerText}>{loadingText}</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.footerText}>{loadingText}</Text>
       </View>
     );
   }
@@ -73,7 +73,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   if (hasMore && !loading && itemCount > 0) {
     return (
       <View style={styles.footerHint}>
-        <Text style={styles.footerHintText}>{hintText}</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.footerHintText}>{hintText}</Text>
       </View>
     );
   }

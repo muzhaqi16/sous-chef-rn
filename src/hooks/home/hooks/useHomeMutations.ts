@@ -8,6 +8,7 @@
  */
 
 import { Alert } from 'react-native';
+import type { ErrorLike } from '@apollo/client';
 import { useShallow } from 'zustand/shallow';
 import {
   useCreateHomeMutation,
@@ -105,7 +106,7 @@ export function useHomeMutations({
           }
         }
       },
-      onError: (error: any) => {
+      onError: (error: ErrorLike) => {
         const { message } = handleApolloError(error, {
           operation: 'Create Home',
         });
@@ -126,7 +127,7 @@ export function useHomeMutations({
           success: true,
           message: 'Home updated successfully',
           code: 'HOME_UPDATED',
-          home: enhanceWithVersion(currentHome as any, variables.input),
+          home: enhanceWithVersion(currentHome, variables.input),
         },
       };
     },
@@ -135,7 +136,7 @@ export function useHomeMutations({
         Alert.alert('Success', 'Home updated successfully');
       }
     },
-    onError: (error: any) => {
+    onError: (error: ErrorLike) => {
       if (handleVersionConflict(error)) {
         Alert.alert('Home Updated', getVersionConflictMessage(error), [
           { text: 'Refresh', onPress: () => refetch() },
@@ -191,7 +192,7 @@ export function useHomeMutations({
           }
         }
       },
-      onError: (error: any) => {
+      onError: (error: ErrorLike) => {
         const { message } = handleApolloError(error, {
           operation: 'Delete Home',
         });

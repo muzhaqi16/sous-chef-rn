@@ -102,7 +102,7 @@ export const ShoppingListItemDetail: React.FC<{
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon name="shopping-basket" size={48} color={theme.colors.textSecondary} />
+                <Icon name="basket-outline" size={48} color={theme.colors.textSecondary} />
               </View>
             )}
           </View>
@@ -122,7 +122,7 @@ export const ShoppingListItemDetail: React.FC<{
           {/* Status Badge */}
           {item.purchaseInfo?.isPurchased ? (
             <View style={styles.statusBadge}>
-              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
               <Text style={styles.statusBadgeText}>Purchased</Text>
             </View>
           ) : null}
@@ -287,7 +287,7 @@ export const ShoppingListItemDetail: React.FC<{
       onBack={() => goBack()}
       headerActions={[
         {
-          icon: 'edit',
+          icon: 'create-outline',
           onPress: handleEdit,
         },
       ]}

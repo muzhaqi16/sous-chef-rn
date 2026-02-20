@@ -117,7 +117,6 @@ export function useShoppingListSelectorModal({
               name={item.title === 'Personal Lists' ? 'person' : 'home'}
               size={14}
               color={colors.textTertiary}
-              library="MaterialIcons"
             />
             <Text style={styles.sectionHeaderText}>{item.title}</Text>
           </View>
@@ -150,10 +149,9 @@ export function useShoppingListSelectorModal({
           </View>
           {isSelected && (
             <Icon
-              name="check"
+              name="checkmark"
               size={20}
               color={colors.primary}
-              library="MaterialIcons"
             />
           )}
         </Pressable>
@@ -174,29 +172,29 @@ export function useShoppingListSelectorModal({
           selectorRef.current?.close();
           navigate('ListSettings');
         },
-        iconLibrary: 'MaterialIcons' as IconLibrary,
+        iconLibrary: 'Ionicons' as IconLibrary,
       },
       ...(currentListId
         ? [
             {
-              icon: 'share',
+              icon: 'share-outline',
               label: 'Share Current List',
               onPress: () => {
                 setOverlayOpen(false);
                 selectorRef.current?.close();
                 navigate('ShareList', { listId: currentListId });
               },
-              iconLibrary: 'MaterialIcons' as IconLibrary,
+              iconLibrary: 'Ionicons' as IconLibrary,
             },
             {
-              icon: 'settings',
+              icon: 'settings-outline',
               label: 'List Settings',
               onPress: () => {
                 setOverlayOpen(false);
                 selectorRef.current?.close();
                 navigate('ListSettings', { listId: currentListId });
               },
-              iconLibrary: 'MaterialIcons' as IconLibrary,
+              iconLibrary: 'Ionicons' as IconLibrary,
             },
           ]
         : []),

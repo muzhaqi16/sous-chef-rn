@@ -42,7 +42,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
           )}
         </View>
       </View>
-      <Icon library="Ionicons" name="chevron-forward" size={20} />
+      <Icon name="chevron-forward" size={20} />
     </Pressable>
   );
 };

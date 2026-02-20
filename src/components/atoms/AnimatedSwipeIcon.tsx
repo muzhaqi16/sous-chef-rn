@@ -37,7 +37,7 @@ interface AnimatedSwipeIconProps {
  */
 export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
   icon,
-  library = 'MaterialIcons',
+  library,
   size = 32,
   color,
   direction = 'left',

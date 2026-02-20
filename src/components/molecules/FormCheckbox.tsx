@@ -35,7 +35,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             disabled && styles.disabledCheckbox,
           ]}>
           {checked && (
-            <Icon name="check" size={18} color={theme.colors.white} />
+            <Icon name="checkmark" size={18} color={theme.colors.white} />
           )}
         </View>
         <Text style={[styles.label, disabled && styles.disabledLabel]}>

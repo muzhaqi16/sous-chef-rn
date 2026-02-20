@@ -97,14 +97,13 @@ function FilterTabsItemComponent<T extends string>({
           name="chevron-down"
           size={isCompact ? 12 : 14}
           color={iconColor}
-          library="Feather"
         />
       )}
     </Pressable>
   );
 }
 
-export const FilterTabsItem = React.memo(FilterTabsItemComponent) as typeof FilterTabsItemComponent;
+export const FilterTabsItem = FilterTabsItemComponent as typeof FilterTabsItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   tab: {

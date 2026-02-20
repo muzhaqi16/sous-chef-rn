@@ -199,10 +199,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize with shallow comparison of items array
-// Items array reference changes when filter runs, but React.memo
-// does shallow comparison which triggers re-render with new items
-export const MemoizedShoppingTab = React.memo(ShoppingTabComponent);
+export const MemoizedShoppingTab = ShoppingTabComponent;
 MemoizedShoppingTab.displayName = 'ShoppingTab';
 
 // Also export non-memoized for backwards compatibility

@@ -88,7 +88,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
           testID={`shopping-item-checkbox-${id}`}
         >
           <View style={styles.checkbox}>
-            {isPurchased && <Icon name="check" size={16} color="white" />}
+            {isPurchased && <Icon name="checkmark" size={16} color="white" />}
           </View>
         </Pressable>
 
@@ -117,7 +117,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 accessibilityHint={`Save new quantity of ${localQuantity}`}
                 style={({pressed}) => pressed && styles.pressed}
               >
-                <Icon name="check" size={20} color={theme.colors.primary} />
+                <Icon name="checkmark" size={20} color={theme.colors.primary} />
               </Pressable>
             </View>
           ) : isPurchased ? (
@@ -147,7 +147,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 displayAsFraction={displayAsFraction}
                 style={styles.quantityText}
               />
-              <Icon name="edit" size={14} color={theme.colors.textSecondary} />
+              <Icon name="create-outline" size={14} color={theme.colors.textSecondary} />
             </Pressable>
           )}
         </View>

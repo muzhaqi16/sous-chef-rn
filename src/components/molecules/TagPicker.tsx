@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -6,11 +6,9 @@ import {
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 
@@ -31,21 +29,22 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   onCancel,
   loading = false,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const animationConfigs = useSharedBottomSheetConfigs();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    onDismiss: onCancel,
+    snapPoints: ['55%', '70%'],
+    keyboardBehavior: 'interactive',
+  });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sync visible prop with bottom sheet ref
+  // Sync visible prop with bottom sheet ref (complex: resets search query)
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
+      ref.current?.present();
       setSearchQuery('');
     } else {
-      bottomSheetRef.current?.dismiss();
+      ref.current?.dismiss();
     }
-  }, [visible]);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredTags = useMemo(() => {
     if (!searchQuery.trim()) return tags;
@@ -71,8 +70,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         style={({pressed}) => [styles.tagItem, isSelected && styles.tagItemSelected, pressed && styles.pressed]}
         onPress={() => handleToggleTag(item)}>
         <Icon
-          library="Feather"
-          name="tag"
+          name="pricetag-outline"
           size={20}
           color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
         />
@@ -83,8 +81,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         </Text>
         {isSelected && (
           <Icon
-            library="Feather"
-            name="check"
+            name="checkmark"
             size={20}
             color={theme.colors.primary}
           />
@@ -94,32 +91,11 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   };
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['55%', '70%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onCancel}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
         style={[
           styles.bottomSheetContent,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
       >
         <View style={styles.header}>
@@ -130,7 +106,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         {tags.length > 5 && (
           <View style={styles.searchContainer}>
             <Icon
-              library="Feather"
               name="search"
               size={18}
               color={theme.colors.textSecondary}

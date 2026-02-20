@@ -25,7 +25,6 @@ export interface IconButtonProps {
   color?: string;
   /** extra styling on the Pressable */
   style?: StyleProp<ViewStyle>;
-  /** override default library—pass Ionicons, MaterialIcons, etc. */
   library?: IconLibrary;
   /** whether button is disabled */
   disabled?: boolean;
@@ -40,7 +39,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   size = 'md',
   color,
   style,
-  library = 'MaterialIcons',
+  library,
   disabled = false,
 }) => {
   const handlePress = useCallback(() => {

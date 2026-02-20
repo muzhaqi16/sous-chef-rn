@@ -1,6 +1,7 @@
 import { ErrorLink } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
+import { isNetworkError } from '#/utils/isNetworkError';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 
@@ -59,24 +60,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // Enhanced network error detection - includes WebSocket errors
-    const message = error.message?.toLowerCase() || '';
-    const isNetworkIssue = [
-      'network request failed',
-      'network error',
-      'connection refused',
-      'timeout',
-      'enotfound',
-      'econnrefused',
-      'econnreset',
-      'ehostunreach',
-      'socket closed',  // WebSocket connection failures
-      'websocket',      // Generic WebSocket errors
-    ].some(issue => message.includes(issue));
-
     // For network errors, log and forward the operation to let Apollo's errorPolicy handle it
     // Returning void silently swallows the error, leaving query observers without a result
-    if (isNetworkIssue) {
+    if (isNetworkError(error)) {
       console.warn(
         `Network error for ${operation.operationName}:`,
         error.message

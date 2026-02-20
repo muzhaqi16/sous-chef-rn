@@ -14,6 +14,7 @@ import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
 import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
+import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
@@ -217,6 +218,7 @@ const App = () => {
                         4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                     <StatusBarBackground />
                     <SafeAreaView style={styles.container}>
+                      <OfflineBanner />
                       <ToastProvider>
                         <NotificationProvider>
                           <Navigation />

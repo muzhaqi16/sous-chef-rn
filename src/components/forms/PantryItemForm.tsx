@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Text,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string } from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -248,10 +248,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     watch,
     reset,
   } = useForm<PantryItemFormData>({
-    resolver:
-      mode === 'add'
-        ? (yupResolver(addItemSchema) as any)
-        : (yupResolver(editItemSchema) as any),
+    resolver: (mode === 'add'
+        ? yupResolver(addItemSchema)
+        : yupResolver(editItemSchema)) as Resolver<PantryItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
@@ -517,7 +516,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           onClose={() => navigation.goBack()}
           rightActions={[
             {
-              icon: 'check',
+              icon: 'checkmark',
               onPress: handleSubmit(handleSave),
               variant: 'primary',
               testID:

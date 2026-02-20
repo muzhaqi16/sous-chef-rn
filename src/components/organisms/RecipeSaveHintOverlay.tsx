@@ -30,7 +30,6 @@ export const RecipeSaveHintOverlay: React.FC<RecipeSaveHintOverlayProps> = ({
         subtitle: 'Tap the bookmark icon to save recipes for later',
         icon: {
           name: 'bookmark',
-          library: 'Ionicons',
           size: 40,
         },
         onDismiss,

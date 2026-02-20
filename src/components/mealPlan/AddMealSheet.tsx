@@ -104,7 +104,7 @@ export const AddMealSheet = forwardRef<AddMealSheetRef, AddMealSheetProps>(
 
         {/* Search bar */}
         <View style={styles.searchContainer}>
-          <Icon library="Ionicons" name="search" size={18} color={styles.searchIcon.color} />
+          <Icon name="search" size={18} color={styles.searchIcon.color} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search your recipes..."
@@ -132,7 +132,7 @@ export const AddMealSheet = forwardRef<AddMealSheetRef, AddMealSheetProps>(
                   {recipe.totalTimeMinutes ? ` \u00B7 ${recipe.totalTimeMinutes} min` : ''}
                 </Text>
               </View>
-              <Icon library="Ionicons" name="add-circle-outline" size={24} color={styles.addIcon.color} />
+              <Icon name="add-circle-outline" size={24} color={styles.addIcon.color} />
             </Pressable>
           ))}
 

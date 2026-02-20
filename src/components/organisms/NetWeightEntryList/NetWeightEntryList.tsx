@@ -108,7 +108,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
             disabled={disabled}
             style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
           >
-            <Icon name="delete" size={20} color={theme.colors.error} />
+            <Icon name="trash-outline" size={20} color={theme.colors.error} />
           </Pressable>
         </View>
       ))}

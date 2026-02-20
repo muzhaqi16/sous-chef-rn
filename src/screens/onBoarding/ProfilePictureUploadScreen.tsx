@@ -203,7 +203,7 @@ export const ProfilePictureUploadScreen = () => {
                 disabled={isUploading}
               >
                 <Icon
-                  library="Ionicons"
+
                   color={theme.colors.error}
                   name="close-circle"
                   size={24}
@@ -213,7 +213,6 @@ export const ProfilePictureUploadScreen = () => {
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon
-                library="Ionicons"
                 color={theme.colors.textSecondary}
                 name="person"
                 size={52}
@@ -256,7 +255,7 @@ export const ProfilePictureUploadScreen = () => {
             >
               <View style={styles.uploadOptionIcon}>
                 <Icon
-                  library="Ionicons"
+
                   color={theme.colors.primary}
                   name="images"
                   size={24}
@@ -284,7 +283,6 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <Icon
-                library="Ionicons"
                 color={theme.colors.textSecondary}
                 name="chevron-forward"
                 size={20}
@@ -298,7 +296,7 @@ export const ProfilePictureUploadScreen = () => {
             >
               <View style={styles.uploadOptionIcon}>
                 <Icon
-                  library="Ionicons"
+
                   color={theme.colors.primary}
                   name="camera"
                   size={24}
@@ -326,7 +324,6 @@ export const ProfilePictureUploadScreen = () => {
               </View>
 
               <Icon
-                library="Ionicons"
                 color={theme.colors.textSecondary}
                 name="chevron-forward"
                 size={20}

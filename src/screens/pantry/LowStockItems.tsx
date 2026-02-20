@@ -75,7 +75,7 @@ export const LowStockItems: React.FC = () => {
             style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           >
             <Icon
-              name="add-shopping-cart"
+              name="cart-outline"
               size={20}
               color={theme.colors.primary}
             />
@@ -112,7 +112,7 @@ export const LowStockItems: React.FC = () => {
             </View>
           ) : (
             <View style={[commonStyles.center, styles.emptyState]}>
-              <Icon name="inventory" size={64} color={theme.colors.success} />
+              <Icon name="cube-outline" size={64} color={theme.colors.success} />
               <Text style={[commonStyles.body, styles.emptyText]}>
                 All items are above minimum stock levels
               </Text>

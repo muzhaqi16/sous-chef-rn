@@ -37,6 +37,7 @@ const config: CodegenConfig = {
         // Disable unused generated code
         withRefetchFn: false,
         withMutationFn: false,
+        withSuspenseQuery: false,
 
         // Apollo Client v4 configuration - React hooks from separate export
         apolloReactHooksImportFrom: '@apollo/client/react',

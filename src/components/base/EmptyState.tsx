@@ -37,7 +37,7 @@ export interface EmptyStateProps {
   iconColor?: string;
 
   /** Icon library (default: uses Icon component default) */
-  iconLibrary?: 'MaterialIcons' | 'Ionicons' | 'MaterialDesignIcons' | 'Feather';
+  iconLibrary?: string;
 
   /** Container alignment */
   alignment?: 'flex-start' | 'center';

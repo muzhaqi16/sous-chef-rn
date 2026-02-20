@@ -51,7 +51,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         <Pressable
           style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onDelete(homeId)}>
-          <Icon name="delete" size={20} color={theme.colors.error} />
+          <Icon name="trash-outline" size={20} color={theme.colors.error} />
           <Text style={[styles.actionText, {color: theme.colors.error}]}>
             Delete
           </Text>

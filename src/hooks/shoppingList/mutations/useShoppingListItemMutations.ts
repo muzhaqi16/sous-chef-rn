@@ -24,7 +24,6 @@
  */
 
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useAddShoppingItem } from './useAddShoppingItem';
 import { useUpdateShoppingItem } from './useUpdateShoppingItem';
 import { useRemoveShoppingItem } from './useRemoveShoppingItem';
@@ -40,13 +39,10 @@ export function useShoppingListItemMutations(
   items: ShoppingListItemDisplayFragment[],
   refetch: () => Promise<any>,
 ) {
-  // Create stable ref to always have current items (avoids stale closure in toggle mutation)
-  const itemsRef = useStableRef(items);
-
   const { addItem } = useAddShoppingItem({ listId, refetch });
   const { updateItem } = useUpdateShoppingItem({ listId, items, refetch });
   const { removeItem } = useRemoveShoppingItem({ listId, items, refetch });
-  const { toggleItem } = useToggleShoppingItem({ listId, itemsRef, refetch });
+  const { toggleItem } = useToggleShoppingItem({ listId, items, refetch });
 
   return {
     addItem,

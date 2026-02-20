@@ -7,26 +7,21 @@
  * - Persist optimistic state for offline support
  */
 
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import {
-  useToggleShoppingListItemPurchasedMutation,
-  ShoppingListItemDisplayFragmentDoc,
-} from '#generated';
+import { useToggleShoppingListItemPurchasedMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
-  addToUnpurchasedItems,
-  removeFromUnpurchasedItems,
-  addToPurchasedItems,
-  removeFromPurchasedItems,
+  moveShoppingListItemToPurchased,
+  moveShoppingListItemToUnpurchased,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { isNetworkError } from './utils';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
-  itemsRef: React.RefObject<ShoppingListItemDisplayFragment[]>;
+  items: ShoppingListItemDisplayFragment[];
   refetch: () => Promise<any>;
 }
 
@@ -45,14 +40,14 @@ interface UseToggleShoppingItemOptions {
  * await toggleItem('item-123');
  * ```
  */
-export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleShoppingItemOptions) {
+export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
     // Optimistic response ensures update() runs immediately (not after network response)
     optimisticResponse: (variables, { IGNORE }) => {
-      const item = itemsRef.current?.find(i => i.id === variables.input.id);
+      const item = items?.find(i => i.id === variables.input.id);
       if (!item) return IGNORE;
       return {
         __typename: 'Mutation',
@@ -98,125 +93,13 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
         },
       });
 
-      // 2. Move item between connections using cache.modify on ShoppingList entity
-      // This is the PREFERRED pattern per docs/apollo-client-patterns.md
-      // With keyArgs: ['filters'], Apollo stores separate connection variants
-      // The itemsConnection modifier is called for EACH variant (unpurchased/purchased)
-      cache.modify({
-        id: cache.identify({ __typename: 'ShoppingList', id: listId }),
-        fields: {
-          itemsConnection(existing: any, { readField, storeFieldName, toReference }) {
-            // Determine which connection variant we're modifying based on storeFieldName
-            // storeFieldName contains the serialized keyArgs, e.g., 'itemsConnection({"filters":{"isPurchased":false}})'
-            const isUnpurchasedConnection = storeFieldName.includes('isPurchased":false');
-            const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
-
-            if (!existing?.edges) return existing;
-
-            if (newStatus) {
-              // Marking as purchased: remove from unpurchased, add to purchased
-              if (isUnpurchasedConnection) {
-                // Filter out the item AND any broken edges with missing node IDs
-                const filteredEdges = existing.edges.filter((edge: any) => {
-                  const nodeId = readField('id', edge?.node);
-                  return nodeId !== undefined && nodeId !== null && nodeId !== itemId;
-                });
-                return {
-                  ...existing,
-                  edges: filteredEdges,
-                  totalCount: Math.max(0, (existing.totalCount || 0) - 1),
-                };
-              }
-              if (isPurchasedConnection) {
-                // Check for duplicates, handling undefined node IDs
-                const alreadyExists = existing.edges.some((edge: any) => {
-                  const nodeId = readField('id', edge?.node);
-                  return nodeId === itemId;
-                });
-                if (alreadyExists) return existing;
-                return {
-                  ...existing,
-                  edges: [
-                    {
-                      __typename: 'ShoppingListItemEdge',
-                      cursor: itemId,
-                      node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
-                    },
-                    ...existing.edges,
-                  ],
-                  totalCount: (existing.totalCount || 0) + 1,
-                };
-              }
-            } else {
-              // Marking as unpurchased: remove from purchased, add to unpurchased
-              if (isPurchasedConnection) {
-                // Filter out the item AND any broken edges with missing node IDs
-                const filteredEdges = existing.edges.filter((edge: any) => {
-                  const nodeId = readField('id', edge?.node);
-                  return nodeId !== undefined && nodeId !== null && nodeId !== itemId;
-                });
-                return {
-                  ...existing,
-                  edges: filteredEdges,
-                  totalCount: Math.max(0, (existing.totalCount || 0) - 1),
-                };
-              }
-              if (isUnpurchasedConnection) {
-                // Check for duplicates, handling undefined node IDs
-                const alreadyExists = existing.edges.some((edge: any) => {
-                  const nodeId = readField('id', edge?.node);
-                  return nodeId === itemId;
-                });
-                if (alreadyExists) return existing;
-                return {
-                  ...existing,
-                  edges: [
-                    {
-                      __typename: 'ShoppingListItemEdge',
-                      cursor: itemId,
-                      node: toReference({ __typename: 'ShoppingListItem', id: itemId }),
-                    },
-                    ...existing.edges,
-                  ],
-                  totalCount: (existing.totalCount || 0) + 1,
-                };
-              }
-            }
-
-            return existing;
-          },
-        },
-      });
-
-      // 2b. Also update aliased fields used by GetShoppingListItemsPaginatedQuery
-      // This query uses aliases: unpurchasedItems/purchasedItems instead of itemsConnection
-      // Apollo caches aliased fields separately, so we must update them explicitly
-
-      // Get the full item data from the items ref (avoids stale closure) - this is more reliable than
-      // cache.readFragment which can return null during optimistic updates
-      const itemFromArray = itemsRef.current?.find(i => i.id === itemId);
-
-      // Fallback to cache read if not found in array (edge case)
-      const fullItem = itemFromArray || cache.readFragment<ShoppingListItemDisplayFragment>({
-        id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-        fragment: ShoppingListItemDisplayFragmentDoc,
-        fragmentName: 'ShoppingListItemDisplayFragment',
-      });
-
-      // Only proceed if we have valid item data to prevent ghost/empty items
-      if (!fullItem || !fullItem.itemName) {
-        console.warn('⚠️ Toggle purchase: Item data missing, skipping aliased field update for', itemId);
-        return;
-      }
-
+      // 2. Move item between purchased/unpurchased connections
+      // moveShoppingListItem* handles BOTH itemsConnection filtered variants
+      // AND aliased fields (unpurchasedItems/purchasedItems) in one call
       if (newStatus) {
-        // Moving to purchased: remove from unpurchased, add to purchased
-        removeFromUnpurchasedItems(cache, listId, itemId);
-        addToPurchasedItems(cache, listId, fullItem);
+        moveShoppingListItemToPurchased(cache, listId, { id: itemId });
       } else {
-        // Moving to unpurchased: remove from purchased, add to unpurchased
-        removeFromPurchasedItems(cache, listId, itemId);
-        addToUnpurchasedItems(cache, listId, fullItem);
+        moveShoppingListItemToUnpurchased(cache, listId, { id: itemId });
       }
 
       // 3. Persist optimistic isPurchased to survive app restarts while offline
@@ -261,7 +144,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
       if (!listId) return false;
 
       try {
-        const item = itemsRef.current?.find(i => i.id === itemId);
+        const item = items?.find(i => i.id === itemId);
         if (!item) return false;
 
         const newStatus = !item.purchaseInfo?.isPurchased;
@@ -276,7 +159,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
         return false;
       }
     },
-    [listId, itemsRef, togglePurchasedMutation],
+    [listId, items, togglePurchasedMutation],
   );
 
   return { toggleItem };

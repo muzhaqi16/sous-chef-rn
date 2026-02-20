@@ -71,7 +71,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <Icon
-          name="keyboard-arrow-down"
+          name="chevron-down"
           size={24}
           color={theme.colors.textSecondary}
         />

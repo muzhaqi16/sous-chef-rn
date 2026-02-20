@@ -1,16 +1,13 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { commonStyles } from '#/styles/commonStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
@@ -59,11 +56,11 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   maxLength,
   keyboardType = 'default',
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['25%', '50%'],
+  });
 
   // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
@@ -77,9 +74,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   useEffect(() => {
     if (visible) {
       form.reset({ [fieldKey]: initialValue });
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, initialValue, fieldKey, form]);
 
@@ -96,37 +90,11 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     onClose();
   }, [form, onClose]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['25%', '50%']}
-      index={0}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-    >
+    <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >

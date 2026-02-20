@@ -462,7 +462,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
-              <Icon name="delete" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete Pantry</Text>
             </Pressable>
 

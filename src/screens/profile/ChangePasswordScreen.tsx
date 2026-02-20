@@ -101,7 +101,7 @@ export const ChangePasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.iconContainer}>
-            <Icon name="lock" size={64} color={theme.colors.primary} />
+            <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
           </View>
 
           <Text style={styles.subtitle}>

@@ -156,7 +156,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="check-circle" size={64} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={64} color={theme.colors.success} />
             </View>
             <Text style={styles.title}>Email Verified!</Text>
             <Text style={styles.subtitle}>
@@ -172,7 +172,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="x-circle" size={64} color={theme.colors.error} />
+              <Icon name="close-circle-outline" size={64} color={theme.colors.error} />
             </View>
             <Text style={styles.title}>Verification Failed</Text>
             <Text style={styles.subtitle}>{errorMessage}</Text>

@@ -44,7 +44,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
             hitSlop={8}
             style={styles.removeButton}
           >
-            <Icon library="Ionicons" name="close-circle" size={20} color={styles.removeIcon.color} />
+            <Icon name="close-circle" size={20} color={styles.removeIcon.color} />
           </Pressable>
         </Pressable>
       ))}
@@ -53,7 +53,7 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
         onPress={onAddIngredient}
         style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
       >
-        <Icon library="Ionicons" name="add-circle-outline" size={20} color={styles.addIcon.color} />
+        <Icon name="add-circle-outline" size={20} color={styles.addIcon.color} />
         <Text style={styles.addText}>Add Ingredient</Text>
       </Pressable>
     </View>

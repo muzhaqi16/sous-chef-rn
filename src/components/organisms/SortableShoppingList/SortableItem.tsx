@@ -114,10 +114,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
               hitSlop={HIT_SLOP}
             >
               <Icon
-                name="cupboard"
+                name="cube-outline"
                 size={24}
                 color={themeColors?.primary}
-                library="MaterialDesignIcons"
               />
             </Pressable>
           )}

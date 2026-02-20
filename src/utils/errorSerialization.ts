@@ -204,17 +204,13 @@ export function safeStringifyError(error: any): {
         if (typeof circularError === 'string') {
           return circularError;
         }
-        if (
-          circularError &&
-          typeof circularError === 'object' &&
-          (circularError as any).message
-        ) {
-          return (circularError as any).message;
+        if (circularError instanceof Error) {
+          return circularError.message;
         }
       } else if (typeof error === 'string') {
         return error;
-      } else if (error && typeof error === 'object' && (error as any).message) {
-        return (error as any).message;
+      } else if (error instanceof Error) {
+        return error.message;
       }
       return 'Unknown error';
     })();
@@ -234,18 +230,18 @@ export function safeStringifyError(error: any): {
       isCircular: false,
       message: '',
     };
-  } catch (stringifyError: any) {
+  } catch (stringifyError: unknown) {
+    const stringifyMessage = stringifyError instanceof Error ? stringifyError.message : '';
     const isCircular =
-      stringifyError?.message?.includes(
+      stringifyMessage.includes(
         'Converting circular structure to JSON',
-      ) || stringifyError?.message?.includes('circular');
+      ) || stringifyMessage.includes('circular');
 
     if (isCircular) {
       // Extract error message if available
-      const errorMessage =
-        typeof error === 'object' && error?.message
-          ? error.message
-          : 'Unknown error';
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Unknown error';
 
       return {
         stringified: `[Circular structure detected] ${errorMessage}`,
@@ -256,9 +252,9 @@ export function safeStringifyError(error: any): {
 
     // Some other JSON.stringify error
     return {
-      stringified: `[Error serializing: ${stringifyError.message}]`,
+      stringified: `[Error serializing: ${stringifyMessage}]`,
       isCircular: false,
-      message: stringifyError.message,
+      message: stringifyMessage,
     };
   }
 }

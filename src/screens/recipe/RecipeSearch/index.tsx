@@ -16,8 +16,7 @@ import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-const IngredientItem = React.memo(
-  ({
+const IngredientItem = ({
     name,
     selected,
     onToggle,
@@ -42,8 +41,7 @@ const IngredientItem = React.memo(
         <Text style={styles.ingredientText}>{name}</Text>
       </Pressable>
     );
-  },
-);
+  };
 IngredientItem.displayName = 'IngredientItem';
 
 const RecipeSearchContent: React.FC<{

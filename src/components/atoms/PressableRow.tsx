@@ -67,7 +67,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
 
       {showChevron && (
         <Icon
-          name="chevron-right"
+          name="chevron-forward"
           size={24}
           color={theme.colors.textTertiary}
         />

@@ -38,8 +38,7 @@ interface LazySwipeableItemProps extends SwipeableItemProps {
  * - onPress still fires and executes the action
  * - Re-render happens after touch completes, showing full SwipeableItem
  */
-export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
-  ({
+export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = ({
     children,
     onPress,
     onLongPress,
@@ -118,8 +117,7 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
         {children}
       </SwipeableItem>
     );
-  },
-);
+  };
 
 LazySwipeableItem.displayName = 'LazySwipeableItem';
 

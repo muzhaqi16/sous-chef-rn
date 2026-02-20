@@ -96,7 +96,7 @@ function setupCachePersistence(client: ApolloClient) {
   // not on every cache operation (write, evict, modify, gc)
   const schedulePersistence = () => {
     apolloCachePersistence.scheduleExtractAndSave(
-      () => client.cache.extract() as any,
+      () => client.cache.extract() as any, // justified: NormalizedCacheObject shape varies by Apollo version
     );
   };
 
@@ -121,6 +121,7 @@ function setupCachePersistence(client: ApolloClient) {
   const originalModify = cache.modify.bind(cache);
   const originalGc = cache.gc ? cache.gc.bind(cache) : null;
 
+  // justified: wrapping Apollo cache methods requires `any` — internal method signatures are not public API
   cache.write = function (...args: any) {
     const result = (originalWrite as any)(...args);
     schedulePersistence();

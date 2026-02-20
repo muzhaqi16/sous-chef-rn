@@ -45,7 +45,7 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
   title,
   subtitle,
   placeholderIcon = 'inventory-2',
-  placeholderIconLibrary = 'MaterialIcons',
+  placeholderIconLibrary = 'Ionicons',
   onPress,
   onQuickAdd,
   quickAddDisabled = false,
@@ -134,7 +134,6 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
               name="add"
               size={20}
               color={quickAddDisabled || isExiting ? theme.colors.textTertiary : theme.colors.primary}
-              library="MaterialIcons"
             />
           </Pressable>
         )}

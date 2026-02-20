@@ -19,7 +19,7 @@ export const RememberMeModal: React.FC<{
       onRequestClose={onDecline}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Icon name="lock" size={48} color={theme.colors.primary} />
+          <Icon name="lock-closed-outline" size={48} color={theme.colors.primary} />
 
           <Text style={styles.modalTitle}>Remember login info?</Text>
           <Text style={styles.modalSubtitle}>

@@ -30,7 +30,7 @@ interface LazyAnimatedCheckboxProps {
  * For screens where full animation is important, use AnimatedCheckbox instead.
  */
 export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
-  React.memo(({ checked, onPress, size = 24, disabled = false, primaryColor, borderColor }) => {
+  ({ checked, onPress, size = 24, disabled = false, primaryColor, borderColor }) => {
     // PERFORMANCE: Only call useUnistyles if color props not provided
     // When used in shopping list, parent provides colors to avoid repeated hook calls
     const { theme } = useUnistyles();
@@ -91,11 +91,11 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
             },
           ]}
         >
-          {checked && <Icon name="check" size={size * 0.66} color="white" />}
+          {checked && <Icon name="checkmark" size={size * 0.66} color="white" />}
         </RNAnimated.View>
       </Pressable>
     );
-  });
+  };
 
 LazyAnimatedCheckbox.displayName = 'LazyAnimatedCheckbox';
 

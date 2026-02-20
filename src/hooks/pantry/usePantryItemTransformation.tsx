@@ -5,6 +5,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { StorageState } from '#generated';
 import { fonts } from '#/theme/foundations/typography';
+import { formatQuantityAsFraction } from '#/utils/formatQuantity';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -261,56 +262,6 @@ export const formatQuantityBreakdown = (
   if (total <= 0) return null;
   const contentLabel = breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
   return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
-};
-
-// Helper to format quantity for redesign display
-export const formatQuantityDisplay = (quantity: number, unit?: string): string => {
-  const unitStr = unit || '';
-  if (quantity >= 1000 && (unitStr === 'g' || unitStr === 'ml')) {
-    return `${(quantity / 1000).toFixed(1)}${unitStr === 'g' ? 'kg' : 'L'}`;
-  }
-  if (Number.isInteger(quantity)) {
-    return `${quantity} ${unitStr}`.trim();
-  }
-  return `${quantity.toFixed(quantity < 10 ? 2 : 1)} ${unitStr}`.trim();
-};
-
-// Helper to format quantity as fraction/mixed number
-const formatQuantityAsFraction = (qty: number): string => {
-  if (qty == null) return '0';
-  if (qty === 0) return '0';
-  if (Number.isInteger(qty)) return qty.toString();
-
-  const whole = Math.floor(qty);
-  const fractional = qty - whole;
-
-  // Common fractions with tolerance-based matching for floating point
-  const commonFractions = [
-    { value: 0.125, display: '1/8' },
-    { value: 0.25, display: '1/4' },
-    { value: 1 / 3, display: '1/3' },
-    { value: 0.375, display: '3/8' },
-    { value: 0.5, display: '1/2' },
-    { value: 0.625, display: '5/8' },
-    { value: 2 / 3, display: '2/3' },
-    { value: 0.75, display: '3/4' },
-    { value: 0.875, display: '7/8' },
-  ];
-
-  const tolerance = 0.02; // Allow small floating point differences
-  const matchedFraction = commonFractions.find(
-    f => Math.abs(fractional - f.value) < tolerance,
-  );
-
-  if (matchedFraction) {
-    return whole === 0
-      ? matchedFraction.display
-      : `${whole} ${matchedFraction.display}`;
-  }
-
-  // Fall back to decimal with smart formatting
-  const formatted = qty.toFixed(2).replace(/\.?0+$/, '');
-  return formatted || '0';
 };
 
 interface ThemeColors {

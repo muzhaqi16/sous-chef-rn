@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   FlashList,
@@ -97,31 +98,13 @@ const SortableShoppingListComponent = forwardRef<
       ],
     );
 
-    // Track currently open swipeable item
-    const openSwipeableRef = useRef<any>(null);
-
     // Safe area insets for bottom padding
     const insets = useSafeAreaInsets();
 
-    // Handle swipeable item opening
-    const handleSwipeableWillOpen = useCallback(
-      (swipeableRef: any) => {
-        if (externalOnSwipeableWillOpen) {
-          externalOnSwipeableWillOpen(swipeableRef);
-        } else {
-          if (
-            openSwipeableRef.current &&
-            openSwipeableRef.current !== swipeableRef
-          ) {
-            openSwipeableRef.current.current?.close();
-          }
-          openSwipeableRef.current = swipeableRef;
-        }
-      },
-      [externalOnSwipeableWillOpen],
-    );
-
-    const handleSwipeableClose = useCallback(() => {}, []);
+    // Coordinate swipeable items — use external coordinator if provided, otherwise internal fallback
+    const internalCoordinator = useSwipeableCoordinator();
+    const handleSwipeableWillOpen = externalOnSwipeableWillOpen ?? internalCoordinator.handleSwipeableWillOpen;
+    const handleSwipeableClose = internalCoordinator.handleSwipeableClose;
 
     // Key extractor - validItems already guarantees every item has an id
     const keyExtractor = useCallback(
@@ -253,4 +236,4 @@ const styles = StyleSheet.create(() => ({
   },
 }));
 
-export const SortableShoppingList = React.memo(SortableShoppingListComponent);
+export const SortableShoppingList = SortableShoppingListComponent;

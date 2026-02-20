@@ -209,15 +209,15 @@ export const BiometricSetupScreen = () => {
 
           <View style={styles.benefits}>
             <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
               <Text style={styles.benefitText}>Quick and secure access</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
               <Text style={styles.benefitText}>No password required</Text>
             </View>
             <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={20} color={theme.colors.success} />
               <Text style={styles.benefitText}>Enhanced security</Text>
             </View>
           </View>

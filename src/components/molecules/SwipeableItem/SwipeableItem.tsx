@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, type AccessibilityActionEvent, type AccessibilityActionInfo } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   useAnimatedStyle,
@@ -113,10 +113,38 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     ],
   );
 
+  // Build accessibility actions from available callbacks so VoiceOver/TalkBack
+  // users can discover swipe actions without swiping
+  const accessibilityActions = useMemo<AccessibilityActionInfo[]>(() => {
+    const actions: AccessibilityActionInfo[] = [];
+    if (onEdit) actions.push({ name: 'edit', label: 'Edit' });
+    if (onDelete) actions.push({ name: 'delete', label: 'Delete' });
+    if (onTogglePurchase) actions.push({ name: 'togglePurchase', label: isPurchased ? 'Mark as unpurchased' : 'Mark as purchased' });
+    if (onConsume) actions.push({ name: 'consume', label: 'Consume' });
+    if (onWaste) actions.push({ name: 'waste', label: 'Record waste' });
+    if (onRestock) actions.push({ name: 'restock', label: 'Restock' });
+    return actions;
+  }, [onEdit, onDelete, onTogglePurchase, onConsume, onWaste, onRestock, isPurchased]);
+
+  const handleAccessibilityAction = useCallback((event: AccessibilityActionEvent) => {
+    switch (event.nativeEvent.actionName) {
+      case 'edit': onEdit?.(); break;
+      case 'delete': onDelete?.(); break;
+      case 'togglePurchase': onTogglePurchase?.(); break;
+      case 'consume': onConsume?.(); break;
+      case 'waste': onWaste?.(); break;
+      case 'restock': onRestock?.(); break;
+    }
+  }, [onEdit, onDelete, onTogglePurchase, onConsume, onWaste, onRestock]);
+
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
   // animated styles on inner Reanimated.View to avoid "2 unistyles styles" warning
   return (
-    <View style={styles.gestureContainer}>
+    <View
+      style={styles.gestureContainer}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={handleAccessibilityAction}
+    >
       <Reanimated.View style={animatedStyle}>
       <Swipeable
         ref={swipeableRef}
@@ -142,4 +170,4 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   );
 };
 
-export const SwipeableItem = React.memo(SwipeableItemComponent);
+export const SwipeableItem = SwipeableItemComponent;

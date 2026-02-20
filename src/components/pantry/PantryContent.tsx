@@ -24,11 +24,11 @@ import {
 import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
-  formatQuantityDisplay,
   formatPackageBreakdown,
   formatRemainingNetWeight,
   formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
+import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState } from '#generated';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
@@ -174,12 +174,12 @@ interface ItemDisplayData {
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: 'kitchen', iconLibrary: 'MaterialIcons' },
-  { id: 'freezer', label: 'Freezer', icon: 'ac-unit', iconLibrary: 'MaterialIcons' },
-  { id: 'pantry', label: 'Pantry', icon: 'inventory-2', iconLibrary: 'MaterialIcons' },
+  { id: 'fridge', label: 'Fridge', icon: 'water-outline' },
+  { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+  { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
 
-export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -329,7 +329,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
       const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = (item as any).condition === 'EXPIRED' || isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
+      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
       const hasExpiry = item.expiresAt != null;
 
       const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
@@ -413,7 +413,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         id: '__add__' as LocationFilter,
         label: '',
         icon: 'add',
-        iconLibrary: 'MaterialIcons',
         onPress: onAddLocation,
         isAction: true,
       },
@@ -466,8 +465,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       return (
         <EmptyState
           testID="pantry-empty-state"
-          icon="search-off"
-          iconLibrary="MaterialIcons"
+          icon="search-outline"
           title="No items found"
           description="Try a different search term"
         />
@@ -480,8 +478,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       return (
         <EmptyState
           testID="pantry-empty-state"
-          icon="kitchen"
-          iconLibrary="MaterialIcons"
+          icon="water-outline"
           title={`No items in ${tabName}`}
           description="Items stored here will appear in this tab"
         />
@@ -491,8 +488,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     return (
       <EmptyState
         testID="pantry-empty-state"
-        icon="kitchen"
-        iconLibrary="MaterialIcons"
+        icon="water-outline"
         title="Your pantry is empty"
         description="Start tracking your food to reduce waste"
         action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}
@@ -531,10 +527,9 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                 accessibilityLabel="Pantry settings"
               >
                 <Icon
-                  name="settings"
+                  name="settings-outline"
                   size={18}
                   color={theme.colors.textTertiary}
-                  library="Feather"
                 />
               </Pressable>
             }
@@ -617,7 +612,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       </View>
     </PantryActionsProvider>
   );
-}));
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

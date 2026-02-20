@@ -311,7 +311,6 @@ export const ListSettings: React.FC<StaticScreenProps<{
                       'Personal (No Home)'}
                   </Text>
                   <Icon
-                    library="Feather"
                     name="chevron-down"
                     size={20}
                     color={theme.colors.textSecondary}
@@ -348,7 +347,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               <Icon name="person-add" size={20} color={theme.colors.primary} />
               <Text style={styles.actionText}>Manage Members</Text>
               <Icon
-                name="chevron-right"
+                name="chevron-forward"
                 size={20}
                 color={theme.colors.textSecondary}
               />
@@ -371,7 +370,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
-              <Icon name="delete" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete List</Text>
             </Pressable>
           </View>

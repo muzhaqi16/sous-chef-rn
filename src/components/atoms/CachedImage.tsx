@@ -48,7 +48,6 @@ export const CachedImage = React.memo<CachedImageProps>(
       return (
         <View style={[styles.placeholder, style as StyleProp<ViewStyle>, containerStyle]}>
           <Icon
-            library="Ionicons"
             name="image-outline"
             size={24}
             color={styles.placeholderIcon.color}
@@ -87,7 +86,6 @@ export const CachedImage = React.memo<CachedImageProps>(
         {status === 'error' && (
           <View style={[styles.overlay, styles.errorOverlay, innerRadius > 0 && { borderRadius: innerRadius, overflow: 'hidden' as const }]}>
             <Icon
-              library="Ionicons"
               name="image-outline"
               size={24}
               color={styles.placeholderIcon.color}

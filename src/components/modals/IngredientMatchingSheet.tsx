@@ -1,14 +1,12 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
   BottomSheetModal,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { IngredientMatchRow } from '#components/recipe/IngredientMatchRow';
 import type {
@@ -41,18 +39,11 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
     onClose,
     confirmLoading,
   }) => {
-    const { theme } = useUnistyles();
-    const insets = useSafeAreaInsets();
-    const bottomSheetRef = useRef<BottomSheetModal>(null);
-    const animationConfigs = useSharedBottomSheetConfigs();
-
-    useEffect(() => {
-      if (visible) {
-        bottomSheetRef.current?.present();
-      } else {
-        bottomSheetRef.current?.dismiss();
-      }
-    }, [visible]);
+    const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['80%'],
+    });
 
     const renderItem = useCallback(
       ({ item, index }: { item: EditableMatch; index: number }) => (
@@ -71,28 +62,9 @@ export const IngredientMatchingSheet: React.FC<IngredientMatchingSheetProps> =
     );
 
     return (
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        snapPoints={['80%']}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        topInset={insets.top}
-        onDismiss={onClose}
-        animationConfigs={animationConfigs}
-        backgroundStyle={{ backgroundColor: theme.colors.background }}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-        backdropComponent={props => (
-          <GlobalBottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            pressBehavior="close"
-            onClose={() => bottomSheetRef.current?.dismiss()}
-          />
-        )}
-      >
+      <BottomSheetModal ref={ref} {...modalProps}>
         <BottomSheetView
-          style={[styles.container, { paddingBottom: insets.bottom + 16 }]}
+          style={[styles.container, contentContainerStyle]}
         >
           <BottomSheetHeader
             title="Review Ingredients"

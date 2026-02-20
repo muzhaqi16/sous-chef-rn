@@ -4,10 +4,10 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 interface ScannerContext {
-  source: string;
+  source: 'pantry' | 'shoppingList';
   pantryId?: string;
   listId?: string;
-  [key: string]: any;
+  shoppingListId?: string;
 }
 
 interface UseScannerSetupOptions {

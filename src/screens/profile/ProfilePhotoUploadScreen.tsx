@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -148,9 +148,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleCropImage = useCallback(() => {
     if (!selectedImage) return;
 
-    navigation.navigate('ImageCrop' as any, {
-      imageFile: selectedImage,
-    });
+    navigation.dispatch(
+      CommonActions.navigate('ImageCrop', { imageFile: selectedImage }),
+    );
   }, [selectedImage, navigation]);
 
   const handleUpload = async () => {
@@ -200,9 +200,8 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           >
             <Icon
               color={theme.colors.textPrimary}
-              name="chevron-left"
+              name="chevron-back"
               size={30}
-              library="Feather"
             />
           </Pressable>
           <Text style={styles.title}>Upload Your Photo</Text>
@@ -235,9 +234,8 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
             ) : (
               <Icon
                 color={theme.colors.textSecondary}
-                name="user"
+                name="person"
                 size={100}
-                library="Feather"
               />
             )}
           </View>
@@ -257,7 +255,6 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 color={theme.colors.background}
                 name="crop"
                 size={20}
-                library="Feather"
               />
             </Pressable>
           )}

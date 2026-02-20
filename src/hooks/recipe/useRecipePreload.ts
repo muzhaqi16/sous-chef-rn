@@ -107,7 +107,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
                     node: savedRecipe,
                   },
                 ],
-                totalCount: existing.me.savedRecipesConnection.totalCount + 1,
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
               },
             },
           };

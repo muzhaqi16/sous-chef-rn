@@ -12,7 +12,7 @@ interface MealPlanItemCardProps {
   onDelete?: (id: string) => void;
 }
 
-export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = React.memo(({
+export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   item,
   onToggleCompleted,
   onPress,
@@ -34,7 +34,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = React.memo(({
         hitSlop={8}
       >
         <Icon
-          library="Ionicons"
+
           name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
           size={24}
           color={item.isCompleted ? styles.checkboxChecked.color : styles.checkboxUnchecked.color}
@@ -72,12 +72,12 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = React.memo(({
       {/* Delete */}
       {onDelete && (
         <Pressable onPress={() => onDelete(item.id)} style={styles.deleteButton} hitSlop={8}>
-          <Icon library="Ionicons" name="close-circle-outline" size={20} color={styles.deleteIcon.color} />
+          <Icon name="close-circle-outline" size={20} color={styles.deleteIcon.color} />
         </Pressable>
       )}
     </Pressable>
   );
-});
+};
 
 MealPlanItemCard.displayName = 'MealPlanItemCard';
 

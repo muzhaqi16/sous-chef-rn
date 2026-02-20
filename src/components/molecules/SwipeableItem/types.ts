@@ -37,7 +37,7 @@ export interface ActionButtonProps {
   backgroundColor: string;
   label?: string;
   circular?: boolean;
-  library?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  library?: string;
   testID?: string;
 }
 

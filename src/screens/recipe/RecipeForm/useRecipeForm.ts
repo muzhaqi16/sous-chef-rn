@@ -300,9 +300,9 @@ export function useRecipeForm() {
         sortOrder: ing.sortOrder ?? 0,
       })),
       steps: Array.isArray(recipe.instructions)
-        ? (recipe.instructions as any[]).map((step: any, i: number) => ({
+        ? (recipe.instructions as unknown[]).map((step: unknown, i: number) => ({
             id: generateTempId(),
-            instruction: typeof step === 'string' ? step : step.text ?? '',
+            instruction: typeof step === 'string' ? step : (step && typeof step === 'object' && 'text' in step ? String((step as { text: unknown }).text) : ''),
             sortOrder: i,
           }))
         : [],

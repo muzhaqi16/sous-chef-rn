@@ -57,16 +57,14 @@ export const Row: React.FC<RowProps> = ({
         />
         <Pressable onPress={handleSave} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
           <Icon
-            library="Feather"
-            name="check"
+            name="checkmark"
             size={20}
             color={theme.colors.primary}
           />
         </Pressable>
         <Pressable onPress={handleCancel} style={({pressed}) => [styles.editIcon, pressed && styles.pressed]}>
           <Icon
-            library="Feather"
-            name="x"
+            name="close"
             size={20}
             color={theme.colors.error}
           />
@@ -109,8 +107,7 @@ export const Row: React.FC<RowProps> = ({
 
         {(onSave || onPress) && (
           <Icon
-            library="Feather"
-            name={onSave ? 'edit-2' : 'chevron-right'}
+            name={onSave ? 'pencil' : 'chevron-forward'}
             size={20}
             color={theme.colors.textSecondary}
           />

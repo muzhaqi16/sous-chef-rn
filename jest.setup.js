@@ -575,19 +575,10 @@ jest.mock('react-native-turbo-image', () => {
 // @react-native-vector-icons
 // ---------------------------------------------------------------------------
 const MockIcon = 'Icon';
-jest.mock('@react-native-vector-icons/material-icons', () => ({
-  MaterialIcons: MockIcon,
-}));
-jest.mock('@react-native-vector-icons/material-design-icons', () => ({
-  MaterialDesignIcons: MockIcon,
-}));
 jest.mock('@react-native-vector-icons/ionicons', () => ({
   __esModule: true,
   default: MockIcon,
   Ionicons: MockIcon,
-}));
-jest.mock('@react-native-vector-icons/feather', () => ({
-  Feather: MockIcon,
 }));
 
 // ---------------------------------------------------------------------------

@@ -91,7 +91,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             name="image-outline"
             size={48}
             color={theme.colors.textTertiary}
-            library="Ionicons"
+
           />
         </View>
       </View>
@@ -114,10 +114,9 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
         {imageError || !currentImageUrl ? (
           <View style={styles.errorContainer}>
             <Icon
-              name="image-not-supported"
+              name="image-outline"
               size={48}
               color={theme.colors.textTertiary}
-              library="MaterialIcons"
             />
           </View>
         ) : (

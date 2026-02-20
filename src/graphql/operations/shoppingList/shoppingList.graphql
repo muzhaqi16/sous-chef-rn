@@ -320,35 +320,6 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       priority
       createdAt
       updatedAt
-      itemsConnection(first: 25) {
-        edges {
-          node {
-            id
-            purchaseInfo {
-              isPurchased
-            }
-          }
-          cursor
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
-      collaboratorsConnection(first: 20) {
-        edges {
-          cursor
-          node {
-            ...ShoppingListCollaboratorFragment
-          }
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
       ownerships {
         ...ShoppingListOwnershipFragment
       }

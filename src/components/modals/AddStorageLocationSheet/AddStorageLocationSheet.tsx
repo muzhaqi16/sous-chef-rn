@@ -4,13 +4,10 @@ import {
   BottomSheetModal,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { commonStyles } from '#/styles/commonStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#generated';
 
 interface AddStorageLocationSheetProps {
@@ -35,12 +32,12 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
   onCreateLocation,
   creating = false,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['30%', '50%'],
+  });
   const inputRef = useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
 
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +45,9 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
   // Control visibility
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
       // Focus input after a short delay for animation
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      bottomSheetRef.current?.dismiss();
       // Reset state when closing
       setName('');
       setError(null);
@@ -94,39 +89,13 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
     if (error) setError(null);
   }, [error]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   const isCreateDisabled = creating || name.trim().length < 2;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['30%', '50%']}
-      index={0}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-    >
+    <BottomSheetModal ref={ref} {...modalProps} index={0}>
       <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        contentContainerStyle={[styles.content, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >

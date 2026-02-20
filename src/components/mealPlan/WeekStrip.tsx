@@ -13,7 +13,7 @@ interface WeekStripProps {
   daysWithMeals?: Set<string>;
 }
 
-export const WeekStrip: React.FC<WeekStripProps> = React.memo(({
+export const WeekStrip: React.FC<WeekStripProps> = ({
   weekDays,
   selectedDate,
   onSelectDate,
@@ -24,7 +24,7 @@ export const WeekStrip: React.FC<WeekStripProps> = React.memo(({
   return (
     <View style={styles.container}>
       <Pressable onPress={onPrevWeek} style={styles.arrowButton} hitSlop={8}>
-        <Icon library="Ionicons" name="chevron-back" size={20} color={styles.arrowIcon.color} />
+        <Icon name="chevron-back" size={20} color={styles.arrowIcon.color} />
       </Pressable>
 
       <View style={styles.daysRow}>
@@ -75,11 +75,11 @@ export const WeekStrip: React.FC<WeekStripProps> = React.memo(({
       </View>
 
       <Pressable onPress={onNextWeek} style={styles.arrowButton} hitSlop={8}>
-        <Icon library="Ionicons" name="chevron-forward" size={20} color={styles.arrowIcon.color} />
+        <Icon name="chevron-forward" size={20} color={styles.arrowIcon.color} />
       </Pressable>
     </View>
   );
-});
+};
 
 WeekStrip.displayName = 'WeekStrip';
 

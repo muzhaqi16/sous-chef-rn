@@ -1,13 +1,11 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
@@ -47,10 +45,12 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   onSave,
   saving,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['70%'],
+    keyboardBehavior: 'interactive',
+  });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,13 +59,10 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
 
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
       setName(mealPlanName ? `${mealPlanName} Template` : '');
       setDescription('');
       setCategory(TemplateCategory.Weekly);
       setTagsInput('');
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, mealPlanName]);
 
@@ -85,33 +82,12 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   }, [mealPlanId, name, description, category, tagsInput, onSave]);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['70%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
       >

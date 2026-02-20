@@ -209,10 +209,10 @@ export const TabBarActionsProvider: React.FC<TabBarActionsProviderProps> = ({
       case 'Recipe':
         return { icon: 'search', iconLibrary: 'Feather' };
       case 'MealPlan':
-        return { icon: 'add', iconLibrary: 'MaterialIcons' };
+        return { icon: 'add', iconLibrary: 'Ionicons' };
       default:
         // Pantry, ShoppingList use the default add icon
-        return { icon: 'add', iconLibrary: 'MaterialIcons' };
+        return { icon: 'add', iconLibrary: 'Ionicons' };
     }
   }, [activeTab]);
 

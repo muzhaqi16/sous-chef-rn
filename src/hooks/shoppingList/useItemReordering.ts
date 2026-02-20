@@ -166,6 +166,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             });
 
             // Helper to sort edges by sortOrder with secondary sort by id
+            // justified: Apollo readField returns opaque cache references — no public type for edge/node access
             const sortEdges = (edges: readonly any[], readField: any) => {
               return [...edges].sort((a, b) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any

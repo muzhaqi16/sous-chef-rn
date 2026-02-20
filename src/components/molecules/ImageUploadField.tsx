@@ -147,7 +147,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                   disabled={disabled || uploading}
                   isProfile={isProfile}>
                   <View style={styles.actionButton}>
-                    <Icon name="edit" size={16} color={theme.colors.white} />
+                    <Icon name="create-outline" size={16} color={theme.colors.white} />
                   </View>
                 </ImagePicker>
 
@@ -155,7 +155,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                   style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                   onPress={handleRemoveImage}
                   disabled={disabled || uploading}>
-                  <Icon name="delete" size={16} color={theme.colors.white} />
+                  <Icon name="trash-outline" size={16} color={theme.colors.white} />
                 </Pressable>
               </View>
             )}
@@ -168,7 +168,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             isProfile={isProfile}>
             <View style={styles.placeholderContainer}>
               <Icon
-                name="add-a-photo"
+                name="camera-outline"
                 size={32}
                 color={theme.colors.textSecondary}
               />

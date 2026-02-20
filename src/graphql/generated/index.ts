@@ -419,7 +419,7 @@ export type BehavioralSignalsInput = {
  * Brand type for product manufacturers and retailers
  * Cache: 1 hour - brand catalog is relatively stable
  */
-export type Brand = Node & {
+export type Brand = {
   __typename: 'Brand';
   children: Array<Brand>;
   createdAt: Scalars['DateTime']['output'];
@@ -437,7 +437,7 @@ export type BrandConnection = Connection & {
   __typename: 'BrandConnection';
   edges: Array<BrandEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Brand connection for pagination */
@@ -656,7 +656,7 @@ export type CategorizeItemInput = {
  * Category type for organizing items
  * Cache: 2 hours - reference data that changes very rarely
  */
-export type Category = Node & {
+export type Category = {
   __typename: 'Category';
   children: Array<Category>;
   color: Maybe<Scalars['String']['output']>;
@@ -683,7 +683,7 @@ export type CategoryConnection = Connection & {
   __typename: 'CategoryConnection';
   edges: Array<CategoryEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Category connection for pagination (Relay spec) */
@@ -871,7 +871,7 @@ export type ConfirmedIngredientConsumptionInput = {
 export type Connection = {
   edges: Array<Edge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Sub-input for connectivity info */
@@ -956,7 +956,7 @@ export type ConvertedValue = {
 };
 
 /** Cooking activity log - personal user data */
-export type CookingLog = Node & {
+export type CookingLog = {
   __typename: 'CookingLog';
   actualCookTime: Maybe<Scalars['Int']['output']>;
   actualPrepTime: Maybe<Scalars['Int']['output']>;
@@ -980,7 +980,7 @@ export type CookingLogConnection = Connection & {
   __typename: 'CookingLogConnection';
   edges: Array<CookingLogEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Cooking log connection for pagination */
@@ -1468,7 +1468,7 @@ export type CurationFilterInput = {
  * Currency type for price information
  * Cache: 2 hours - currency definitions are static reference data
  */
-export type Currency = Node & {
+export type Currency = {
   __typename: 'Currency';
   code: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -1554,7 +1554,7 @@ export enum DeletionBlockerType {
 }
 
 /** User device information - contains sensitive device fingerprinting data */
-export type Device = Node & {
+export type Device = {
   __typename: 'Device';
   apiLevel: Maybe<Scalars['Int']['output']>;
   appVersion: Maybe<Scalars['String']['output']>;
@@ -1680,7 +1680,7 @@ export type DeviceConnection = Connection & {
   __typename: 'DeviceConnection';
   edges: Array<DeviceEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Filter input for device count query */
@@ -1983,7 +1983,6 @@ export enum DisplayFormat {
 
 export type Edge = {
   cursor: Scalars['String']['output'];
-  node: Node;
 };
 
 /** Effective usage rate: consumed / (consumed + wasted) */
@@ -2023,7 +2022,7 @@ export type ExpirationNotifConfigInput = {
   expirationNotifications?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type ExpirationNotification = Node & {
+export type ExpirationNotification = {
   __typename: 'ExpirationNotification';
   actionAt: Maybe<Scalars['DateTime']['output']>;
   actionTaken: Maybe<ExpirationAction>;
@@ -2064,7 +2063,7 @@ export type ExpirationNotificationConnection = Connection & {
   __typename: 'ExpirationNotificationConnection';
   edges: Array<ExpirationNotificationEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Expiration notification connection for pagination */
@@ -2324,7 +2323,7 @@ export type HealthInfoInput = {
  * Home/household for managing pantries and shopping lists
  * Cache: 5 minutes - metadata changes occasionally
  */
-export type Home = Node & {
+export type Home = {
   __typename: 'Home';
   allowJoinCode: Scalars['Boolean']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -2428,7 +2427,7 @@ export type HomeConnection = Connection & {
   __typename: 'HomeConnection';
   edges: Array<HomeEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Home connection for pagination */
@@ -2453,7 +2452,7 @@ export type HomeFilters = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type HomeInvite = Node & {
+export type HomeInvite = {
   __typename: 'HomeInvite';
   acceptedAt: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -2499,7 +2498,7 @@ export type HomeInviteConnection = Connection & {
   __typename: 'HomeInviteConnection';
   edges: Array<HomeInviteEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Home invite connection for pagination */
@@ -2815,7 +2814,7 @@ export type InviteActionStats = {
   inviteViewed: Maybe<Scalars['Int']['output']>;
 };
 
-export type InviteLog = Node & {
+export type InviteLog = {
   __typename: 'InviteLog';
   action: InviteAction;
   actor: Maybe<User>;
@@ -2834,7 +2833,7 @@ export type InviteLogConnection = Connection & {
   __typename: 'InviteLogConnection';
   edges: Array<InviteLogEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Invite log connection for pagination */
@@ -2897,7 +2896,7 @@ export type InviteToShoppingListInput = {
  * Item/Product catalog type
  * Cache: 30 minutes - catalog items are relatively static
  */
-export type Item = Node & {
+export type Item = {
   __typename: 'Item';
   allergens: Array<AllergenInfo>;
   alternateUpcs: Array<Scalars['String']['output']>;
@@ -3022,7 +3021,7 @@ export type ItemConnection = Connection & {
   __typename: 'ItemConnection';
   edges: Array<ItemEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 export type ItemCreation = {
@@ -3089,7 +3088,7 @@ export type ItemFilters = {
 };
 
 /** Typed image record for items (replaces JSON images field) */
-export type ItemImage = Node & {
+export type ItemImage = {
   __typename: 'ItemImage';
   createdAt: Maybe<Scalars['DateTime']['output']>;
   featured: Maybe<Scalars['Boolean']['output']>;
@@ -3143,7 +3142,7 @@ export type ItemPayload = MutationPayload & {
 };
 
 /** Price history for items - may contain user-specific pricing data */
-export type ItemPriceHistory = Node & {
+export type ItemPriceHistory = {
   __typename: 'ItemPriceHistory';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -3157,7 +3156,7 @@ export type ItemPriceHistoryConnection = Connection & {
   __typename: 'ItemPriceHistoryConnection';
   edges: Array<ItemPriceHistoryEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Item price history connection for pagination */
@@ -3207,7 +3206,7 @@ export enum ItemStatus {
  * Store SKU mapping for items
  * Cache: 10 minutes - SKU mappings can change but not frequently
  */
-export type ItemStoreSku = Node & {
+export type ItemStoreSku = {
   __typename: 'ItemStoreSku';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -3224,7 +3223,7 @@ export type ItemStoreSkuConnection = Connection & {
   __typename: 'ItemStoreSkuConnection';
   edges: Array<ItemStoreSkuEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Item store SKU connection for pagination */
@@ -3492,7 +3491,7 @@ export enum LoginFailureReason {
 }
 
 /** Security audit log for login attempts - NEVER cache */
-export type LoginHistory = Node & {
+export type LoginHistory = {
   __typename: 'LoginHistory';
   apiClient: Maybe<Scalars['String']['output']>;
   browserName: Maybe<Scalars['String']['output']>;
@@ -3569,7 +3568,7 @@ export type LoginHistoryConnection = Connection & {
   __typename: 'LoginHistoryConnection';
   edges: Array<LoginHistoryEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Login history connection for pagination */
@@ -3730,7 +3729,7 @@ export enum MatchType {
  * Meal plan for organizing meals over a period
  * Cache: 5 minutes - plans change occasionally
  */
-export type MealPlan = Node & {
+export type MealPlan = {
   __typename: 'MealPlan';
   actualCost: Scalars['Float']['output'];
   budgetAmount: Maybe<Scalars['Float']['output']>;
@@ -3768,7 +3767,7 @@ export type MealPlanConnection = Connection & {
   __typename: 'MealPlanConnection';
   edges: Array<MealPlanEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Meal plan connection for pagination */
@@ -3860,7 +3859,7 @@ export enum MealPlanType {
  * Templates store meal patterns that can be applied to create meal plans.
  * Cache: 5 minutes - templates change occasionally
  */
-export type MealTemplate = Node & {
+export type MealTemplate = {
   __typename: 'MealTemplate';
   category: TemplateCategory;
   createdAt: Scalars['DateTime']['output'];
@@ -3881,7 +3880,7 @@ export type MealTemplateConnection = Connection & {
   __typename: 'MealTemplateConnection';
   edges: Array<MealTemplateEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Meal template connection for pagination */
@@ -3978,7 +3977,7 @@ export type MediaAssetsInput = {
   images?: InputMaybe<Array<ImageInput>>;
 };
 
-export type Membership = Node & {
+export type Membership = {
   __typename: 'Membership';
   canAddItems: Scalars['Boolean']['output'];
   canEditPantry: Scalars['Boolean']['output'];
@@ -4024,7 +4023,7 @@ export type MembershipConnection = Connection & {
   __typename: 'MembershipConnection';
   edges: Array<MembershipEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Membership connection for pagination */
@@ -4530,6 +4529,8 @@ export type Mutation = {
    * @deprecated Not yet implemented
    */
   importItemsFromProvider: ImportItemsResponse;
+  /** Increment an item's popularity counter */
+  incrementItemPopularity: ItemPayload;
   /** Increment the cooked count for a saved recipe. */
   incrementRecipeCookedCount: SavedRecipePayload;
   /** Send an invitation for a user to join a home. */
@@ -4610,6 +4611,8 @@ export type Mutation = {
   rejectItem: ItemPayload;
   /** Remove an item from a shopping list. */
   removeItemFromShoppingList: ShoppingListItemPayload;
+  /** Remove the primary image from an item (deletes from S3) */
+  removeItemImage: ItemPayload;
   /** Remove a member from a home (owner/admin only). */
   removeMember: MembershipPayload;
   /** Remove a dietary restriction from the user's profile. */
@@ -4726,7 +4729,6 @@ export type Mutation = {
    * - Nutrition facts, allergens, ingredients
    * - Images
    * - Metadata
-   * - Price updates
    */
   updateItem: ItemPayload;
   /**
@@ -5352,6 +5354,12 @@ export type MutationImportItemsFromProviderArgs = {
 };
 
 
+export type MutationIncrementItemPopularityArgs = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationIncrementRecipeCookedCountArgs = {
   recipeId: Scalars['ID']['input'];
 };
@@ -5496,6 +5504,11 @@ export type MutationRejectItemArgs = {
 
 
 export type MutationRemoveItemFromShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationRemoveItemImageArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -6044,15 +6057,11 @@ export type NetworkLocationInput = {
   timezone?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type Node = {
-  id: Scalars['ID']['output'];
-};
-
 /**
  * Notification type for user alerts and messages
  * Cache: None - notifications must be real-time
  */
-export type Notification = Node & Timestamped & {
+export type Notification = Timestamped & {
   __typename: 'Notification';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -6095,7 +6104,7 @@ export type NotificationConnection = Connection & {
   __typename: 'NotificationConnection';
   edges: Array<NotificationEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
   unreadCount: Scalars['Int']['output'];
 };
 
@@ -6375,7 +6384,7 @@ export type PageInfo = {
  * Pantry/storage location for a home
  * Cache: 5 minutes - updated when items added/removed
  */
-export type Pantry = Node & {
+export type Pantry = {
   __typename: 'Pantry';
   createdAt: Scalars['DateTime']['output'];
   description: Maybe<Scalars['String']['output']>;
@@ -6555,7 +6564,7 @@ export type PantryConnection = Connection & {
   __typename: 'PantryConnection';
   edges: Array<PantryEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Deficit calculation for recipe ingredients */
@@ -6603,7 +6612,7 @@ export type PantryFilters = {
 };
 
 /** Real-time collaborative type - never cache */
-export type PantryItem = Node & {
+export type PantryItem = {
   __typename: 'PantryItem';
   acquisitionMethod: AcquisitionMethod;
   addedAt: Scalars['DateTime']['output'];
@@ -6653,7 +6662,7 @@ export type PantryItem = Node & {
   unitId: Maybe<Scalars['ID']['output']>;
   updatedAt: Maybe<Scalars['DateTime']['output']>;
   usageRecords: PantryItemUsageConnection;
-  version: Maybe<Scalars['Int']['output']>;
+  version: Scalars['Int']['output'];
   wasteDate: Maybe<Scalars['DateTime']['output']>;
   wasteReason: Maybe<WasteReason>;
 };
@@ -6682,7 +6691,7 @@ export type PantryItemUsageRecordsArgs = {
 };
 
 /** Audit record of a change to a pantry item */
-export type PantryItemChange = Node & {
+export type PantryItemChange = {
   __typename: 'PantryItemChange';
   changeType: ChangeType;
   changedBy: User;
@@ -6704,7 +6713,7 @@ export type PantryItemChangeConnection = Connection & {
   __typename: 'PantryItemChangeConnection';
   edges: Array<PantryItemChangeEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Edge type for PantryItemChange pagination */
@@ -6728,7 +6737,7 @@ export type PantryItemConnection = Connection & {
   __typename: 'PantryItemConnection';
   edges: Array<PantryItemEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Pantry item connection for pagination */
@@ -6821,7 +6830,7 @@ export type PantryItemSuggestion = {
   source: PantrySuggestionSource;
 };
 
-export type PantryItemUsage = Node & {
+export type PantryItemUsage = {
   __typename: 'PantryItemUsage';
   adjustmentReason: Maybe<Scalars['String']['output']>;
   cookingLog: Maybe<CookingLog>;
@@ -6868,7 +6877,7 @@ export type PantryItemUsageConnection = Connection & {
   __typename: 'PantryItemUsageConnection';
   edges: Array<PantryItemUsageEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Pantry item usage connection for pagination */
@@ -7139,7 +7148,7 @@ export enum ProviderType {
 }
 
 /** Purchase record - contains financial and shopping data */
-export type Purchase = Node & {
+export type Purchase = {
   __typename: 'Purchase';
   createdAt: Scalars['DateTime']['output'];
   currency: Currency;
@@ -7180,7 +7189,7 @@ export type PurchaseConnection = Connection & {
   __typename: 'PurchaseConnection';
   edges: Array<PurchaseEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Purchase connection for pagination */
@@ -7449,8 +7458,6 @@ export type Query = {
   /** List memberships for a home with cursor-based pagination. */
   memberships: MembershipConnection;
   myModeration: Maybe<MyModerationStatus>;
-  /** Fetch any node by its globally unique ID. */
-  node: Maybe<Node>;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
   /** Fetch notification statistics with optional filtering. */
@@ -7856,11 +7863,6 @@ export type QueryMembershipsArgs = {
 };
 
 
-export type QueryNodeArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
 export type QueryNotificationArgs = {
   id: Scalars['ID']['input'];
 };
@@ -8127,7 +8129,7 @@ export type RapidAttempt = {
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
  */
-export type Recipe = Node & {
+export type Recipe = {
   __typename: 'Recipe';
   averageRating: Maybe<Scalars['Float']['output']>;
   caloriesPerServing: Maybe<Scalars['Float']['output']>;
@@ -8239,7 +8241,7 @@ export type RecipeConnection = Connection & {
   __typename: 'RecipeConnection';
   edges: Array<RecipeEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 export type RecipeConsumptionResult = {
@@ -8362,7 +8364,7 @@ export type RecipePayload = MutationPayload & {
   success: Scalars['Boolean']['output'];
 };
 
-export type RecipeReview = Node & {
+export type RecipeReview = {
   __typename: 'RecipeReview';
   comment: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -8380,7 +8382,7 @@ export type RecipeReviewConnection = Connection & {
   __typename: 'RecipeReviewConnection';
   edges: Array<RecipeReviewEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Recipe review connection for pagination */
@@ -8638,7 +8640,7 @@ export enum RiskFactor {
   VpnDetected = 'VPN_DETECTED'
 }
 
-export type SavedRecipe = Node & {
+export type SavedRecipe = {
   __typename: 'SavedRecipe';
   cookedCount: Scalars['Int']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -8659,7 +8661,7 @@ export type SavedRecipeConnection = Connection & {
   __typename: 'SavedRecipeConnection';
   edges: Array<SavedRecipeEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Saved recipe connection for pagination */
@@ -8739,7 +8741,7 @@ export type ShareShoppingListInput = {
  * Shopping list for a home
  * Cache: 1 minute - frequently updated by collaborators
  */
-export type ShoppingList = Node & {
+export type ShoppingList = {
   __typename: 'ShoppingList';
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
@@ -8875,7 +8877,7 @@ export type ShoppingListSuggestionsArgs = {
   sources?: InputMaybe<Array<SuggestionSource>>;
 };
 
-export type ShoppingListActivity = Node & {
+export type ShoppingListActivity = {
   __typename: 'ShoppingListActivity';
   action: ListActivityType;
   createdAt: Scalars['DateTime']['output'];
@@ -8896,7 +8898,7 @@ export type ShoppingListActivityConnection = Connection & {
   __typename: 'ShoppingListActivityConnection';
   edges: Array<ShoppingListActivityEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Shopping list activity connection for pagination */
@@ -8939,7 +8941,7 @@ export enum ShoppingListChangeType {
   StatusChanged = 'STATUS_CHANGED'
 }
 
-export type ShoppingListCollaborator = Node & {
+export type ShoppingListCollaborator = {
   __typename: 'ShoppingListCollaborator';
   canAddItems: Scalars['Boolean']['output'];
   canEdit: Scalars['Boolean']['output'];
@@ -8984,7 +8986,7 @@ export type ShoppingListCollaboratorConnection = Connection & {
   __typename: 'ShoppingListCollaboratorConnection';
   edges: Array<ShoppingListCollaboratorEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Shopping list collaborator connection for pagination */
@@ -9006,7 +9008,7 @@ export type ShoppingListConnection = Connection & {
   __typename: 'ShoppingListConnection';
   edges: Array<ShoppingListEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Shopping list connection for pagination */
@@ -9034,7 +9036,7 @@ export type ShoppingListFilters = {
  * Real-time collaborative type - never cache
  * Shopping list item with focused sub-types for better organization
  */
-export type ShoppingListItem = Node & {
+export type ShoppingListItem = {
   __typename: 'ShoppingListItem';
   addedBy: Maybe<User>;
   addedById: Maybe<Scalars['ID']['output']>;
@@ -9101,7 +9103,7 @@ export type ShoppingListItemConnection = Connection & {
   __typename: 'ShoppingListItemConnection';
   edges: Array<ShoppingListItemEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Shopping list item connection for pagination */
@@ -9380,7 +9382,7 @@ export type StorageDetailsInput = {
  * Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
  * Supports hierarchical organization with parent-child relationships
  */
-export type StorageLocation = Node & {
+export type StorageLocation = {
   __typename: 'StorageLocation';
   /** Maximum capacity (in capacityUnit) */
   capacity: Maybe<Scalars['Float']['output']>;
@@ -9430,7 +9432,7 @@ export type StorageLocationConnection = Connection & {
   __typename: 'StorageLocationConnection';
   edges: Array<StorageLocationEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Storage location connection for pagination */
@@ -9500,7 +9502,7 @@ export enum StorageType {
  * Store type for retail locations
  * Cache: 30 minutes - store information changes rarely
  */
-export type Store = Node & {
+export type Store = {
   __typename: 'Store';
   address: Maybe<Scalars['String']['output']>;
   averageShelfLife: Maybe<Scalars['JSON']['output']>;
@@ -9580,7 +9582,7 @@ export type StoreConnection = Connection & {
   __typename: 'StoreConnection';
   edges: Array<StoreEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** Cost breakdown by store */
@@ -9649,7 +9651,7 @@ export type StoreHoursInput = {
  * Store information and contact details
  * Cache: 30 minutes - store metadata changes rarely
  */
-export type StoreInfo = Node & {
+export type StoreInfo = {
   __typename: 'StoreInfo';
   email: Maybe<Scalars['String']['output']>;
   hours: Maybe<StoreHours>;
@@ -10318,8 +10320,6 @@ export type UpdateItemInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
   healthInfo?: InputMaybe<HealthInfoInput>;
-  /** Increment popularity counter */
-  incrementPopularity?: InputMaybe<Scalars['Boolean']['input']>;
   media?: InputMaybe<MediaAssetsInput>;
   mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
@@ -10327,15 +10327,7 @@ export type UpdateItemInput = {
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   packageInfo?: InputMaybe<PackageInfoInput>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
-  /** Update item price */
-  price?: InputMaybe<Scalars['Float']['input']>;
-  /** Price source for tracking */
-  priceSource?: InputMaybe<Scalars['String']['input']>;
-  /** Store ID for price update */
-  priceStoreId?: InputMaybe<Scalars['ID']['input']>;
   productDetails?: InputMaybe<ProductDetailsInput>;
-  /** Remove the item image */
-  removeImage?: InputMaybe<Scalars['Boolean']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
   storeSkuOps?: InputMaybe<StoreSkuOpsInput>;
@@ -10819,7 +10811,7 @@ export enum UsageSource {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
-export type User = Node & {
+export type User = {
   __typename: 'User';
   addresses: Array<UserAddress>;
   collaboratedShoppingLists: Array<ShoppingList>;
@@ -11036,7 +11028,7 @@ export enum UserActivityType {
  * User address information
  * Cache: 10 minutes - addresses rarely change, always private
  */
-export type UserAddress = Node & {
+export type UserAddress = {
   __typename: 'UserAddress';
   city: Scalars['String']['output'];
   country: Scalars['String']['output'];
@@ -11088,7 +11080,7 @@ export type UserConnection = Connection & {
   __typename: 'UserConnection';
   edges: Array<UserEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 /** User connection for pagination (admin only) */
@@ -11098,7 +11090,7 @@ export type UserEdge = Edge & {
   node: User;
 };
 
-export type UserModeration = Node & {
+export type UserModeration = {
   __typename: 'UserModeration';
   abuseScore: Scalars['Float']['output'];
   appealNotes: Maybe<Scalars['String']['output']>;
@@ -11153,7 +11145,7 @@ export type UserModerationConnection = Connection & {
   __typename: 'UserModerationConnection';
   edges: Array<UserModerationEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int']['output'];
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 export type UserModerationEdge = Edge & {
@@ -11200,7 +11192,7 @@ export type UserPayload = MutationPayload & {
  * User profile information
  * Cache: 10 minutes - profile data rarely changes, always private
  */
-export type UserProfile = Node & {
+export type UserProfile = {
   __typename: 'UserProfile';
   avatar: Maybe<Scalars['String']['output']>;
   bio: Maybe<Scalars['String']['output']>;
@@ -11249,7 +11241,7 @@ export enum UserRole {
  * User settings and preferences
  * Cache: 10 minutes - settings rarely change, always private
  */
-export type UserSettings = Node & {
+export type UserSettings = {
   __typename: 'UserSettings';
   alwaysShowFractions: Scalars['Boolean']['output'];
   autoSync: Scalars['Boolean']['output'];
@@ -11295,7 +11287,7 @@ export type UserSocialPayload = {
  * User activity statistics
  * Cache: 3 minutes - stats update with user activity, always private
  */
-export type UserStatistics = Node & {
+export type UserStatistics = {
   __typename: 'UserStatistics';
   averageRatingGiven: Maybe<Scalars['Float']['output']>;
   helpfulVotesReceived: Scalars['Int']['output'];
@@ -11546,7 +11538,7 @@ export type GetMyDevicesQueryVariables = Exact<{
 }>;
 
 
-export type GetMyDevicesQuery = { __typename: 'Query', devices: { __typename: 'DeviceConnection', totalCount: number, edges: Array<{ __typename: 'DeviceEdge', cursor: string, node: { __typename: 'Device', id: string, deviceId: string, deviceName: string | null, deviceType: DeviceType, platform: MobilePlatform | null, isActive: boolean, isTrusted: boolean, lastSeenAt: string, createdAt: string } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetMyDevicesQuery = { __typename: 'Query', devices: { __typename: 'DeviceConnection', totalCount: number | null, edges: Array<{ __typename: 'DeviceEdge', cursor: string, node: { __typename: 'Device', id: string, deviceId: string, deviceName: string | null, deviceType: DeviceType, platform: MobilePlatform | null, isActive: boolean, isTrusted: boolean, lastSeenAt: string, createdAt: string } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetDeviceByDeviceIdQueryVariables = Exact<{
   deviceId: Scalars['String']['input'];
@@ -11690,7 +11682,7 @@ export type ShoppingListItemFragment = (
     ) | null }, source: { __typename: 'ShoppingListItemSource', isAutoAdded: boolean, autoAddReason: string | null, isFromMealPlan: boolean, mealPlan: { __typename: 'MealPlan', id: string, name: string } | null }, storeInfo: { __typename: 'ShoppingListItemStoreInfo', aisle: string | null, storeSection: string | null, preferredStore: { __typename: 'Store', id: string, name: string } | null }, purchaseHistory: { __typename: 'PurchaseHistorySummary', previouslyPurchased: boolean, lastPurchaseDate: string | null, purchaseCount: number }, addedBy: (
     { __typename: 'User' }
     & UserSummaryFragment
-  ) | null, purchasesConnection: { __typename: 'PurchaseConnection', totalCount: number, edges: Array<{ __typename: 'PurchaseEdge', cursor: string, node: (
+  ) | null, purchasesConnection: { __typename: 'PurchaseConnection', totalCount: number | null, edges: Array<{ __typename: 'PurchaseEdge', cursor: string, node: (
         { __typename: 'Purchase' }
         & PurchaseFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } }
@@ -11733,7 +11725,7 @@ export type ItemFragment = (
   & ItemDisplayFragment
 );
 
-export type PantryItemCoreFragment = { __typename: 'PantryItem', id: string, pantryId: string, itemId: string, itemName: string, quantity: number, version: number | null, updatedAt: string | null, storageState: StorageState, expiresAt: string | null, lowStockAlert: boolean, minQuantity: number | null, lastUsedAt: string | null, netWeight: number | null, remainingNetWeight: number | null };
+export type PantryItemCoreFragment = { __typename: 'PantryItem', id: string, pantryId: string, itemId: string, itemName: string, quantity: number, version: number, updatedAt: string | null, storageState: StorageState, expiresAt: string | null, lowStockAlert: boolean, minQuantity: number | null, lastUsedAt: string | null, netWeight: number | null, remainingNetWeight: number | null };
 
 export type PantryItemDisplayFragment = (
   { __typename: 'PantryItem', tags: Array<string>, item: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, displayUnit: { __typename: 'Unit', id: string, symbol: string } | null }, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, netWeightUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, storageLocation: { __typename: 'StorageLocation', id: string, name: string, type: StorageType } | null, brand: { __typename: 'Brand', id: string, name: string } | null, packageBreakdown: { __typename: 'PackageBreakdown', count: number, perUnitNetWeight: number | null, totalNetWeight: number | null, contentUnit: { __typename: 'Unit', id: string, name: string, symbol: string }, perUnitNetWeightUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null } | null, quantityBreakdown: { __typename: 'QuantityBreakdown', fullPackages: number, looseContentUnits: number, totalContentUnits: number, remainingWeight: number | null, contentUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, remainingWeightUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null } | null }
@@ -11765,21 +11757,21 @@ export type MemberShipFragment = { __typename: 'Membership', id: string, homeId:
 
 export type BasicPantryFragment = { __typename: 'Pantry', id: string, homeId: string, name: string, description: string | null, isDefault: boolean, location: string | null, temperature: string | null, tags: Array<string>, metadata: any | null, version: number, createdAt: string, updatedAt: string };
 
-export type HomeDisplayFragment = { __typename: 'Home', id: string, name: string, type: HomeType, description: string | null, currency: string | null, timezone: string | null, version: number, updatedAt: string, isDefault: boolean, membersConnection: { __typename: 'MembershipConnection', totalCount: number, edges: Array<{ __typename: 'MembershipEdge', node: { __typename: 'Membership', id: string, role: MembershipRole, status: MembershipStatus, userId: string, displayName: string | null } }> }, invitesConnection: { __typename: 'HomeInviteConnection', totalCount: number, edges: Array<{ __typename: 'HomeInviteEdge', cursor: string, node: (
+export type HomeDisplayFragment = { __typename: 'Home', id: string, name: string, type: HomeType, description: string | null, currency: string | null, timezone: string | null, version: number, updatedAt: string, isDefault: boolean, membersConnection: { __typename: 'MembershipConnection', totalCount: number | null, edges: Array<{ __typename: 'MembershipEdge', node: { __typename: 'Membership', id: string, role: MembershipRole, status: MembershipStatus, userId: string, displayName: string | null } }> }, invitesConnection: { __typename: 'HomeInviteConnection', totalCount: number | null, edges: Array<{ __typename: 'HomeInviteEdge', cursor: string, node: (
         { __typename: 'HomeInvite' }
         & HomeInviteDisplayFragment
-      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, pantriesConnection: { __typename: 'PantryConnection', totalCount: number, edges: Array<{ __typename: 'PantryEdge', cursor: string, node: (
+      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, pantriesConnection: { __typename: 'PantryConnection', totalCount: number | null, edges: Array<{ __typename: 'PantryEdge', cursor: string, node: (
         { __typename: 'Pantry' }
         & BasicPantryFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, status: MembershipStatus, displayName: string | null, canManageHome: boolean, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null };
 
-export type HomeFragment = { __typename: 'Home', id: string, name: string, type: HomeType, description: string | null, timezone: string | null, currency: string | null, isPublic: boolean, joinCode: string | null, allowJoinCode: boolean, maxMembers: number | null, tags: Array<string>, metadata: any | null, version: number, createdAt: string, updatedAt: string, invitesConnection: { __typename: 'HomeInviteConnection', totalCount: number, edges: Array<{ __typename: 'HomeInviteEdge', cursor: string, node: (
+export type HomeFragment = { __typename: 'Home', id: string, name: string, type: HomeType, description: string | null, timezone: string | null, currency: string | null, isPublic: boolean, joinCode: string | null, allowJoinCode: boolean, maxMembers: number | null, tags: Array<string>, metadata: any | null, version: number, createdAt: string, updatedAt: string, invitesConnection: { __typename: 'HomeInviteConnection', totalCount: number | null, edges: Array<{ __typename: 'HomeInviteEdge', cursor: string, node: (
         { __typename: 'HomeInvite' }
         & HomeInviteFragment
-      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, membersConnection: { __typename: 'MembershipConnection', totalCount: number, edges: Array<{ __typename: 'MembershipEdge', cursor: string, node: (
+      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, membersConnection: { __typename: 'MembershipConnection', totalCount: number | null, edges: Array<{ __typename: 'MembershipEdge', cursor: string, node: (
         { __typename: 'Membership' }
         & MemberShipFragment
-      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, pantriesConnection: { __typename: 'PantryConnection', totalCount: number, edges: Array<{ __typename: 'PantryEdge', cursor: string, node: (
+      ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, pantriesConnection: { __typename: 'PantryConnection', totalCount: number | null, edges: Array<{ __typename: 'PantryEdge', cursor: string, node: (
         { __typename: 'Pantry' }
         & BasicPantryFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -11820,7 +11812,7 @@ export type RecipeReviewFragment = { __typename: 'RecipeReview', id: string, rat
 export type BasicRecipeFragment = { __typename: 'Recipe', id: string, name: string, description: string | null, imageUrl: string | null, servings: number, prepTimeMinutes: number | null, cookTimeMinutes: number | null, totalTimeMinutes: number | null, difficulty: Difficulty, category: RecipeCategory, cuisine: string | null, status: RecipeStatus, isExternal: boolean, externalSource: ExternalSource | null, externalId: string | null, primarySource: string | null, caloriesPerServing: number | null, createdAt: string, updatedAt: string, savedDetails: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number } | null };
 
 export type RecipeFragment = (
-  { __typename: 'Recipe', instructions: any, notes: string | null, tips: string | null, videoUrl: string | null, sourceUrl: string | null, source: string | null, originalAuthor: string | null, externalUrl: string | null, externalData: any | null, nutritionData: any | null, tags: Array<string>, visibility: Visibility, isPublished: boolean, publishedAt: string | null, averageRating: number | null, totalReviews: number, rating1Count: number, rating2Count: number, rating3Count: number, rating4Count: number, rating5Count: number, matchPercentage: number | null, reviews: { __typename: 'RecipeReviewConnection', totalCount: number, edges: Array<{ __typename: 'RecipeReviewEdge', node: (
+  { __typename: 'Recipe', instructions: any, notes: string | null, tips: string | null, videoUrl: string | null, sourceUrl: string | null, source: string | null, originalAuthor: string | null, externalUrl: string | null, externalData: any | null, nutritionData: any | null, tags: Array<string>, visibility: Visibility, isPublished: boolean, publishedAt: string | null, averageRating: number | null, totalReviews: number, rating1Count: number, rating2Count: number, rating3Count: number, rating4Count: number, rating5Count: number, matchPercentage: number | null, reviews: { __typename: 'RecipeReviewConnection', totalCount: number | null, edges: Array<{ __typename: 'RecipeReviewEdge', node: (
         { __typename: 'RecipeReview' }
         & RecipeReviewFragment
       ) }> }, createdBy: (
@@ -11843,23 +11835,13 @@ export type GetHomeQuery = { __typename: 'Query', home: (
     & HomeFragment
   ) | null };
 
-export type GetHomeBasicQueryVariables = Exact<{
-  homeId: Scalars['ID']['input'];
-}>;
-
-
-export type GetHomeBasicQuery = { __typename: 'Query', home: (
-    { __typename: 'Home' }
-    & HomeFragment
-  ) | null };
-
 export type GetHomesQueryVariables = Exact<{
   first?: InputMaybe<Scalars['Int']['input']>;
   after?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type GetHomesQuery = { __typename: 'Query', homes: { __typename: 'HomeConnection', totalCount: number, edges: Array<{ __typename: 'HomeEdge', cursor: string, node: (
+export type GetHomesQuery = { __typename: 'Query', homes: { __typename: 'HomeConnection', totalCount: number | null, edges: Array<{ __typename: 'HomeEdge', cursor: string, node: (
         { __typename: 'Home' }
         & HomeDisplayFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12040,7 +12022,7 @@ export type RemoveItemImageMutationVariables = Exact<{
 }>;
 
 
-export type RemoveItemImageMutation = { __typename: 'Mutation', updateItem: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, imageUrl: string | null } | null } };
+export type RemoveItemImageMutation = { __typename: 'Mutation', removeItemImage: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, imageUrl: string | null } | null } };
 
 export type ConvertQuantityQueryVariables = Exact<{
   itemId?: InputMaybe<Scalars['ID']['input']>;
@@ -12128,7 +12110,7 @@ export type SearchItemsQueryVariables = Exact<{
 }>;
 
 
-export type SearchItemsQuery = { __typename: 'Query', searchItems: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } };
+export type SearchItemsQuery = { __typename: 'Query', searchItems: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } };
 
 export type ItemByUpcFilterQueryVariables = Exact<{
   upc: Scalars['String']['input'];
@@ -12136,7 +12118,7 @@ export type ItemByUpcFilterQueryVariables = Exact<{
 }>;
 
 
-export type ItemByUpcFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, primaryUpc: string | null, alternateUpcs: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }>, variationBrand: { __typename: 'Brand', id: string, name: string } | null, matchedVariation: { __typename: 'ProductVariation', netWeight: number | null, netWeightUnit: string | null, packageSize: string | null, confidence: number | null, brandInfo: { __typename: 'VariationBrandInfo', id: string | null, name: string } | null } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type ItemByUpcFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, primaryUpc: string | null, alternateUpcs: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }>, variationBrand: { __typename: 'Brand', id: string, name: string } | null, matchedVariation: { __typename: 'ProductVariation', netWeight: number | null, netWeightUnit: string | null, packageSize: string | null, confidence: number | null, brandInfo: { __typename: 'VariationBrandInfo', id: string | null, name: string } | null } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type ItemBySkuFilterQueryVariables = Exact<{
   sku: Scalars['String']['input'];
@@ -12144,7 +12126,7 @@ export type ItemBySkuFilterQueryVariables = Exact<{
 }>;
 
 
-export type ItemBySkuFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, description: string | null, primaryUpc: string | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type ItemBySkuFilterQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, imageUrl: string | null, name: string, netWeight: number | null, description: string | null, primaryUpc: string | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', isDefault: boolean, unitId: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
@@ -12154,7 +12136,7 @@ export type GetOnboardingItemsQueryVariables = Exact<{
 }>;
 
 
-export type GetOnboardingItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, storageState: StorageState, displayUnit: { __typename: 'Unit', id: string, name: string } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetOnboardingItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, storageState: StorageState, displayUnit: { __typename: 'Unit', id: string, name: string } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type AutocompleteItemsQueryVariables = Exact<{
   input: AutocompleteInput;
@@ -12169,7 +12151,7 @@ export type SearchBrandsQueryVariables = Exact<{
 }>;
 
 
-export type SearchBrandsQuery = { __typename: 'Query', brands: { __typename: 'BrandConnection', totalCount: number, edges: Array<{ __typename: 'BrandEdge', node: { __typename: 'Brand', id: string, name: string } }> } };
+export type SearchBrandsQuery = { __typename: 'Query', brands: { __typename: 'BrandConnection', totalCount: number | null, edges: Array<{ __typename: 'BrandEdge', node: { __typename: 'Brand', id: string, name: string } }> } };
 
 export type AutocompleteCategoriesQueryVariables = Exact<{
   input: AutocompleteCategoryInput;
@@ -12183,7 +12165,7 @@ export type GetPopularItemsQueryVariables = Exact<{
 }>;
 
 
-export type GetPopularItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, popularity: number, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string, type: UnitType } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }> } }> } };
+export type GetPopularItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ItemEdge', node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, popularity: number, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string, type: UnitType } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }> } }> } };
 
 export type GetRecommendedItemsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -12201,7 +12183,7 @@ export type GetPurchasesQueryVariables = Exact<{
 }>;
 
 
-export type GetPurchasesQuery = { __typename: 'Query', purchases: { __typename: 'PurchaseConnection', totalCount: number, edges: Array<{ __typename: 'PurchaseEdge', cursor: string, node: (
+export type GetPurchasesQuery = { __typename: 'Query', purchases: { __typename: 'PurchaseConnection', totalCount: number | null, edges: Array<{ __typename: 'PurchaseEdge', cursor: string, node: (
         { __typename: 'Purchase' }
         & PurchaseFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12268,7 +12250,7 @@ export type GetMealPlansQueryVariables = Exact<{
 }>;
 
 
-export type GetMealPlansQuery = { __typename: 'Query', mealPlans: { __typename: 'MealPlanConnection', totalCount: number, edges: Array<{ __typename: 'MealPlanEdge', cursor: string, node: (
+export type GetMealPlansQuery = { __typename: 'Query', mealPlans: { __typename: 'MealPlanConnection', totalCount: number | null, edges: Array<{ __typename: 'MealPlanEdge', cursor: string, node: (
         { __typename: 'MealPlan' }
         & MealPlanDisplayFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12290,7 +12272,7 @@ export type CreateMealPlanMutationVariables = Exact<{
 
 export type CreateMealPlanMutation = { __typename: 'Mutation', createMealPlan: { __typename: 'MealPlanPayload', success: boolean, message: string, code: string, mealPlan: (
       { __typename: 'MealPlan' }
-      & MealPlanFullFragment
+      & MealPlanDisplayFragment
     ) | null } };
 
 export type UpdateMealPlanMutationVariables = Exact<{
@@ -12301,7 +12283,7 @@ export type UpdateMealPlanMutationVariables = Exact<{
 
 export type UpdateMealPlanMutation = { __typename: 'Mutation', updateMealPlan: { __typename: 'MealPlanPayload', success: boolean, message: string, code: string, mealPlan: (
       { __typename: 'MealPlan' }
-      & MealPlanFullFragment
+      & MealPlanDisplayFragment
     ) | null } };
 
 export type DeleteMealPlanMutationVariables = Exact<{
@@ -12347,7 +12329,7 @@ export type GetMealTemplatesQueryVariables = Exact<{
 }>;
 
 
-export type GetMealTemplatesQuery = { __typename: 'Query', mealTemplates: { __typename: 'MealTemplateConnection', totalCount: number, edges: Array<{ __typename: 'MealTemplateEdge', cursor: string, node: (
+export type GetMealTemplatesQuery = { __typename: 'Query', mealTemplates: { __typename: 'MealTemplateConnection', totalCount: number | null, edges: Array<{ __typename: 'MealTemplateEdge', cursor: string, node: (
         { __typename: 'MealTemplate' }
         & MealTemplateDisplayFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12474,7 +12456,7 @@ export type GetMyNotificationsQueryVariables = Exact<{
 }>;
 
 
-export type GetMyNotificationsQuery = { __typename: 'Query', me: { __typename: 'User', id: string, notificationsConnection: { __typename: 'NotificationConnection', totalCount: number, unreadCount: number, edges: Array<{ __typename: 'NotificationEdge', cursor: string, node: (
+export type GetMyNotificationsQuery = { __typename: 'Query', me: { __typename: 'User', id: string, notificationsConnection: { __typename: 'NotificationConnection', totalCount: number | null, unreadCount: number, edges: Array<{ __typename: 'NotificationEdge', cursor: string, node: (
           { __typename: 'Notification' }
           & NotificationFragment
         ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } } | null };
@@ -12546,10 +12528,10 @@ export type GetPantryQueryVariables = Exact<{
 }>;
 
 
-export type GetPantryQuery = { __typename: 'Query', pantry: { __typename: 'Pantry', id: string, homeId: string, name: string, description: string | null, isDefault: boolean, location: string | null, temperature: string | null, tags: Array<string>, metadata: any | null, version: number, createdAt: string, updatedAt: string, itemsConnection: { __typename: 'PantryItemConnection', totalCount: number, edges: Array<{ __typename: 'PantryItemEdge', cursor: string, node: (
+export type GetPantryQuery = { __typename: 'Query', pantry: { __typename: 'Pantry', id: string, homeId: string, name: string, description: string | null, isDefault: boolean, location: string | null, temperature: string | null, tags: Array<string>, metadata: any | null, version: number, createdAt: string, updatedAt: string, itemsConnection: { __typename: 'PantryItemConnection', totalCount: number | null, edges: Array<{ __typename: 'PantryItemEdge', cursor: string, node: (
           { __typename: 'PantryItem' }
           & PantryItemDisplayFragment
-        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } }, storageLocationsConnection: { __typename: 'StorageLocationConnection', totalCount: number, edges: Array<{ __typename: 'StorageLocationEdge', cursor: string, node: { __typename: 'StorageLocation', id: string, name: string, type: StorageType, icon: string | null, color: string | null, temperature: StorageState | null, isDefault: boolean, sortOrder: number, parentLocation: { __typename: 'StorageLocation', id: string, name: string } | null, childLocations: Array<{ __typename: 'StorageLocation', id: string, name: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } } | null };
+        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } }, storageLocationsConnection: { __typename: 'StorageLocationConnection', totalCount: number | null, edges: Array<{ __typename: 'StorageLocationEdge', cursor: string, node: { __typename: 'StorageLocation', id: string, name: string, type: StorageType, icon: string | null, color: string | null, temperature: StorageState | null, isDefault: boolean, sortOrder: number, parentLocation: { __typename: 'StorageLocation', id: string, name: string } | null, childLocations: Array<{ __typename: 'StorageLocation', id: string, name: string }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } } | null };
 
 export type GetPantryItemQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -12813,7 +12795,7 @@ export type SearchRecipesQueryVariables = Exact<{
 }>;
 
 
-export type SearchRecipesQuery = { __typename: 'Query', searchRecipes: { __typename: 'RecipeConnection', totalCount: number, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
+export type SearchRecipesQuery = { __typename: 'Query', searchRecipes: { __typename: 'RecipeConnection', totalCount: number | null, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
         { __typename: 'Recipe' }
         & BasicRecipeFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12824,7 +12806,7 @@ export type SuggestedRecipesQueryVariables = Exact<{
 }>;
 
 
-export type SuggestedRecipesQuery = { __typename: 'Query', recipeSuggestions: { __typename: 'RecipeConnection', totalCount: number, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
+export type SuggestedRecipesQuery = { __typename: 'Query', recipeSuggestions: { __typename: 'RecipeConnection', totalCount: number | null, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
         { __typename: 'Recipe' }
         & BasicRecipeFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
@@ -12837,7 +12819,7 @@ export type MyRecipesQueryVariables = Exact<{
 }>;
 
 
-export type MyRecipesQuery = { __typename: 'Query', recipes: { __typename: 'RecipeConnection', totalCount: number, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
+export type MyRecipesQuery = { __typename: 'Query', recipes: { __typename: 'RecipeConnection', totalCount: number | null, edges: Array<{ __typename: 'RecipeEdge', cursor: string, node: (
         { __typename: 'Recipe' }
         & BasicRecipeFragment
       ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } };
@@ -12857,7 +12839,7 @@ export type MySavedRecipesQueryVariables = Exact<{
 }>;
 
 
-export type MySavedRecipesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, savedRecipesConnection: { __typename: 'SavedRecipeConnection', totalCount: number, edges: Array<{ __typename: 'SavedRecipeEdge', cursor: string, node: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number, lastCookedAt: string | null, createdAt: string, updatedAt: string, recipe: (
+export type MySavedRecipesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, savedRecipesConnection: { __typename: 'SavedRecipeConnection', totalCount: number | null, edges: Array<{ __typename: 'SavedRecipeEdge', cursor: string, node: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number, lastCookedAt: string | null, createdAt: string, updatedAt: string, recipe: (
             { __typename: 'Recipe' }
             & BasicRecipeFragment
           ) } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } | null };
@@ -12874,7 +12856,7 @@ export type CreateRecipeMutationVariables = Exact<{
 
 export type CreateRecipeMutation = { __typename: 'Mutation', createRecipe: { __typename: 'RecipePayload', success: boolean, message: string, code: string, recipe: (
       { __typename: 'Recipe' }
-      & RecipeFragment
+      & BasicRecipeFragment
     ) | null } };
 
 export type UpsertExternalRecipeMutationVariables = Exact<{
@@ -12892,7 +12874,7 @@ export type UpdateRecipeMutationVariables = Exact<{
 
 export type UpdateRecipeMutation = { __typename: 'Mutation', updateRecipe: { __typename: 'RecipePayload', success: boolean, message: string, code: string, recipe: (
       { __typename: 'Recipe' }
-      & RecipeFragment
+      & BasicRecipeFragment
     ) | null } };
 
 export type DeleteRecipeMutationVariables = Exact<{
@@ -12984,7 +12966,7 @@ export type GetRecipeCookingLogsQueryVariables = Exact<{
 }>;
 
 
-export type GetRecipeCookingLogsQuery = { __typename: 'Query', recipeCookingLogs: { __typename: 'CookingLogConnection', totalCount: number, edges: Array<{ __typename: 'CookingLogEdge', cursor: string, node: { __typename: 'CookingLog', id: string, servingsMade: number | null, notes: string | null, cookedAt: string, recipe: { __typename: 'Recipe', id: string, name: string } } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetRecipeCookingLogsQuery = { __typename: 'Query', recipeCookingLogs: { __typename: 'CookingLogConnection', totalCount: number | null, edges: Array<{ __typename: 'CookingLogEdge', cursor: string, node: { __typename: 'CookingLog', id: string, servingsMade: number | null, notes: string | null, cookedAt: string, recipe: { __typename: 'Recipe', id: string, name: string } } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type ConfirmRecipeConsumptionMutationVariables = Exact<{
   input: ConfirmRecipeConsumptionInput;
@@ -13075,10 +13057,10 @@ export type GetShoppingListQueryVariables = Exact<{
 export type GetShoppingListQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, isPublic: boolean, shareCode: string | null, tags: Array<string>, budgetAmount: number | null, totalCost: number, estimatedTotal: number, currency: string | null, category: string | null, priority: number, status: ListStatus, isCompleted: boolean, completedAt: string | null, totalItems: number, completedItems: number, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null } | null, ownerships: Array<(
       { __typename: 'ShoppingListOwnership' }
       & ShoppingListOwnershipFragment
-    )>, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
+    )>, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
           { __typename: 'ShoppingListItem' }
           & ShoppingListItemDisplayFragment
-        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
+        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
           { __typename: 'ShoppingListCollaborator', canEdit: boolean, canInviteOthers: boolean, invitedAt: string, lastViewedAt: string | null }
           & ShoppingListCollaboratorFragment
         ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, targetStore: { __typename: 'Store', id: string, name: string, address: string | null } | null } | null };
@@ -13090,18 +13072,18 @@ export type GetShoppingListsLiteQueryVariables = Exact<{
 }>;
 
 
-export type GetShoppingListsLiteQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListEdge', cursor: string, node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, status: ListStatus, isCompleted: boolean, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string } | null, ownerships: Array<{ __typename: 'ShoppingListOwnership', id: string, userId: string, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', id: string, displayName: string | null, avatar: string | null } | null } }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetShoppingListsLiteQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListEdge', cursor: string, node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, status: ListStatus, isCompleted: boolean, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string } | null, ownerships: Array<{ __typename: 'ShoppingListOwnership', id: string, userId: string, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', id: string, displayName: string | null, avatar: string | null } | null } }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetDefaultShoppingListQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetDefaultShoppingListQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', edges: Array<{ __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
+export type GetDefaultShoppingListQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', edges: Array<{ __typename: 'ShoppingListEdge', node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
               { __typename: 'ShoppingListItem', item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } | null }
               & ShoppingListItemCoreFragment
             ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, ownerships: Array<(
           { __typename: 'ShoppingListOwnership' }
           & ShoppingListOwnershipFragment
-        )>, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
+        )>, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
               { __typename: 'ShoppingListCollaborator' }
               & ShoppingListCollaboratorFragment
             ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } }> } };
@@ -13114,10 +13096,10 @@ export type GetShoppingListItemsPaginatedQueryVariables = Exact<{
 }>;
 
 
-export type GetShoppingListItemsPaginatedQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, unpurchasedItems: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
+export type GetShoppingListItemsPaginatedQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, unpurchasedItems: { __typename: 'ShoppingListItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
           { __typename: 'ShoppingListItem' }
           & ShoppingListItemDisplayFragment
-        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, purchasedItems: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
+        ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, purchasedItems: { __typename: 'ShoppingListItemConnection', totalCount: number | null, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
           { __typename: 'ShoppingListItem' }
           & ShoppingListItemDisplayFragment
         ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } | null };
@@ -13156,10 +13138,7 @@ export type UpdateShoppingListMutationVariables = Exact<{
 }>;
 
 
-export type UpdateShoppingListMutation = { __typename: 'Mutation', updateShoppingList: { __typename: 'ShoppingListPayload', success: boolean, message: string, code: string, shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, isPublic: boolean, tags: Array<string>, totalItems: number, completedItems: number, estimatedTotal: number, currency: string | null, status: ListStatus, isCompleted: boolean, priority: number, createdAt: string, updatedAt: string, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: { __typename: 'ShoppingListItem', id: string, purchaseInfo: { __typename: 'ShoppingListItemPurchaseInfo', isPurchased: boolean } } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
-            { __typename: 'ShoppingListCollaborator' }
-            & ShoppingListCollaboratorFragment
-          ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, ownerships: Array<(
+export type UpdateShoppingListMutation = { __typename: 'Mutation', updateShoppingList: { __typename: 'ShoppingListPayload', success: boolean, message: string, code: string, shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, isPublic: boolean, tags: Array<string>, totalItems: number, completedItems: number, estimatedTotal: number, currency: string | null, status: ListStatus, isCompleted: boolean, priority: number, createdAt: string, updatedAt: string, ownerships: Array<(
         { __typename: 'ShoppingListOwnership' }
         & ShoppingListOwnershipFragment
       )> } | null } };
@@ -13379,7 +13358,7 @@ export type GetStorageLocationsQueryVariables = Exact<{
 }>;
 
 
-export type GetStorageLocationsQuery = { __typename: 'Query', storageLocations: { __typename: 'StorageLocationConnection', totalCount: number, edges: Array<{ __typename: 'StorageLocationEdge', cursor: string, node: { __typename: 'StorageLocation', id: string, name: string, type: StorageType, icon: string | null, color: string | null, temperature: StorageState | null, sortOrder: number, isDefault: boolean, currentItemCount: number, parentLocation: { __typename: 'StorageLocation', id: string, name: string } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetStorageLocationsQuery = { __typename: 'Query', storageLocations: { __typename: 'StorageLocationConnection', totalCount: number | null, edges: Array<{ __typename: 'StorageLocationEdge', cursor: string, node: { __typename: 'StorageLocation', id: string, name: string, type: StorageType, icon: string | null, color: string | null, temperature: StorageState | null, sortOrder: number, isDefault: boolean, currentItemCount: number, parentLocation: { __typename: 'StorageLocation', id: string, name: string } | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetStorageLocationTreeQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
@@ -14363,43 +14342,6 @@ export type GetHomeQueryHookResult = ReturnType<typeof useGetHomeQuery>;
 export type GetHomeLazyQueryHookResult = ReturnType<typeof useGetHomeLazyQuery>;
 export type GetHomeSuspenseQueryHookResult = ReturnType<typeof useGetHomeSuspenseQuery>;
 export type GetHomeQueryResult = ApolloReactCommon.QueryResult<GetHomeQuery, GetHomeQueryVariables>;
-export const GetHomeBasicDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetHomeBasic"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"home"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"invitedUserId"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"customPermissions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastReminderAt"}},{"kind":"Field","name":{"kind":"Name","value":"reminderCount"}},{"kind":"Field","name":{"kind":"Name","value":"acceptedAt"}},{"kind":"Field","name":{"kind":"Name","value":"declinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"revokedAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MemberShipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Membership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"joinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"leftAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicPantryFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Pantry"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Home"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"joinCode"}},{"kind":"Field","name":{"kind":"Name","value":"allowJoinCode"}},{"kind":"Field","name":{"kind":"Name","value":"maxMembers"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"invitesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"50"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeInviteFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"membersConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MemberShipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"50"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicPantryFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useGetHomeBasicQuery__
- *
- * To run a query within a React component, call `useGetHomeBasicQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetHomeBasicQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetHomeBasicQuery({
- *   variables: {
- *      homeId: // value for 'homeId'
- *   },
- * });
- */
-export function useGetHomeBasicQuery(baseOptions: ApolloReactHooks.QueryHookOptions<GetHomeBasicQuery, GetHomeBasicQueryVariables> & ({ variables: GetHomeBasicQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useQuery<GetHomeBasicQuery, GetHomeBasicQueryVariables>(GetHomeBasicDocument, options);
-      }
-export function useGetHomeBasicLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<GetHomeBasicQuery, GetHomeBasicQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return ApolloReactHooks.useLazyQuery<GetHomeBasicQuery, GetHomeBasicQueryVariables>(GetHomeBasicDocument, options);
-        }
-// @ts-ignore
-export function useGetHomeBasicSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<GetHomeBasicQuery, GetHomeBasicQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetHomeBasicQuery, GetHomeBasicQueryVariables>;
-export function useGetHomeBasicSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetHomeBasicQuery, GetHomeBasicQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<GetHomeBasicQuery | undefined, GetHomeBasicQueryVariables>;
-export function useGetHomeBasicSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<GetHomeBasicQuery, GetHomeBasicQueryVariables>) {
-          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return ApolloReactHooks.useSuspenseQuery<GetHomeBasicQuery, GetHomeBasicQueryVariables>(GetHomeBasicDocument, options);
-        }
-export type GetHomeBasicQueryHookResult = ReturnType<typeof useGetHomeBasicQuery>;
-export type GetHomeBasicLazyQueryHookResult = ReturnType<typeof useGetHomeBasicLazyQuery>;
-export type GetHomeBasicSuspenseQueryHookResult = ReturnType<typeof useGetHomeBasicSuspenseQuery>;
-export type GetHomeBasicQueryResult = ApolloReactCommon.QueryResult<GetHomeBasicQuery, GetHomeBasicQueryVariables>;
 export const GetHomesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetHomes"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"first"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"homes"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"first"}}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeDisplay"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicPantryFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Pantry"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Home"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"membersConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeInviteDisplay"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"50"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicPantryFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -14981,7 +14923,7 @@ export function useUpdateItemImageMutation(baseOptions?: ApolloReactHooks.Mutati
 export type UpdateItemImageMutationHookResult = ReturnType<typeof useUpdateItemImageMutation>;
 export type UpdateItemImageMutationResult = ApolloReactCommon.MutationResult<UpdateItemImageMutation>;
 export type UpdateItemImageMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateItemImageMutation, UpdateItemImageMutationVariables>;
-export const RemoveItemImageDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"RemoveItemImage"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateItem"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"removeImage"},"value":{"kind":"BooleanValue","value":true}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const RemoveItemImageDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"RemoveItemImage"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"removeItemImage"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useRemoveItemImageMutation__
@@ -16057,7 +15999,7 @@ export type GetMealPlanQueryHookResult = ReturnType<typeof useGetMealPlanQuery>;
 export type GetMealPlanLazyQueryHookResult = ReturnType<typeof useGetMealPlanLazyQuery>;
 export type GetMealPlanSuspenseQueryHookResult = ReturnType<typeof useGetMealPlanSuspenseQuery>;
 export type GetMealPlanQueryResult = ApolloReactCommon.QueryResult<GetMealPlanQuery, GetMealPlanQueryVariables>;
-export const CreateMealPlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateMealPlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateMealPlanInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createMealPlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanFull"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlanItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"mealType"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"customMealName"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"calories"}},{"kind":"Field","name":{"kind":"Name","value":"protein"}},{"kind":"Field","name":{"kind":"Name","value":"carbs"}},{"kind":"Field","name":{"kind":"Name","value":"fat"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedCost"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionSource"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"planType"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanFull"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nutritionSummary"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyCalories"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyProtein"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyFat"}},{"kind":"Field","name":{"kind":"Name","value":"totalMeals"}},{"kind":"Field","name":{"kind":"Name","value":"mealsWithNutrition"}},{"kind":"Field","name":{"kind":"Name","value":"coveragePercentage"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
+export const CreateMealPlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateMealPlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateMealPlanInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createMealPlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanDisplay"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"planType"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useCreateMealPlanMutation__
@@ -16083,7 +16025,7 @@ export function useCreateMealPlanMutation(baseOptions?: ApolloReactHooks.Mutatio
 export type CreateMealPlanMutationHookResult = ReturnType<typeof useCreateMealPlanMutation>;
 export type CreateMealPlanMutationResult = ApolloReactCommon.MutationResult<CreateMealPlanMutation>;
 export type CreateMealPlanMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateMealPlanMutation, CreateMealPlanMutationVariables>;
-export const UpdateMealPlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateMealPlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateMealPlanInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateMealPlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanFull"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlanItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"mealType"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"customMealName"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"calories"}},{"kind":"Field","name":{"kind":"Name","value":"protein"}},{"kind":"Field","name":{"kind":"Name","value":"carbs"}},{"kind":"Field","name":{"kind":"Name","value":"fat"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedCost"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionSource"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"planType"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanFull"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nutritionSummary"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyCalories"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyProtein"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"avgDailyFat"}},{"kind":"Field","name":{"kind":"Name","value":"totalMeals"}},{"kind":"Field","name":{"kind":"Name","value":"mealsWithNutrition"}},{"kind":"Field","name":{"kind":"Name","value":"coveragePercentage"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
+export const UpdateMealPlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateMealPlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateMealPlanInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateMealPlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MealPlanDisplay"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealPlanDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealPlan"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"planType"}},{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"totalCalories"}},{"kind":"Field","name":{"kind":"Name","value":"totalProtein"}},{"kind":"Field","name":{"kind":"Name","value":"totalCarbs"}},{"kind":"Field","name":{"kind":"Name","value":"totalFat"}},{"kind":"Field","name":{"kind":"Name","value":"actualCost"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpdateMealPlanMutation__
@@ -17876,7 +17818,7 @@ export type SavedRecipeFoldersQueryHookResult = ReturnType<typeof useSavedRecipe
 export type SavedRecipeFoldersLazyQueryHookResult = ReturnType<typeof useSavedRecipeFoldersLazyQuery>;
 export type SavedRecipeFoldersSuspenseQueryHookResult = ReturnType<typeof useSavedRecipeFoldersSuspenseQuery>;
 export type SavedRecipeFoldersQueryResult = ApolloReactCommon.QueryResult<SavedRecipeFoldersQuery, SavedRecipeFoldersQueryVariables>;
-export const CreateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
+export const CreateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useCreateRecipeMutation__
@@ -17928,7 +17870,7 @@ export function useUpsertExternalRecipeMutation(baseOptions?: ApolloReactHooks.M
 export type UpsertExternalRecipeMutationHookResult = ReturnType<typeof useUpsertExternalRecipeMutation>;
 export type UpsertExternalRecipeMutationResult = ApolloReactCommon.MutationResult<UpsertExternalRecipeMutation>;
 export type UpsertExternalRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<UpsertExternalRecipeMutation, UpsertExternalRecipeMutationVariables>;
-export const UpdateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
+export const UpdateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpdateRecipeMutation__
@@ -18804,7 +18746,7 @@ export function useCreateShoppingListMutation(baseOptions?: ApolloReactHooks.Mut
 export type CreateShoppingListMutationHookResult = ReturnType<typeof useCreateShoppingListMutation>;
 export type CreateShoppingListMutationResult = ApolloReactCommon.MutationResult<CreateShoppingListMutation>;
 export type CreateShoppingListMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateShoppingListMutation, CreateShoppingListMutationVariables>;
-export const UpdateShoppingListDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateShoppingListInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateShoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"itemsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"25"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredFrom"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const UpdateShoppingListDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateShoppingListInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateShoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredFrom"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpdateShoppingListMutation__

@@ -19,7 +19,7 @@ interface DayMealListProps {
   onAddMeal?: (mealType?: MealType) => void;
 }
 
-export const DayMealList: React.FC<DayMealListProps> = React.memo(({
+export const DayMealList: React.FC<DayMealListProps> = ({
   selectedDate,
   dailyMeals,
   totalCalories,
@@ -67,13 +67,13 @@ export const DayMealList: React.FC<DayMealListProps> = React.memo(({
           onPress={() => onAddMeal()}
           style={({ pressed }) => [styles.addMealButton, pressed && styles.pressed]}
         >
-          <Icon library="Ionicons" name="add-circle-outline" size={20} color={styles.addMealIcon.color} />
+          <Icon name="add-circle-outline" size={20} color={styles.addMealIcon.color} />
           <Text style={styles.addMealText}>Add a meal</Text>
         </Pressable>
       )}
     </ScrollView>
   );
-});
+};
 
 DayMealList.displayName = 'DayMealList';
 

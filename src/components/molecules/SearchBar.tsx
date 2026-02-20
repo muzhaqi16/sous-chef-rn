@@ -14,7 +14,7 @@ export interface SearchBarAction {
   backgroundColor?: string;
   badge?: number;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  library?: 'MaterialDesignIcons' | 'Ionicons' | 'FontAwesome' | string;
+  library?: string;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   animated?: boolean;
@@ -130,7 +130,6 @@ export const SearchBar: FC<SearchBarProps> = ({
               name="search"
               size={16}
               color={theme.colors.textTertiary}
-              library="Feather"
             />
           ) : undefined
         }

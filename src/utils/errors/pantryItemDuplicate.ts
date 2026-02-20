@@ -5,17 +5,24 @@ export interface PantryItemDuplicateInfo {
 
 const ERROR_CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
 
-function getGraphQLErrors(error: unknown): any[] | null {
+interface GraphQLErrorLike {
+  extensions?: { code?: string; existingPantryItemId?: string; existingPantryItemIds?: string[] };
+  message?: string;
+}
+
+function getGraphQLErrors(error: unknown): GraphQLErrorLike[] | null {
   if (error == null || typeof error !== 'object') return null;
 
   // CombinedGraphQLErrors (Apollo Client 4) — has .errors
-  if ('errors' in error && Array.isArray((error as any).errors)) {
-    return (error as any).errors;
+  if ('errors' in error) {
+    const { errors } = error as { errors: unknown };
+    if (Array.isArray(errors)) return errors;
   }
 
   // Legacy ApolloError — has .graphQLErrors
-  if ('graphQLErrors' in error && Array.isArray((error as any).graphQLErrors)) {
-    return (error as any).graphQLErrors;
+  if ('graphQLErrors' in error) {
+    const { graphQLErrors } = error as { graphQLErrors: unknown };
+    if (Array.isArray(graphQLErrors)) return graphQLErrors;
   }
 
   return null;
@@ -31,7 +38,7 @@ export function isPantryItemDuplicateError(error: unknown): boolean {
   const gqlErrors = getGraphQLErrors(error);
   if (gqlErrors) {
     return gqlErrors.some(
-      (err: any) => err.extensions?.code === ERROR_CODE,
+      (err) => err.extensions?.code === ERROR_CODE,
     );
   }
 
@@ -39,10 +46,10 @@ export function isPantryItemDuplicateError(error: unknown): boolean {
   if (
     error != null &&
     typeof error === 'object' &&
-    'extensions' in error &&
-    (error as any).extensions
+    'extensions' in error
   ) {
-    return (error as any).extensions.code === ERROR_CODE;
+    const { extensions } = error as GraphQLErrorLike;
+    return extensions?.code === ERROR_CODE;
   }
 
   return false;
@@ -57,20 +64,19 @@ export function isPantryItemDuplicateError(error: unknown): boolean {
 export function getPantryItemDuplicateInfo(
   error: unknown,
 ): PantryItemDuplicateInfo | null {
-  let duplicateError: any | undefined;
+  let duplicateError: GraphQLErrorLike | undefined;
 
   const gqlErrors = getGraphQLErrors(error);
   if (gqlErrors) {
     duplicateError = gqlErrors.find(
-      (err: any) => err.extensions?.code === ERROR_CODE,
+      (err) => err.extensions?.code === ERROR_CODE,
     );
   } else if (
     error != null &&
     typeof error === 'object' &&
-    'extensions' in error &&
-    (error as any).extensions
+    'extensions' in error
   ) {
-    duplicateError = error;
+    duplicateError = error as GraphQLErrorLike;
   }
 
   if (!duplicateError?.extensions) {

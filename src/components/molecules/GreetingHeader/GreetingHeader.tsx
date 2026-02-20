@@ -79,7 +79,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
               <Text style={styles.homeEmoji}>{household.icon || '🏠'}</Text>
               <Text style={styles.householdName}>{household.name}</Text>
               {household.onPress && (
-                <Icon name="chevron-right" size={14} color={theme.colors.textTertiary} />
+                <Icon name="chevron-forward" size={14} color={theme.colors.textTertiary} />
               )}
             </Pressable>
           )}

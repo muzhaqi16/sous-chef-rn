@@ -10,14 +10,14 @@ interface EmptyDayStateProps {
   onAddMeal?: (mealType?: MealType) => void;
 }
 
-export const EmptyDayState: React.FC<EmptyDayStateProps> = React.memo(({
+export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
   selectedDate,
   onAddMeal,
 }) => {
   return (
     <View style={styles.container}>
       <Icon
-        library="Ionicons"
+
         name="restaurant-outline"
         size={48}
         color={styles.icon.color}
@@ -31,13 +31,13 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = React.memo(({
           onPress={() => onAddMeal()}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
-          <Icon library="Ionicons" name="add" size={20} color={styles.buttonIcon.color} />
+          <Icon name="add" size={20} color={styles.buttonIcon.color} />
           <Text style={styles.buttonText}>Add a meal</Text>
         </Pressable>
       )}
     </View>
   );
-});
+};
 
 EmptyDayState.displayName = 'EmptyDayState';
 

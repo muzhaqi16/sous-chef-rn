@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
 import { StorageState, ItemType, BaseDimension, type ItemUnitInput } from '#generated';
@@ -261,7 +261,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     handleSubmit,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
-    resolver: yupResolver(createItemSchema) as any,
+    resolver: yupResolver(createItemSchema) as Resolver<CreateItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });

@@ -1,4 +1,5 @@
 import { useRef, useMemo } from 'react';
+import type { ErrorLike } from '@apollo/client';
 import { useErrorService } from '#/services/errorService';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 
@@ -29,13 +30,13 @@ export interface StandardSubscriptionOptions {
    * Custom onData handler (optional)
    * Called after deduplication check passes
    */
-  onData?: (data: any) => void;
+  onData?: (data: { data: Record<string, unknown> }) => void;
 
   /**
    * Custom error handler (optional)
    * If not provided, uses default error handling with logging
    */
-  onError?: (error: any) => void;
+  onError?: (error: ErrorLike) => void;
 }
 
 /**
@@ -108,11 +109,11 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
   const onData = useMemo(
     () =>
       needsOnData
-        ? ({ data }: any) => {
+        ? ({ data }: { data: { data?: Record<string, unknown> } }) => {
             // Check deduplication if userId provided
             if (userId && data?.data) {
               const payload = Object.values(data.data)[0]; // Get first value (the subscription payload)
-              if (!shouldProcessUpdate(payload as any)) {
+              if (!shouldProcessUpdate(payload as Record<string, unknown>)) {
                 if (__DEV__ && enableLogging) {
                   console.log(`🔕 ${operation}: Filtered self-echo event`);
                 }
@@ -140,11 +141,11 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
   const onError = useMemo(
     () =>
       customOnError
-        ? (error: any) => {
+        ? (error: ErrorLike) => {
             // Read from ref to always get the latest callback
             customOnErrorRef.current?.(error);
           }
-        : (error: any) => {
+        : (error: ErrorLike) => {
             const { message } = handleApolloError(error, { operation });
 
             if (__DEV__) {

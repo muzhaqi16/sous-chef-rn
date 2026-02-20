@@ -303,6 +303,7 @@ export class TelemetryService {
   }
 
   private setupErrorHandlers(): void {
+    // justified: HermesInternal is a Hermes engine-specific API not in TS type definitions
     if (typeof global !== 'undefined' && (global as any).HermesInternal) {
       (global as any).HermesInternal.enablePromiseRejectionTracker?.({
         allRejections: true,

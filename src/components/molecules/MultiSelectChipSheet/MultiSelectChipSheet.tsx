@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -6,13 +6,11 @@ import {
   BottomSheetView,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetHeader } from '#/components/atoms/BottomSheetHeader';
 import { AnimatedChip } from '#/components/atoms/AnimatedChip';
 import { Icon } from '#utils/iconUtils';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;
@@ -40,21 +38,22 @@ export function MultiSelectChipSheet<T extends string = string>({
   onDone,
   loading = false,
 }: MultiSelectChipSheetProps<T>) {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const animationConfigs = useSharedBottomSheetConfigs();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    onDismiss: onClose,
+    snapPoints: ['60%', '80%'],
+    keyboardBehavior: 'interactive',
+  });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sync visible prop with bottom sheet ref
+  // Sync visible prop with bottom sheet ref (complex: resets search query)
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
+      ref.current?.present();
       setSearchQuery('');
     } else {
-      bottomSheetRef.current?.dismiss();
+      ref.current?.dismiss();
     }
-  }, [visible]);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items;
@@ -76,32 +75,11 @@ export function MultiSelectChipSheet<T extends string = string>({
   const showSearch = items.length > 8;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['60%', '80%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.surface }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
         style={[
           styles.bottomSheetContent,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
       >
         <BottomSheetHeader
@@ -117,7 +95,6 @@ export function MultiSelectChipSheet<T extends string = string>({
         {showSearch && (
           <View style={styles.searchContainer}>
             <Icon
-              library="Feather"
               name="search"
               size={18}
               color={theme.colors.textSecondary}

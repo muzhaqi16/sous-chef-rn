@@ -15,7 +15,7 @@ interface MealTypeSectionProps {
   onAddMeal?: (mealType: MealType) => void;
 }
 
-export const MealTypeSection: React.FC<MealTypeSectionProps> = React.memo(({
+export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
   mealType,
   label,
   items,
@@ -34,7 +34,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = React.memo(({
             style={styles.addButton}
             hitSlop={8}
           >
-            <Icon library="Ionicons" name="add" size={20} color={styles.addIcon.color} />
+            <Icon name="add" size={20} color={styles.addIcon.color} />
           </Pressable>
         )}
       </View>
@@ -50,7 +50,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = React.memo(({
       ))}
     </View>
   );
-});
+};
 
 MealTypeSection.displayName = 'MealTypeSection';
 

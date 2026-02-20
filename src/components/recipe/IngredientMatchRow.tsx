@@ -21,7 +21,7 @@ const BADGE_CONFIG = {
   missing: { label: 'Missing', color: 'error' as const },
 } as const;
 
-export const IngredientMatchRow: React.FC<IngredientMatchRowProps> = React.memo(
+export const IngredientMatchRow: React.FC<IngredientMatchRowProps> =
   ({ editableMatch, index, onUpdate }) => {
     const { theme } = useUnistyles();
     const { match, adjustedQuantity, isIncluded } = editableMatch;
@@ -96,8 +96,7 @@ export const IngredientMatchRow: React.FC<IngredientMatchRowProps> = React.memo(
         </View>
       </View>
     );
-  },
-);
+  };
 
 IngredientMatchRow.displayName = 'IngredientMatchRow';
 

@@ -51,7 +51,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
       {canManageMember && (
         <View style={styles.memberActions}>
           <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onChangeRole}>
-            <Icon name="swap-horizontal" size={18} library="Ionicons" />
+            <Icon name="swap-horizontal" size={18} />
             <Text style={styles.actionButtonText}>Change Role</Text>
           </Pressable>
           <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onRemove}>

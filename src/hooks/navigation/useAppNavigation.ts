@@ -31,14 +31,14 @@ export function useAppNavigation() {
   }, [navigation]);
 
   const replace = useCallback(
-    (name: string, params?: any) => {
+    (name: string, params?: object) => {
       navigation.dispatch(StackActions.replace(name, params));
     },
     [navigation],
   );
 
   const push = useCallback(
-    (name: string, params?: any) => {
+    (name: string, params?: object) => {
       navigation.dispatch(StackActions.push(name, params));
     },
     [navigation],
@@ -55,7 +55,7 @@ export function useAppNavigation() {
       login: () => navigate('Login'),
       signUp: () => navigate('SignUp'),
       forgotPassword: () => navigate('ForgotPassword'),
-      codeVerification: (params?: any) => navigate('CodeVerification', params),
+      codeVerification: (params?: { email?: string }) => navigate('CodeVerification', params),
 
       // Onboarding stack screens (when in Onboarding stack)
       createHome: () => navigate('CreateHome'),
@@ -73,8 +73,8 @@ export function useAppNavigation() {
             screen: 'PantryMain',
           },
         }),
-      pantryItem: (params: any) => navigate('PantryItem', params),
-      pantryItemDetail: (params: any) => navigate('PantryItemDetail', params),
+      pantryItem: (params?: { itemId?: string }) => navigate('PantryItem', params),
+      pantryItemDetail: (params: { itemId: string }) => navigate('PantryItemDetail', params),
       nutritionScreen: (params: {itemId: string; itemName: string; nutritions: unknown; actualServingGrams?: number}) =>
         navigate('NutritionScreen', params),
       shoppingListMain: () =>
@@ -116,27 +116,27 @@ export function useAppNavigation() {
         }),
 
       // Root level screens
-      homeManagement: (params?: any) => navigate('HomeManagement', params),
+      homeManagement: (params?: { homeId?: string }) => navigate('HomeManagement', params),
       imageUpload: () => navigate('ProfilePhotoUpload'),
-      imageCrop: (params: any) => navigate('ImageCrop', params),
+      imageCrop: (params: { imageFile: { uri: string; fileName?: string; fileSize?: number; type?: string } }) => navigate('ImageCrop', params),
 
       // Nested stack navigation (Notifications)
       notificationList: () =>
         navigateToNested('Notifications', 'NotificationList'),
-      notificationDetail: (notification: any) =>
+      notificationDetail: (notification: { id: string; title: string; body: string; [key: string]: unknown }) =>
         navigateToNested('Notifications', 'NotificationDetail', {notification}),
       notificationSettings: () =>
         navigateToNested('Notifications', 'NotificationSettings'),
 
       // Nested stack navigation (Barcode)
-      barcodeScanner: (params?: any) =>
+      barcodeScanner: (params?: { source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) =>
         navigateToNested('Barcode', 'BarcodeScanner', params),
-      searchResults: (params: any) =>
+      searchResults: (params: { barcode: string; format: string; source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) =>
         navigateToNested('Barcode', 'SearchResults', params),
 
       // Alternative: Direct navigation to root stacks
       notifications: () => navigate('Notifications'),
-      barcode: (params?: any) => navigate('Barcode', {
+      barcode: (params?: { source?: 'pantry' | 'shoppingList'; pantryId?: string; shoppingListId?: string }) => navigate('Barcode', {
         screen: 'BarcodeScanner',
         params: params,
       }),

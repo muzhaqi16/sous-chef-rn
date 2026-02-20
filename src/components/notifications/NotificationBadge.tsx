@@ -37,7 +37,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       />
       {unreadCount > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
+          <Text maxFontSizeMultiplier={1} style={styles.badgeText}>
             {unreadCount > 99 ? '99+' : unreadCount.toString()}
           </Text>
         </View>

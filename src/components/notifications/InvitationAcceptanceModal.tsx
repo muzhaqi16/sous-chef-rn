@@ -358,7 +358,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <ActivityIndicator color={theme.colors.white} />
               ) : (
                 <>
-                  <Icon name="check" size={20} color={theme.colors.white} />
+                  <Icon name="checkmark" size={20} color={theme.colors.white} />
                   <Text style={[styles.buttonText, styles.acceptText]}>
                     Accept
                   </Text>

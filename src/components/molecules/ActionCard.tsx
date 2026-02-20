@@ -20,7 +20,7 @@ export interface ActionCardProps {
  */
 export const ActionCard: React.FC<ActionCardProps> = ({
   icon,
-  iconLibrary = 'MaterialIcons',
+  iconLibrary,
   label,
   onPress,
   disabled = false,

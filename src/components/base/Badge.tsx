@@ -21,7 +21,7 @@ export const Badge: React.FC<BadgeProps> = ({
       accessibilityLabel={typeof children === 'string' ? children : undefined}
       style={[styles.badge, styles[variant], styles[size], style]}
     >
-      <Text style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
+      <Text maxFontSizeMultiplier={1.5} style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
     </View>
   );
 };

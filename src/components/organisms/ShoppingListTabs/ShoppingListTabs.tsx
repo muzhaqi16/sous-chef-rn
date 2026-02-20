@@ -400,8 +400,4 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize with shallow comparison
-const MemoizedShoppingListTabs = React.memo(ShoppingListTabs);
-
-// Export memoized version as default to ensure it's always used with optimization
-export { MemoizedShoppingListTabs as ShoppingListTabs };
+export { ShoppingListTabs };

@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
+import { useApolloClient } from '@apollo/client/react';
 import {
   useCreatePantryItemUsageMutation,
   useRestockPantryItemMutation,
@@ -7,6 +8,7 @@ import {
   WasteReason,
   PantryItemFragment,
 } from '#generated';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 interface UsePantryItemActionsOptions {
   pantryItems: PantryItemFragment[];
@@ -47,38 +49,63 @@ export function usePantryItemActions({
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
-  // Stable ref for pantryItems — read from ref in callbacks to keep them stable
-  // across data changes (avoids context cascade when subscription updates the list)
-  const pantryItemsRef = useRef(pantryItems);
-  pantryItemsRef.current = pantryItems;
-
+  const client = useApolloClient();
   // Single state for all modals — only one can be open at a time
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   const closeModal = useCallback(() => setActiveModal(CLOSED_MODAL), []);
 
+  /**
+   * Optimistically update a pantry item's quantity in cache for instant UI feedback.
+   */
+  const optimisticUpdateQuantity = useCallback(
+    (itemId: string, newQuantity: number) => {
+      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
+      if (!cacheId) return;
+
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return Math.max(0, newQuantity);
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
+    },
+    [client.cache],
+  );
+
+  /**
+   * Revert a pantry item's quantity in cache on mutation error.
+   */
+  const revertQuantity = useCallback(
+    (itemId: string, originalQty: number) => {
+      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
+      if (!cacheId) return;
+
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return originalQty;
+          },
+        },
+      });
+    },
+    [client.cache],
+  );
+
   // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
     errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to create pantry item usage:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to record item usage. Please try again.',
-      );
-    },
   });
 
   // Restock item mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to restock pantry item:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to restock item. Please try again.',
-      );
-    },
   });
 
   // Handler to confirm consumption
@@ -92,11 +119,16 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'consume') return;
 
+      // Optimistically decrease quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
+
       try {
         await createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: activeModal.item.id,
+              pantryItemId: item.id,
               quantityUsed,
               purpose,
               notes: notes || undefined,
@@ -105,13 +137,16 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state — Apollo cache normalization handles quantity updates
         closeModal();
-      } catch (error) {
-        console.error('Error consuming pantry item:', error);
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error consuming pantry item:', error);
+          Alert.alert('Error', error.message || 'Failed to record item usage. Please try again.');
+        }
       }
     },
-    [activeModal, createPantryItemUsage, closeModal],
+    [activeModal, createPantryItemUsage, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
 
   // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
@@ -126,11 +161,16 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'waste') return;
 
+      // Optimistically decrease quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
+
       try {
         await createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: activeModal.item.id,
+              pantryItemId: item.id,
               quantityUsed: wasteAmount,
               purpose: UsagePurpose.Waste,
               notes: notes || undefined,
@@ -142,13 +182,16 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state — Apollo cache normalization handles quantity updates
         closeModal();
-      } catch (error) {
-        console.error('Error recording pantry item waste:', error);
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error recording pantry item waste:', error);
+          Alert.alert('Error', error.message || 'Failed to record item waste. Please try again.');
+        }
       }
     },
-    [activeModal, createPantryItemUsage, closeModal],
+    [activeModal, createPantryItemUsage, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
 
   // Handler to confirm restock
@@ -164,10 +207,15 @@ export function usePantryItemActions({
     ) => {
       if (activeModal.type !== 'restock') return;
 
+      // Optimistically increase quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty + quantity);
+
       try {
         await restockPantryItem({
           variables: {
-            id: activeModal.item.id,
+            id: item.id,
             input: {
               quantity,
               unitId,
@@ -179,47 +227,49 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state — Apollo cache normalization handles quantity updates
         closeModal();
-      } catch (error) {
-        console.error('Error restocking pantry item:', error);
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error restocking pantry item:', error);
+          Alert.alert('Error', error.message || 'Failed to restock item. Please try again.');
+        }
       }
     },
-    [activeModal, restockPantryItem, closeModal],
+    [activeModal, restockPantryItem, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
 
   // Handler to open consume modal (for swipe action)
-  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleConsumeItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
         setActiveModal({ type: 'consume', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to open waste modal (for swipe action)
   const handleWasteItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
         setActiveModal({ type: 'waste', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to open restock modal (for swipe action)
   const handleRestockItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
         setActiveModal({ type: 'restock', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to edit item (for swipe action)

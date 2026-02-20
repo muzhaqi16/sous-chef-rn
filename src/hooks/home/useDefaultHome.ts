@@ -117,7 +117,7 @@ export const useDefaultHome = () => {
 
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = useMemo(
-    () => homesList?.find((h: any) => h.isDefault)?.id ?? null,
+    () => homesList?.find(h => h.isDefault)?.id ?? null,
     [homesList],
   );
 
@@ -125,10 +125,10 @@ export const useDefaultHome = () => {
   // Using useMemo ensures we only recalculate when the underlying data changes
   const defaultPantryId = useMemo(() => {
     // Find the default home from the homes list
-    const defaultHome = homesList?.find((h: any) => h.isDefault);
+    const defaultHome = homesList?.find(h => h.isDefault);
     if (!defaultHome?.pantries?.length) return null;
     const defaultPantry =
-      defaultHome.pantries.find((p: any) => p.isDefault) ||
+      defaultHome.pantries.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
       defaultHome.pantries[0];
     return defaultPantry?.id || null;
   }, [homesList]);
@@ -136,7 +136,7 @@ export const useDefaultHome = () => {
   // Validate that selectedHomeId still exists in the homes list
   const isSelectedHomeValid = useMemo(() => {
     if (!selectedHomeId || !homesList || homesList.length === 0) return false;
-    return homesList.some((h: any) => h.id === selectedHomeId);
+    return homesList.some(h => h.id === selectedHomeId);
   }, [selectedHomeId, homesList]);
 
   // Clear stale selectedHomeId if home was deleted while app was in background
@@ -264,7 +264,7 @@ export const useDefaultHome = () => {
 
     // Set pantry immediately from local data (mutation will confirm/update later)
     const localDefaultPantry =
-      firstHome.pantries?.find((p: any) => p.isDefault) ||
+      firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
       firstHome.pantries?.[0];
     if (localDefaultPantry?.id && !selectedPantryId) {
       setSelectedPantryId(localDefaultPantry.id);
@@ -287,7 +287,7 @@ export const useDefaultHome = () => {
         } else if (!selectedPantryId) {
           // Fallback: Get default pantry from first home data if mutation didn't return one
           const firstHomePantry =
-            firstHome.pantries?.find((p: any) => p.isDefault) ||
+            firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
             firstHome.pantries?.[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
@@ -303,7 +303,7 @@ export const useDefaultHome = () => {
         // Fallback on error: try to set pantry from home data
         if (!selectedPantryId) {
           const firstHomePantry =
-            firstHome.pantries?.find((p: any) => p.isDefault) ||
+            firstHome.pantries?.find((p: { isDefault?: boolean; id?: string }) => p.isDefault) ||
             firstHome.pantries?.[0];
           if (firstHomePantry?.id) {
             setSelectedPantryId(firstHomePantry.id);
@@ -350,7 +350,7 @@ export const useDefaultHome = () => {
 
     // Case 2: Valid home is selected - ready
     const hasValidSelection =
-      selectedHomeId && homesList.some((h: any) => h.id === selectedHomeId);
+      selectedHomeId && homesList.some(h => h.id === selectedHomeId);
     if (hasValidSelection) {
       if (!isHomeSelectionReady) {
         setIsHomeSelectionReady(true);
@@ -372,6 +372,7 @@ export const useDefaultHome = () => {
 
   // Helper function to get the default pantry from a home
   // Handle both normalized homes (with pantries array) and raw homes (with pantriesConnection)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- homeData shape varies between raw and normalized homes
   const getDefaultPantry = (homeData: any) => {
     const home = homeData?.home ?? homeData;
     const pantries = home?.pantries ?? normalizeHome(home)?.pantries ?? [];
@@ -380,7 +381,7 @@ export const useDefaultHome = () => {
       return null;
     }
     return (
-      pantries.find((pantry: any) => pantry.isDefault) || pantries[0] || null
+      pantries.find((pantry: { isDefault?: boolean; id?: string }) => pantry.isDefault) || pantries[0] || null
     );
   };
 

@@ -121,8 +121,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export const ListItem = React.memo(ListItemComponent);
+export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

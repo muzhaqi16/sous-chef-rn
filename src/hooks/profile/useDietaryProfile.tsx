@@ -79,7 +79,7 @@ export const useDietaryProfile = () => {
           message: 'Dietary profile updated',
           code: 'DIETARY_PROFILE_UPDATED',
           dietaryProfile: enhanceWithVersion(
-            profile as any,
+            profile,
             variables.input,
           ),
         },
@@ -150,7 +150,7 @@ export const useDietaryProfile = () => {
           message: 'Dietary restriction updated',
           code: 'DIETARY_RESTRICTION_UPDATED',
           dietaryRestriction: enhanceWithVersion(
-            currentRestriction as any,
+            currentRestriction,
             variables.input,
           ),
         },

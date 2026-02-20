@@ -131,6 +131,7 @@ class ApolloCachePersistence {
         typeof globalThis !== 'undefined' &&
         'requestIdleCallback' in globalThis
       ) {
+        // justified: requestIdleCallback not in React Native's global type definitions
         this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
       } else if (typeof requestAnimationFrame === 'function') {
         // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
@@ -155,7 +156,7 @@ class ApolloCachePersistence {
     }
     if (this.idleCallbackId != null) {
       if (typeof globalThis !== 'undefined' && 'cancelIdleCallback' in globalThis) {
-        (globalThis as any).cancelIdleCallback(this.idleCallbackId);
+        (globalThis as any).cancelIdleCallback(this.idleCallbackId); // justified: cancelIdleCallback not in RN types
       } else if (typeof cancelAnimationFrame === 'function') {
         cancelAnimationFrame(this.idleCallbackId);
       }

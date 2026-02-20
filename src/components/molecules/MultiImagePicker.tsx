@@ -127,7 +127,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
         >
           <View style={styles.placeholderContainer}>
             <Icon
-              name="add-a-photo"
+              name="camera-outline"
               size={32}
               color={theme.colors.textSecondary}
             />
@@ -181,7 +181,6 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 {getPerspectiveLabel(image.perspective)}
               </Text>
               <Icon
-                library="Feather"
                 name="chevron-down"
                 size={14}
                 color={theme.colors.textSecondary}
@@ -201,7 +200,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           >
             <View style={styles.addMoreButton}>
               <Icon
-                name="add-a-photo"
+                name="camera-outline"
                 size={24}
                 color={theme.colors.primary}
               />

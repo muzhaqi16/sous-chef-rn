@@ -8,12 +8,6 @@ query GetHome($homeId: ID!) {
   }
 }
 
-query GetHomeBasic($homeId: ID!) {
-  home(id: $homeId) {
-    ...HomeFragment
-  }
-}
-
 query GetHomes($first: Int, $after: String) {
   homes(first: $first, after: $after) {
     edges {

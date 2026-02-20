@@ -139,7 +139,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
-              library="Ionicons"
+
             />
           )}
         </Pressable>

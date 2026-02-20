@@ -63,8 +63,7 @@ const BatchMoveToPantryBar: React.FC<{
           <ActivityIndicator size="small" color={theme.colors.white} />
         ) : (
           <Icon
-            name="move-to-inbox"
-            library="MaterialIcons"
+            name="enter-outline"
             size={18}
             color={theme.colors.white}
           />
@@ -189,8 +188,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   if (items.length === 0) {
     return (
       <EmptyState
-        icon="shopping-cart"
-        iconLibrary="MaterialIcons"
+        icon="cart-outline"
         title="No purchased items yet"
         description="Check off items as you shop to see them here"
       />
@@ -227,10 +225,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize with shallow comparison of items array
-// Items array reference changes when filter runs, but React.memo
-// does shallow comparison which triggers re-render with new items
-export const MemoizedPurchasedTab = React.memo(PurchasedTabComponent);
+export const MemoizedPurchasedTab = PurchasedTabComponent;
 MemoizedPurchasedTab.displayName = 'PurchasedTab';
 
 // Also export non-memoized for backwards compatibility

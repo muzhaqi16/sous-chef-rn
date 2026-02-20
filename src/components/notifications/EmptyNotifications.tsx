@@ -7,7 +7,7 @@ import {StyleSheet} from 'react-native-unistyles';
 export const EmptyNotifications: React.FC = () => {
   return (
     <View style={styles.container}>
-      <Icon name="notifications-none" size={64} color={styles.icon.color} />
+      <Icon name="notifications-outline" size={64} color={styles.icon.color} />
       <Text style={styles.title}>No notifications yet</Text>
       <Text style={styles.subtitle}>
         We'll notify you when something important happens

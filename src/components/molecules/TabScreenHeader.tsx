@@ -24,8 +24,8 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={styles.leftContent}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+        <Text maxFontSizeMultiplier={1.5} style={styles.label}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.5} style={styles.title} numberOfLines={1} ellipsizeMode="tail">
           {title}
         </Text>
       </View>
@@ -40,7 +40,6 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
           accessibilityHint="Open notifications"
         >
           <Icon
-            library="Ionicons"
             name="notifications-outline"
             size={24}
             color={styles.notificationIcon.color}
@@ -67,7 +66,6 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Icon
-                  library="Ionicons"
                   name="person"
                   size={24}
                   color={styles.avatarIcon.color}

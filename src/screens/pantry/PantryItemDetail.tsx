@@ -416,7 +416,6 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             onPress: handleAddToShoppingList,
             variant: addToListStatus === 'success' ? 'success' : 'primary',
             loading: addToListStatus === 'loading',
-            library: 'Ionicons',
             testID: 'pantry-item-add-to-list-button',
           },
           ...(item.condition === 'EXPIRED' && item.quantity > 0
@@ -424,27 +423,23 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 icon: 'close-circle-outline' as const,
                 onPress: handleDiscardExpired,
                 variant: 'error' as const,
-                library: 'Ionicons' as const,
                 testID: 'pantry-item-discard-button',
               }]
             : []),
           {
             icon: 'swap-vertical-outline',
             onPress: () => setAdjustModalVisible(true),
-            library: 'Ionicons',
             testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
             onPress: handleEdit,
-            library: 'Ionicons',
             testID: 'pantry-item-edit-button',
           },
           {
             icon: 'trash-outline',
             onPress: handleDelete,
             variant: 'error',
-            library: 'Ionicons',
             testID: 'pantry-item-delete-button',
           },
         ]}
@@ -480,7 +475,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               name="restaurant-outline"
               size={16}
               color={theme.colors.primary}
-              library="Ionicons"
+
             />
             <Text style={styles.categoryText}>
               {categoryName || 'Item'}
@@ -550,7 +545,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="apps-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </View>
             <Text style={styles.infoValue}>
@@ -569,7 +564,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="scale-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
@@ -583,7 +578,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                     name="create-outline"
                     size={16}
                     color={theme.colors.primary}
-                    library="Ionicons"
+      
                   />
                 </Pressable>
               )}
@@ -601,7 +596,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="scale-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{remainingNetWeightText}</Text>
@@ -619,7 +614,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="layers-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{quantityBreakdownText}</Text>
@@ -637,7 +632,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="layers-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{packageBreakdownText}</Text>
@@ -655,7 +650,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="pricetag-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{brandName}</Text>
@@ -673,7 +668,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="cube-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -695,7 +690,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="storefront-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{item.store.name}</Text>
@@ -717,7 +712,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                       ? theme.colors.error
                       : theme.colors.warning
                   }
-                  library="Ionicons"
+    
                 />
               </View>
               <Text
@@ -743,7 +738,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="bag-handle-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -763,7 +758,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="cash-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -783,7 +778,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="wallet-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -803,7 +798,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="alert-circle-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -823,7 +818,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="refresh-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -843,7 +838,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="receipt-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -866,7 +861,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="time-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -884,7 +879,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="document-text-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
               <Text style={styles.notesLabel}>Notes</Text>
             </View>
@@ -915,7 +910,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="calendar-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </View>
             <Text style={styles.infoValue}>{formatDate(item.createdAt)}</Text>
@@ -938,7 +933,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
                 size={20}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </Pressable>
 

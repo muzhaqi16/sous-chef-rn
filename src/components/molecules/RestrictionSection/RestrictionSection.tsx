@@ -33,8 +33,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
         <Text style={commonStyles.subtitle}>{title}</Text>
         <Pressable onPress={onAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
           <Icon
-            library="Feather"
-            name="plus"
+            name="add"
             size={18}
             color={theme.colors.primary}
           />
@@ -54,8 +53,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
                 onPress={() => onRemove(item.id)}
               >
                 <Icon
-                  library="Feather"
-                  name="x-circle"
+                  name="close-circle-outline"
                   size={18}
                   color={theme.colors.error}
                 />

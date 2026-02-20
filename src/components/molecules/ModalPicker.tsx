@@ -30,8 +30,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
             <Text style={styles.title}>{label}</Text>
             <Pressable onPress={onCancel} style={({pressed}) => pressed && styles.pressed}>
               <Icon
-                library="Feather"
-                name="x"
+                name="close"
                 size={24}
                 color={theme.colors.textPrimary}
               />
@@ -46,8 +45,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
                 <Text style={styles.optionText}>{opt.label}</Text>
                 {selected === opt.value && (
                   <Icon
-                    library="Feather"
-                    name="check"
+                    name="checkmark"
                     size={20}
                     color={theme.colors.primary}
                   />

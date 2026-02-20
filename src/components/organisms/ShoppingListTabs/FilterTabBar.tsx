@@ -73,7 +73,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
               name={actionButton.icon}
               size={20}
               color={theme.colors.primary}
-              library={actionButton.iconLibrary || 'MaterialIcons'}
+              library={actionButton.iconLibrary}
             />
           ) : null}
         </Pressable>
@@ -82,7 +82,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   );
 };
 
-export const FilterTabBar = React.memo(FilterTabBarComponent);
+export const FilterTabBar = FilterTabBarComponent;
 FilterTabBar.displayName = 'FilterTabBar';
 
 const styles = StyleSheet.create(theme => ({

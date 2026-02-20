@@ -9,7 +9,7 @@ interface MonthCalendarProps {
   daysWithMeals?: Set<string>;
 }
 
-export const MonthCalendar: React.FC<MonthCalendarProps> = React.memo(({
+export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   selectedDate,
   onSelectDate,
   daysWithMeals,
@@ -74,6 +74,6 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = React.memo(({
       }}
     />
   );
-});
+};
 
 MonthCalendar.displayName = 'MonthCalendar';

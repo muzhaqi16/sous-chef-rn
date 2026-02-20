@@ -44,7 +44,7 @@ export const SelectorItem = <T extends SelectableItem>({
           entering={FadeInUp.duration(200).springify()}
           style={styles.checkIcon}
         >
-          <Icon name="check" size={18} color={theme.colors.primary} />
+          <Icon name="checkmark" size={18} color={theme.colors.primary} />
         </Animated.View>
       )}
     </AnimatedPressable>

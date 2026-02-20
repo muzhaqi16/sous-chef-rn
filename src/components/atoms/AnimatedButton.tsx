@@ -16,6 +16,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { SPRING, TIMING } from '#/constants/animations';
 
 interface AnimatedButtonProps extends Omit<PressableProps, 'style'> {
   children: React.ReactNode;
@@ -48,18 +49,12 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   useEffect(() => {
     if (loading) {
       // Shrink to circular loading indicator
-      loadingProgress.value = withSpring(1, {
-        damping: 20,
-        stiffness: 180,
-      });
-      textOpacity.value = withTiming(0, { duration: 150 });
+      loadingProgress.value = withSpring(1, SPRING.GENTLE);
+      textOpacity.value = withTiming(0, { duration: TIMING.FAST });
     } else {
       // Expand back to full width
-      loadingProgress.value = withSpring(0, {
-        damping: 20,
-        stiffness: 180,
-      });
-      textOpacity.value = withTiming(1, { duration: 200 });
+      loadingProgress.value = withSpring(0, SPRING.GENTLE);
+      textOpacity.value = withTiming(1, { duration: TIMING.STANDARD });
     }
   }, [loading, loadingProgress, textOpacity]);
 

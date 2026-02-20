@@ -94,7 +94,7 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
             onPress: () => bottomSheetRef.current?.close(),
           }]}
           rightActions={[{
-            icon: 'check',
+            icon: 'checkmark',
             onPress: handleSave,
           }]}
         />

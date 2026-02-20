@@ -108,7 +108,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessibilityState={{ disabled }}
         >
           <Icon
-            name="remove"
+            name="remove-outline"
             size={theme.fonts.size.md}
             color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />

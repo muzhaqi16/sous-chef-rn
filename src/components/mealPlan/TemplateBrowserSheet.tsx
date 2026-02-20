@@ -1,18 +1,16 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
   BottomSheetModal,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { TemplateCard } from './TemplateCard';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
 import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 const CATEGORIES: { key: TemplateCategory | undefined; label: string }[] = [
   { key: undefined, label: 'All' },
@@ -37,10 +35,11 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   onClose,
   onSelectTemplate,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['85%'],
+  });
 
   const {
     templates,
@@ -52,14 +51,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     loadMore,
     hasMore,
   } = useMealTemplates();
-
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible]);
 
   const renderTemplate = useCallback(
     ({ item }: { item: MealTemplateDisplayFragment }) => (
@@ -74,40 +65,21 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   );
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['85%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
-        style={[styles.container, { paddingBottom: insets.bottom + 16 }]}
+        style={[styles.container, contentContainerStyle]}
       >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Browse Templates</Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Icon name="close" library="Ionicons" size={24} color={theme.colors.textSecondary} />
+            <Icon name="close" size={24} color={theme.colors.textSecondary} />
           </Pressable>
         </View>
 
         {/* Search bar */}
         <View style={styles.searchContainer}>
-          <Icon name="search" library="Ionicons" size={18} color={theme.colors.textTertiary} />
+          <Icon name="search" size={18} color={theme.colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search templates..."
@@ -149,7 +121,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           <View style={styles.emptyContainer}>
             <Icon
               name="document-text-outline"
-              library="Ionicons"
               size={48}
               color={theme.colors.textTertiary}
             />

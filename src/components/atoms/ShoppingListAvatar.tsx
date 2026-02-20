@@ -57,8 +57,7 @@ export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = ({
       uri={avatarInfo?.avatar}
       name={avatarInfo?.displayName || avatarInfo?.email}
       size={size}
-      fallbackIcon="shopping-cart"
-      fallbackIconLibrary="MaterialIcons"
+      fallbackIcon="cart-outline"
     />
   );
 };

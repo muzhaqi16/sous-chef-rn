@@ -58,7 +58,6 @@ export function ItemRecentCard<T extends RecentItem>({
               name={placeholderIcon}
               size={24}
               color={theme.colors.primary}
-              library="MaterialIcons"
             />
           </View>
         )}
@@ -84,7 +83,6 @@ export function ItemRecentCard<T extends RecentItem>({
           name="add"
           size={20}
           color={theme.colors.primary}
-          library="MaterialIcons"
         />
       </Pressable>
     </View>
