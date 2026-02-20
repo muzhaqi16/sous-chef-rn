@@ -7,7 +7,7 @@ import {
   RegisterInput,
 } from '#generated';
 import { logger } from '#/utils/environment';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -85,7 +85,7 @@ export const useAuthOperations = ({
 
   // Dependencies
   const toast = useToast();
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { registerDeviceInBackground } = useDeviceRegistration();
   const {
     shouldShowCredentialPrompt,

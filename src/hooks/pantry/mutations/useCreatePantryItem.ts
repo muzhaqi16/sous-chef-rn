@@ -15,7 +15,7 @@ import {
   useCreatePantryItemMutation,
   useRestockPantryItemMutation,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
   getPantryItemDuplicateInfo,
@@ -48,7 +48,7 @@ export function useCreatePantryItem({
   pantryId,
   onSuccess,
 }: UseCreatePantryItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [createMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
@@ -90,20 +90,36 @@ export function useCreatePantryItem({
 
       const baseInput = {
         pantryId: targetPantryId,
-        unitId: unitId || '',
+        ...(unitId && { unit: { unitId } }),
         quantity: quantityValue,
-        storageState: input.storageState,
+        storage: {
+          storageState: input.storageState,
+          storageNotes: input.notes.trim() || null,
+          ...storageLocationInput,
+        },
         expiresAt: input.expirationDate?.toISOString() || null,
-        storageNotes: input.notes.trim() || null,
-        minQuantity: input.minQuantity
-          ? parseFloat(input.minQuantity)
-          : undefined,
-        restockQuantity: input.restockQuantity
-          ? parseFloat(input.restockQuantity)
-          : undefined,
-        netWeight: input.netWeight ? parseFloat(input.netWeight) : undefined,
-        netWeightUnitId: input.netWeightUnitId || undefined,
-        ...storageLocationInput,
+        ...(input.minQuantity || input.restockQuantity
+          ? {
+              thresholds: {
+                ...(input.minQuantity && {
+                  minQuantity: parseFloat(input.minQuantity),
+                }),
+                ...(input.restockQuantity && {
+                  restockQuantity: parseFloat(input.restockQuantity),
+                }),
+              },
+            }
+          : {}),
+        ...(input.netWeight
+          ? {
+              netWeight: {
+                netWeight: parseFloat(input.netWeight),
+                ...(input.netWeightUnitId && {
+                  netWeightUnitId: input.netWeightUnitId,
+                }),
+              },
+            }
+          : {}),
       };
 
       let mutationInput: any;
@@ -115,19 +131,19 @@ export function useCreatePantryItem({
           itemId: input.selectedItemId,
         };
       } else {
-        // Creating new item
-        const categoryInput = selectedCategoryId
-          ? { itemCategory: selectedCategoryId }
-          : input.category.trim()
-          ? { itemCategory: input.category.trim() }
-          : {};
+        // Creating new item via inline item input
+        const category = selectedCategoryId
+          ? selectedCategoryId
+          : input.category.trim() || undefined;
 
         mutationInput = {
           ...baseInput,
-          itemName: input.itemName.trim(),
-          itemDescription: input.notes.trim() || null,
-          itemBrand: input.brand?.trim() || null,
-          ...categoryInput,
+          item: {
+            name: input.itemName.trim(),
+            description: input.notes.trim() || null,
+            ...(input.brand?.trim() && { brand: input.brand.trim() }),
+            ...(category && { category }),
+          },
         };
       }
 

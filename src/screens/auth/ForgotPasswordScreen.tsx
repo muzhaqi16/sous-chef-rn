@@ -7,6 +7,7 @@ import {getForgotPasswordValidationSchema} from '#utils/validation/auth';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {useForgotPasswordMutation} from '../../graphql/generated';
 import {useAuthNavigation} from '#hooks/navigation/useAuthNavigation';
+import { errorService } from '#/services/errorService';
 
 type ForgotPasswordValues = {
   email: string;
@@ -35,8 +36,7 @@ export function ForgotPasswordScreen() {
       // On success, navigate to login
       navigateToLogin();
     } catch (error) {
-      console.error('Error sending reset email:', error);
-      // Handle error, e.g., show a toast or alert
+      errorService.reportError(error, { operation: 'ForgotPassword.sendResetEmail' });
     }
     // Here you would typically call your API to send the reset email
     // For example: await api.sendResetEmail(email);

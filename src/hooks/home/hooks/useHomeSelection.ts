@@ -18,7 +18,7 @@ import {
   selectSetHomeAndPantry,
   selectSetIsHomeSelectionReady,
 } from '#store/useAppStore';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
 interface UseHomeSelectionOptions {
   homes: any[] | null;
@@ -54,7 +54,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
   );
   const setHomeAndPantry = useAppStore(selectSetHomeAndPantry);
   const setIsHomeSelectionReady = useAppStore(selectSetIsHomeSelectionReady);
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);

@@ -16,12 +16,11 @@
  */
 
 import { Alert } from 'react-native';
-import { serializeError } from '#/utils/errorSerialization';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from './errors/versionConflict';
-import { getErrorMessage } from './errorHandling';
+import { errorService, getErrorMessage } from '#/services/errorService';
 
 /**
  * Version conflict handler configuration
@@ -86,8 +85,8 @@ export const withVersionConflictHandling =
  * Higher-order function that adds generic error handling to a mutation with Apollo-like error
  * Use this for operations that need consistent error alerting
  *
- * Note: This doesn't use useErrorHandler hook since it's not a React component/hook.
- * For Apollo-specific error handling with useErrorHandler, handle errors directly in your hooks.
+ * Note: This doesn't use useErrorService hook since it's not a React component/hook.
+ * For Apollo-specific error handling with useErrorService, handle errors directly in your hooks.
  *
  * @param fn - The mutation function to wrap
  * @param config - Configuration for Apollo error handling
@@ -121,7 +120,7 @@ export const withMutationErrorHandling =
         Alert.alert('Error', errorMessage);
       }
 
-      console.error(`${operation} error:`, serializeError(error));
+      errorService.reportError(error, { operation });
       return false as TReturn;
     }
   };
@@ -154,7 +153,7 @@ export const withGenericErrorHandling =
       return await fn(...args);
     } catch (error: any) {
       Alert.alert('Error', errorMessage);
-      console.error(logMessage || errorMessage, serializeError(error));
+      errorService.reportError(error, { operation: logMessage || errorMessage });
       return false as TReturn;
     }
   };
@@ -231,8 +230,8 @@ export const handleVersionConflictAlert = (
  * Creates a generic error alert without wrapping a function
  * Useful for inline error handling in try/catch blocks
  *
- * Note: This doesn't use useErrorHandler hook. For Apollo-specific error handling,
- * use handleApolloError from useErrorHandler directly in your hooks.
+ * Note: This doesn't use useErrorService hook. For Apollo-specific error handling,
+ * use handleApolloError from useErrorService directly in your hooks.
  *
  * @param error - The error object
  * @param config - Configuration for error handling
@@ -260,5 +259,5 @@ export const handleMutationErrorAlert = (
     Alert.alert('Error', errorMessage);
   }
 
-  console.error(`${operation} error:`, serializeError(error));
+  errorService.reportError(error, { operation });
 };

@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 
 export interface StandardSubscriptionOptions {
@@ -82,7 +82,7 @@ export interface StandardSubscriptionOptions {
  * ```
  */
 export function useStandardSubscription(options: StandardSubscriptionOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const {
     userId,
     operation,

@@ -6,7 +6,9 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { useSelectableItems } from '#hooks/useSelectableItems';
 import {
   useGetOnboardingItemsQuery,
+  useGetPantryQuery,
   useCreatePantryItemMutation,
+  useDeletePantryItemMutation,
   StorageState,
   ItemCondition,
   AcquisitionMethod,
@@ -14,11 +16,14 @@ import {
   SortOrder,
   ItemType,
 } from '#generated';
+import { extractNodes } from '#/utils/connectionUtils';
+import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
 import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { AnimatedButton } from '#components/atoms/AnimatedButton';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { errorService } from '#/services/errorService';
 
 export const SelectPantryItems = () => {
   useScreenTransition('SelectPantryItems');
@@ -46,20 +51,41 @@ export const SelectPantryItems = () => {
     },
     fetchPolicy: 'cache-and-network',
   });
-  const [addItemToPantry] = useCreatePantryItemMutation({
-    onError: (e: any) => console.error(e),
+
+  const { data: pantryData, loading: pantryLoading } = useGetPantryQuery({
+    variables: { id: selectedPantryId!, itemsFirst: 100 },
+    skip: !selectedPantryId,
+    fetchPolicy: 'cache-and-network',
   });
 
-  const [isAddingItems, setIsAddingItems] = useState(false);
+  const [addItemToPantry] = useCreatePantryItemMutation();
+  const [deletePantryItem] = useDeletePantryItemMutation();
 
-  // Transform onboarding items into selectable items with id and selected properties
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Map catalog item IDs to pantry item IDs for existing pantry items
+  const { existingItemMap, existingCatalogIds } = useMemo(() => {
+    const pantryItems = extractNodes(pantryData?.pantry?.itemsConnection);
+    const map = new Map<string, string>();
+    const ids = new Set<string>();
+    for (const pantryItem of pantryItems) {
+      const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
+      if (catalogId) {
+        map.set(catalogId, pantryItem.id);
+        ids.add(catalogId);
+      }
+    }
+    return { existingItemMap: map, existingCatalogIds: ids };
+  }, [pantryData?.pantry?.itemsConnection]);
+
+  // Transform onboarding items into selectable items, pre-selecting existing pantry items
   const selectableItems = useMemo(
     () =>
       (data?.items?.edges?.map(edge => edge.node) || []).map((item: any) => ({
         ...item,
-        selected: false,
+        selected: existingCatalogIds.has(item.id),
       })),
-    [data?.items?.edges],
+    [data?.items?.edges, existingCatalogIds],
   );
 
   // Use the custom hook for managing selection state
@@ -70,7 +96,7 @@ export const SelectPantryItems = () => {
     },
   );
 
-  if (loading) {
+  if (loading || pantryLoading) {
     return (
       <OnBoardingWrapper
         title="Stock your pantry"
@@ -107,34 +133,55 @@ export const SelectPantryItems = () => {
     );
   }
 
+  const selectedIds = new Set(selectedItems.map(i => i.id));
+  const itemsToAdd = selectedItems.filter(i => !existingCatalogIds.has(i.id));
+  const itemsToRemove = [...existingCatalogIds].filter(id => !selectedIds.has(id));
+  const hasChanges = itemsToAdd.length > 0 || itemsToRemove.length > 0;
+  const isFirstVisit = existingCatalogIds.size === 0;
+
   const onNext = async () => {
-    if (selectedItems.length > 0 && selectedPantryId) {
-      setIsAddingItems(true);
+    if (hasChanges && selectedPantryId) {
+      setIsSaving(true);
 
       try {
-        // Add all selected items to pantry
-        await Promise.all(
-          selectedItems.map(item => {
-            return addItemToPantry({
+        await Promise.all([
+          // Add newly selected items
+          ...itemsToAdd.map(item =>
+            addItemToPantry({
               variables: {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  // Only pass unitId if displayUnit exists, otherwise let backend use its fallback chain
-                  ...(item.displayUnit?.id && { unitId: item.displayUnit.id }),
+                  ...(item.displayUnit?.id && {
+                    unit: { unitId: item.displayUnit.id },
+                  }),
                   quantity: null,
-                  storageState: StorageState.Ambient,
-                  condition: ItemCondition.Good,
-                  acquisitionMethod: AcquisitionMethod.Purchased,
+                  storage: {
+                    storageState: StorageState.Ambient,
+                    condition: ItemCondition.Good,
+                  },
+                  purchase: {
+                    acquisitionMethod: AcquisitionMethod.Purchased,
+                  },
                 },
+              },
+            }),
+          ),
+          // Remove deselected items
+          ...itemsToRemove.map(catalogId => {
+            const pantryItemId = existingItemMap.get(catalogId)!;
+            return deletePantryItem({
+              variables: { id: pantryItemId },
+              update: cache => {
+                removeFromPantryItemsCache(cache, selectedPantryId, pantryItemId);
               },
             });
           }),
-        );
+        ]);
       } catch (error) {
-        console.error('Error adding items to pantry:', error);
+        errorService.reportError(error, { operation: 'SelectPantryItems.updatePantryItems' });
       } finally {
-        setIsAddingItems(false);
+        setIsSaving(false);
       }
     }
     navigateToNextStep('SelectPantryItems');
@@ -172,15 +219,17 @@ export const SelectPantryItems = () => {
 
       <Button
         title={
-          isAddingItems
-            ? 'Adding Items...'
-            : `Add ${
-                selectedItems.length > 0 ? selectedItems.length : ''
-              } Item${selectedItems.length === 1 ? '' : 's'}`
+          isSaving
+            ? 'Saving...'
+            : isFirstVisit
+              ? `Add ${selectedItems.length > 0 ? selectedItems.length : ''} Item${selectedItems.length === 1 ? '' : 's'}`
+              : hasChanges
+                ? 'Save Changes'
+                : 'Continue'
         }
         onPress={onNext}
         variant="primary"
-        disabled={isAddingItems || selectedItems.length === 0}
+        disabled={isSaving || (isFirstVisit && selectedItems.length === 0)}
       />
     </OnBoardingWrapper>
   );
@@ -199,13 +248,13 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
   },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   errorContainer: {
     flex: 1,

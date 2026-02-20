@@ -356,7 +356,7 @@ type AuthPayload {
 
 input AutocompleteCategoryInput {
   limit: Int = 10
-  parentId: String
+  parentId: ID
   query: String!
   type: CategoryType
 }
@@ -370,7 +370,7 @@ input AutocompleteInput {
   category: String
   limit: Int = 10
   query: String!
-  storeId: String
+  storeId: ID
 }
 
 type AutocompleteResponse {
@@ -407,7 +407,7 @@ input BatchAddShoppingListItemInput {
   category: String
   """Client-provided ID for matching results (optional)"""
   clientId: String
-  itemId: String
+  itemId: ID
   itemName: String
   netWeight: NetWeightInput
   notes: String
@@ -529,13 +529,13 @@ input BrandFilterInput {
 input BrandFilters {
   """Filter root brands (no parent)"""
   isRoot: Boolean
-  parentId: String
+  parentId: ID
   search: String
 }
 
 input BrandOpsInput {
-  addBrandIds: [String!]
-  removeBrandIds: [String!]
+  addBrandIds: [ID!]
+  removeBrandIds: [ID!]
 }
 
 """Order by options for brands"""
@@ -555,7 +555,7 @@ type BrandPayload implements MutationPayload {
 Reusable sub-input for referencing a brand by ID or name (find-or-create)
 """
 input BrandReferenceInput {
-  brandId: String
+  brandId: ID
   brandName: String
 }
 
@@ -752,15 +752,15 @@ type CategoryEdge implements Edge {
 }
 
 input CategoryFilters {
-  parentId: String
+  parentId: ID
   search: String
   type: CategoryType
 }
 
 input CategoryOpsInput {
-  addCategoryIds: [String!]
-  primaryCategoryId: String
-  removeCategoryIds: [String!]
+  addCategoryIds: [ID!]
+  primaryCategoryId: ID
+  removeCategoryIds: [ID!]
 }
 
 """Order by options for categories"""
@@ -1066,7 +1066,7 @@ input CorrectPantryItemWeightInput {
   """
   Unit for the net weight (optional — only provide to also change the unit)
   """
-  netWeightUnitId: String
+  netWeightUnitId: ID
   """Why the correction is needed (required for audit trail)"""
   reason: String!
   """Optimistic concurrency control"""
@@ -1084,7 +1084,7 @@ input CreateCategoryInput {
   description: String
   icon: String
   name: String!
-  parentId: String
+  parentId: ID
   slug: String
   type: CategoryType
   visibility: Visibility
@@ -1128,7 +1128,7 @@ input CreateDeviceInput {
 input CreateFromTemplateInput {
   name: String
   plannedShopDate: DateTime
-  targetStoreId: String
+  targetStoreId: ID
   templateId: ID!
 }
 
@@ -1275,7 +1275,7 @@ input CreatePantryItemInput {
   expiresAt: String
   forceAdd: Boolean
   item: InlineItemInput
-  itemId: String
+  itemId: ID
   lastUsedAt: DateTime
   netWeight: NetWeightInput
   pantryId: ID!
@@ -1349,7 +1349,7 @@ input CreateRecipeReviewInput {
 input CreateShoppingListInput {
   budgetAmount: Float
   description: String
-  homeId: String
+  homeId: ID
   isDefault: Boolean
   name: String!
   tags: [String!]
@@ -1358,7 +1358,7 @@ input CreateShoppingListInput {
 input CreateShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
-  itemId: String
+  itemId: ID
   itemName: String
   netWeight: NetWeightInput
   notes: String
@@ -1428,7 +1428,7 @@ input CreateTemplateFromMealPlanInput {
 }
 
 input CreateUnitInput {
-  baseUnitId: String
+  baseUnitId: ID
   conversionFactor: Float
   isCommon: Boolean
   isMetric: Boolean
@@ -2690,7 +2690,7 @@ input InlineItemInput {
   brand: String
   category: String
   description: String
-  displayUnitId: String
+  displayUnitId: ID
   imageUrl: String
   images: JSON
   name: String
@@ -2946,7 +2946,7 @@ type ItemCategorySuggestion {
 }
 
 input ItemClassificationInput {
-  categoryIds: [String!]
+  categoryIds: [ID!]
   storageState: StorageState
   tags: [String!]
 }
@@ -3071,7 +3071,7 @@ enum ItemMatchType {
 Manufacturer-provided net weight in a specific unit (e.g., 3.4 oz or 96g)
 """
 input ItemNetWeightInput {
-  unitId: String
+  unitId: ID
   unitName: String
   value: Float!
 }
@@ -3239,7 +3239,7 @@ type ItemUnit {
 input ItemUnitConfigInput {
   defaultUnit: String
   density: Float
-  preferredTrackingUnitId: String
+  preferredTrackingUnitId: ID
   units: [ItemUnitInput!]
 }
 
@@ -3272,16 +3272,16 @@ type ItemUnitConversionPayload implements MutationPayload {
 
 input ItemUnitInput {
   averagePricePerUnit: Float
-  contentUnitId: String
+  contentUnitId: ID
   contentUnitName: String
-  externalSourceMappingId: String
+  externalSourceMappingId: ID
   isDefault: Boolean
   isPreferred: Boolean
   packageDescription: String
   packageSize: Float
   recommendedFor: [UnitRecommendation!]
   retailUnit: Boolean
-  unitId: String
+  unitId: ID
   unitName: String
   usageContext: [UnitUsageContext!]
 }
@@ -4400,7 +4400,7 @@ type Mutation {
   """Duplicate a template with a new name"""
   duplicateTemplate(id: ID!, newName: String!): MealTemplatePayload!
   """Export items to file"""
-  exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse!
+  exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse! @deprecated(reason: "Not yet implemented")
   """Save a recipe as a favorite."""
   favoriteRecipe(input: FavoriteRecipeInput!): SavedRecipePayload!
   """Flag an item for review"""
@@ -4413,9 +4413,9 @@ type Mutation {
   """Hard delete a device permanently (admin only)"""
   hardDeleteDevice(id: ID!): DevicePayload!
   """Import items from CSV file"""
-  importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse!
+  importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
   """Import items from external provider (USDA, Spoonacular, etc.)"""
-  importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse!
+  importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse! @deprecated(reason: "Not yet implemented")
   """Increment the cooked count for a saved recipe."""
   incrementRecipeCookedCount(recipeId: ID!): SavedRecipePayload!
   """Send an invitation for a user to join a home."""
@@ -4771,7 +4771,7 @@ type MyModerationStatus {
 """Reusable sub-input for net weight with unit"""
 input NetWeightInput {
   netWeight: Float
-  netWeightUnitId: String
+  netWeightUnitId: ID
 }
 
 """Reusable sub-input for network and location info"""
@@ -5085,7 +5085,7 @@ type PackageBreakdown {
 
 input PackageInfoInput {
   baseDimension: BaseDimension
-  displayUnitId: String
+  displayUnitId: ID
   displayUnitName: String
   netWeight: Float
   servingSize: Float
@@ -5358,7 +5358,7 @@ input PantryItemFilters {
   condition: ItemCondition
   expirationDays: Int
   expiringSoon: Boolean
-  itemId: String
+  itemId: ID
   search: String
   storageState: StorageState
   tags: [String!]
@@ -5819,8 +5819,8 @@ type PurchaseHistorySummary {
 input PurchaseInfoInput {
   acquisitionMethod: AcquisitionMethod
   costPerUnit: Float
-  purchaseId: String
-  storeId: String
+  purchaseId: ID
+  storeId: ID
   totalCost: Float
 }
 
@@ -6309,7 +6309,7 @@ input RecipeIngredientInput {
   externalSources: [RecipeIngredientSourceInput!]
   image: String
   isOptional: Boolean
-  itemId: String
+  itemId: ID
   measurements: MultiUnitMeasurementInput
   meta: [String!]
   name: String!
@@ -6319,7 +6319,7 @@ input RecipeIngredientInput {
   section: String
   sortOrder: Int
   spoonacular: SpoonacularDataInput
-  unitId: String
+  unitId: ID
 }
 
 type RecipeIngredientMatch {
@@ -6466,16 +6466,16 @@ input RecordLoginInput {
 }
 
 input RecordPantryItemUsageInput {
-  cookingLogId: String
+  cookingLogId: ID
   isComposted: Boolean
   isRecycled: Boolean
-  mealPlanItemId: String
+  mealPlanItemId: ID
   notes: String
   pantryItemId: ID!
   purpose: UsagePurpose!
   quantityUsed: Float!
-  recipeId: String
-  usageUnitId: String
+  recipeId: ID
+  usageUnitId: ID
   wasteReason: WasteReason
 }
 
@@ -6493,7 +6493,7 @@ input RecordPriceObservationInput {
   itemId: ID!
   observedAt: DateTime
   price: Float!
-  storeId: String!
+  storeId: ID!
 }
 
 enum RecurringPattern {
@@ -6579,9 +6579,9 @@ input RestockPantryItemInput {
   notes: String
   quantity: Float!
   restockedAt: DateTime
-  storeId: String
+  storeId: ID
   totalCost: Float
-  unitId: String
+  unitId: ID
 }
 
 """Restocking frequency for an item or pantry"""
@@ -6949,7 +6949,7 @@ type ShoppingListEdge implements Edge {
 }
 
 input ShoppingListFilters {
-  homeId: String
+  homeId: ID
   isArchived: Boolean
   isCompleted: Boolean
   isDefault: Boolean
@@ -7143,7 +7143,7 @@ input ShoppingListPlanningInput {
   plannedShopDate: DateTime
   reminderDate: DateTime
   reminderEnabled: Boolean
-  targetStoreId: String
+  targetStoreId: ID
 }
 
 """Sub-input for shopping list settings"""
@@ -7275,7 +7275,7 @@ input StaleDeviceCleanupInput {
 """Reusable sub-input for storage details"""
 input StorageDetailsInput {
   condition: ItemCondition
-  storageLocationId: String
+  storageLocationId: ID
   storageLocationName: String
   storageNotes: String
   storageState: StorageState
@@ -7538,7 +7538,7 @@ type StorePayload implements MutationPayload {
 """Sub-input for store preferences"""
 input StorePreferencesInput {
   aisle: String
-  preferredStoreId: String
+  preferredStoreId: ID
   storeSection: String
 }
 
@@ -7558,12 +7558,12 @@ input StoreSkuInput {
   inventoryStatus: String
   price: Float
   sku: String!
-  storeId: String!
+  storeId: ID!
 }
 
 input StoreSkuOpsInput {
   addStoreSkus: [StoreSkuInput!]
-  removeStoreSkuIds: [String!]
+  removeStoreSkuIds: [ID!]
   storeSkus: [StoreSkuInput!]
 }
 
@@ -7707,7 +7707,7 @@ input SyncPantryItemInput {
   isComposted: Boolean
   isRecycled: Boolean
   item: InlineItemInput
-  itemId: String
+  itemId: ID
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   netWeight: NetWeightInput
@@ -7741,7 +7741,7 @@ input SyncShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
   """Item reference (if linking to catalog item)"""
-  itemId: String
+  itemId: ID
   """Item details (for items not in catalog)"""
   itemName: String
   netWeight: NetWeightInput
@@ -7882,7 +7882,7 @@ type Unit {
 
 input UnitOpsInput {
   addUnits: [ItemUnitInput!]
-  removeUnitIds: [String!]
+  removeUnitIds: [ID!]
 }
 
 type UnitPayload implements MutationPayload {
@@ -7913,7 +7913,7 @@ type UnitRef {
 
 """Reusable sub-input for specifying a unit by ID, name, or symbol"""
 input UnitSpecInput {
-  unitId: String
+  unitId: ID
   unitName: String
   unitSymbol: String
 }
@@ -7977,7 +7977,7 @@ input UpdateCategoryInput {
   icon: String
   isActive: Boolean
   name: String
-  parentId: String
+  parentId: ID
   slug: String
   sortOrder: Int
   visibility: Visibility
@@ -8119,7 +8119,7 @@ input UpdateItemInput {
   """Price source for tracking"""
   priceSource: String
   """Store ID for price update"""
-  priceStoreId: String
+  priceStoreId: ID
   productDetails: ProductDetailsInput
   """Remove the item image"""
   removeImage: Boolean
@@ -8138,7 +8138,7 @@ input UpdateItemPriceInput {
   itemId: ID!
   price: Float!
   source: String
-  storeId: String
+  storeId: ID
 }
 
 input UpdateLoginHistoryInput {
@@ -8333,7 +8333,7 @@ input UpdateRestrictionInput {
 
 input UpdateShoppingListInput {
   description: String
-  homeId: String
+  homeId: ID
   isCompleted: Boolean
   isDefault: Boolean
   name: String
@@ -8421,7 +8421,7 @@ input UpdateTemplateItemInput {
 }
 
 input UpdateUnitInput {
-  baseUnitId: String
+  baseUnitId: ID
   conversionFactor: Float
   isCommon: Boolean
   isMetric: Boolean

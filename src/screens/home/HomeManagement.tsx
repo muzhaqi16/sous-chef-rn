@@ -33,6 +33,7 @@ import {
 } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { errorService } from '#/services/errorService';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -196,7 +197,7 @@ export const HomeManagement: React.FC = () => {
     try {
       await refetchHomes();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      errorService.reportError(error, { operation: 'HomeManagement.refreshData' });
     } finally {
       setRefreshing(false);
     }

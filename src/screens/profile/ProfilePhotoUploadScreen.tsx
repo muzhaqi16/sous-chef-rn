@@ -29,6 +29,7 @@ import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
+import { errorService } from '#/services/errorService';
 
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -65,7 +66,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           storage.remove('temp_cropped_image');
         }
       } catch (error) {
-        console.error('Error reading cropped image from MMKV:', error);
+        errorService.reportError(error, { operation: 'ProfilePhotoUpload.readCroppedImage' });
         // Clean up potentially corrupted data
         storage.remove('temp_cropped_image');
       }
@@ -129,7 +130,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error('Camera permission error:', error);
+      errorService.reportError(error, { operation: 'ProfilePhotoUpload.cameraPermission' });
       // PERFORMANCE: Specific error message - permission request failed
       Alert.alert(
         'Permission Error',

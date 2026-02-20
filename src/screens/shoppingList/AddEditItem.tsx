@@ -23,6 +23,7 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { errorService } from '#/services/errorService';
 
 type RouteParams = {
   listId: string;
@@ -75,7 +76,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       addToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
-      console.error('Add item error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.addItem' });
     },
   });
 
@@ -94,7 +95,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       }
     },
     onError: error => {
-      console.error('Update item error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.updateItem' });
     },
   });
 
@@ -217,7 +218,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
         );
       }
     } catch (error: any) {
-      console.error('Save error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.save' });
 
       // Handle version conflict errors with user-friendly message
       if (handleVersionConflict(error)) {

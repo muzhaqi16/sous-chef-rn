@@ -20,7 +20,7 @@ import {
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService, errorService } from '#/services/errorService';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 
@@ -33,7 +33,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
 
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -227,7 +227,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   useEffect(() => {
     // Handle error case
     if (pantryError && pantryId) {
-      console.error('❌ Error loading pantry:', pantryError);
+      errorService.reportError(pantryError, { operation: 'PantrySettings.loadPantry' });
       Alert.alert(
         'Error Loading Pantry',
         'Failed to load pantry data. Please try again.',
@@ -264,8 +264,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         },
       });
     } catch (error) {
-      // Error handler will revert the toggle
-      console.error('Failed to set default pantry:', error);
+      errorService.reportError(error, { operation: 'PantrySettings.setDefaultPantry' });
     }
   };
 

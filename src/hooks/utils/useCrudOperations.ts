@@ -22,7 +22,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
-import { serializeError } from '#/utils/errorSerialization';
+import { errorService } from '#/services/errorService';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -152,7 +152,7 @@ export function useCrudOperations() {
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
         } catch (error: any) {
-          console.error(`${operationName} error:`, serializeError(error));
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;
@@ -262,7 +262,7 @@ export function useCrudOperations() {
             return false;
           }
 
-          console.error(`${operationName} error:`, error);
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;
@@ -350,7 +350,7 @@ export function useCrudOperations() {
             Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
             return false;
           } catch (error: any) {
-            console.error(`${operationName} error:`, error);
+            errorService.reportError(error, { operation: operationName });
             onError?.(error);
             handleMutationErrorAlert(error, { operation: operationName });
             return false;
@@ -416,7 +416,7 @@ export function useCrudOperations() {
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
         } catch (error: any) {
-          console.error(`${operationName} error:`, serializeError(error));
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;

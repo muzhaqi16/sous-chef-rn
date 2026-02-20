@@ -6,7 +6,7 @@ import {
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
 export interface NotificationSettings {
   // Core toggles
@@ -45,7 +45,7 @@ export interface NotificationSettings {
 
 export const useNotificationSettings = () => {
   const user = useAppStore(state => state.user);
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for settings

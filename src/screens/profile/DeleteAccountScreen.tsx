@@ -20,6 +20,7 @@ import {
 } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { errorService } from '#/services/errorService';
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
@@ -72,7 +73,7 @@ export const DeleteAccountScreen: React.FC = () => {
             try {
               await deleteAccountMutation();
             } catch (error) {
-              console.error('Delete account error:', error);
+              errorService.reportError(error, { operation: 'DeleteAccount.deleteAccount' });
               setIsDeleting(false);
             }
           },

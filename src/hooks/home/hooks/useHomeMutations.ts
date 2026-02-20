@@ -20,7 +20,7 @@ import {
   selectSelectedHomeId,
   selectHomeState,
 } from '#store/useAppStore';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -58,7 +58,7 @@ export function useHomeMutations({
 }: UseHomeMutationsOptions) {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const { setSelectedHomeId } = useAppStore(useShallow(selectHomeState));
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   const [createHomeMutation, { loading: creating, client }] =

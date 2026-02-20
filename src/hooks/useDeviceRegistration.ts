@@ -5,7 +5,7 @@ import {
   type DeviceInformation,
 } from '#/utils/deviceInfo';
 import { logger } from '#/utils/environment';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
 
 interface DeviceRegistrationState {
@@ -21,7 +21,7 @@ export const useDeviceRegistration = () => {
     registrationError: null,
   });
 
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const [registerDeviceMutation] = useRegisterDeviceMutation();
 
   /**

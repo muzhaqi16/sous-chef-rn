@@ -12,7 +12,7 @@ import {
   useAddItemToShoppingListMutation,
   type AddItemToShoppingListMutation,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -34,7 +34,7 @@ interface UseAddShoppingItemOptions {
  * ```
  */
 export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { createAddOperation } = useCrudOperations();
 
   const [addItemMutation] = useAddItemToShoppingListMutation({

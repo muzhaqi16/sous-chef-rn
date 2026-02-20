@@ -10,7 +10,7 @@
 import { Alert } from 'react-native';
 import { useRemoveItemFromShoppingListMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { buildOptimisticRemoveItemResponse } from '#/apollo/utils/optimisticTypes';
 import { removeFromShoppingListItemsCache } from './utils';
@@ -31,7 +31,7 @@ interface UseRemoveShoppingItemOptions {
  * ```
  */
 export function useRemoveShoppingItem({ listId, items, refetch }: UseRemoveShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({

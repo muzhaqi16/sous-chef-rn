@@ -32,6 +32,10 @@ import {
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { LaunchArguments } from 'react-native-launch-arguments';
+import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+
+// Install global JS exception and promise rejection handlers before any component renders
+setupGlobalErrorHandler();
 
 // Enable native screens for better performance
 enableScreens();

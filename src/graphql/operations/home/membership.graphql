@@ -30,6 +30,7 @@ subscription MembershipChanges($homeId: ID!) {
         id
         email
         profile {
+          id
           displayName
           avatar
         }

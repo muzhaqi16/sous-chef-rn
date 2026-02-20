@@ -2,21 +2,21 @@
  * Error Service - Unified error handling for the application
  *
  * This service provides:
- * 1. Structured error parsing (from errorHandling.ts)
- * 2. Error wrapper functions (from errorHandlers.ts)
+ * 1. Structured error parsing with Telemetry integration
+ * 2. Error wrapper functions for mutations
  * 3. Returns typed results instead of showing alerts
  * 4. Works with toast/snackbar service for user feedback
+ * 5. reportError() for non-Apollo errors
  *
  * Usage:
  * ```typescript
- * const result = errorService.handleMutation(() => mutation(), 'Update Item');
- * if (!result.success) {
- *   toastService.error(result.message);
- *   return;
- * }
+ * const { handleApolloError } = useErrorService();
+ * const { message } = handleApolloError(error, { operation: 'Update Item' });
+ * Alert.alert('Error', message);
  * ```
  */
 
+import { useMemo } from 'react';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -33,6 +33,7 @@ import {
   isVersionConflictError,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { Telemetry } from '#/services/telemetry';
 
 /**
  * Result type for error operations
@@ -48,6 +49,18 @@ export interface ErrorResult<T = any> {
     isAuthError: boolean;
     validationErrors?: Record<string, string>;
   };
+}
+
+/**
+ * Flat error result matching the legacy handleApolloError return shape
+ */
+export interface ApolloErrorResult {
+  code: string;
+  message: string;
+  category: string;
+  shouldRetry: boolean;
+  isAuthError: boolean;
+  validationErrors?: Record<string, string>;
 }
 
 /**
@@ -79,6 +92,13 @@ class ErrorService {
     AUTHZ_ADMIN_REQUIRED: 'Administrator privileges required',
     AUTHZ_MODERATOR_REQUIRED: 'Moderator privileges required',
 
+    // API Key Errors
+    API_KEY_MISSING: 'API key is missing. Please check your configuration',
+    API_KEY_INVALID: 'Invalid API key. Please check your configuration',
+    API_KEY_EXPIRED: 'API key has expired. Please contact support',
+    API_KEY_REVOKED: 'API key has been revoked. Please contact support',
+    API_KEY_RATE_LIMITED: 'API rate limit exceeded. Please try again later',
+
     // Validation Errors
     VALIDATION_FAILED: 'Please check your input and try again',
     VALIDATION_FIELD_REQUIRED: 'Required field is missing',
@@ -106,6 +126,7 @@ class ErrorService {
     RATE_LIMIT_EXCEEDED: 'Too many requests. Please try again later',
     RATE_LIMIT_IP_BLOCKED: 'Your IP has been rate limited',
     RATE_LIMIT_USER_BLOCKED: 'Your account has been rate limited',
+    RATE_LIMIT_API_KEY_BLOCKED: 'API key rate limit exceeded',
 
     // Service Errors
     SERVICE_UNAVAILABLE: 'Service is temporarily unavailable',
@@ -120,6 +141,9 @@ class ErrorService {
       "You're currently offline. Showing cached data when available.",
     CIRCUIT_HALF_OPEN: 'Reconnecting... You may see cached data.',
 
+    // Email Errors
+    EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
+
     // Query Complexity Errors
     QUERY_TOO_COMPLEX: 'Query is too complex. Please simplify your request.',
     PAGINATION_LIMIT_EXCEEDED:
@@ -129,13 +153,19 @@ class ErrorService {
     VERSION_CONFLICT:
       'This item was updated by another user. Please refresh and try again.',
 
+    // Pantry Errors
+    PANTRY_ITEM_ALREADY_EXISTS: 'This item is already in your pantry',
+
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
     SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
+    SHOPPING_ITEM_NOT_FOUND: 'Shopping item not found',
+    SHOPPING_ITEM_ALREADY_EXISTS: 'This item is already in your shopping list',
     HOME_NOT_FOUND: 'Home not found',
     HOME_ACCESS_DENIED: "You don't have access to this home",
     HOME_INVITE_INVALID: 'Invalid home invitation',
     HOME_INVITE_EXPIRED: 'Home invitation has expired',
+    HOME_MEMBER_ALREADY_EXISTS: 'User is already a member of this home',
   };
 
   private static readonly RETRYABLE_ERRORS = [
@@ -149,6 +179,7 @@ class ErrorService {
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
     AUTH_: 'Authentication',
     AUTHZ_: 'Authorization',
+    API_: 'API Key',
     VALIDATION_: 'Validation',
     RESOURCE_: 'Resource',
     BUSINESS_: 'Business Logic',
@@ -156,6 +187,8 @@ class ErrorService {
     SERVICE_: 'Service',
     NETWORK_: 'Network',
     CIRCUIT_: 'Circuit Breaker',
+    EMAIL_: 'Email',
+    PANTRY_: 'Pantry',
     SHOPPING_: 'Shopping',
     HOME_: 'Home Management',
   };
@@ -185,6 +218,40 @@ class ErrorService {
 
   isAuthError(errorCode: string): boolean {
     return errorCode.startsWith('AUTH_') || errorCode.startsWith('AUTHZ_');
+  }
+
+  /**
+   * Report a non-Apollo error to telemetry and console.
+   * Use this to replace scattered console.error calls so errors flow to Loki.
+   */
+  reportError(
+    error: unknown,
+    context?: { operation?: string; [key: string]: any },
+  ): void {
+    const operation = context?.operation || 'Unknown';
+    const serialized = serializeError(error);
+
+    if (__DEV__) {
+      logger.error(`[ErrorService] ${operation}:`, serialized);
+    }
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : 'Unknown error';
+
+    Telemetry.trackError(errorMessage, {
+      operation,
+      serialized_error: JSON.stringify(serialized),
+      ...context,
+    });
+
+    Telemetry.increment('app_errors_total', 1, {
+      category: 'reported',
+      operation,
+    });
   }
 
   /**
@@ -246,6 +313,7 @@ class ErrorService {
         errorMessage = error;
       }
 
+      const category = this.getErrorCategory(errorCode);
       const userFriendlyMessage =
         customMessage || this.getUserFriendlyMessage(errorCode, errorMessage);
 
@@ -257,12 +325,26 @@ class ErrorService {
         });
       }
 
+      // Report to telemetry so errors flow to Loki in production
+      Telemetry.trackError(errorMessage, {
+        code: errorCode,
+        category,
+        operation,
+        serialized_error: JSON.stringify(serializeError(error)),
+      });
+
+      Telemetry.increment('app_errors_total', 1, {
+        category,
+        code: errorCode,
+        operation,
+      });
+
       return {
         success: false,
         error: {
           code: errorCode,
           message: userFriendlyMessage,
-          category: this.getErrorCategory(errorCode),
+          category,
           shouldRetry: this.shouldRetry(errorCode),
           isAuthError: this.isAuthError(errorCode),
           validationErrors,
@@ -280,6 +362,26 @@ class ErrorService {
         },
       };
     }
+  }
+
+  /**
+   * Handle an Apollo error and return a flat result.
+   * Drop-in replacement for the legacy ErrorHandler.handleApolloError().
+   */
+  handleApolloError(
+    error: unknown,
+    config: ErrorConfig = {},
+  ): ApolloErrorResult {
+    const result = this.parseApolloError(error, config);
+    return (
+      result.error || {
+        code: 'UNKNOWN_ERROR',
+        message: 'An unexpected error occurred',
+        category: 'Unknown',
+        shouldRetry: false,
+        isAuthError: false,
+      }
+    );
   }
 
   /**
@@ -322,5 +424,30 @@ class ErrorService {
 // Export singleton instance
 export const errorService = new ErrorService();
 
+// Utility function for getting error messages (replaces getErrorMessage from errorHandling.ts)
+export const getErrorMessage = (error: unknown): string => {
+  const result = errorService.parseApolloError(error, { logError: false });
+  return result.error?.message || 'An unexpected error occurred';
+};
+
 // Export hook for use in components
-export const useErrorService = () => errorService;
+// Returns an object matching the legacy useErrorHandler shape for easy migration
+export const useErrorService = () => {
+  return useMemo(
+    () => ({
+      handleApolloError: errorService.handleApolloError.bind(errorService),
+      parseApolloError: errorService.parseApolloError.bind(errorService),
+      handleMutation: errorService.handleMutation.bind(errorService),
+      handleMutationWithVersionConflict:
+        errorService.handleMutationWithVersionConflict.bind(errorService),
+      getUserFriendlyMessage:
+        errorService.getUserFriendlyMessage.bind(errorService),
+      getErrorCategory: errorService.getErrorCategory.bind(errorService),
+      shouldRetry: errorService.shouldRetry.bind(errorService),
+      isAuthError: errorService.isAuthError.bind(errorService),
+      reportError: errorService.reportError.bind(errorService),
+      getErrorMessage,
+    }),
+    [],
+  );
+};

@@ -25,7 +25,7 @@ import {
   createAddToQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -47,7 +47,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);

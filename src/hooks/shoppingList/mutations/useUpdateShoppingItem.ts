@@ -10,7 +10,7 @@
 import { Alert } from 'react-native';
 import { useUpdateShoppingListItemMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import {
   handleVersionConflict,
@@ -34,7 +34,7 @@ interface UseUpdateShoppingItemOptions {
  * ```
  */
 export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // Apollo auto-normalizes the server response by __typename + id
   // No onCompleted cleanup needed - cache persistence handles this automatically

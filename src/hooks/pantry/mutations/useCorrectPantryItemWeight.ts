@@ -11,7 +11,7 @@ import {
   useCorrectPantryItemWeightMutation,
   PantryItemDisplayFragmentDoc,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -24,7 +24,7 @@ interface UseCorrectPantryItemWeightOptions {
 export function useCorrectPantryItemWeight({
   onSuccess,
 }: UseCorrectPantryItemWeightOptions = {}) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [correctMutation, { loading }] = useCorrectPantryItemWeightMutation({
     errorPolicy: 'all',

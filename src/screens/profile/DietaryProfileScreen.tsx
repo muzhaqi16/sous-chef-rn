@@ -20,6 +20,7 @@ import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
+import { errorService } from '#/services/errorService';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { theme } = useUnistyles();
@@ -75,7 +76,7 @@ export const DietaryProfileScreen: React.FC = () => {
       // Check if all succeeded
       return results.every(result => result === true);
     } catch (error) {
-      console.error('Error adding restrictions:', error);
+      errorService.reportError(error, { operation: 'DietaryProfile.addRestrictions' });
       return false;
     }
   }, [addDietaryRestriction]);

@@ -82,7 +82,7 @@ query GetShoppingList($id: ID!) {
 
 # Lightweight query for list selector - metadata only, no items/collaborators
 # Use this for dashboard/list views. Use GetShoppingList for full details.
-query GetShoppingListsLite($homeId: String, $first: Int, $after: String) {
+query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
       cursor
@@ -109,6 +109,7 @@ query GetShoppingListsLite($homeId: String, $first: Int, $after: String) {
             id
             email
             profile {
+              id
               displayName
               avatar
             }

@@ -14,7 +14,7 @@ import {
   RestrictionSeverity,
 } from '#generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
   id: string;
@@ -47,7 +47,7 @@ export interface DietaryProfileData {
 
 export const useDietaryProfile = () => {
   const user = useAppStore(state => state.user);
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for profile data

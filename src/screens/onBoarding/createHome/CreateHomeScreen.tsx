@@ -26,7 +26,6 @@ import {
   useCreateHomeMutation,
   useCreatePantryMutation,
   useGetHomesQuery,
-  useGetPantriesQuery,
   useGetMyPendingInvitesQuery,
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
@@ -82,12 +81,6 @@ const CreateHomeScreenComponent = () => {
     fetchPolicy: 'cache-and-network',
   });
 
-  const { data: pantriesData, loading: pantriesLoading } = useGetPantriesQuery({
-    variables: { homeId: selectedHomeId || '' },
-    skip: !selectedHomeId,
-    fetchPolicy: 'cache-and-network',
-  });
-
   const { data: pendingInvitesData, loading: invitesLoading } =
     useGetMyPendingInvitesQuery({
       skip: !user?.id,
@@ -96,10 +89,9 @@ const CreateHomeScreenComponent = () => {
 
   // Extract nodes from connection types (homes and pantries return Connection types)
   const homes = normalizeHomes(extractNodes(homesData?.homes));
-  const pantries = extractNodes(pantriesData?.pantries);
   const pendingInvites = pendingInvitesData?.me?.pendingHomeInvites || [];
   const existingHome = homes[0];
-  const existingPantry = pantries.find(p => p.isDefault) || pantries[0];
+  const existingPantry = existingHome?.pantries?.find((p: { isDefault: boolean }) => p.isDefault) || existingHome?.pantries?.[0];
   const needsHome = !existingHome;
   const needsPantry = !existingPantry;
   const hasPendingInvites = pendingInvites.length > 0;
@@ -243,7 +235,7 @@ const CreateHomeScreenComponent = () => {
     let isMounted = true;
 
     const checkExisting = async () => {
-      if (homesLoading || (selectedHomeId && pantriesLoading)) return;
+      if (homesLoading) return;
 
       try {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -272,8 +264,6 @@ const CreateHomeScreenComponent = () => {
     };
   }, [
     homesLoading,
-    pantriesLoading,
-    selectedHomeId,
     existingHome,
     existingPantry,
     setSelectedHomeId,
@@ -312,6 +302,15 @@ const CreateHomeScreenComponent = () => {
             if (payload.home) {
               homeId = payload.home.id;
               setSelectedHomeId(homeId);
+
+              // Set pantry ID from the home response (created via createDefaultPantry)
+              const pantries = extractNodes(payload.home.pantriesConnection);
+              const defaultPantry = pantries.find(
+                (p: { isDefault: boolean }) => p.isDefault,
+              ) || pantries[0];
+              if (defaultPantry) {
+                setSelectedPantryId(defaultPantry.id);
+              }
             } else {
               // Success but home object null — refetch to get the ID
               const refetchResult = await refetchHomes();
@@ -459,8 +458,7 @@ const CreateHomeScreenComponent = () => {
   if (
     checkingExisting ||
     homesLoading ||
-    invitesLoading ||
-    (selectedHomeId && pantriesLoading)
+    invitesLoading
   ) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }

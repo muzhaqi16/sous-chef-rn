@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Icon } from '#utils/iconUtils';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useTextInputModal } from '#components/organisms/modal/useTextInputModal';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { useAppStore, selectUser } from '#store/useAppStore';
@@ -22,6 +23,7 @@ export const BiometricSetupScreen = () => {
     storeCredentials,
   } = useAuth();
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
+  const { show: showPasswordModal, TextModalComponent } = useTextInputModal();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
     biometryType: string | null;
@@ -88,15 +90,10 @@ export const BiometricSetupScreen = () => {
     }
   }, [hasCheckedBiometric, biometricInfo.isAvailable, handleComplete]);
 
-  const handleEnableBiometric = async () => {
-    if (isEnabling || !registrationPassword || !user?.email) return;
-
+  const enableBiometricWithPassword = async (email: string, password: string) => {
     try {
       setIsEnabling(true);
-
-      // Store credentials with biometric protection
-      const success = await storeCredentials(user.email, registrationPassword);
-
+      const success = await storeCredentials(email, password);
       if (success) {
         handleComplete(true);
       } else {
@@ -116,6 +113,32 @@ export const BiometricSetupScreen = () => {
     } finally {
       setIsEnabling(false);
     }
+  };
+
+  const handleEnableBiometric = async () => {
+    if (isEnabling) return;
+
+    if (!user?.email) {
+      // Edge case: no email means auth state is broken, skip biometric
+      handleComplete(false);
+      return;
+    }
+
+    if (!registrationPassword) {
+      // Password lost (app restart) — ask the user to re-enter it
+      showPasswordModal({
+        title: 'Enter Your Password',
+        placeholder: 'Password',
+        submitText: 'Enable',
+        textInputProps: { secureTextEntry: true, autoCapitalize: 'none' },
+        onSubmit: async (password: string) => {
+          await enableBiometricWithPassword(user.email, password);
+        },
+      });
+      return;
+    }
+
+    await enableBiometricWithPassword(user.email, registrationPassword);
   };
 
   const handleSkip = () => {
@@ -167,66 +190,69 @@ export const BiometricSetupScreen = () => {
   };
 
   return (
-    <OnBoardingWrapper
-      title={getBiometricTitle()}
-      subtitle="Secure your account"
-      step={7}
-      totalSteps={7}
-      testID="biometric-setup-screen"
-    >
-      <View style={styles.container} testID="biometric-setup-container">
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
-            <Icon name={getBiometricIcon()} size={48} color={theme.colors.primary} />
+    <>
+      <OnBoardingWrapper
+        title={getBiometricTitle()}
+        subtitle="Secure your account"
+        step={7}
+        totalSteps={7}
+        testID="biometric-setup-screen"
+      >
+        <View style={styles.container} testID="biometric-setup-container">
+          <View style={styles.iconContainer}>
+            <View style={styles.iconBackground}>
+              <Icon name={getBiometricIcon()} size={48} color={theme.colors.primary} />
+            </View>
           </View>
+
+          <Text style={styles.description}>{getBiometricDescription()}</Text>
+
+          <View style={styles.benefits}>
+            <View style={styles.benefitItem}>
+              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Text style={styles.benefitText}>Quick and secure access</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Text style={styles.benefitText}>No password required</Text>
+            </View>
+            <View style={styles.benefitItem}>
+              <Icon name="check-circle" size={20} color={theme.colors.success} />
+              <Text style={styles.benefitText}>Enhanced security</Text>
+            </View>
+          </View>
+
+          <View style={styles.buttons}>
+            <Pressable
+              style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
+              onPress={handleEnableBiometric}
+              disabled={isEnabling}
+              testID="biometric-setup-enable"
+            >
+              <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                {isEnabling ? 'Setting up...' : 'Enable Now'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({pressed}) => [styles.button, styles.secondaryButton, pressed && styles.pressed]}
+              onPress={handleSkip}
+              disabled={isEnabling}
+              testID="biometric-setup-skip"
+            >
+              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+                Set up later
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.footer}>
+            You can always enable this later in Settings
+          </Text>
         </View>
-
-        <Text style={styles.description}>{getBiometricDescription()}</Text>
-
-        <View style={styles.benefits}>
-          <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color={theme.colors.success} />
-            <Text style={styles.benefitText}>Quick and secure access</Text>
-          </View>
-          <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color={theme.colors.success} />
-            <Text style={styles.benefitText}>No password required</Text>
-          </View>
-          <View style={styles.benefitItem}>
-            <Icon name="check-circle" size={20} color={theme.colors.success} />
-            <Text style={styles.benefitText}>Enhanced security</Text>
-          </View>
-        </View>
-
-        <View style={styles.buttons}>
-          <Pressable
-            style={({pressed}) => [styles.button, styles.primaryButton, pressed && styles.pressed]}
-            onPress={handleEnableBiometric}
-            disabled={isEnabling}
-            testID="biometric-setup-enable"
-          >
-            <Text style={[styles.buttonText, styles.primaryButtonText]}>
-              {isEnabling ? 'Setting up...' : 'Enable Now'}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={({pressed}) => [styles.button, styles.secondaryButton, pressed && styles.pressed]}
-            onPress={handleSkip}
-            disabled={isEnabling}
-            testID="biometric-setup-skip"
-          >
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-              Set up later
-            </Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.footer}>
-          You can always enable this later in Settings
-        </Text>
-      </View>
-    </OnBoardingWrapper>
+      </OnBoardingWrapper>
+      {TextModalComponent}
+    </>
   );
 };
 

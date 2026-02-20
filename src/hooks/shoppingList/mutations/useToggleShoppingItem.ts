@@ -14,7 +14,7 @@ import {
   ShoppingListItemDisplayFragmentDoc,
 } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   addToUnpurchasedItems,
   removeFromUnpurchasedItems,
@@ -46,7 +46,7 @@ interface UseToggleShoppingItemOptions {
  * ```
  */
 export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',

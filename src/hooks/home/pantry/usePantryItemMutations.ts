@@ -14,7 +14,7 @@ import {
   useUpdatePantryItemMutation,
   useDeletePantryItemMutation,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   enhanceWithVersion,
   createOptimisticEntity,
@@ -56,7 +56,7 @@ export function usePantryItemMutations({
   pantryItems,
   refetch,
 }: UsePantryItemMutationsOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { createAddOperation, createUpdateOperation } = useCrudOperations();
 
   // ADD MUTATION
@@ -201,15 +201,19 @@ export function usePantryItemMutations({
     transformInput: (input: PantryItemInput) => ({
       pantryId,
       quantity: input.quantity,
-      itemName: input.itemName,
-      unitId: input.unitId,
-      storageState: input.storageState,
-      ...(input.brand && { itemBrand: input.brand }),
-      ...(input.location && { storageLocation: input.location }),
+      item: {
+        name: input.itemName,
+        ...(input.category && { category: input.category }),
+        ...(input.barcode && { upc: input.barcode }),
+        ...(input.brand && { brand: input.brand }),
+      },
+      ...(input.unitId && { unit: { unitId: input.unitId } }),
+      storage: {
+        storageState: input.storageState,
+        ...(input.location && { storageLocationName: input.location }),
+        ...(input.notes && { storageNotes: input.notes }),
+      },
       ...(input.expirationDate && { expiresAt: input.expirationDate }),
-      ...(input.notes && { storageNotes: input.notes }),
-      ...(input.category && { itemCategory: input.category }),
-      ...(input.barcode && { itemUpc: input.barcode }),
     }),
     onSuccess: (data: any) => data?.createPantryItem?.pantryItem,
     operationName: 'Add Pantry Item',

@@ -11,6 +11,7 @@ import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
+import { errorService } from '#/services/errorService';
 
 // Exponential backoff delays in seconds: immediate, then 30s, 1m, 3m, 5m
 const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
@@ -98,7 +99,7 @@ export function CodeVerificationScreen() {
         toast({ message: response.data.verifyEmail.message, type: 'error' });
       }
     } catch (error) {
-      console.error('Error verifying email:', error);
+      errorService.reportError(error, { operation: 'CodeVerification.verifyEmail' });
       toast({ message: 'Something went wrong. Please try again.', type: 'error' });
     }
   };
@@ -134,7 +135,7 @@ export function CodeVerificationScreen() {
           return;
         }
 
-        console.error('Error resending verification email:', response.error);
+        errorService.reportError(response.error, { operation: 'CodeVerification.resendEmail.graphqlError' });
         toast({ message: 'Failed to resend verification email.', type: 'error' });
         return;
       }
@@ -142,7 +143,7 @@ export function CodeVerificationScreen() {
       // Show success message only if no errors
       console.log('Verification email resent');
     } catch (error) {
-      console.error('Error resending verification email:', error);
+      errorService.reportError(error, { operation: 'CodeVerification.resendEmail' });
       toast({ message: 'Something went wrong. Please try again.', type: 'error' });
     }
   };

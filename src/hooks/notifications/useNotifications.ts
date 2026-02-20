@@ -304,13 +304,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         '✅ [NotificationChanged] Subscription ACTIVE for user:',
         user.id,
       );
-    } else if (config.skip) {
+    } else if (!user?.id) {
       console.log(
-        '⏸️ [NotificationChanged] Subscription DEFERRED - startup delay',
+        '⏸️ [NotificationChanged] Subscription SKIPPED - no authenticated user',
       );
     } else {
       console.log(
-        '⏸️ [NotificationChanged] Subscription SKIPPED - no user ID',
+        '⏸️ [NotificationChanged] Subscription DEFERRED - startup delay',
       );
     }
   }, [user?.id, config.skip]);

@@ -23,6 +23,7 @@ import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
+import { errorService } from '#/services/errorService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
@@ -242,7 +243,7 @@ export const ImageCropScreen = () => {
 
       goBack();
     } catch (error) {
-      console.error('Crop failed:', error);
+      errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
       Alert.alert('Error', 'Failed to crop image. Please try again.');
     } finally {
       setIsCropping(false);

@@ -29,6 +29,7 @@ query MyShoppingListInvites {
         id
         email
         profile {
+          id
           displayName
           avatar
         }
@@ -37,6 +38,7 @@ query MyShoppingListInvites {
         id
         email
         profile {
+          id
           displayName
         }
       }

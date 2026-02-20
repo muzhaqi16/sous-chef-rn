@@ -192,6 +192,7 @@ fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
     id
     email
     profile {
+      id
       displayName
       avatar
     }
@@ -212,6 +213,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
     id
     email
     profile {
+      id
       displayName
       avatar
     }
@@ -220,6 +222,7 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
     id
     email
     profile {
+      id
       displayName
     }
   }
@@ -236,6 +239,7 @@ fragment UserSummary on User {
   id
   email
   profile {
+    id
     displayName
     avatar
   }
@@ -658,6 +662,7 @@ fragment HomeInviteFragment on HomeInvite {
   inviter {
     ...BasicUser
     profile {
+      id
       displayName
     }
   }
@@ -681,6 +686,7 @@ fragment HomeInviteDisplay on HomeInvite {
   inviter {
     ...BasicUser
     profile {
+      id
       displayName
     }
   }

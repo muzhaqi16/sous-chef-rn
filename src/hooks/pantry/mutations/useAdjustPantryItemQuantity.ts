@@ -11,7 +11,7 @@ import {
   useAdjustPantryItemQuantityMutation,
   PantryItemDisplayFragmentDoc,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -24,7 +24,7 @@ interface UseAdjustPantryItemQuantityOptions {
 export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [adjustMutation, { loading }] = useAdjustPantryItemQuantityMutation({
     errorPolicy: 'all',

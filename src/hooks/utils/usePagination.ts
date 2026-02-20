@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { errorService } from '#/services/errorService';
 
 /**
  * Configuration for pagination from normalized data
@@ -103,7 +104,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
         },
       });
     } catch (error) {
-      console.error('Failed to load more items:', error);
+      errorService.reportError(error, { operation: 'Pagination.loadMore' });
       // Fail silently - user can try scrolling again
     }
   }, [hasMore, loading, endCursor, fetchMore, cursorVariableName]);

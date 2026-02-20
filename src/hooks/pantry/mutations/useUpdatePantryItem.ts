@@ -14,7 +14,7 @@ import {
   PantryItemFragmentDoc,
   PantryItemFragment,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -58,7 +58,7 @@ export function useUpdatePantryItem({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [updateMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',

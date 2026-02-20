@@ -17,6 +17,7 @@ import {
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
 } from '#generated';
+import { errorService } from '#/services/errorService';
 
 type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
@@ -106,7 +107,7 @@ export const AcceptInvite: React.FC = () => {
         Alert.alert('Error', 'Unknown invitation type');
       }
     } catch (error: any) {
-      console.error('Accept invitation error:', error);
+      errorService.reportError(error, { operation: 'AcceptInvite.acceptInvitation' });
 
       // PERFORMANCE: Specific error messages based on error type
       let errorMessage = 'Failed to accept invitation. ';

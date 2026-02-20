@@ -13,7 +13,7 @@ import {
   PantryItemDisplayFragmentDoc,
   PantryItemFragment,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -59,7 +59,7 @@ export function useUpdatePantryItemQuantity({
   onSuccess,
   refetch,
 }: UseUpdatePantryItemQuantityOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [updateQuantityMutation] = useUpdatePantryItemQuantityMutation({
     errorPolicy: 'all',

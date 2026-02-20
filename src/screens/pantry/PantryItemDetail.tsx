@@ -38,6 +38,7 @@ import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPa
 import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPantryItemWeight';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
+import { errorService } from '#/services/errorService';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -226,7 +227,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         setCachedSuggestions(itemName, results);
       } catch (error: any) {
         if (error.name === 'AbortError') return;
-        console.error('Failed to fetch suggested recipes:', error);
+        errorService.reportError(error, { operation: 'PantryItemDetail.fetchSuggestedRecipes' });
       } finally {
         setLoadingRecipes(false);
       }
@@ -296,7 +297,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       setAddToListStatus('success');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
-      console.error('Failed to add to shopping list:', error);
+      errorService.reportError(error, { operation: 'PantryItemDetail.addToShoppingList' });
       setAddToListStatus('error');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     }
