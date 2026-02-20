@@ -31,7 +31,7 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
 
   // Sort reviews: most helpful first, then newest
   const reviews = useMemo(() => {
-    const raw = backendRecipe?.reviews ?? [];
+    const raw = backendRecipe?.reviews?.edges?.map(edge => edge.node) ?? [];
     return [...raw].sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();

@@ -3,9 +3,7 @@
  *
  * Centralizes all shopping list-related subscriptions using the unified
  * SubscriptionService. Handles real-time updates for:
- * - Shopping list items (add/update/delete) - uses custom handler for itemsConnection
- * - Shopping list metadata (name, status, budget, totals)
- * - Collaborators (add/remove)
+ * - Shopping list changes (items, metadata, collaborators, batch clears, status)
  *
  * These subscriptions automatically update the Apollo cache and provide
  * deduplication to prevent self-echo and duplicate updates.
@@ -13,10 +11,7 @@
 
 import { useAppStore } from '#store/useAppStore';
 import {
-  useShoppingListItemsChangedSubscription,
-  useShoppingListUpdatedSubscription,
-  useShoppingListCollaboratorsChangedSubscription,
-  useShoppingListItemsBatchClearedSubscription,
+  useShoppingListChangesSubscription,
   ShoppingListItemDisplayFragmentDoc,
   GetShoppingListDocument,
   GetShoppingListQuery,
@@ -71,295 +66,216 @@ export function useShoppingListSubscriptions(
   const selectedShoppingListId = useAppStore(state => state.selectedShoppingListId) || undefined;
 
   //
-  // Shopping List Items Changed Subscription
-  // Handles CREATE/UPDATE/DELETE operations on shopping list items
-  // Uses custom handler for ShoppingList.itemsConnection cache updates
+  // Shopping List Changes Subscription (consolidated)
+  // Handles all shopping list events based on changeType:
+  // - ITEMS_CHANGED: item add/update/delete
+  // - LIST_UPDATED: metadata changes
+  // - COLLABORATORS_CHANGED: collaborator updates
+  // - ITEMS_BATCH_CLEARED: batch clear of purchased items
+  // - STATUS_CHANGED: status transitions (no-op currently)
   //
-  const itemsHandlers = subscriptionService.register({
-    subscriptionName: 'ShoppingListItemsChanged',
+  const changesHandlers = subscriptionService.register({
+    subscriptionName: 'ShoppingListChanges',
     entityType: 'ShoppingListItem',
     enableDeduplication: true,
     userId,
-    cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler for connection pattern
+    cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler
     enableLogging: true,
     entityId: selectedShoppingListId,
-    // Custom handler for itemsConnection updates
-    // payload IS shoppingListItemsChanged (already extracted by SubscriptionService)
     customOnData: (payload: any, client: any) => {
       if (!payload || !selectedShoppingListId) return;
 
       // Skip processing if the parent list is being deleted
       if (subscriptionService.isParentDeleting(selectedShoppingListId)) return;
 
-      const mutation = payload.mutation;
-      const item = payload.item;
+      const changeType = payload.changeType;
       const payloadUserId = payload.userId;
 
-      if (!item) return;
+      switch (changeType) {
+        case 'ITEMS_CHANGED': {
+          const mutation = payload.mutation;
+          const item = payload.item;
 
-      // Skip self-echo: if this subscription is from our own mutation, skip processing
-      // The mutation's cache.modify already handled the update
-      // Note: This also blocks updates from same user on different devices
-      // When multi-device support is needed, switch to originatorClientId filtering
-      if (payloadUserId && userId && payloadUserId === userId) {
-        if (__DEV__) {
-          console.log('⏭️ [Subscription] Skipping self-echo (same user)', item.id);
-        }
-        return;
-      }
+          if (!item) return;
 
-      if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
-        // Add new item to ShoppingList.itemsConnection and unpurchasedItems alias
-        // New items are unpurchased by default
-        addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
-        addToUnpurchasedItems(client.cache, selectedShoppingListId, item);
-      } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
-        // Remove item from ShoppingList.itemsConnection and both aliased fields
-        // We don't know which alias the item was in, so remove from both
-        if (scheduleAnimation) {
-          scheduleAnimation(item.id, -1, () => {
-            removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-              evictItem: true,
-            });
-            removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-            removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
-          });
-        } else {
-          removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
-            evictItem: true,
-          });
-          removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-          removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
-        }
-      } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
-        // Apollo auto-normalizes subscription data BEFORE onData runs, so reading
-        // the old item via readFragment returns the already-updated value, making
-        // comparison unreliable. Instead, always re-sort when sortOrder is present.
-        const sortOrderChanged = item.sortOrder != null;
-
-        // Write updated item data to cache using fragment
-        // This handles quantity, sortOrder, purchaseInfo, and all other field updates
-        client.cache.writeFragment({
-          id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
-          fragment: ShoppingListItemDisplayFragmentDoc,
-          fragmentName: 'ShoppingListItemDisplayFragment',
-          data: item,
-        });
-
-        // Use mutation type to determine cache operations (aligns with usePantrySubscriptions.ts pattern)
-        // Apollo auto-normalizes subscription data BEFORE onData runs, so comparing old vs new
-        // values doesn't work - both will show the same value. Use mutation type instead.
-        const isCompletedMutation = mutation === MutationType.ItemCompleted;
-        const isUncompletedMutation = mutation === MutationType.ItemUncompleted;
-
-        // Debug logging for subscription cache updates (only in development)
-        if (__DEV__) {
-          console.log('🔍 [Subscription Cache Debug]', {
-            mutation,
-            itemId: item.id,
-            isCompletedMutation,
-            isUncompletedMutation,
-            willMoveItem: isCompletedMutation || isUncompletedMutation,
-          });
-        }
-
-        // Move item between purchased/unpurchased connections using reusable utilities
-        // These handle both itemsConnection (GetShoppingListQuery) and aliased fields (GetShoppingListItemsPaginatedQuery)
-        // If animation scheduler is available, play exit animation first before moving
-        if (isCompletedMutation) {
-          if (scheduleAnimation) {
-            // Slide right for marking as purchased
-            scheduleAnimation(item.id, 1, () => {
-              moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
-              // Schedule entry animation for when item appears in Purchased section
-              scheduleEntryAnimation?.(item.id, 1);
-            });
-          } else {
-            moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+          // Skip self-echo
+          if (payloadUserId && userId && payloadUserId === userId) {
+            if (__DEV__) {
+              console.log('⏭️ [Subscription] Skipping self-echo (same user)', item.id);
+            }
+            return;
           }
-        } else if (isUncompletedMutation) {
-          if (scheduleAnimation) {
-            // Slide left for unmarking as purchased
-            scheduleAnimation(item.id, -1, () => {
-              moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
-              // Schedule entry animation for when item appears in Shopping section
-              scheduleEntryAnimation?.(item.id, -1);
+
+          if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
+            addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
+            addToUnpurchasedItems(client.cache, selectedShoppingListId, item);
+          } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
+            if (scheduleAnimation) {
+              scheduleAnimation(item.id, -1, () => {
+                removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+                  evictItem: true,
+                });
+                removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
+                removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
+              });
+            } else {
+              removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+                evictItem: true,
+              });
+              removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
+              removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
+            }
+          } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
+            const sortOrderChanged = item.sortOrder != null;
+
+            client.cache.writeFragment({
+              id: client.cache.identify({ __typename: 'ShoppingListItem', id: item.id }),
+              fragment: ShoppingListItemDisplayFragmentDoc,
+              fragmentName: 'ShoppingListItemDisplayFragment',
+              data: item,
             });
-          } else {
-            moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
-          }
-        }
 
-        // Re-sort itemsConnection edges if sortOrder changed
-        // This ensures multi-client sync: when one client reorders, others see the new order
-        if (sortOrderChanged) {
-          try {
-            const queryResult = client.cache.readQuery({
-              query: GetShoppingListDocument,
-              variables: { id: selectedShoppingListId },
-            }) as GetShoppingListQuery | null;
+            const isCompletedMutation = mutation === MutationType.ItemCompleted;
+            const isUncompletedMutation = mutation === MutationType.ItemUncompleted;
 
-            if (queryResult?.shoppingList?.itemsConnection?.edges) {
-              // Sort edges by sortOrder (localeCompare matches base62 ordering)
-              const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
-                (a, b) =>
-                  (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-              );
-
-              client.cache.writeQuery({
-                query: GetShoppingListDocument,
-                variables: { id: selectedShoppingListId },
-                data: {
-                  shoppingList: {
-                    ...queryResult.shoppingList,
-                    itemsConnection: {
-                      ...queryResult.shoppingList.itemsConnection,
-                      edges: sortedEdges,
-                    },
-                  },
-                },
+            if (__DEV__) {
+              console.log('🔍 [Subscription Cache Debug]', {
+                mutation,
+                itemId: item.id,
+                isCompletedMutation,
+                isUncompletedMutation,
+                willMoveItem: isCompletedMutation || isUncompletedMutation,
               });
             }
 
-            // Also re-sort aliased fields used by paginated query (GetShoppingListItemsPaginated)
-            // Without this, the UI reads stale sortOrder values from these cached fields
-            client.cache.modify({
-              id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
-              fields: {
-                unpurchasedItems(existing: any, { readField }: any) {
-                  if (!existing?.edges) return existing;
-                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                    const nodeA = readField('node', a);
-                    const nodeB = readField('node', b);
-                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                    return sortA.localeCompare(sortB);
+            if (isCompletedMutation) {
+              if (scheduleAnimation) {
+                scheduleAnimation(item.id, 1, () => {
+                  moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+                  scheduleEntryAnimation?.(item.id, 1);
+                });
+              } else {
+                moveShoppingListItemToPurchased(client.cache, selectedShoppingListId, item);
+              }
+            } else if (isUncompletedMutation) {
+              if (scheduleAnimation) {
+                scheduleAnimation(item.id, -1, () => {
+                  moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+                  scheduleEntryAnimation?.(item.id, -1);
+                });
+              } else {
+                moveShoppingListItemToUnpurchased(client.cache, selectedShoppingListId, item);
+              }
+            }
+
+            if (sortOrderChanged) {
+              try {
+                const queryResult = client.cache.readQuery({
+                  query: GetShoppingListDocument,
+                  variables: { id: selectedShoppingListId },
+                }) as GetShoppingListQuery | null;
+
+                if (queryResult?.shoppingList?.itemsConnection?.edges) {
+                  const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
+                    (a, b) =>
+                      (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
+                  );
+
+                  client.cache.writeQuery({
+                    query: GetShoppingListDocument,
+                    variables: { id: selectedShoppingListId },
+                    data: {
+                      shoppingList: {
+                        ...queryResult.shoppingList,
+                        itemsConnection: {
+                          ...queryResult.shoppingList.itemsConnection,
+                          edges: sortedEdges,
+                        },
+                      },
+                    },
                   });
-                  return { ...existing, edges: sortedAliasedEdges };
-                },
-                purchasedItems(existing: any, { readField }: any) {
-                  if (!existing?.edges) return existing;
-                  const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                    const nodeA = readField('node', a);
-                    const nodeB = readField('node', b);
-                    const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                    const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                    return sortA.localeCompare(sortB);
-                  });
-                  return { ...existing, edges: sortedAliasedEdges };
-                },
-              },
-            });
-          } catch (error) {
-            console.warn('Failed to re-sort edges after subscription update:', error);
+                }
+
+                client.cache.modify({
+                  id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
+                  fields: {
+                    unpurchasedItems(existing: any, { readField }: any) {
+                      if (!existing?.edges) return existing;
+                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                        const nodeA = readField('node', a);
+                        const nodeB = readField('node', b);
+                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                        return sortA.localeCompare(sortB);
+                      });
+                      return { ...existing, edges: sortedAliasedEdges };
+                    },
+                    purchasedItems(existing: any, { readField }: any) {
+                      if (!existing?.edges) return existing;
+                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
+                        const nodeA = readField('node', a);
+                        const nodeB = readField('node', b);
+                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
+                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
+                        return sortA.localeCompare(sortB);
+                      });
+                      return { ...existing, edges: sortedAliasedEdges };
+                    },
+                  },
+                });
+              } catch (error) {
+                console.warn('Failed to re-sort edges after subscription update:', error);
+              }
+            }
           }
+          break;
         }
+        case 'LIST_UPDATED': {
+          // Metadata updates - handle deletion re-eviction
+          const node = payload.shoppingList;
+          if (!node?.id) return;
+          if (subscriptionService.isParentDeleting(node.id)) {
+            const cacheId = client.cache.identify({ __typename: 'ShoppingList', id: node.id });
+            if (cacheId) {
+              client.cache.evict({ id: cacheId });
+              client.cache.gc();
+            }
+          }
+          break;
+        }
+        case 'COLLABORATORS_CHANGED':
+          // Collaborator updates are handled automatically by Apollo normalization
+          break;
+        case 'ITEMS_BATCH_CLEARED': {
+          const clearedItemIds = payload.clearedItemIds || [];
+
+          // Skip self-echo
+          if (payloadUserId && userId && payloadUserId === userId) {
+            if (__DEV__) {
+              console.log('⏭️ [Subscription] Skipping batch clear self-echo');
+            }
+            return;
+          }
+
+          clearAllPurchasedItemsFromCache(client.cache, selectedShoppingListId, clearedItemIds);
+          break;
+        }
+        case 'STATUS_CHANGED':
+          // Currently unused
+          break;
+        default:
+          break;
       }
     },
   });
 
-  useShoppingListItemsChangedSubscription({
+  useShoppingListChangesSubscription({
     variables: { listId: selectedShoppingListId! },
     skip: !selectedShoppingListId,
-    ...itemsHandlers,
-  });
-
-  //
-  // Shopping List Updated Subscription
-  // Handles metadata changes (name, status, budget, item counts, totals)
-  //
-  const metadataHandlers = subscriptionService.register({
-    subscriptionName: 'ShoppingListUpdated',
-    entityType: 'ShoppingList',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC, // Apollo handles metadata updates
-    enableLogging: true,
-    entityId: selectedShoppingListId,
-    // Re-evict entity if it's pending deletion — Apollo auto-normalizes
-    // subscription data back into cache before onData runs, so we must
-    // counter that by evicting again here.
-    customOnData: (payload: any, client: any) => {
-      if (!payload) return;
-      const node = payload.node;
-      if (!node?.id) return;
-      if (subscriptionService.isParentDeleting(node.id)) {
-        const cacheId = client.cache.identify({ __typename: 'ShoppingList', id: node.id });
-        if (cacheId) {
-          client.cache.evict({ id: cacheId });
-          client.cache.gc();
-        }
-      }
-    },
-  });
-
-  useShoppingListUpdatedSubscription({
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...metadataHandlers,
-  });
-
-  //
-  // Shopping List Collaborators Changed Subscription
-  // Handles collaborator add/remove/update operations
-  //
-  const collaboratorsHandlers = subscriptionService.register({
-    subscriptionName: 'ShoppingListCollaboratorsChanged',
-    entityType: 'ShoppingListCollaborator',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
-    enableLogging: true,
-    entityId: selectedShoppingListId,
-  });
-
-  useShoppingListCollaboratorsChangedSubscription({
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...collaboratorsHandlers,
-  });
-
-  //
-  // Shopping List Items Batch Cleared Subscription
-  // Handles when another user clears all purchased items
-  //
-  const batchClearedHandlers = subscriptionService.register({
-    subscriptionName: 'ShoppingListItemsBatchCleared',
-    entityType: 'ShoppingListItem',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE, // Using custom handler
-    enableLogging: true,
-    entityId: selectedShoppingListId,
-    customOnData: (payload: any, client: any) => {
-      if (!payload || !selectedShoppingListId) return;
-
-      // Skip processing if the parent list is being deleted
-      if (subscriptionService.isParentDeleting(selectedShoppingListId)) return;
-
-      const payloadUserId = payload.userId;
-      const clearedItemIds = payload.clearedItemIds || [];
-
-      // Skip self-echo: if this subscription is from our own mutation, skip processing
-      if (payloadUserId && userId && payloadUserId === userId) {
-        if (__DEV__) {
-          console.log('⏭️ [Subscription] Skipping batch clear self-echo');
-        }
-        return;
-      }
-
-      // Clear purchased items from cache
-      clearAllPurchasedItemsFromCache(client.cache, selectedShoppingListId, clearedItemIds);
-    },
-  });
-
-  useShoppingListItemsBatchClearedSubscription({
-    variables: { listId: selectedShoppingListId! },
-    skip: !selectedShoppingListId,
-    ...batchClearedHandlers,
+    ...changesHandlers,
   });
 
   // Additional shopping list subscriptions can be added here:
-  // - ShoppingListStatusChanged
+  // - MyShoppingListsChanges (for dashboard updates)
   // - etc.
 }

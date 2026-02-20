@@ -52,7 +52,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
     errorPolicy: 'all',
     // Optimistic response ensures update() runs immediately (not after network response)
     optimisticResponse: (variables, { IGNORE }) => {
-      const item = itemsRef.current?.find(i => i.id === variables.id);
+      const item = itemsRef.current?.find(i => i.id === variables.input.id);
       if (!item) return IGNORE;
       return {
         __typename: 'Mutation',
@@ -66,10 +66,10 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
             normalizedQuantity: null,
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
-              isPurchased: variables.purchased,
+              isPurchased: variables.input.purchased,
               purchasedQuantity: null,
               purchasedPrice: null,
-              purchaseDate: variables.purchased ? new Date().toISOString() : null,
+              purchaseDate: variables.input.purchased ? new Date().toISOString() : null,
             },
             updatedAt: new Date().toISOString(),
           },
@@ -79,8 +79,8 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
     update(cache, _result, { variables }) {
       if (!variables || !listId) return;
 
-      const itemId = variables.id;
-      const newStatus = variables.purchased; // true = marking purchased, false = marking unpurchased
+      const itemId = variables.input.id;
+      const newStatus = variables.input.purchased; // true = marking purchased, false = marking unpurchased
 
       // 1. Update the item's purchaseInfo field directly
       cache.modify({
@@ -267,7 +267,7 @@ export function useToggleShoppingItem({ listId, itemsRef, refetch }: UseToggleSh
         const newStatus = !item.purchaseInfo?.isPurchased;
 
         const result = await togglePurchasedMutation({
-          variables: { id: itemId, purchased: newStatus },
+          variables: { input: { id: itemId, purchased: newStatus } },
         });
 
         return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;

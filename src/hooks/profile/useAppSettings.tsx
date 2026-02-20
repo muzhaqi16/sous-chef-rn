@@ -26,7 +26,7 @@ export const useAppSettings = () => {
   });
   const [updateSettings] = useUpdateUserPreferencesMutation();
 
-  const settings = data?.userSettings;
+  const settings = data?.me?.settings;
 
   const getAppSettings = useCallback((): AppSettings => {
     return {

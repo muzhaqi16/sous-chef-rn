@@ -239,7 +239,7 @@ export const useUnitConverter = () => {
 
       try {
         const {data} = await upsertConversion({
-          variables: params,
+          variables: { input: params },
         });
 
         return data?.upsertItemUnitConversion || null;

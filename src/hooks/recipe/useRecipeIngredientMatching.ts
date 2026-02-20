@@ -143,7 +143,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
 
     try {
       const result = await confirmMutation({
-        variables: { recipeId, pantryId, consumptions },
+        variables: { input: { recipeId, pantryId, consumptions } },
       });
 
       const data = result.data?.confirmRecipeConsumption;

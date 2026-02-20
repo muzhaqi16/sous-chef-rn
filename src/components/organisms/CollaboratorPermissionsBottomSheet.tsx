@@ -179,9 +179,11 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     try {
       await updateRole({
         variables: {
-          shoppingListId,
-          collaboratorId: collaborator.collaboratorId,
-          role: selectedRole,
+          input: {
+            shoppingListId,
+            collaboratorId: collaborator.collaboratorId,
+            role: selectedRole,
+          },
         },
       });
 

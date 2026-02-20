@@ -182,7 +182,7 @@ export function useRecipeDetail() {
         if (!data?.createShoppingListItemsFromRecipe || !variables) return;
         try {
           const result = data.createShoppingListItemsFromRecipe;
-          const shoppingListId = variables.shoppingListId;
+          const shoppingListId = variables.input.shoppingListId;
           const addToShoppingListItemsCache =
             createAddToParentConnectionUpdater(
               'ShoppingList',
@@ -587,9 +587,11 @@ export function useRecipeDetail() {
         if (isBackendRecipe && backendRecipe && recipeId) {
           const result = await addRecipeToShoppingListMutation({
             variables: {
-              recipeId,
-              shoppingListId: targetList.id,
-              servings: backendRecipe.servings,
+              input: {
+                recipeId,
+                shoppingListId: targetList.id,
+                servings: backendRecipe.servings,
+              },
             },
           });
 
@@ -829,10 +831,12 @@ export function useRecipeDetail() {
             // Fallback to simple deduction if matching fails
             await markRecipeAsCookedMutation({
               variables: {
-                recipeId,
-                servings: input.servings,
-                deductFromPantry: input.deductFromPantry,
-                notes: input.notes,
+                input: {
+                  recipeId,
+                  servings: input.servings,
+                  deductFromPantry: input.deductFromPantry,
+                  notes: input.notes,
+                },
               },
             });
             toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
@@ -852,10 +856,12 @@ export function useRecipeDetail() {
       try {
         await markRecipeAsCookedMutation({
           variables: {
-            recipeId,
-            servings: input.servings,
-            deductFromPantry: input.deductFromPantry,
-            notes: input.notes,
+            input: {
+              recipeId,
+              servings: input.servings,
+              deductFromPantry: input.deductFromPantry,
+              notes: input.notes,
+            },
           },
         });
 
@@ -883,9 +889,11 @@ export function useRecipeDetail() {
     try {
       await markRecipeAsCookedMutation({
         variables: {
-          recipeId,
-          servings: undefined,
-          deductFromPantry: true,
+          input: {
+            recipeId,
+            servings: undefined,
+            deductFromPantry: true,
+          },
         },
       });
       toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');

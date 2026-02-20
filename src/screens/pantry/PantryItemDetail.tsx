@@ -922,7 +922,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Usage Records Section - only show if there are usage records */}
-        {item.usageRecords && item.usageRecords.length > 0 && (
+        {item.usageRecords && item.usageRecords.edges.length > 0 && (
           <>
             <Pressable
               style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
@@ -931,7 +931,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               }
             >
               <Text style={styles.sectionTitle}>
-                Usage History ({item.usageRecords.length})
+                Usage History ({item.usageRecords.edges.length})
               </Text>
               <Icon
                 name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
@@ -943,7 +943,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
 
             {purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
-                {item.usageRecords.slice(0, 5).map(usage => {
+                {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
                   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
                   const purposeLabel = isAdjustment
                     ? 'Inventory adjusted'
@@ -980,9 +980,9 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                     </View>
                   );
                 })}
-                {item.usageRecords.length > 5 && (
+                {item.usageRecords.edges.length > 5 && (
                   <Text style={styles.noPurchaseData}>
-                    +{item.usageRecords.length - 5} more entries
+                    +{item.usageRecords.edges.length - 5} more entries
                   </Text>
                 )}
               </View>
