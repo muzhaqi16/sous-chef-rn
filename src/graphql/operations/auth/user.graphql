@@ -8,33 +8,33 @@ query GetMe {
 }
 
 query GetUserSettings {
-  userSettings {
+  me {
     id
-    user {
+    settings {
       id
-      email
+      theme
+      compactMode
+      showTutorials
+      autoSync
+      offlineMode
+      shareUsageData
+      shareWithPartners
+      personalizedAds
+      preferredUnitSystem
+      language
+      timezone
+      preferredCurrency
+      enabledFeatures
+      betaFeatures
+      createdAt
+      updatedAt
     }
-    theme
-    compactMode
-    showTutorials
-    autoSync
-    offlineMode
-    shareUsageData
-    shareWithPartners
-    personalizedAds
-    preferredUnitSystem
-    language
-    timezone
-    preferredCurrency
-    enabledFeatures
-    betaFeatures
-    createdAt
-    updatedAt
   }
 }
 
 query GetUserProfile {
   me {
+    id
     profile {
       id
       userId
@@ -177,10 +177,10 @@ mutation CompleteOnboarding {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription UserUpdated($userId: ID) {
-  userUpdated(userId: $userId) {
-    mutation
-    node {
+subscription UserChanges($userId: ID) {
+  userChanged(userId: $userId) {
+    changeType
+    user {
       id
       email
       emailVerified
@@ -190,46 +190,7 @@ subscription UserUpdated($userId: ID) {
       preferredCurrency
       language
       lastActiveAt
-      profile {
-        id
-        firstName
-        lastName
-        displayName
-        avatar
-        bio
-      }
     }
-    updatedFields
-    userId
-    timestamp
-  }
-}
-
-subscription UserStatusChanged($userId: ID) {
-  userStatusChanged(userId: $userId) {
-    userId
-    newStatus
-    previousStatus
-    isOnline
-    lastActiveAt
-    timestamp
-  }
-}
-
-subscription UserActivity($userId: ID) {
-  userActivity(userId: $userId) {
-    userId
-    activityType
-    description
-    metadata
-    timestamp
-  }
-}
-
-subscription UserProfileChanged($userId: ID) {
-  userProfileChanged(userId: $userId) {
-    userId
-    mutation
     profile {
       id
       firstName
@@ -244,5 +205,6 @@ subscription UserProfileChanged($userId: ID) {
     }
     updatedFields
     timestamp
+    userId
   }
 }

@@ -6,6 +6,7 @@ import { AuthWrapper } from '#components/templates/AuthWrapper';
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
 import { CodeInputAdapter } from '#components/molecules/CodeInputAdapter';
 import { useAppStore } from '#store/useAppStore';
+import { useToast } from '#/hooks/useToast';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
@@ -26,6 +27,7 @@ type CodeVerificationValues = {
 export function CodeVerificationScreen() {
   const user = useAppStore(state => state.user);
   const updateUser = useAppStore(state => state.updateUser);
+  const toast = useToast();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
@@ -88,13 +90,16 @@ export function CodeVerificationScreen() {
         variables: { code: data.code },
       });
 
-      if (response.data?.verifyEmail) {
+      if (response.data?.verifyEmail.success) {
         // Just update the user state
         // Navigation happens automatically
         updateUser({ emailVerified: true });
+      } else if (response.data?.verifyEmail) {
+        toast({ message: response.data.verifyEmail.message, type: 'error' });
       }
     } catch (error) {
       console.error('Error verifying email:', error);
+      toast({ message: 'Something went wrong. Please try again.', type: 'error' });
     }
   };
 
@@ -130,6 +135,7 @@ export function CodeVerificationScreen() {
         }
 
         console.error('Error resending verification email:', response.error);
+        toast({ message: 'Failed to resend verification email.', type: 'error' });
         return;
       }
 
@@ -137,6 +143,7 @@ export function CodeVerificationScreen() {
       console.log('Verification email resent');
     } catch (error) {
       console.error('Error resending verification email:', error);
+      toast({ message: 'Something went wrong. Please try again.', type: 'error' });
     }
   };
 

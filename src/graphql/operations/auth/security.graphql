@@ -2,33 +2,34 @@
 # SUBSCRIPTIONS
 # ============================================
 
-subscription LoginAttempts($userId: ID!) {
-  loginAttempted(userId: $userId) {
-    id
-    userId
-    success
-    method
-    provider
-    isVpn
-    isTor
-    isProxy
-    userAgent
-    browserName
-    browserVersion
-    osName
-    osVersion
-    deviceType
-    isMobileApp
-    isRisky
-    failureReason
-    failureDetails
-    isNewLocation
-    isNewDevice
-    isNewBrowser
-    loggedInAt
-    user {
+subscription LoginActivityChanges($userId: ID!) {
+  loginActivityChanged(userId: $userId) {
+    activityType
+    loginHistory {
       id
-      email
+      userId
+      success
+      method
+      provider
+      isRisky
+      failureReason
+      loggedInAt
     }
+    suspiciousActivity {
+      suspiciousActivity
+      failedFromSameIP {
+        ipAddress
+        count
+      }
+      riskyLogins {
+        id
+        userId
+        success
+        isRisky
+        loggedInAt
+      }
+    }
+    timestamp
+    userId
   }
 }

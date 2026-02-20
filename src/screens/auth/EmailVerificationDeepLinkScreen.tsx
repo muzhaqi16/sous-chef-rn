@@ -50,7 +50,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           variables: { code: token }
         });
 
-        if (result.data?.verifyEmail) {
+        if (result.data?.verifyEmail?.success) {
           logger.info('Email verification successful');
 
           // Update user state to mark email as verified
@@ -69,7 +69,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           // when user.emailVerified changes to true
 
         } else {
-          throw new Error('Verification failed');
+          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
         }
       } catch (error: any) {
         logger.error('Email verification failed', { error });
@@ -108,7 +108,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           variables: { code: token }
         });
 
-        if (result.data?.verifyEmail) {
+        if (result.data?.verifyEmail?.success) {
           if (user) {
             updateUser({ ...user, emailVerified: true });
           }
@@ -118,7 +118,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             type: 'success',
           });
         } else {
-          throw new Error('Verification failed');
+          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
         }
       } catch (error: any) {
         const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';

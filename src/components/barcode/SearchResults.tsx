@@ -52,8 +52,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToPantry] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data }: any) => {
-      if (data?.createPantryItem && pantryId) {
-        addToPantryItemsConnection(cache, pantryId, data.createPantryItem);
+      const pantryItem = data?.createPantryItem?.pantryItem;
+      if (pantryItem && pantryId) {
+        addToPantryItemsConnection(cache, pantryId, pantryItem);
       }
     },
   });
@@ -64,9 +65,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     update: (cache, { data }) => {
-      if (data?.addItemToShoppingList && shoppingListId) {
+      const shoppingListItem = data?.addItemToShoppingList?.shoppingListItem;
+      if (shoppingListItem && shoppingListId) {
         // Add item to ShoppingList.itemsConnection using parent connection pattern
-        addToShoppingListItemsConnection(cache, shoppingListId, data.addItemToShoppingList);
+        addToShoppingListItemsConnection(cache, shoppingListId, shoppingListItem);
       }
     },
   });
@@ -138,7 +140,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                           input: { ...mutationInput, forceAdd: true } as any,
                         },
                       });
-                      if (retryResult.data?.createPantryItem) {
+                      if (retryResult.data?.createPantryItem?.success) {
                         setIsAdded(true);
                         setPendingPantryScrollToTop(true);
                         onScanAnother();
@@ -158,7 +160,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           }
         }
 
-        if (result.data?.createPantryItem) {
+        if (result.data?.createPantryItem?.success) {
           setIsAdded(true);
           setPendingPantryScrollToTop(true);
           onScanAnother();

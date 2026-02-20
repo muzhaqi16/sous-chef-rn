@@ -49,8 +49,9 @@ export const createPantryForHome = async (
       },
     });
 
-    if (result.data?.createPantry) {
-      setSelectedPantryId(result.data.createPantry.id);
+    const pantryPayload = result.data?.createPantry;
+    if (pantryPayload?.success && pantryPayload.pantry) {
+      setSelectedPantryId(pantryPayload.pantry.id);
       return true;
     }
     return false;

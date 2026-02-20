@@ -61,7 +61,7 @@ export const useDietaryProfile = () => {
   });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const profile = usePreservedQueryData(data?.dietaryProfile, null);
+  const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
 
   // ===== MUTATION 1: Update Dietary Profile =====
   const [updateProfile] = useUpdateDietaryProfileMutation({

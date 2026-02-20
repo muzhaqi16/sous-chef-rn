@@ -3,10 +3,8 @@
  *
  * Centralizes all pantry-related subscriptions using the unified
  * SubscriptionService. Handles real-time updates for:
- * - Pantry items (add/update/delete)
- * - Pantry metadata (name, description)
- * - Low stock alerts
- * - Expiring items alerts
+ * - Pantry changes (items add/update/delete, metadata, usage)
+ * - Pantry alerts (low stock, expiring items, waste)
  *
  * These subscriptions automatically update the Apollo cache and provide
  * deduplication to prevent self-echo and duplicate updates.
@@ -14,10 +12,8 @@
 
 import { useAppStore } from '#store/useAppStore';
 import {
-  usePantryItemsChangedSubscription,
-  usePantryUpdatedSubscription,
-  usePantryLowStockAlertSubscription,
-  usePantryExpiringItemsAlertSubscription,
+  usePantryChangesSubscription,
+  usePantryAlertsSubscription,
   PantryItemDisplayFragmentDoc,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -57,116 +53,103 @@ export function usePantrySubscriptions(userId?: string) {
   const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   //
-  // Pantry Items Changed Subscription
-  // Handles CREATE/UPDATE/DELETE operations on pantry items
-  // Uses custom handler for Pantry.itemsConnection cache updates
+  // Pantry Changes Subscription (consolidated)
+  // Handles all pantry change events based on changeType:
+  // - ITEMS_CHANGED: item add/update/delete via pantryItem field
+  // - UPDATED: pantry metadata changes via pantry field
+  // - USAGE_CHANGED: usage record changes (no-op for cache)
   //
-  const itemsHandlers = subscriptionService.register({
-    subscriptionName: 'PantryItemsChanged',
+  const changesHandlers = subscriptionService.register({
+    subscriptionName: 'PantryChanges',
     entityType: 'PantryItem',
     enableDeduplication: true,
     userId,
     cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler for connection pattern
     enableLogging: true,
     entityId: selectedPantryId,
-    // Custom handler for itemsConnection updates
-    // payload IS pantryItemsChanged (already extracted by SubscriptionService)
     customOnData: (payload: any, client: any) => {
       if (!payload || !selectedPantryId) return;
 
-      const mutation = payload.mutation;
-      const item = payload.item;
+      const changeType = payload.changeType;
       const payloadUserId = payload.userId;
-
-      if (!item) return;
 
       // Skip self-echo: if this subscription is from our own mutation, skip processing
       // The mutation's cache update already handled it
       if (payloadUserId && userId && payloadUserId === userId) {
         if (__DEV__) {
-          console.log('⏭️ [Subscription] Skipping pantry self-echo', item.id);
+          console.log('⏭️ [Subscription] Skipping pantry self-echo');
         }
         return;
       }
 
-      if (mutation === MutationType.ItemAdded) {
-        // Add new item to Pantry.itemsConnection
-        // Note: Server fires both CREATED and ITEM_ADDED for the same entity.
-        // We only process ITEM_ADDED as it's the semantic subscription event.
-        addToPantryItemsConnection(client.cache, selectedPantryId, item);
-      } else if (
-        mutation === MutationType.Deleted ||
-        mutation === MutationType.ItemRemoved
-      ) {
-        // Remove item from Pantry.itemsConnection
-        removeFromPantryItemsConnection(
-          client.cache,
-          selectedPantryId,
-          item.id,
-          {
-            evictItem: true,
-          },
-        );
-      } else if (
-        mutation === MutationType.Updated ||
-        mutation === MutationType.ItemUpdated
-      ) {
-        // Write updated item to cache
-        // Note: When using onData callback, Apollo doesn't auto-normalize
-        // so we must explicitly write the fragment
-        const cacheId = client.cache.identify({
-          __typename: 'PantryItem',
-          id: item.id,
-        });
+      switch (changeType) {
+        case 'ITEMS_CHANGED': {
+          const item = payload.pantryItem;
+          const mutation = payload.mutation;
 
-        if (cacheId) {
-          // Item exists - update it
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: PantryItemDisplayFragmentDoc,
-            fragmentName: 'PantryItemDisplay',
-            data: item,
-          });
-        } else {
-          // Item not in cache - add to connection (another user created it)
-          addToPantryItemsConnection(client.cache, selectedPantryId, item);
+          if (!item) return;
+
+          if (mutation === MutationType.ItemAdded) {
+            addToPantryItemsConnection(client.cache, selectedPantryId, item);
+          } else if (
+            mutation === MutationType.Deleted ||
+            mutation === MutationType.ItemRemoved
+          ) {
+            removeFromPantryItemsConnection(
+              client.cache,
+              selectedPantryId,
+              item.id,
+              {
+                evictItem: true,
+              },
+            );
+          } else if (
+            mutation === MutationType.Updated ||
+            mutation === MutationType.ItemUpdated
+          ) {
+            const cacheId = client.cache.identify({
+              __typename: 'PantryItem',
+              id: item.id,
+            });
+
+            if (cacheId) {
+              client.cache.writeFragment({
+                id: cacheId,
+                fragment: PantryItemDisplayFragmentDoc,
+                fragmentName: 'PantryItemDisplay',
+                data: item,
+              });
+            } else {
+              addToPantryItemsConnection(client.cache, selectedPantryId, item);
+            }
+          }
+          break;
         }
+        case 'UPDATED':
+          // Pantry metadata updates are handled automatically by Apollo normalization
+          break;
+        case 'USAGE_CHANGED':
+          // Usage changes don't need cache updates currently
+          break;
+        default:
+          break;
       }
     },
   });
 
-  usePantryItemsChangedSubscription({
+  usePantryChangesSubscription({
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
-    ...itemsHandlers,
+    ...changesHandlers,
   });
 
   //
-  // Pantry Updated Subscription
-  // Handles metadata changes (name, description)
+  // Pantry Alerts Subscription (consolidated)
+  // Handles all alert types: LOW_STOCK, EXPIRING_ITEMS, WASTE
+  // Alerts don't need cache updates
   //
-  const metadataHandlers = subscriptionService.register({
-    subscriptionName: 'PantryUpdated',
-    entityType: 'Pantry',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
-    enableLogging: true,
-    entityId: selectedPantryId,
-  });
-
-  usePantryUpdatedSubscription({
-    variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady,
-    ...metadataHandlers,
-  });
-
-  //
-  // Pantry Low Stock Alert Subscription
-  // Real-time alerts when items reach reorder point
-  //
-  const lowStockHandlers = subscriptionService.register({
-    subscriptionName: 'PantryLowStockAlert',
+  const alertsHandlers = subscriptionService.register({
+    subscriptionName: 'PantryAlerts',
     entityType: 'PantryItem',
     enableDeduplication: true,
     userId,
@@ -175,34 +158,9 @@ export function usePantrySubscriptions(userId?: string) {
     entityId: selectedPantryId,
   });
 
-  usePantryLowStockAlertSubscription({
+  usePantryAlertsSubscription({
     variables: { pantryId: selectedPantryId! },
     skip: !selectedPantryId || !isHomeSelectionReady,
-    ...lowStockHandlers,
+    ...alertsHandlers,
   });
-
-  //
-  // Pantry Expiring Items Alert Subscription
-  // Real-time alerts for items expiring soon
-  //
-  const expiringHandlers = subscriptionService.register({
-    subscriptionName: 'PantryExpiringItemsAlert',
-    entityType: 'PantryItem',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.NONE, // Alerts don't need cache updates
-    enableLogging: true,
-    entityId: selectedPantryId,
-  });
-
-  usePantryExpiringItemsAlertSubscription({
-    variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady,
-    ...expiringHandlers,
-  });
-
-  // Additional pantry subscriptions can be added here:
-  // - PantryItemUsageChanged
-  // - PantryWasteAlert
-  // - etc.
 }

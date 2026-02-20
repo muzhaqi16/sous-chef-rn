@@ -70,6 +70,7 @@ query GetRecipe($id: ID!) {
 
 query MySavedRecipes($folder: String) {
   me {
+    id
     savedRecipesConnection(folder: $folder) {
       edges {
         node {
@@ -219,15 +220,9 @@ mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!
 }
 
 mutation CreateShoppingListItemsFromRecipe(
-  $recipeId: ID!
-  $shoppingListId: ID!
-  $servings: Int
+  $input: CreateShoppingListItemsFromRecipeInput!
 ) {
-  createShoppingListItemsFromRecipe(
-    recipeId: $recipeId
-    shoppingListId: $shoppingListId
-    servings: $servings
-  ) {
+  createShoppingListItemsFromRecipe(input: $input) {
     addedItems {
       id
       itemName
@@ -296,17 +291,9 @@ mutation CreateShoppingListItemFromRecipeIngredient(
 }
 
 mutation AddRecipeToShoppingList(
-  $recipeId: ID!
-  $shoppingListId: ID!
-  $servings: Float
-  $checkPantry: Boolean
+  $input: AddRecipeToShoppingListInput!
 ) {
-  addRecipeToShoppingList(
-    recipeId: $recipeId
-    shoppingListId: $shoppingListId
-    servings: $servings
-    checkPantry: $checkPantry
-  ) {
+  addRecipeToShoppingList(input: $input) {
     success
     message
     code
@@ -395,15 +382,9 @@ query GetRecipeCookingLogs($recipeId: ID!, $first: Int, $after: String) {
 }
 
 mutation ConfirmRecipeConsumption(
-  $recipeId: ID!
-  $pantryId: ID!
-  $consumptions: [ConfirmedIngredientConsumptionInput!]!
+  $input: ConfirmRecipeConsumptionInput!
 ) {
-  confirmRecipeConsumption(
-    recipeId: $recipeId
-    pantryId: $pantryId
-    consumptions: $consumptions
-  ) {
+  confirmRecipeConsumption(input: $input) {
     success
     totalConsumed
     totalFailed
@@ -417,19 +398,9 @@ mutation ConfirmRecipeConsumption(
 }
 
 mutation MarkRecipeAsCooked(
-  $recipeId: ID!
-  $servings: Float
-  $deductFromPantry: Boolean!
-  $ingredientsUsed: [IngredientUsageInput!]
-  $notes: String
+  $input: MarkRecipeAsCookedInput!
 ) {
-  markRecipeAsCooked(
-    recipeId: $recipeId
-    servings: $servings
-    deductFromPantry: $deductFromPantry
-    ingredientsUsed: $ingredientsUsed
-    notes: $notes
-  ) {
+  markRecipeAsCooked(input: $input) {
     success
     message
     code

@@ -11,6 +11,7 @@ query GetMyNotifications(
   $orderBy: NotificationOrderBy
 ) {
   me {
+    id
     notificationsConnection(
       filter: $filter
       first: $first
@@ -105,15 +106,13 @@ mutation DeleteMultipleNotifications($ids: [ID!]!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription NotificationReceived {
-  notificationReceived {
-    ...NotificationSubscription
-  }
-}
-
-subscription NotificationUpdated {
-  notificationUpdated {
-    ...NotificationSubscription
+subscription NotificationChanged {
+  notificationChanged {
+    changeType
+    notification {
+      ...NotificationFragment
+    }
+    timestamp
   }
 }
 

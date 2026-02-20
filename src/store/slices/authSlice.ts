@@ -147,6 +147,18 @@ export const createAuthSlice: StateCreator<
 
   setAuth: (user, accessToken, refreshToken) => {
     set(state => {
+      // Clear stale navigation state if the user changed (or no previous user).
+      // This prevents a new user from inheriting another user's selectedHomeId,
+      // which would cause "Not authorized to access pantries in this home" errors.
+      const previousUserId = state.user?.id;
+      if (!previousUserId || previousUserId !== user.id) {
+        state.selectedHomeId = null;
+        state.selectedPantryId = null;
+        state.selectedShoppingListId = null;
+        state.hasInitializedHomeData = false;
+        state.isHomeSelectionReady = false;
+      }
+
       // Normalize email to prevent validation issues (trim whitespace, lowercase)
       state.user = {
         ...user,

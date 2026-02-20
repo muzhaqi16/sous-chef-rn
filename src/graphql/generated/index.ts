@@ -19,11 +19,11 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
-  BigInt: { input: string; output: string; }
+  /** A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `date-time` format outlined in section 5.6 of the RFC 3339 profile of the ISO 8601 standard for representation of dates and times using the Gregorian calendar.This scalar is serialized to a string in ISO 8601 format and parsed from a string in ISO 8601 format. */
   DateTime: { input: string; output: string; }
   /** Quantity input that accepts both strings and numbers. Strings can be fractions like "1/3" or "1 1/4". */
   FlexibleQuantity: { input: string | number; output: string; }
-  IPv4: { input: string; output: string; }
+  /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: { input: any; output: any; }
   Upload: { input: { uri: string; type: string; name: string }; output: { uri: string; type: string; name: string }; }
 };
@@ -40,12 +40,19 @@ export enum AccessLevel {
   Write = 'WRITE'
 }
 
+/** Indicates how a pantry item was originally acquired or added to the inventory */
 export enum AcquisitionMethod {
+  /** Added by scanning the product barcode */
   BarcodeScan = 'BARCODE_SCAN',
+  /** Received as a gift from someone else */
   Gifted = 'GIFTED',
+  /** Grown at home in a garden, farm, or indoor setup */
   Homegrown = 'HOMEGROWN',
+  /** Acquired through a method not covered by the other options */
   Other = 'OTHER',
+  /** Bought from a store, market, or online retailer */
   Purchased = 'PURCHASED',
+  /** Added to the pantry after being purchased from a shopping list */
   ShoppingList = 'SHOPPING_LIST'
 }
 
@@ -68,6 +75,14 @@ export type AddIngredientResult = {
 export type AddPantryItemToShoppingListResult = {
   __typename: 'AddPantryItemToShoppingListResult';
   shoppingListItemId: Scalars['ID']['output'];
+};
+
+/** Input for adding recipe ingredients to a shopping list */
+export type AddRecipeToShoppingListInput = {
+  checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Float']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type AddRecipeToShoppingListResult = {
@@ -185,6 +200,16 @@ export type AggregationResult = {
   quantity: Scalars['Float']['output'];
   sufficient: Maybe<Scalars['Boolean']['output']>;
   unit: Unit;
+};
+
+/** Typed allergen information (replaces JSON allergens field) */
+export type AllergenInfo = {
+  __typename: 'AllergenInfo';
+  contains: Scalars['Boolean']['output'];
+  mayContain: Maybe<Scalars['Boolean']['output']>;
+  name: Scalars['String']['output'];
+  processedIn: Maybe<Scalars['Boolean']['output']>;
+  severity: Maybe<AllergenSeverity>;
 };
 
 export type AllergenInput = {
@@ -514,7 +539,7 @@ export type BulkDeviceResult = MutationPayload & {
   __typename: 'BulkDeviceResult';
   code: Scalars['String']['output'];
   devices: Array<Device>;
-  errors: Maybe<Array<BulkDeviceError>>;
+  errors: Array<BulkDeviceError>;
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
   updatedCount: Scalars['Int']['output'];
@@ -535,7 +560,7 @@ export type BulkLoginHistoryPayload = MutationPayload & {
   __typename: 'BulkLoginHistoryPayload';
   code: Scalars['String']['output'];
   count: Scalars['Int']['output'];
-  loginHistories: Maybe<Array<LoginHistory>>;
+  loginHistories: Array<LoginHistory>;
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
@@ -559,7 +584,7 @@ export type BulkNotificationPayload = MutationPayload & {
   code: Scalars['String']['output'];
   count: Scalars['Int']['output'];
   message: Scalars['String']['output'];
-  notifications: Maybe<Array<Notification>>;
+  notifications: Array<Notification>;
   success: Scalars['Boolean']['output'];
 };
 
@@ -591,7 +616,7 @@ export type BulkPurchasePayload = MutationPayload & {
   code: Scalars['String']['output'];
   count: Scalars['Int']['output'];
   message: Scalars['String']['output'];
-  purchases: Maybe<Array<Purchase>>;
+  purchases: Array<Purchase>;
   success: Scalars['Boolean']['output'];
 };
 
@@ -618,6 +643,13 @@ export type CanDeleteAccountResult = {
   __typename: 'CanDeleteAccountResult';
   blockers: Array<DeletionBlocker>;
   canDelete: Scalars['Boolean']['output'];
+};
+
+/** Input for categorizing an item */
+export type CategorizeItemInput = {
+  categoryId: Scalars['ID']['input'];
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
 };
 
 /**
@@ -761,6 +793,22 @@ export type ClearItemsResponse = {
   summary: BulkOperationSummary;
 };
 
+export type CollaborationChangeEvent = {
+  __typename: 'CollaborationChangeEvent';
+  changeType: CollaborationChangeType;
+  collaborator: ShoppingListCollaborator;
+  shoppingListId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export enum CollaborationChangeType {
+  InviteAccepted = 'INVITE_ACCEPTED',
+  InviteSent = 'INVITE_SENT',
+  MemberAdded = 'MEMBER_ADDED',
+  MemberRemoved = 'MEMBER_REMOVED'
+}
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -768,12 +816,19 @@ export type CollaboratorOrderBy = {
   lastViewedAt?: InputMaybe<SortOrder>;
 };
 
+/** Defines the role and permission level of a collaborator on a shopping list */
 export enum CollaboratorRole {
+  /** Can manage list settings, collaborators, and all items */
   Admin = 'ADMIN',
+  /** Can add new items and edit their own contributions */
   Contributor = 'CONTRIBUTOR',
+  /** Can add, edit, and remove any items on the list */
   Editor = 'EDITOR',
+  /** Full ownership with the ability to transfer or delete the list */
   Owner = 'OWNER',
+  /** Can view the list and mark items as purchased while shopping */
   Shopper = 'SHOPPER',
+  /** Read-only access to view the list and its items */
   Viewer = 'VIEWER'
 }
 
@@ -799,22 +854,18 @@ export type CompleteShoppingListInput = {
   totalCost?: InputMaybe<Scalars['Float']['input']>;
 };
 
+/** Input for confirming recipe ingredient consumption from pantry */
+export type ConfirmRecipeConsumptionInput = {
+  consumptions: Array<ConfirmedIngredientConsumptionInput>;
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
+};
+
 export type ConfirmedIngredientConsumptionInput = {
   pantryItemId: Scalars['ID']['input'];
   quantity: Scalars['Float']['input'];
   recipeIngredientId: Scalars['ID']['input'];
   unitId: Scalars['ID']['input'];
-};
-
-/** Error when operation conflicts with existing data */
-export type ConflictError = MutationError & {
-  __typename: 'ConflictError';
-  code: Scalars['String']['output'];
-  /** The field causing the conflict */
-  conflictingField: Maybe<Scalars['String']['output']>;
-  /** The existing value causing the conflict */
-  existingValue: Maybe<Scalars['String']['output']>;
-  message: Scalars['String']['output'];
 };
 
 export type Connection = {
@@ -1040,6 +1091,7 @@ export type CreateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
   createDefaultPantry?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
+  defaultPantryName?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
   maxMembers?: InputMaybe<Scalars['Int']['input']>;
@@ -1273,6 +1325,13 @@ export type CreateShoppingListItemInput = {
   unit?: InputMaybe<UnitSpecInput>;
 };
 
+/** Input for creating shopping list items from a recipe */
+export type CreateShoppingListItemsFromRecipeInput = {
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
 /** Input for creating a new storage location */
 export type CreateStorageLocationInput = {
   /** Maximum capacity in specified units */
@@ -1409,7 +1468,7 @@ export type CurationFilterInput = {
  * Currency type for price information
  * Cache: 2 hours - currency definitions are static reference data
  */
-export type Currency = {
+export type Currency = Node & {
   __typename: 'Currency';
   code: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -1574,6 +1633,22 @@ export type DeviceBreakdown = {
   platforms: Array<PlatformStat>;
 };
 
+export type DeviceChangeEvent = {
+  __typename: 'DeviceChangeEvent';
+  changeType: DeviceChangeType;
+  device: Device;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export enum DeviceChangeType {
+  Activity = 'ACTIVITY',
+  Registered = 'REGISTERED',
+  StatusChanged = 'STATUS_CHANGED',
+  TrustChanged = 'TRUST_CHANGED',
+  Verified = 'VERIFIED'
+}
+
 /** Sub-input for device characteristics */
 export type DeviceCharacteristicsInput = {
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1702,6 +1777,11 @@ export type DeviceLocationInput = {
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type DeviceOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  lastActiveAt?: InputMaybe<SortOrder>;
+};
+
 export type DevicePayload = MutationPayload & {
   __typename: 'DevicePayload';
   code: Scalars['String']['output'];
@@ -1784,17 +1864,29 @@ export type DeviceTypeStat = {
   deviceType: DeviceType;
 };
 
+/** Represents a dietary preference or restriction that influences recipe and meal recommendations */
 export enum Diet {
+  /** Excludes all foods containing gluten proteins found in wheat, barley, and rye */
   GlutenFree = 'GLUTEN_FREE',
+  /** High-fat, very low-carbohydrate diet that promotes ketosis */
   Keto = 'KETO',
+  /** Excludes meat, fish, and eggs but allows dairy products */
   LactoVegetarian = 'LACTO_VEGETARIAN',
+  /** Limits fermentable carbohydrates that can trigger digestive issues */
   LowFodmap = 'LOW_FODMAP',
+  /** Excludes meat, fish, and dairy but allows eggs */
   OvoVegetarian = 'OVO_VEGETARIAN',
+  /** Focuses on whole foods that mimic pre-agricultural diets, excluding grains, legumes, and dairy */
   Paleo = 'PALEO',
+  /** Excludes meat but allows fish, dairy, and eggs */
   Pescetarian = 'PESCETARIAN',
+  /** Similar to paleo but allows some dairy products, especially raw and fermented */
   Primal = 'PRIMAL',
+  /** Excludes all animal products including dairy, eggs, and honey */
   Vegan = 'VEGAN',
+  /** Excludes meat and fish but allows dairy and eggs */
   Vegetarian = 'VEGETARIAN',
+  /** Strict 30-day elimination diet that removes sugar, alcohol, grains, legumes, soy, and dairy */
   Whole30 = 'WHOLE30'
 }
 
@@ -1889,19 +1981,6 @@ export enum DisplayFormat {
   Mixed = 'MIXED'
 }
 
-/** Error when a duplicate resource already exists */
-export type DuplicateError = MutationError & {
-  __typename: 'DuplicateError';
-  code: Scalars['String']['output'];
-  /** ID of the existing resource (if available) */
-  existingId: Maybe<Scalars['ID']['output']>;
-  /** The field that has a duplicate value */
-  field: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  /** The duplicate value */
-  value: Maybe<Scalars['String']['output']>;
-};
-
 export type Edge = {
   cursor: Scalars['String']['output'];
   node: Node;
@@ -1967,6 +2046,19 @@ export type ExpirationNotification = Node & {
   user: User;
   userId: Scalars['ID']['output'];
 };
+
+export type ExpirationNotificationChangeEvent = {
+  __typename: 'ExpirationNotificationChangeEvent';
+  changeType: ExpirationNotificationChangeType;
+  notification: ExpirationNotification;
+  pantryId: Scalars['ID']['output'];
+  timestamp: Scalars['DateTime']['output'];
+};
+
+export enum ExpirationNotificationChangeType {
+  Created = 'CREATED',
+  Updated = 'UPDATED'
+}
 
 export type ExpirationNotificationConnection = Connection & {
   __typename: 'ExpirationNotificationConnection';
@@ -2187,6 +2279,16 @@ export enum GoalStatus {
   UnderTarget = 'UNDER_TARGET'
 }
 
+/** Typed health benefit information (replaces JSON healthBenefits field) */
+export type HealthBenefit = {
+  __typename: 'HealthBenefit';
+  benefit: Scalars['String']['output'];
+  category: Maybe<HealthBenefitCategory>;
+  confidenceLevel: Maybe<Scalars['Float']['output']>;
+  description: Maybe<Scalars['String']['output']>;
+  scientificEvidence: Maybe<Scalars['String']['output']>;
+};
+
 export enum HealthBenefitCategory {
   Dietary = 'DIETARY',
   Fitness = 'FITNESS',
@@ -2213,8 +2315,8 @@ export enum HealthGoal {
 }
 
 export type HealthInfoInput = {
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
-  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
+  allergens?: InputMaybe<Array<AllergenInput>>;
+  healthBenefits?: InputMaybe<Array<HealthBenefitInput>>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
 };
 
@@ -2574,6 +2676,7 @@ export type ImageInput = {
 
 export enum ImageKind {
   Barcode = 'BARCODE',
+  Front = 'FRONT',
   Gallery = 'GALLERY',
   IngredientList = 'INGREDIENT_LIST',
   Main = 'MAIN',
@@ -2647,19 +2750,33 @@ export type InlineItemInput = {
   upc?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Represents a food intolerance or allergy used to filter recipes and flag unsuitable ingredients */
 export enum Intolerance {
+  /** Sensitivity to lactose or proteins found in milk and dairy products */
   Dairy = 'DAIRY',
+  /** Allergy or sensitivity to chicken eggs and egg-derived ingredients */
   Egg = 'EGG',
+  /** Sensitivity specifically to finned fish such as salmon, tuna, and cod */
   Fish = 'FISH',
+  /** Sensitivity to gluten proteins found in wheat, barley, and rye */
   Gluten = 'GLUTEN',
+  /** Sensitivity to grains including wheat, rice, corn, and oats */
   Grain = 'GRAIN',
+  /** Allergy to peanuts and peanut-derived products */
   Peanut = 'PEANUT',
+  /** General sensitivity to all types of seafood including fish and shellfish */
   Seafood = 'SEAFOOD',
+  /** Allergy to sesame seeds and sesame-derived products */
   Sesame = 'SESAME',
+  /** Sensitivity specifically to shellfish such as shrimp, crab, and lobster */
   Shellfish = 'SHELLFISH',
+  /** Sensitivity to soybeans and soy-derived ingredients */
   Soy = 'SOY',
+  /** Sensitivity to sulfites commonly found in wine, dried fruits, and preservatives */
   Sulfite = 'SULFITE',
+  /** Allergy to tree nuts such as almonds, walnuts, cashews, and pecans */
   TreeNut = 'TREE_NUT',
+  /** Specific sensitivity to wheat and wheat-derived ingredients */
   Wheat = 'WHEAT'
 }
 
@@ -2782,13 +2899,13 @@ export type InviteToShoppingListInput = {
  */
 export type Item = Node & {
   __typename: 'Item';
-  allergens: Maybe<Scalars['JSON']['output']>;
+  allergens: Array<AllergenInfo>;
   alternateUpcs: Array<Scalars['String']['output']>;
   approvedAt: Maybe<Scalars['DateTime']['output']>;
   approvedBy: Maybe<User>;
   baseDimension: Maybe<BaseDimension>;
   brands: Array<ItemBrand>;
-  categories: Maybe<Array<ItemCategory>>;
+  categories: Array<ItemCategory>;
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
   dataSource: DataSource;
@@ -2800,12 +2917,14 @@ export type Item = Node & {
   displayUnit: Maybe<Unit>;
   displayUnitId: Maybe<Scalars['ID']['output']>;
   externalSources: Array<ExternalSourceMapping>;
-  healthBenefits: Maybe<Scalars['JSON']['output']>;
+  healthBenefits: Array<HealthBenefit>;
   id: Scalars['ID']['output'];
   imageCount: Scalars['Int']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
-  images: Maybe<Scalars['JSON']['output']>;
+  images: Array<ItemImage>;
   ingredients: Maybe<Scalars['JSON']['output']>;
+  /** Whether this item has been soft-deleted (admin visibility) */
+  isDeleted: Scalars['Boolean']['output'];
   isUserCreated: Scalars['Boolean']['output'];
   matchedVariation: Maybe<ProductVariation>;
   metadata: Maybe<Scalars['JSON']['output']>;
@@ -2887,10 +3006,15 @@ export type ItemClassificationInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+/** Describes the current physical condition or quality of a pantry item */
 export enum ItemCondition {
+  /** Item has passed its expiration or best-by date */
   Expired = 'EXPIRED',
+  /** Item is still usable but showing signs of age or quality decline */
   Fair = 'FAIR',
+  /** Item is fresh and in optimal condition for use */
   Good = 'GOOD',
+  /** Item has deteriorated and is no longer safe to consume */
   Spoiled = 'SPOILED'
 }
 
@@ -2964,6 +3088,21 @@ export type ItemFilters = {
   workflow?: InputMaybe<WorkflowFilterInput>;
 };
 
+/** Typed image record for items (replaces JSON images field) */
+export type ItemImage = Node & {
+  __typename: 'ItemImage';
+  createdAt: Maybe<Scalars['DateTime']['output']>;
+  featured: Maybe<Scalars['Boolean']['output']>;
+  hash: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isPrimary: Maybe<Scalars['Boolean']['output']>;
+  kind: Maybe<ImageKind>;
+  perspective: Maybe<Scalars['String']['output']>;
+  size: Maybe<Scalars['Int']['output']>;
+  source: Maybe<Scalars['String']['output']>;
+  url: Scalars['String']['output'];
+};
+
 /** Sub-input for item lookup by identifier */
 export type ItemLookupInput = {
   /** External ID from a provider (e.g., Kroger product ID) */
@@ -3004,7 +3143,7 @@ export type ItemPayload = MutationPayload & {
 };
 
 /** Price history for items - may contain user-specific pricing data */
-export type ItemPriceHistory = {
+export type ItemPriceHistory = Node & {
   __typename: 'ItemPriceHistory';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -3012,6 +3151,25 @@ export type ItemPriceHistory = {
   metadata: Maybe<Scalars['JSON']['output']>;
   price: Scalars['Float']['output'];
   source: Scalars['String']['output'];
+};
+
+export type ItemPriceHistoryConnection = Connection & {
+  __typename: 'ItemPriceHistoryConnection';
+  edges: Array<ItemPriceHistoryEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Item price history connection for pagination */
+export type ItemPriceHistoryEdge = Edge & {
+  __typename: 'ItemPriceHistoryEdge';
+  cursor: Scalars['String']['output'];
+  node: ItemPriceHistory;
+};
+
+export type ItemPriceHistoryOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  price?: InputMaybe<SortOrder>;
 };
 
 export type ItemPriceHistoryPayload = MutationPayload & {
@@ -3049,7 +3207,7 @@ export enum ItemStatus {
  * Store SKU mapping for items
  * Cache: 10 minutes - SKU mappings can change but not frequently
  */
-export type ItemStoreSku = {
+export type ItemStoreSku = Node & {
   __typename: 'ItemStoreSku';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -3060,6 +3218,24 @@ export type ItemStoreSku = {
   store: Store;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type ItemStoreSkuConnection = Connection & {
+  __typename: 'ItemStoreSkuConnection';
+  edges: Array<ItemStoreSkuEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Item store SKU connection for pagination */
+export type ItemStoreSkuEdge = Edge & {
+  __typename: 'ItemStoreSkuEdge';
+  cursor: Scalars['String']['output'];
+  node: ItemStoreSku;
+};
+
+export type ItemStoreSkuOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
 };
 
 export type ItemSuggestion = {
@@ -3076,15 +3252,25 @@ export type ItemSuggestion = {
   type: ItemType;
 };
 
+/** Categorizes the general type of an item in the pantry or shopping list */
 export enum ItemType {
+  /** Beverages including water, juice, coffee, tea, and alcohol */
   Drink = 'DRINK',
+  /** General food items including produce, meats, dairy, and prepared foods */
   Food = 'FOOD',
+  /** Staple ingredients and basics such as flour, oil, salt, and sugar */
   Foundation = 'FOUNDATION',
+  /** Household essentials like cleaning products, trash bags, and batteries */
   Household = 'HOUSEHOLD',
+  /** Items that do not fit into any other category */
   Other = 'OTHER',
+  /** Personal care items such as soap, shampoo, and hygiene products */
   PersonalCare = 'PERSONAL_CARE',
+  /** Pet food, treats, litter, and other pet-related supplies */
   Pet = 'PET',
+  /** Non-food grocery products such as cleaning supplies or paper goods */
   Product = 'PRODUCT',
+  /** Vitamins, minerals, protein powders, and other dietary supplements */
   Supplement = 'SUPPLEMENT'
 }
 
@@ -3189,7 +3375,7 @@ export type ItemValidationError = {
 export type ItemsResponse = {
   __typename: 'ItemsResponse';
   hasMore: Scalars['Boolean']['output'];
-  items: Maybe<Array<Item>>;
+  items: Array<Item>;
   totalCount: Scalars['Int']['output'];
 };
 
@@ -3233,6 +3419,16 @@ export type LedgerSummary = {
   wasteCount: Scalars['Int']['output'];
 };
 
+/** Input for linking an item to an external source */
+export type LinkItemToExternalSourceInput = {
+  data?: InputMaybe<Scalars['JSON']['input']>;
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
+  source: ExternalSource;
+};
+
 export enum ListActivityType {
   CollaboratorAdded = 'COLLABORATOR_ADDED',
   CollaboratorRemoved = 'COLLABORATOR_REMOVED',
@@ -3262,6 +3458,22 @@ export type LocationStat = {
   ipCity: Maybe<Scalars['String']['output']>;
   ipCountry: Maybe<Scalars['String']['output']>;
 };
+
+export type LoginActivityEvent = {
+  __typename: 'LoginActivityEvent';
+  activityType: LoginActivityType;
+  loginHistory: Maybe<LoginHistory>;
+  suspiciousActivity: Maybe<SuspiciousActivity>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export enum LoginActivityType {
+  Attempted = 'ATTEMPTED',
+  Failed = 'FAILED',
+  Risky = 'RISKY',
+  Suspicious = 'SUSPICIOUS'
+}
 
 export enum LoginFailureReason {
   AccountDisabled = 'ACCOUNT_DISABLED',
@@ -3360,27 +3572,17 @@ export type LoginHistoryConnection = Connection & {
   totalCount: Scalars['Int']['output'];
 };
 
+/** Login history connection for pagination */
 export type LoginHistoryEdge = Edge & {
   __typename: 'LoginHistoryEdge';
   cursor: Scalars['String']['output'];
   node: LoginHistory;
 };
 
-export type LoginHistoryFilters = {
-  failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
-  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
-  ipAddress?: InputMaybe<Scalars['String']['input']>;
-  method?: InputMaybe<LoginMethod>;
-  riskyOnly?: InputMaybe<Scalars['Boolean']['input']>;
-  successOnly?: InputMaybe<Scalars['Boolean']['input']>;
-  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+export type LoginHistoryOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  loginAt?: InputMaybe<SortOrder>;
 };
-
-export enum LoginHistoryOrderBy {
-  CreatedAt = 'CREATED_AT',
-  LoggedInAt = 'LOGGED_IN_AT',
-  RiskScore = 'RISK_SCORE'
-}
 
 export type LoginHistoryPayload = MutationPayload & {
   __typename: 'LoginHistoryPayload';
@@ -3506,6 +3708,15 @@ export type MarkActionInput = {
 export type MarkAsTemplateInput = {
   saveItems?: InputMaybe<Scalars['Boolean']['input']>;
   templateName: Scalars['String']['input'];
+};
+
+/** Input for marking a recipe as cooked */
+export type MarkRecipeAsCookedInput = {
+  deductFromPantry: Scalars['Boolean']['input'];
+  ingredientsUsed?: InputMaybe<Array<IngredientUsageInput>>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Float']['input']>;
 };
 
 export enum MatchType {
@@ -3734,12 +3945,19 @@ export type MealTemplatePayload = MutationPayload & {
   success: Scalars['Boolean']['output'];
 };
 
+/** Identifies the type of meal for meal planning and recipe categorization */
 export enum MealType {
+  /** Morning meal, typically the first meal of the day */
   Breakfast = 'BREAKFAST',
+  /** Late-morning meal combining elements of breakfast and lunch */
   Brunch = 'BRUNCH',
+  /** Sweet course served at the end of a meal or as a treat */
   Dessert = 'DESSERT',
+  /** Evening meal, typically the main meal of the day */
   Dinner = 'DINNER',
+  /** Midday meal */
   Lunch = 'LUNCH',
+  /** Light bite or small portion eaten between main meals */
   Snack = 'SNACK'
 }
 
@@ -3757,7 +3975,7 @@ export type MealTypeNutrition = {
 /** Reusable sub-input for media assets (images) */
 export type MediaAssetsInput = {
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
+  images?: InputMaybe<Array<ImageInput>>;
 };
 
 export type Membership = Node & {
@@ -3783,6 +4001,24 @@ export type Membership = Node & {
   userId: Scalars['ID']['output'];
   version: Scalars['Int']['output'];
 };
+
+export type MembershipChangeEvent = {
+  __typename: 'MembershipChangeEvent';
+  changeType: MembershipChangeType;
+  homeId: Scalars['ID']['output'];
+  membership: Membership;
+  newRole: Maybe<MembershipRole>;
+  previousRole: Maybe<MembershipRole>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export enum MembershipChangeType {
+  Joined = 'JOINED',
+  Left = 'LEFT',
+  RoleChanged = 'ROLE_CHANGED',
+  Updated = 'UPDATED'
+}
 
 export type MembershipConnection = Connection & {
   __typename: 'MembershipConnection';
@@ -3834,6 +4070,10 @@ export enum MembershipMutationType {
   Updated = 'UPDATED'
 }
 
+export type MembershipOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+};
+
 export type MembershipPayload = MutationPayload & {
   __typename: 'MembershipPayload';
   code: Scalars['String']['output'];
@@ -3842,10 +4082,15 @@ export type MembershipPayload = MutationPayload & {
   success: Scalars['Boolean']['output'];
 };
 
+/** Defines the role and permission level of a member within a household */
 export enum MembershipRole {
+  /** Can manage household settings, members, and all resources */
   Admin = 'ADMIN',
+  /** Limited temporary access to household resources */
   Guest = 'GUEST',
+  /** Standard member with access to shared household features */
   Member = 'MEMBER',
+  /** Full ownership of the household including the ability to delete it */
   Owner = 'OWNER'
 }
 
@@ -4010,9 +4255,11 @@ export type MultiUnitMeasurementInput = {
 
 export type Mutation = {
   __typename: 'Mutation';
-  _empty: Maybe<Scalars['String']['output']>;
+  /** Accept a home invitation using its token. */
   acceptHomeInvite: MembershipPayload;
+  /** Accept an invitation to collaborate on a shopping list. */
   acceptShoppingListInvite: ShoppingListCollaboratorPayload;
+  /** Add a single item to a shopping list. */
   addItemToShoppingList: ShoppingListItemPayload;
   /**
    * Batch add multiple items to a shopping list.
@@ -4035,9 +4282,11 @@ export type Mutation = {
    * Checks pantry for available items and only adds deficit
    */
   addRecipeToShoppingList: ShoppingListPayload;
+  /** Add a dietary restriction to the user's profile. */
   addRestriction: DietaryRestrictionPayload;
   /** Add an item to a template */
   addTemplateItem: MealTemplateItemPayload;
+  /** Add a new address to the current user's account. */
   addUserAddress: UserAddressPayload;
   /** Add a warning to a user's moderation record */
   addWarning: UserModerationPayload;
@@ -4057,17 +4306,22 @@ export type Mutation = {
    * It removes the specified images from storage and cleans up Item.images arrays.
    */
   adminDeleteImages: ImageDeletionResult;
+  /** Delete a user's account as an administrator. */
   adminDeleteUser: UserPayload;
   /** Approve a user-created item for public visibility */
   approveItem: ItemPayload;
+  /** Archive a shopping list. */
   archiveShoppingList: ShoppingListPayload;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
+  /** Create multiple purchase records at once. */
   bulkCreatePurchases: BulkPurchasePayload;
   bulkCreateStores: BulkStorePayload;
   /** Delete multiple items */
   bulkDeleteItems: BulkOperationSummary;
+  /** Delete multiple purchase records at once. */
   bulkDeletePurchases: BulkPurchasePayload;
+  /** Send notifications to multiple users at once (admin only). */
   bulkSendNotifications: BulkNotificationResult;
   /**
    * Bulk update multiple devices at once.
@@ -4081,8 +4335,11 @@ export type Mutation = {
    * Replaces markMultipleLoginsAsReviewed and flagMultipleLoginsAsRisky.
    */
   bulkUpdateLoginHistories: BulkLoginHistoryPayload;
+  /** Bulk create or update items by external source (max 50 per batch). */
   bulkUpsertItemsByExternalSource: BatchUpsertItemsResponse;
+  /** Cancel recurring generation for a shopping list. */
   cancelRecurring: ShoppingListPayload;
+  /** Assign an item to a category. */
   categorizeItem: ItemCategoryPayload;
   /** Change password for authenticated user (requires current password verification) */
   changePassword: ChangePasswordResponse;
@@ -4091,6 +4348,7 @@ export type Mutation = {
    * Admin operation for maintenance.
    */
   cleanupDevices: DeviceCleanupResult;
+  /** Clear the reminder from a shopping list. */
   clearReminder: ShoppingListPayload;
   /**
    * Clear items from a shopping list based on purchased status.
@@ -4101,8 +4359,11 @@ export type Mutation = {
   clearShoppingListItems: ClearItemsResponse;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: UserPayload;
+  /** Mark a shopping list as completed. */
   completeShoppingList: ShoppingListPayload;
+  /** Confirm an item image upload and associate it with the item. */
   confirmItemImageUpload: UploadPayload;
+  /** Confirm a profile image upload and associate it with the user. */
   confirmProfileImageUpload: UploadPayload;
   confirmRecipeConsumption: RecipeConsumptionResult;
   /**
@@ -4117,35 +4378,53 @@ export type Mutation = {
    * Use this when the original net weight was entered incorrectly.
    */
   correctPantryItemWeight: PantryItemPayload;
+  /** Create a new brand. */
   createBrand: BrandPayload;
+  /** Create a new category. */
   createCategory: CategoryPayload;
+  /** Create a new cooking log entry. */
   createCookingLog: CookingLogPayload;
+  /** Create a new currency. */
   createCurrency: CurrencyPayload;
+  /** Create a new shopping list from a template. */
   createFromTemplate: ShoppingListPayload;
+  /** Create a new home. */
   createHome: HomePayload;
+  /** Generate a presigned URL for image upload with purpose validation. */
   createImageUploadUrl: PresignPayload;
   /** Create a new item */
   createItem: ItemPayload;
+  /** Create a new meal plan. */
   createMealPlan: MealPlanPayload;
   /**
    * Create a new meal plan from a template.
    * Copies all template items to the new plan with dates offset from startDate.
    */
   createMealPlanFromTemplate: MealPlanPayload;
+  /** Add an item to a meal plan. */
   createMealPlanItem: MealPlanItemPayload;
   /** Create a new meal template */
   createMealTemplate: MealTemplatePayload;
+  /** Create a new membership directly (owner/admin only). */
   createMembership: MembershipPayload;
   /** Create a moderation record for a user */
   createModerationRecord: UserModerationPayload;
+  /** Create a new notification. */
   createNotification: NotificationPayload;
+  /** Create a new pantry for a home. */
   createPantry: PantryPayload;
+  /** Create a new pantry item in a pantry. */
   createPantryItem: PantryItemPayload;
+  /** Record a usage event for a pantry item. */
   createPantryItemUsage: PantryItemUsagePayload;
+  /** Create a user profile for the current user. */
   createProfile: UserProfilePayload;
+  /** Create a new purchase record. */
   createPurchase: PurchasePayload;
   createRecipe: RecipePayload;
+  /** Create a review for a published recipe. */
   createRecipeReview: RecipeReviewPayload;
+  /** Create a new shopping list. */
   createShoppingList: ShoppingListPayload;
   createShoppingListItemFromRecipeIngredient: AddIngredientResult;
   createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
@@ -4161,34 +4440,54 @@ export type Mutation = {
    * Extracts the meal pattern into a reusable template.
    */
   createTemplateFromMealPlan: MealTemplatePayload;
+  /** Create a new unit of measurement. */
   createUnit: UnitPayload;
-  /** @deprecated Use createImageUploadUrl instead */
-  createUploadUrl: PresignPayload;
+  /** Decline a home invitation using its token. */
   declineHomeInvite: HomeInvitePayload;
+  /** Decline an invitation to collaborate on a shopping list. */
   declineShoppingListInvite: ShoppingListCollaboratorPayload;
+  /** Delete the current user's account. */
   deleteAccount: UserPayload;
+  /** Delete all read notifications for the current user. */
   deleteAllReadNotifications: BulkNotificationPayload;
+  /** Delete a brand. */
   deleteBrand: BrandPayload;
+  /** Delete a category. */
   deleteCategory: CategoryPayload;
+  /** Delete a cooking log entry. */
   deleteCookingLog: CookingLogPayload;
+  /** Delete a currency. */
   deleteCurrency: CurrencyPayload;
+  /** Delete all expired notifications (admin only). */
   deleteExpiredNotifications: BulkNotificationPayload;
+  /** Delete an external source mapping. */
   deleteExternalSource: ExternalSourceMappingPayload;
+  /** Delete a home (owner only). */
   deleteHome: HomePayload;
   /** Delete an item (soft delete by default, permanent if specified) */
   deleteItem: ItemPayload;
+  /** Delete a meal plan. */
   deleteMealPlan: MealPlanPayload;
+  /** Remove an item from a meal plan. */
   deleteMealPlanItem: MealPlanItemPayload;
   /** Delete a meal template (soft delete) */
   deleteMealTemplate: MealTemplatePayload;
+  /** Delete multiple notifications by their IDs. */
   deleteMultipleNotifications: BulkNotificationPayload;
+  /** Delete a notification. */
   deleteNotification: NotificationPayload;
+  /** Delete a pantry (owner only). */
   deletePantry: PantryPayload;
+  /** Delete a pantry item (soft delete). */
   deletePantryItem: PantryItemPayload;
+  /** Delete a purchase record. */
   deletePurchase: PurchasePayload;
   deleteRecipe: RecipePayload;
+  /** Delete a recipe folder and optionally move its recipes. */
   deleteRecipeFolder: SavedRecipePayload;
+  /** Delete a recipe review (author only). */
   deleteRecipeReview: RecipeReviewPayload;
+  /** Delete a shopping list (owner only). */
   deleteShoppingList: ShoppingListPayload;
   /**
    * Delete a storage location (soft delete)
@@ -4197,19 +4496,24 @@ export type Mutation = {
    */
   deleteStorageLocation: StorageLocationPayload;
   deleteStore: StorePayload;
+  /** Delete a unit of measurement. */
   deleteUnit: UnitPayload;
+  /** Delete a user address. */
   deleteUserAddress: UserAddressPayload;
+  /** Dismiss an expiration notification so it no longer appears. */
   dismissExpirationNotification: ExpirationNotificationPayload;
   /** Duplicate a template with a new name */
   duplicateTemplate: MealTemplatePayload;
   /** Export items to file */
   exportItems: ExportResponse;
+  /** Save a recipe as a favorite. */
   favoriteRecipe: SavedRecipePayload;
   /** Flag an item for review */
   flagItemForReview: ItemPayload;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResponse;
   forkRecipe: RecipePayload;
+  /** Generate the next recurring shopping list instance. */
   generateNextRecurringList: ShoppingListPayload;
   /** Hard delete a device permanently (admin only) */
   hardDeleteDevice: DevicePayload;
@@ -4217,13 +4521,21 @@ export type Mutation = {
   importItemsFromCSV: ImportItemsResponse;
   /** Import items from external provider (USDA, Spoonacular, etc.) */
   importItemsFromProvider: ImportItemsResponse;
+  /** Increment the cooked count for a saved recipe. */
   incrementRecipeCookedCount: SavedRecipePayload;
+  /** Send an invitation for a user to join a home. */
   inviteToHome: HomeInvitePayload;
+  /** Invite a user to collaborate on a shopping list. */
   inviteToShoppingList: ShoppingListCollaboratorPayload;
+  /** Join a home using its join code. */
   joinHomeByCode: MembershipPayload;
+  /** Join a shared shopping list using its share code. */
   joinShoppingListByShareCode: ShoppingListPayload;
+  /** Leave a home as the current user. */
   leaveHome: MembershipPayload;
+  /** Link an existing item to an external source. */
   linkItemToExternalSource: ExternalSourceMappingPayload;
+  /** Authenticate a user with credentials and return tokens. */
   login: AuthPayload;
   /**
    * Manage appeals (submit or review).
@@ -4235,12 +4547,19 @@ export type Mutation = {
    * Consolidates: addRestrictions, removeRestrictions.
    */
   manageRestrictions: UserModerationPayload;
+  /** Mark all notifications as read for the current user. */
   markAllNotificationsAsRead: BulkNotificationPayload;
+  /** Mark a shopping list as a reusable template. */
   markAsTemplate: ShoppingListPayload;
+  /** Record an action taken on an expiring item. */
   markExpirationAction: ExpirationNotificationPayload;
+  /** Mark an expiration notification as read. */
   markExpirationNotificationAsRead: ExpirationNotificationPayload;
+  /** Mark a notification as read. */
   markNotificationAsRead: NotificationPayload;
+  /** Mark a notification as unread. */
   markNotificationUnread: NotificationPayload;
+  /** Mark a pantry item as expired. */
   markPantryItemExpired: PantryItemPayload;
   /** Mark recipe as cooked and optionally deduct from pantry */
   markRecipeAsCooked: CookingLogPayload;
@@ -4256,7 +4575,9 @@ export type Mutation = {
    * Optionally removes the item from the shopping list.
    */
   moveShoppingItemToPantry: PantryItemPayload;
+  /** Reorder a shopping list item relative to other items. */
   moveShoppingListItem: ShoppingListItemPayload;
+  /** Mark a pantry item as opened. */
   openPantryItem: PantryItemPayload;
   /**
    * Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
@@ -4267,7 +4588,9 @@ export type Mutation = {
   recordPantryUsage: PantryItemUsagePayload;
   /** Record a price observation for historical tracking */
   recordPriceObservation: ItemPriceHistoryPayload;
+  /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
+  /** Register a new user account and return tokens. */
   register: AuthPayload;
   /**
    * Register a new device for the current user.
@@ -4276,12 +4599,17 @@ export type Mutation = {
   registerDevice: DevicePayload;
   /** Reject a user-created item */
   rejectItem: ItemPayload;
+  /** Remove an item from a shopping list. */
   removeItemFromShoppingList: ShoppingListItemPayload;
+  /** Remove a member from a home (owner/admin only). */
   removeMember: MembershipPayload;
+  /** Remove a dietary restriction from the user's profile. */
   removeRestriction: DietaryRestrictionPayload;
+  /** Remove a collaborator from a shopping list. */
   removeShoppingListCollaborator: ShoppingListCollaboratorPayload;
   /** Remove an item from a template */
   removeTemplateItem: MealTemplateItemPayload;
+  /** Remove the conversion factor from a unit. */
   removeUnitConversion: UnitPayload;
   /**
    * Reorder multiple storage locations
@@ -4289,6 +4617,7 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   reorderStorageLocations: StorageLocationPayload;
+  /** Resend the email verification message to a user. */
   resendVerificationEmail: UserPayload;
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -4299,10 +4628,15 @@ export type Mutation = {
   restockPantryItem: PantryItemUsagePayload;
   /** Restore a soft-deleted item */
   restoreItem: ItemPayload;
+  /** Revoke a pending home invitation. */
   revokeHomeInvite: HomeInvitePayload;
+  /** Send a test notification of a specific type to the current user. */
   sendTestNotification: NotificationPayload;
+  /** Set the default home for the current user. */
   setDefaultHome: SetDefaultHomePayload;
+  /** Set a pantry as the default for its home. */
   setDefaultPantry: PantryPayload;
+  /** Set a shopping list as the default. */
   setDefaultShoppingList: ShoppingListPayload;
   /**
    * Set a storage location as the default for its home
@@ -4310,27 +4644,49 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   setDefaultStorageLocation: StorageLocationPayload;
+  /** Set a reminder for a shopping list. */
   setReminder: ShoppingListPayload;
+  /** Set up recurring generation for a shopping list. */
   setupRecurring: ShoppingListPayload;
+  /** Set up a conversion factor between a unit and its base unit. */
   setupUnitConversion: UnitPayload;
+  /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShoppingListPayload;
+  /** Sync a pantry item deletion from an offline client. */
   syncDeletePantryItem: SyncPantryItemResult;
+  /** Sync a shopping list item deletion from an offline client. */
   syncDeleteShoppingListItem: SyncShoppingListItemResult;
+  /** Sync a pantry item reorder from an offline client. */
   syncMovePantryItem: SyncPantryItemResult;
+  /** Sync a shopping list item reorder from an offline client. */
   syncMoveShoppingListItem: SyncShoppingListItemResult;
+  /** Sync a pantry item from an offline client. */
   syncPantryItem: SyncPantryItemResult;
+  /** Sync a shopping list item from an offline client. */
   syncShoppingListItem: SyncShoppingListItemResult;
+  /** Toggle a helpful vote on a recipe review. */
   toggleReviewHelpful: ReviewHelpfulPayload;
+  /** Toggle the purchased state of a shopping list item. */
   toggleShoppingListItemPurchased: ShoppingListItemPayload;
+  /** Transfer ownership of a home to another member. */
   transferHomeOwnership: HomeOwnershipPayload;
+  /** Remove an item from a category. */
   uncategorizeItem: ItemCategoryPayload;
+  /** Revert a completed shopping list back to active. */
   uncompleteShoppingList: ShoppingListPayload;
+  /** Remove a recipe from favorites. */
   unfavoriteRecipe: SavedRecipePayload;
+  /** Update an existing brand. */
   updateBrand: BrandPayload;
+  /** Update an existing category. */
   updateCategory: CategoryPayload;
+  /** Update a collaborator's granular permissions on a shopping list. */
   updateCollaboratorPermissions: ShoppingListCollaboratorPayload;
+  /** Update a collaborator's role on a shopping list. */
   updateCollaboratorRole: ShoppingListCollaboratorPayload;
+  /** Update an existing cooking log entry. */
   updateCookingLog: CookingLogPayload;
+  /** Update an existing currency. */
   updateCurrency: CurrencyPayload;
   /**
    * Update a device. Consolidated mutation that handles all device updates including:
@@ -4343,9 +4699,13 @@ export type Mutation = {
    * - Soft delete
    */
   updateDevice: DevicePayload;
+  /** Update the current user's dietary profile. */
   updateDietaryProfile: DietaryProfilePayload;
+  /** Update an external source mapping. */
   updateExternalSource: ExternalSourceMappingPayload;
+  /** Update details of a favorited recipe (notes, folder, rating). */
   updateFavoriteRecipe: SavedRecipePayload;
+  /** Update an existing home's details. */
   updateHome: HomePayload;
   /**
    * Update an item. Consolidated mutation that handles:
@@ -4367,10 +4727,13 @@ export type Mutation = {
    * - General field updates
    */
   updateLoginHistory: LoginHistoryPayload;
+  /** Update an existing meal plan. */
   updateMealPlan: MealPlanPayload;
+  /** Update an item in a meal plan. */
   updateMealPlanItem: MealPlanItemPayload;
   /** Update an existing meal template */
   updateMealTemplate: MealTemplatePayload;
+  /** Update membership details and permissions (owner/admin only). */
   updateMembership: MembershipPayload;
   /**
    * Update moderation state for a user.
@@ -4378,10 +4741,15 @@ export type Mutation = {
    * banUser, unbanUser, suspendUser, unsuspendUser, putUnderReview, completeReview.
    */
   updateModeration: UserModerationPayload;
+  /** Update an existing notification. */
   updateNotification: NotificationPayload;
+  /** Update notification preferences for the current user. */
   updateNotificationPreferences: NotificationPreferencesPayload;
+  /** Update an existing pantry's details. */
   updatePantry: PantryPayload;
+  /** Update an existing pantry item. */
   updatePantryItem: PantryItemPayload;
+  /** Move a pantry item to a different storage location. */
   updatePantryItemLocation: PantryItemPayload;
   /** Update pantry item quantity (supports fractions) */
   updatePantryItemQuantity: PantryItemPayload;
@@ -4390,13 +4758,19 @@ export type Mutation = {
    * Set avatarUrl/coverImageUrl to null to remove them.
    */
   updateProfile: UserProfilePayload;
+  /** Update an existing purchase record. */
   updatePurchase: PurchasePayload;
   updateRecipe: RecipePayload;
   updateRecipeIngredients: RecipePayload;
+  /** Update an existing recipe review (author only). */
   updateRecipeReview: RecipeReviewPayload;
+  /** Update an existing dietary restriction. */
   updateRestriction: DietaryRestrictionPayload;
+  /** Update settings for the current user. */
   updateSettings: UserSettingsPayload;
+  /** Update an existing shopping list. */
   updateShoppingList: ShoppingListPayload;
+  /** Update a shopping list item. */
   updateShoppingListItem: ShoppingListItemPayload;
   /** Update shopping list item quantity (supports fractions) */
   updateShoppingListItemQuantity: ShoppingListItemPayload;
@@ -4407,19 +4781,25 @@ export type Mutation = {
    */
   updateStorageLocation: StorageLocationPayload;
   updateStore: StorePayload;
-  updateStoreInfo: StoreInfo;
+  updateStoreInfo: StorePayload;
   /** Update a template item */
   updateTemplateItem: MealTemplateItemPayload;
+  /** Update an existing unit of measurement. */
   updateUnit: UnitPayload;
+  /** Update a user's account details. */
   updateUser: UserPayload;
+  /** Update an existing user address. */
   updateUserAddress: UserAddressPayload;
   upsertExternalRecipe: UpsertExternalRecipeResult;
+  /** Create or update an item based on its external source ID. */
   upsertItemByExternalSource: UpsertItemResult;
   /** Add or update item-specific unit conversion */
   upsertItemUnitConversion: ItemUnitConversionPayload;
   /** Validate if a password reset token is still valid */
   validatePasswordResetToken: ValidateTokenResponse;
+  /** Verify a user's email address using a verification code. */
   verifyEmail: UserPayload;
+  /** Manually verify a user's email address (admin use). */
   verifyUserEmail: UserPayload;
 };
 
@@ -4459,10 +4839,7 @@ export type MutationAddPantryItemToShoppingListArgs = {
 
 
 export type MutationAddRecipeToShoppingListArgs = {
-  checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Float']['input']>;
-  shoppingListId: Scalars['ID']['input'];
+  input: AddRecipeToShoppingListInput;
 };
 
 
@@ -4573,9 +4950,7 @@ export type MutationCancelRecurringArgs = {
 
 
 export type MutationCategorizeItemArgs = {
-  categoryId: Scalars['ID']['input'];
-  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['ID']['input'];
+  input: CategorizeItemInput;
 };
 
 
@@ -4618,9 +4993,7 @@ export type MutationConfirmProfileImageUploadArgs = {
 
 
 export type MutationConfirmRecipeConsumptionArgs = {
-  consumptions: Array<ConfirmedIngredientConsumptionInput>;
-  pantryId: Scalars['ID']['input'];
-  recipeId: Scalars['ID']['input'];
+  input: ConfirmRecipeConsumptionInput;
 };
 
 
@@ -4760,9 +5133,7 @@ export type MutationCreateShoppingListItemFromRecipeIngredientArgs = {
 
 
 export type MutationCreateShoppingListItemsFromRecipeArgs = {
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Int']['input']>;
-  shoppingListId: Scalars['ID']['input'];
+  input: CreateShoppingListItemsFromRecipeInput;
 };
 
 
@@ -4783,12 +5154,6 @@ export type MutationCreateTemplateFromMealPlanArgs = {
 
 export type MutationCreateUnitArgs = {
   input: CreateUnitInput;
-};
-
-
-export type MutationCreateUploadUrlArgs = {
-  ext: Scalars['String']['input'];
-  mime: Scalars['String']['input'];
 };
 
 
@@ -5009,12 +5374,7 @@ export type MutationLeaveHomeArgs = {
 
 
 export type MutationLinkItemToExternalSourceArgs = {
-  data?: InputMaybe<Scalars['JSON']['input']>;
-  externalId: Scalars['String']['input'];
-  externalType?: InputMaybe<Scalars['String']['input']>;
-  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['ID']['input'];
-  source: ExternalSource;
+  input: LinkItemToExternalSourceInput;
 };
 
 
@@ -5066,11 +5426,7 @@ export type MutationMarkPantryItemExpiredArgs = {
 
 
 export type MutationMarkRecipeAsCookedArgs = {
-  deductFromPantry: Scalars['Boolean']['input'];
-  ingredientsUsed?: InputMaybe<Array<IngredientUsageInput>>;
-  notes?: InputMaybe<Scalars['String']['input']>;
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Float']['input']>;
+  input: MarkRecipeAsCookedInput;
 };
 
 
@@ -5101,11 +5457,7 @@ export type MutationRecordLoginArgs = {
 
 
 export type MutationRecordPantryUsageArgs = {
-  notes?: InputMaybe<Scalars['String']['input']>;
-  pantryItemId: Scalars['ID']['input'];
-  purpose?: InputMaybe<UsagePurpose>;
-  quantity: Scalars['Float']['input'];
-  unitId: Scalars['ID']['input'];
+  input: RecordPantryUsageInput;
 };
 
 
@@ -5292,9 +5644,7 @@ export type MutationToggleReviewHelpfulArgs = {
 
 
 export type MutationToggleShoppingListItemPurchasedArgs = {
-  id: Scalars['ID']['input'];
-  purchased: Scalars['Boolean']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  input: ToggleShoppingListItemPurchasedInput;
 };
 
 
@@ -5340,9 +5690,7 @@ export type MutationUpdateCollaboratorPermissionsArgs = {
 
 
 export type MutationUpdateCollaboratorRoleArgs = {
-  collaboratorId: Scalars['ID']['input'];
-  role: CollaboratorRole;
-  shoppingListId: Scalars['ID']['input'];
+  input: UpdateCollaboratorRoleInput;
 };
 
 
@@ -5539,13 +5887,8 @@ export type MutationUpdateStoreArgs = {
 
 
 export type MutationUpdateStoreInfoArgs = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  hoursJSON?: InputMaybe<Scalars['JSON']['input']>;
-  lat?: InputMaybe<Scalars['Float']['input']>;
-  lng?: InputMaybe<Scalars['Float']['input']>;
-  phone?: InputMaybe<Scalars['String']['input']>;
+  input: UpdateStoreInfoInput;
   storeId: Scalars['ID']['input'];
-  website?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -5588,11 +5931,7 @@ export type MutationUpsertItemByExternalSourceArgs = {
 
 
 export type MutationUpsertItemUnitConversionArgs = {
-  conversionRatio: Scalars['Float']['input'];
-  fromUnitId: Scalars['ID']['input'];
-  itemId: Scalars['ID']['input'];
-  notes?: InputMaybe<Scalars['String']['input']>;
-  toUnitId: Scalars['ID']['input'];
+  input: UpsertItemUnitConversionInput;
 };
 
 
@@ -5611,17 +5950,6 @@ export type MutationVerifyUserEmailArgs = {
 };
 
 /**
- * Standard error interface for all mutation errors.
- * All error types should implement this interface.
- */
-export type MutationError = {
-  /** Machine-readable error code for client handling */
-  code: Scalars['String']['output'];
-  /** Human-readable error message */
-  message: Scalars['String']['output'];
-};
-
-/**
  * Base interface for all mutation payloads.
  * Ensures every mutation response includes operation metadata.
  * Domain-specific payload types implement this interface and add their entity field.
@@ -5635,19 +5963,33 @@ export type MutationPayload = {
   success: Scalars['Boolean']['output'];
 };
 
+/** Describes the type of mutation that triggered a real-time subscription event */
 export enum MutationType {
+  /** A new collaborator was added to a shared resource */
   CollaboratorAdded = 'COLLABORATOR_ADDED',
+  /** A collaborator was removed from a shared resource */
   CollaboratorRemoved = 'COLLABORATOR_REMOVED',
+  /** A resource was marked as completed */
   Completed = 'COMPLETED',
+  /** A new resource was created */
   Created = 'CREATED',
+  /** A resource was deleted or soft-deleted */
   Deleted = 'DELETED',
+  /** Multiple items were cleared from a list in a single batch operation */
   ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
+  /** A new item was added to a list or collection */
   ItemAdded = 'ITEM_ADDED',
+  /** An item was marked as completed or purchased */
   ItemCompleted = 'ITEM_COMPLETED',
+  /** An item was removed from a list or collection */
   ItemRemoved = 'ITEM_REMOVED',
+  /** A previously completed item was reverted to an active state */
   ItemUncompleted = 'ITEM_UNCOMPLETED',
+  /** An existing item within a list was modified */
   ItemUpdated = 'ITEM_UPDATED',
+  /** The status of a resource changed */
   StatusChanged = 'STATUS_CHANGED',
+  /** An existing resource was modified */
   Updated = 'UPDATED'
 }
 
@@ -5697,17 +6039,6 @@ export type Node = {
   id: Scalars['ID']['output'];
 };
 
-/** Error when a requested resource is not found */
-export type NotFoundError = MutationError & {
-  __typename: 'NotFoundError';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  /** ID that was searched for */
-  resourceId: Maybe<Scalars['String']['output']>;
-  /** Type of resource that was not found */
-  resourceType: Scalars['String']['output'];
-};
-
 /**
  * Notification type for user alerts and messages
  * Cache: None - notifications must be real-time
@@ -5731,6 +6062,18 @@ export type NotificationCategoryCount = {
   count: Scalars['Int']['output'];
   unreadCount: Scalars['Int']['output'];
 };
+
+export type NotificationChangeEvent = {
+  __typename: 'NotificationChangeEvent';
+  changeType: NotificationChangeType;
+  notification: Notification;
+  timestamp: Scalars['DateTime']['output'];
+};
+
+export enum NotificationChangeType {
+  Received = 'RECEIVED',
+  Updated = 'UPDATED'
+}
 
 /** Sub-input for notification channel toggles */
 export type NotificationChannelsInput = {
@@ -5889,18 +6232,31 @@ export type NotificationSubscriptionPayload = {
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
 };
 
+/** Identifies the category of a notification sent to a user */
 export enum NotificationType {
+  /** Invitation to collaborate on a shopping list */
   CollaborationInvite = 'COLLABORATION_INVITE',
+  /** Alerts that a pantry item is approaching or has passed its expiration date */
   ExpiryReminder = 'EXPIRY_REMINDER',
+  /** Invitation to join a household home */
   HomeInvitation = 'HOME_INVITATION',
+  /** Confirmation that a user has joined a household */
   HomeJoined = 'HOME_JOINED',
+  /** Informs that an item has been removed */
   ItemDeleted = 'ITEM_DELETED',
+  /** Informs that an existing item has been modified */
   ItemUpdated = 'ITEM_UPDATED',
+  /** Notifies that a shared shopping list has been updated */
   ListUpdated = 'LIST_UPDATED',
+  /** Warns that a pantry item quantity has fallen below the configured threshold */
   LowStock = 'LOW_STOCK',
+  /** Invitation to join a household as a member */
   MembershipInvite = 'MEMBERSHIP_INVITE',
+  /** Informs that a new item has been added to the pantry or shopping list */
   NewItemAdded = 'NEW_ITEM_ADDED',
+  /** Records that a recipe has been cooked or prepared */
   RecipeCooked = 'RECIPE_COOKED',
+  /** Confirms that a recipe has been saved to the user's collection */
   RecipeSaved = 'RECIPE_SAVED'
 }
 
@@ -6004,16 +6360,6 @@ export type PageInfo = {
   hasNextPage: Scalars['Boolean']['output'];
   hasPreviousPage: Scalars['Boolean']['output'];
   startCursor: Maybe<Scalars['String']['output']>;
-};
-
-/** Offset-based pagination input. Prefer cursor-based pagination (first/after/last/before) at the query level. */
-export type PaginationInput = {
-  /** @deprecated Use cursor-based pagination (after/before) at the query level */
-  cursor?: InputMaybe<Scalars['String']['input']>;
-  /** @deprecated Use cursor-based pagination (first/after) at the query level */
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  /** @deprecated Use cursor-based pagination (first/after) at the query level */
-  take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /**
@@ -6155,6 +6501,47 @@ export enum PantryActivityType {
   QuantityUpdated = 'QUANTITY_UPDATED'
 }
 
+export type PantryAlertEvent = {
+  __typename: 'PantryAlertEvent';
+  alertType: PantryAlertType;
+  /** Populated for EXPIRING_ITEMS alerts */
+  items: Maybe<Array<PantryItem>>;
+  message: Maybe<Scalars['String']['output']>;
+  pantryId: Scalars['ID']['output'];
+  /** Populated for LOW_STOCK and WASTE alerts */
+  pantryItem: Maybe<PantryItem>;
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export enum PantryAlertType {
+  ExpiringItems = 'EXPIRING_ITEMS',
+  LowStock = 'LOW_STOCK',
+  Waste = 'WASTE'
+}
+
+export type PantryChangeEvent = {
+  __typename: 'PantryChangeEvent';
+  changeType: PantryChangeType;
+  mutation: Maybe<MutationType>;
+  /** Populated for UPDATED events */
+  pantry: Maybe<Pantry>;
+  pantryId: Scalars['ID']['output'];
+  /** Populated for ITEMS_CHANGED events */
+  pantryItem: Maybe<PantryItem>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  /** Populated for USAGE_CHANGED events */
+  usage: Maybe<PantryItemUsage>;
+  userId: Scalars['ID']['output'];
+};
+
+export enum PantryChangeType {
+  ItemsChanged = 'ITEMS_CHANGED',
+  Updated = 'UPDATED',
+  UsageChanged = 'USAGE_CHANGED'
+}
+
 export type PantryConnection = Connection & {
   __typename: 'PantryConnection';
   edges: Array<PantryEdge>;
@@ -6256,8 +6643,7 @@ export type PantryItem = Node & {
   unit: Maybe<Unit>;
   unitId: Maybe<Scalars['ID']['output']>;
   updatedAt: Maybe<Scalars['DateTime']['output']>;
-  usageHistory: Array<PantryItemUsage>;
-  usageRecords: Array<PantryItemUsage>;
+  usageRecords: PantryItemUsageConnection;
   version: Maybe<Scalars['Int']['output']>;
   wasteDate: Maybe<Scalars['DateTime']['output']>;
   wasteReason: Maybe<WasteReason>;
@@ -6276,6 +6662,14 @@ export type PantryItemChangeHistoryArgs = {
 /** Real-time collaborative type - never cache */
 export type PantryItemLedgerArgs = {
   filter?: InputMaybe<AnalyticsFilters>;
+};
+
+
+/** Real-time collaborative type - never cache */
+export type PantryItemUsageRecordsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PantryItemUsageOrderBy>;
 };
 
 /** Audit record of a change to a pantry item */
@@ -6418,7 +6812,7 @@ export type PantryItemSuggestion = {
   source: PantrySuggestionSource;
 };
 
-export type PantryItemUsage = {
+export type PantryItemUsage = Node & {
   __typename: 'PantryItemUsage';
   adjustmentReason: Maybe<Scalars['String']['output']>;
   cookingLog: Maybe<CookingLog>;
@@ -6459,6 +6853,25 @@ export type PantryItemUsageChangedPayload = {
   timestamp: Scalars['DateTime']['output'];
   usage: PantryItemUsage;
   userId: Scalars['ID']['output'];
+};
+
+export type PantryItemUsageConnection = Connection & {
+  __typename: 'PantryItemUsageConnection';
+  edges: Array<PantryItemUsageEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Pantry item usage connection for pagination */
+export type PantryItemUsageEdge = Edge & {
+  __typename: 'PantryItemUsageEdge';
+  cursor: Scalars['String']['output'];
+  node: PantryItemUsage;
+};
+
+export type PantryItemUsageOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  usedAt?: InputMaybe<SortOrder>;
 };
 
 export type PantryItemUsagePayload = MutationPayload & {
@@ -6647,10 +7060,15 @@ export type PricingEstimatesInput = {
   estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
 };
 
+/** Indicates the priority level for shopping list items, notifications, or tasks */
 export enum Priority {
+  /** Important and should be addressed soon */
   High = 'HIGH',
+  /** Not time-sensitive and can be addressed at convenience */
   Low = 'LOW',
+  /** Standard priority with no special urgency */
   Normal = 'NORMAL',
+  /** Critical and requires immediate attention */
   Urgent = 'URGENT'
 }
 
@@ -6763,14 +7181,19 @@ export type PurchaseEdge = Edge & {
   node: Purchase;
 };
 
+/** Filter for querying purchases - consolidates multiple query patterns. */
 export type PurchaseFilters = {
-  endDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Start of the date range filter. */
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Filter by item. */
   itemId?: InputMaybe<Scalars['ID']['input']>;
+  /** Filter by shopping list. */
   shoppingListId?: InputMaybe<Scalars['ID']['input']>;
+  /** Filter by specific shopping list item. */
   shoppingListItemId?: InputMaybe<Scalars['ID']['input']>;
-  startDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Filter by store. */
   storeId?: InputMaybe<Scalars['ID']['input']>;
+  /** End of the date range filter. */
   toDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
@@ -6875,8 +7298,8 @@ export type QuantityInput = {
 
 export type Query = {
   __typename: 'Query';
-  _empty: Maybe<Scalars['String']['output']>;
   activeModerations: UserModerationConnection;
+  /** Check whether a specific user's account can be safely deleted (admin only). */
   adminCanDeleteUser: CanDeleteAccountResult;
   /**
    * Get the status of a background image deletion job.
@@ -6890,13 +7313,16 @@ export type Query = {
    * Useful for calculating total needed across multiple recipes
    */
   aggregateQuantities: AggregationResult;
+  /** Autocomplete category names for faster item categorization. */
   autocompleteCategories: AutocompleteCategoryResponse;
-  autocompleteItems: Maybe<AutocompleteResponse>;
+  /** Autocomplete item names for quick search suggestions. */
+  autocompleteItems: AutocompleteResponse;
   /**
    * Get best display unit for a quantity
    * Auto-converts to more readable units (1000mL → 1L)
    */
   bestDisplayUnit: Unit;
+  /** Fetch a single brand by its ID. */
   brand: Maybe<Brand>;
   /**
    * Get brands with filtering and cursor-based pagination.
@@ -6914,6 +7340,7 @@ export type Query = {
    * Returns availability and confidence level
    */
   canConvert: ConversionAvailability;
+  /** Check whether the current user's account can be safely deleted. */
   canDeleteAccount: CanDeleteAccountResult;
   /**
    * Get categories with filtering and cursor-based pagination.
@@ -6921,21 +7348,32 @@ export type Query = {
    * popularCategories (use categories with appropriate sorting)
    */
   categories: CategoryConnection;
+  /** Fetch a single category by its ID. */
   category: Maybe<Category>;
+  /** Fetch a single category by its URL slug. */
   categoryBySlug: Maybe<Category>;
-  checkItemAvailability: Maybe<Array<ItemAvailability>>;
-  compareItemPrices: Maybe<Array<StorePriceComparison>>;
+  /** Check item availability across specified stores. */
+  checkItemAvailability: Array<ItemAvailability>;
+  /** Compare prices for an item across multiple stores. */
+  compareItemPrices: Array<StorePriceComparison>;
+  /** List compatible units for an item with conversion metadata. */
   compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
    */
   convertQuantity: Maybe<ConversionResult>;
+  /** Convert a value from one unit to another. */
   convertUnit: Maybe<ConvertedUnitValue>;
+  /** List all units that a given unit can be converted to. */
   convertibleUnits: Array<Unit>;
+  /** Fetch a single cooking log by its ID. */
   cookingLog: Maybe<CookingLog>;
+  /** List all currencies, optionally filtered by active status. */
   currencies: Array<Currency>;
+  /** Fetch a single currency by its ID. */
   currency: Maybe<Currency>;
+  /** Fetch a single currency by its ISO code. */
   currencyByCode: Maybe<Currency>;
   /** Get a single device by ID */
   device: Maybe<Device>;
@@ -6950,10 +7388,13 @@ export type Query = {
    * devicesByManufacturer, devicesWithPeripherals, lowBatteryDevices, staleDevices
    */
   devices: DeviceConnection;
-  dietaryProfile: Maybe<DietaryProfile>;
+  /** Fetch a single expiration notification by its ID. */
   expirationNotification: Maybe<ExpirationNotification>;
+  /** Fetch a single home by its ID. */
   home: Maybe<Home>;
+  /** Fetch a single home by its join code. */
   homeByJoinCode: Maybe<Home>;
+  /** Fetch a home invite by its token for the acceptance flow. */
   homeInviteByToken: Maybe<HomeInvite>;
   /**
    * Get homes accessible to the current user.
@@ -6961,7 +7402,9 @@ export type Query = {
    * For regular users: Returns only homes where user is a member.
    */
   homes: HomeConnection;
+  /** Fetch invite usage statistics for a specific invite (admin only). */
   inviteStats: InviteStats;
+  /** Fetch a single item by its ID. */
   item: Maybe<Item>;
   /**
    * Get all available conversions for an item
@@ -6981,20 +7424,27 @@ export type Query = {
    * Supports filtering by userId, ipAddress, date range, device, success/failure, and search.
    */
   loginHistories: LoginHistoryConnection;
-  loginHistoryStats: LoginHistoryStats;
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
+  /** Fetch the currently authenticated user. */
   me: Maybe<User>;
+  /** Fetch a single meal plan by its ID. */
   mealPlan: Maybe<MealPlan>;
+  /** List meal plans with filtering and cursor-based pagination. */
   mealPlans: MealPlanConnection;
   /** Get a single meal template by ID */
   mealTemplate: Maybe<MealTemplate>;
   /** List meal templates for the current user */
   mealTemplates: MealTemplateConnection;
+  /** Fetch a single membership by its ID. */
   membership: Maybe<Membership>;
+  /** List memberships for a home with cursor-based pagination. */
   memberships: MembershipConnection;
   myModeration: Maybe<MyModerationStatus>;
+  /** Fetch any node by its globally unique ID. */
+  node: Maybe<Node>;
+  /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
-  notificationPreferences: Maybe<NotificationPreferences>;
+  /** Fetch notification statistics with optional filtering. */
   notificationStats: NotificationStats;
   /**
    * Get pantries.
@@ -7003,24 +7453,32 @@ export type Query = {
    * Replaces: defaultPantry (use filters: { isDefault: true })
    */
   pantries: PantryConnection;
+  /** Fetch a single pantry by its ID. */
   pantry: Maybe<Pantry>;
+  /** Fetch a single pantry item by its ID. */
   pantryItem: Maybe<PantryItem>;
   /**
    * Parse fractional input string to decimal
    * Handles "1/4", "1 1/4", "0.25" formats
    */
   parseQuantityInput: QuantityDisplay;
+  /** Fetch a single purchase by its ID. */
   purchase: Maybe<Purchase>;
+  /** List purchases with filtering and cursor-based pagination. */
   purchases: PurchaseConnection;
   recipe: Maybe<Recipe>;
+  /** List cooking logs for a specific recipe with cursor-based pagination. */
   recipeCookingLogs: CookingLogConnection;
   recipeSuggestions: RecipeConnection;
   recipes: RecipeConnection;
-  recommendedItems: Maybe<Array<ItemSuggestion>>;
+  /** Fetch personalized item recommendations for a user. */
+  recommendedItems: Array<ItemSuggestion>;
+  /** Fetch a single saved recipe by its ID. */
   savedRecipe: Maybe<SavedRecipe>;
+  /** List all folder names the user has organized saved recipes into. */
   savedRecipeFolders: Array<Scalars['String']['output']>;
   /** Search items with cursor-based pagination (Relay spec). */
-  searchItems: Maybe<ItemConnection>;
+  searchItems: ItemConnection;
   searchRecipes: RecipeConnection;
   /**
    * Search units by name or symbol.
@@ -7028,8 +7486,11 @@ export type Query = {
    * Default limit: 10
    */
   searchUnits: Array<Unit>;
+  /** Fetch a single shopping list by its ID. */
   shoppingList: Maybe<ShoppingList>;
+  /** Fetch a shopping list by its share code. */
   shoppingListByShareCode: Maybe<ShoppingList>;
+  /** Fetch a single shopping list item by its ID. */
   shoppingListItem: Maybe<ShoppingListItem>;
   /**
    * Get shopping lists accessible to the current user.
@@ -7060,8 +7521,6 @@ export type Query = {
   storageLocations: StorageLocationConnection;
   /** Get a single store by ID */
   store: Maybe<Store>;
-  /** Get store statistics */
-  storeStats: Maybe<StoreStats>;
   /**
    * List stores with filtering, sorting, and Relay-style pagination.
    * Replaces: stores, searchStores, storeByName, popularStores, nearbyStores, recommendedStores.
@@ -7073,21 +7532,25 @@ export type Query = {
    * Based on unit rules, user preferences, and quantity value
    */
   suggestDisplayFormat: QuantityDisplay;
+  /** List suspicious invite activity within a time window (admin only). */
   suspiciousInviteActivity: InviteLogConnection;
-  suspiciousLoginActivity: SuspiciousActivity;
+  /** Fetch a single unit by its ID. */
   unit: Maybe<Unit>;
+  /** Fetch a single unit by its symbol. */
   unitBySymbol: Maybe<Unit>;
   /**
    * Get all units, optionally filtered by type and/or common flag.
    * Default limit: 50
    */
   units: Array<Unit>;
+  /** Fetch a single user by their ID. */
   user: Maybe<User>;
   userModeration: Maybe<UserModeration>;
-  userSettings: Maybe<UserSettings>;
+  /** List users with search and cursor-based pagination (admin only). */
   users: UserConnection;
   /** Validate item data integrity (read-only check) */
   validateItem: ValidationResult;
+  /** Validate a UPC barcode string. */
   validateUpc: UpcValidation;
 };
 
@@ -7266,11 +7729,6 @@ export type QueryDevicesArgs = {
 };
 
 
-export type QueryDietaryProfileArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
 export type QueryExpirationNotificationArgs = {
   id: Scalars['ID']['input'];
 };
@@ -7338,12 +7796,6 @@ export type QueryLoginHistoriesArgs = {
 };
 
 
-export type QueryLoginHistoryStatsArgs = {
-  days?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
-
 export type QueryMatchRecipeIngredientsToPantryArgs = {
   pantryId: Scalars['ID']['input'];
   recipeId: Scalars['ID']['input'];
@@ -7395,13 +7847,13 @@ export type QueryMembershipsArgs = {
 };
 
 
-export type QueryNotificationArgs = {
+export type QueryNodeArgs = {
   id: Scalars['ID']['input'];
 };
 
 
-export type QueryNotificationPreferencesArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
+export type QueryNotificationArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -7575,11 +8027,6 @@ export type QueryStoreArgs = {
 };
 
 
-export type QueryStoreStatsArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
 export type QueryStoresArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -7603,12 +8050,6 @@ export type QuerySuspiciousInviteActivityArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type QuerySuspiciousLoginActivityArgs = {
-  hours?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
 };
 
 
@@ -7636,11 +8077,6 @@ export type QueryUserArgs = {
 
 export type QueryUserModerationArgs = {
   userId: Scalars['ID']['input'];
-};
-
-
-export type QueryUserSettingsArgs = {
-  userId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -7678,17 +8114,6 @@ export type RapidAttempt = {
   hour: Scalars['String']['output'];
 };
 
-/** Error when rate limit is exceeded */
-export type RateLimitError = MutationError & {
-  __typename: 'RateLimitError';
-  code: Scalars['String']['output'];
-  /** The limit that was exceeded */
-  limit: Scalars['Int']['output'];
-  message: Scalars['String']['output'];
-  /** Seconds until the limit resets */
-  retryAfter: Scalars['Int']['output'];
-};
-
 /**
  * Recipe type for meal instructions and ingredients
  * Cache: 30 minutes - published recipes are static content
@@ -7699,7 +8124,7 @@ export type Recipe = Node & {
   caloriesPerServing: Maybe<Scalars['Float']['output']>;
   category: RecipeCategory;
   cookTimeMinutes: Maybe<Scalars['Int']['output']>;
-  cookingLogs: Array<CookingLog>;
+  cookingLogs: CookingLogConnection;
   createdAt: Scalars['DateTime']['output'];
   createdBy: Maybe<User>;
   cuisine: Maybe<Scalars['String']['output']>;
@@ -7719,6 +8144,8 @@ export type Recipe = Node & {
   ingredients: Array<RecipeIngredient>;
   instructions: Scalars['JSON']['output'];
   intolerances: Array<Intolerance>;
+  /** Whether this recipe has been soft-deleted (admin visibility) */
+  isDeleted: Scalars['Boolean']['output'];
   isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
   isSaved: Scalars['Boolean']['output'];
@@ -7736,7 +8163,7 @@ export type Recipe = Node & {
   rating3Count: Scalars['Int']['output'];
   rating4Count: Scalars['Int']['output'];
   rating5Count: Scalars['Int']['output'];
-  reviews: Array<RecipeReview>;
+  reviews: RecipeReviewConnection;
   savedDetails: Maybe<SavedRecipe>;
   servings: Scalars['Int']['output'];
   source: Maybe<Scalars['String']['output']>;
@@ -7753,6 +8180,28 @@ export type Recipe = Node & {
   version: Scalars['Int']['output'];
   videoUrl: Maybe<Scalars['String']['output']>;
   visibility: Visibility;
+};
+
+
+/**
+ * Recipe type for meal instructions and ingredients
+ * Cache: 30 minutes - published recipes are static content
+ */
+export type RecipeCookingLogsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<CookingLogOrderBy>;
+};
+
+
+/**
+ * Recipe type for meal instructions and ingredients
+ * Cache: 30 minutes - published recipes are static content
+ */
+export type RecipeReviewsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<RecipeReviewOrderBy>;
 };
 
 /** Sub-input for recipe attribution */
@@ -7904,7 +8353,7 @@ export type RecipePayload = MutationPayload & {
   success: Scalars['Boolean']['output'];
 };
 
-export type RecipeReview = {
+export type RecipeReview = Node & {
   __typename: 'RecipeReview';
   comment: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -7916,6 +8365,25 @@ export type RecipeReview = {
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   verified: Scalars['Boolean']['output'];
+};
+
+export type RecipeReviewConnection = Connection & {
+  __typename: 'RecipeReviewConnection';
+  edges: Array<RecipeReviewEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Recipe review connection for pagination */
+export type RecipeReviewEdge = Edge & {
+  __typename: 'RecipeReviewEdge';
+  cursor: Scalars['String']['output'];
+  node: RecipeReview;
+};
+
+export type RecipeReviewOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  rating?: InputMaybe<SortOrder>;
 };
 
 export type RecipeReviewPayload = MutationPayload & {
@@ -7987,6 +8455,15 @@ export type RecordPantryItemUsageInput = {
   recipeId?: InputMaybe<Scalars['String']['input']>;
   usageUnitId?: InputMaybe<Scalars['String']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
+};
+
+/** Input for recording pantry item usage */
+export type RecordPantryUsageInput = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  pantryItemId: Scalars['ID']['input'];
+  purpose?: InputMaybe<UsagePurpose>;
+  quantity: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
 };
 
 /** Input for recording a price observation (historical tracking) */
@@ -8210,8 +8687,9 @@ export type SearchFacets = {
 
 export type SearchItemsInput = {
   filters?: InputMaybe<ItemFilters>;
-  pagination?: InputMaybe<PaginationInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
   query: Scalars['String']['input'];
+  skip?: InputMaybe<Scalars['Int']['input']>;
   sort?: InputMaybe<ItemSortInput>;
 };
 
@@ -8295,7 +8773,7 @@ export type ShoppingList = Node & {
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   nextRecurringDate: Maybe<Scalars['DateTime']['output']>;
-  ownerships: Maybe<Array<ShoppingListOwnership>>;
+  ownerships: Array<ShoppingListOwnership>;
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
@@ -8424,6 +8902,33 @@ export type ShoppingListActivityOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   timestamp?: InputMaybe<SortOrder>;
 };
+
+export type ShoppingListChangeEvent = {
+  __typename: 'ShoppingListChangeEvent';
+  changeType: ShoppingListChangeType;
+  clearedCount: Maybe<Scalars['Int']['output']>;
+  /** Populated for ITEMS_BATCH_CLEARED events */
+  clearedItemIds: Maybe<Array<Scalars['ID']['output']>>;
+  /** Populated for COLLABORATORS_CHANGED events */
+  collaborator: Maybe<ShoppingListCollaborator>;
+  /** Populated for ITEMS_CHANGED events */
+  item: Maybe<ShoppingListItem>;
+  listId: Scalars['ID']['output'];
+  mutation: Maybe<MutationType>;
+  /** Populated for LIST_UPDATED and STATUS_CHANGED events */
+  shoppingList: Maybe<ShoppingList>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  userId: Scalars['ID']['output'];
+};
+
+export enum ShoppingListChangeType {
+  CollaboratorsChanged = 'COLLABORATORS_CHANGED',
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
+  ItemsChanged = 'ITEMS_CHANGED',
+  ListUpdated = 'LIST_UPDATED',
+  StatusChanged = 'STATUS_CHANGED'
+}
 
 export type ShoppingListCollaborator = Node & {
   __typename: 'ShoppingListCollaborator';
@@ -8994,16 +9499,73 @@ export type Store = Node & {
   id: Scalars['ID']['output'];
   lastPriceUpdate: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
-  pantryItems: Array<PantryItem>;
+  pantryItems: PantryItemConnection;
   priceAccuracy: Maybe<Scalars['Float']['output']>;
-  priceHistory: Array<ItemPriceHistory>;
-  purchases: Array<Purchase>;
+  priceHistory: ItemPriceHistoryConnection;
+  purchases: PurchaseConnection;
   qualityRating: Maybe<Scalars['Float']['output']>;
+  stats: Maybe<StoreStats>;
   storeInfo: Maybe<StoreInfo>;
-  storeSkus: Array<ItemStoreSku>;
+  storeSkus: ItemStoreSkuConnection;
   supportsPriceAPI: Scalars['Boolean']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
+
+
+/**
+ * Store type for retail locations
+ * Cache: 30 minutes - store information changes rarely
+ */
+export type StorePantryItemsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PantryItemOrderBy>;
+};
+
+
+/**
+ * Store type for retail locations
+ * Cache: 30 minutes - store information changes rarely
+ */
+export type StorePriceHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ItemPriceHistoryOrderBy>;
+};
+
+
+/**
+ * Store type for retail locations
+ * Cache: 30 minutes - store information changes rarely
+ */
+export type StorePurchasesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PurchaseOrderBy>;
+};
+
+
+/**
+ * Store type for retail locations
+ * Cache: 30 minutes - store information changes rarely
+ */
+export type StoreStoreSkusArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ItemStoreSkuOrderBy>;
+};
+
+export type StoreChangeEvent = {
+  __typename: 'StoreChangeEvent';
+  changeType: StoreChangeType;
+  store: Store;
+  timestamp: Scalars['DateTime']['output'];
+};
+
+export enum StoreChangeType {
+  RatingChanged = 'RATING_CHANGED',
+  Updated = 'UPDATED'
+}
 
 export type StoreConnection = Connection & {
   __typename: 'StoreConnection';
@@ -9051,14 +9613,37 @@ export type StoreFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Typed store operating hours (replaces hoursJSON field) */
+export type StoreHours = {
+  __typename: 'StoreHours';
+  friday: Maybe<Scalars['String']['output']>;
+  monday: Maybe<Scalars['String']['output']>;
+  saturday: Maybe<Scalars['String']['output']>;
+  sunday: Maybe<Scalars['String']['output']>;
+  thursday: Maybe<Scalars['String']['output']>;
+  tuesday: Maybe<Scalars['String']['output']>;
+  wednesday: Maybe<Scalars['String']['output']>;
+};
+
+/** Input for store operating hours */
+export type StoreHoursInput = {
+  friday?: InputMaybe<Scalars['String']['input']>;
+  monday?: InputMaybe<Scalars['String']['input']>;
+  saturday?: InputMaybe<Scalars['String']['input']>;
+  sunday?: InputMaybe<Scalars['String']['input']>;
+  thursday?: InputMaybe<Scalars['String']['input']>;
+  tuesday?: InputMaybe<Scalars['String']['input']>;
+  wednesday?: InputMaybe<Scalars['String']['input']>;
+};
+
 /**
  * Store information and contact details
  * Cache: 30 minutes - store metadata changes rarely
  */
-export type StoreInfo = {
+export type StoreInfo = Node & {
   __typename: 'StoreInfo';
   email: Maybe<Scalars['String']['output']>;
-  hoursJSON: Maybe<Scalars['JSON']['output']>;
+  hours: Maybe<StoreHours>;
   id: Scalars['ID']['output'];
   lat: Maybe<Scalars['Float']['output']>;
   lng: Maybe<Scalars['Float']['output']>;
@@ -9099,7 +9684,7 @@ export type StorePriceComparison = {
   __typename: 'StorePriceComparison';
   inventoryStatus: Maybe<Scalars['String']['output']>;
   lastUpdated: Maybe<Scalars['DateTime']['output']>;
-  offers: Maybe<Array<OfferSummary>>;
+  offers: Array<OfferSummary>;
   price: Maybe<Scalars['Float']['output']>;
   storeId: Scalars['String']['output'];
   storeName: Scalars['String']['output'];
@@ -9151,107 +9736,46 @@ export type SubmitAppealInput = {
 
 export type Subscription = {
   __typename: 'Subscription';
-  _empty: Maybe<Scalars['String']['output']>;
-  collaborationInviteAccepted: ShoppingListCollaborator;
-  collaborationInviteSent: ShoppingListCollaborator;
-  collaborationMemberAdded: ShoppingListCollaborator;
-  collaborationMemberRemoved: ShoppingListCollaborator;
-  deviceActivity: Device;
-  deviceRegistered: Device;
-  deviceStatusChanged: Device;
-  deviceTrustChanged: Device;
-  deviceVerified: Device;
-  expirationNotificationCreated: ExpirationNotification;
-  expirationNotificationUpdated: ExpirationNotification;
+  /** Subscribe to collaboration changes for a shopping list */
+  collaborationChanged: CollaborationChangeEvent;
+  /** Subscribe to all device changes for a user */
+  deviceChanged: DeviceChangeEvent;
+  /** Subscribe to expiration notification changes for a pantry */
+  expirationNotificationChanged: ExpirationNotificationChangeEvent;
   /** Subscribe to home invitation changes for a specific home */
   homeInviteChanged: HomeInviteChangeEvent;
-  loginAttempted: LoginHistory;
-  loginFailed: LoginHistory;
-  memberJoined: MembershipUpdatePayload;
-  memberLeft: MembershipUpdatePayload;
-  membershipRoleChanged: MembershipRoleChangedPayload;
-  membershipUpdated: MembershipUpdatePayload;
-  myShoppingListsUpdated: Maybe<ShoppingListUpdatedPayload>;
-  notificationReceived: NotificationPayload;
-  notificationUpdated: NotificationPayload;
-  pantryExpiringItemsAlert: PantryExpiringItemsAlertPayload;
-  pantryItemUsageChanged: PantryItemUsageChangedPayload;
-  pantryItemsChanged: PantryItemChangedPayload;
-  pantryLowStockAlert: PantryLowStockAlertPayload;
-  pantryUpdated: PantryUpdatedPayload;
-  pantryWasteAlert: PantryWasteAlertPayload;
-  riskyLoginDetected: LoginHistory;
-  shoppingListCollaboratorsChanged: Maybe<ShoppingListCollaboratorChangedPayload>;
-  shoppingListItemsBatchCleared: Maybe<ShoppingListItemsBatchClearedPayload>;
-  shoppingListItemsChanged: Maybe<ShoppingListItemChangedPayload>;
-  shoppingListStatusChanged: Maybe<ShoppingListStatusChangedPayload>;
-  shoppingListUpdated: Maybe<ShoppingListUpdatedPayload>;
-  storeRatingChanged: Store;
-  storeUpdated: Store;
-  suspiciousActivityDetected: SuspiciousActivity;
-  userActivity: UserActivityPayload;
-  userModerationChanged: UserModerationChangedPayload;
-  userProfileChanged: UserProfileChangedPayload;
-  userStatusChanged: UserStatusChangedPayload;
-  userUpdated: UserUpdatedPayload;
+  /** Subscribe to all login activity for a user */
+  loginActivityChanged: LoginActivityEvent;
+  /** Subscribe to all membership changes for a home */
+  membershipChanged: MembershipChangeEvent;
+  /** Subscribe to changes across all of the current user's shopping lists */
+  myShoppingListsChanged: ShoppingListChangeEvent;
+  /** Subscribe to notification changes */
+  notificationChanged: NotificationChangeEvent;
+  /** Subscribe to pantry alerts (low stock, expiring, waste) */
+  pantryAlert: PantryAlertEvent;
+  /** Subscribe to pantry data changes (updates, items, usage) */
+  pantryChanged: PantryChangeEvent;
+  /** Subscribe to all changes for a specific shopping list */
+  shoppingListChanged: ShoppingListChangeEvent;
+  /** Subscribe to store changes */
+  storeChanged: StoreChangeEvent;
+  /** Subscribe to all user changes */
+  userChanged: UserChangeEvent;
 };
 
 
-export type SubscriptionCollaborationInviteAcceptedArgs = {
-  email: Scalars['String']['input'];
+export type SubscriptionCollaborationChangedArgs = {
   shoppingListId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionCollaborationInviteSentArgs = {
-  email: Scalars['String']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionCollaborationMemberAddedArgs = {
-  email: Scalars['String']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionCollaborationMemberRemovedArgs = {
-  email: Scalars['String']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionDeviceActivityArgs = {
+export type SubscriptionDeviceChangedArgs = {
   userId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionDeviceRegisteredArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionDeviceStatusChangedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionDeviceTrustChangedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionDeviceVerifiedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionExpirationNotificationCreatedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionExpirationNotificationUpdatedArgs = {
+export type SubscriptionExpirationNotificationChangedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -9261,132 +9785,37 @@ export type SubscriptionHomeInviteChangedArgs = {
 };
 
 
-export type SubscriptionLoginAttemptedArgs = {
+export type SubscriptionLoginActivityChangedArgs = {
   userId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionLoginFailedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionMemberJoinedArgs = {
+export type SubscriptionMembershipChangedArgs = {
   homeId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionMemberLeftArgs = {
-  homeId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionMembershipRoleChangedArgs = {
-  homeId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionMembershipUpdatedArgs = {
-  homeId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionPantryExpiringItemsAlertArgs = {
+export type SubscriptionPantryAlertArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionPantryItemUsageChangedArgs = {
+export type SubscriptionPantryChangedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionPantryItemsChangedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryLowStockAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryUpdatedArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionPantryWasteAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionRiskyLoginDetectedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListCollaboratorsChangedArgs = {
+export type SubscriptionShoppingListChangedArgs = {
   listId: Scalars['ID']['input'];
 };
 
 
-export type SubscriptionShoppingListItemsBatchClearedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListItemsChangedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListStatusChangedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionShoppingListUpdatedArgs = {
-  listId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionStoreRatingChangedArgs = {
+export type SubscriptionStoreChangedArgs = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
-export type SubscriptionStoreUpdatedArgs = {
-  storeId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionSuspiciousActivityDetectedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionUserActivityArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionUserModerationChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionUserProfileChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionUserStatusChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-
-export type SubscriptionUserUpdatedArgs = {
+export type SubscriptionUserChangedArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -9430,14 +9859,14 @@ export type SuspendUserInput = {
 
 export type SuspiciousActivity = {
   __typename: 'SuspiciousActivity';
-  failedFromSameIP: Maybe<Array<FailedIpStat>>;
-  multipleAccountsFromIP: Maybe<Array<FailedIpStat>>;
-  newDeviceLogins: Maybe<Array<LoginHistory>>;
-  newLocationLogins: Maybe<Array<LoginHistory>>;
-  rapidAttempts: Maybe<Array<RapidAttempt>>;
+  failedFromSameIP: Array<FailedIpStat>;
+  multipleAccountsFromIP: Array<FailedIpStat>;
+  newDeviceLogins: Array<LoginHistory>;
+  newLocationLogins: Array<LoginHistory>;
+  rapidAttempts: Array<RapidAttempt>;
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
-  unusualTimeLogins: Maybe<Array<LoginHistory>>;
+  unusualTimeLogins: Array<LoginHistory>;
 };
 
 export type SuspiciousActivitySummary = {
@@ -9604,6 +10033,13 @@ export type ToggleReviewHelpfulInput = {
   reviewId: Scalars['ID']['input'];
 };
 
+/** Input for toggling the purchased state of a shopping list item */
+export type ToggleShoppingListItemPurchasedInput = {
+  id: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export enum TrustLevel {
   Admin = 'ADMIN',
   Basic = 'BASIC',
@@ -9618,17 +10054,6 @@ export type UiPreferencesInput = {
   compactMode?: InputMaybe<Scalars['Boolean']['input']>;
   showTutorials?: InputMaybe<Scalars['Boolean']['input']>;
   theme?: InputMaybe<AppTheme>;
-};
-
-/** Error when user lacks permission for the operation */
-export type UnauthorizedError = MutationError & {
-  __typename: 'UnauthorizedError';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  /** The permission that was required */
-  requiredPermission: Maybe<Scalars['String']['output']>;
-  /** The resource being accessed */
-  resource: Maybe<Scalars['String']['output']>;
 };
 
 /**
@@ -9773,6 +10198,13 @@ export type UpdateCollaboratorPermissionsInput = {
   canMarkPurchased?: InputMaybe<Scalars['Boolean']['input']>;
   canRemoveItems?: InputMaybe<Scalars['Boolean']['input']>;
   canViewHistory?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** Input for updating a collaborator's role */
+export type UpdateCollaboratorRoleInput = {
+  collaboratorId: Scalars['ID']['input'];
+  role: CollaboratorRole;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type UpdateCookingLogInput = {
@@ -10162,6 +10594,16 @@ export type UpdateStorageLocationInput = {
   type?: InputMaybe<StorageType>;
 };
 
+/** Input for updating store information */
+export type UpdateStoreInfoInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  hours?: InputMaybe<StoreHoursInput>;
+  lat?: InputMaybe<Scalars['Float']['input']>;
+  lng?: InputMaybe<Scalars['Float']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  website?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateStoreInput = {
   address?: InputMaybe<Scalars['String']['input']>;
   averageShelfLife?: InputMaybe<Scalars['JSON']['input']>;
@@ -10271,6 +10713,15 @@ export type UpsertItemResult = {
   mapping: ExternalSourceMapping;
 };
 
+/** Input for adding or updating item-specific unit conversion */
+export type UpsertItemUnitConversionInput = {
+  conversionRatio: Scalars['Float']['input'];
+  fromUnitId: Scalars['ID']['input'];
+  itemId: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  toUnitId: Scalars['ID']['input'];
+};
+
 /** Comprehensive usage analytics for a pantry */
 export type UsageAnalytics = {
   __typename: 'UsageAnalytics';
@@ -10324,15 +10775,25 @@ export type UsageByUnit = {
   unitSymbol: Scalars['String']['output'];
 };
 
+/** Describes the purpose or reason for consuming or adjusting pantry item quantities */
 export enum UsagePurpose {
+  /** Manual correction to reconcile actual stock with recorded quantities */
   Adjustment = 'ADJUSTMENT',
+  /** Used as an ingredient in a cooked dish or recipe */
   Cooking = 'COOKING',
+  /** General-purpose consumption that does not fit a specific category */
   General = 'GENERAL',
+  /** Given away as a gift to someone outside the household */
   Gift = 'GIFT',
+  /** Used for batch cooking or advance meal preparation */
   MealPrep = 'MEAL_PREP',
+  /** Quantity added back to the pantry through a restock or purchase */
   Restock = 'RESTOCK',
+  /** Consumed directly as a snack without preparation */
   Snack = 'SNACK',
+  /** Moved to a different storage location or household */
   Transfer = 'TRANSFER',
+  /** Discarded due to spoilage, expiration, or other waste */
   Waste = 'WASTE'
 }
 
@@ -10360,7 +10821,7 @@ export type User = Node & {
   defaultHomeId: Maybe<Scalars['ID']['output']>;
   defaultShoppingListId: Maybe<Scalars['ID']['output']>;
   deviceStats: DeviceStats;
-  devices: Array<Device>;
+  devices: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
@@ -10371,9 +10832,10 @@ export type User = Node & {
   inviteLogsConnection: InviteLogConnection;
   language: Maybe<Scalars['String']['output']>;
   lastActiveAt: Maybe<Scalars['DateTime']['output']>;
-  loginHistory: Array<LoginHistory>;
+  loginHistory: LoginHistoryConnection;
+  loginHistoryStats: LoginHistoryStats;
   membershipInHome: Maybe<Membership>;
-  memberships: Array<Membership>;
+  memberships: MembershipConnection;
   moderation: Maybe<UserModeration>;
   notificationPreferences: Maybe<NotificationPreferences>;
   notificationsConnection: NotificationConnection;
@@ -10391,6 +10853,7 @@ export type User = Node & {
   shoppingListInvites: Array<ShoppingListCollaborator>;
   shoppingListOwnerships: Array<ShoppingListOwnership>;
   statistics: Maybe<UserStatistics>;
+  suspiciousLoginActivity: SuspiciousActivity;
   timezone: Maybe<Scalars['String']['output']>;
   unreadNotificationCount: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
@@ -10407,6 +10870,17 @@ export type UserCookingLogsConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<CookingLogOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserDevicesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<DeviceOrderBy>;
 };
 
 
@@ -10441,8 +10915,39 @@ export type UserInviteLogsConnectionArgs = {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
+export type UserLoginHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<LoginHistoryOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserLoginHistoryStatsArgs = {
+  days?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
 export type UserMembershipInHomeArgs = {
   homeId: Scalars['ID']['input'];
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserMembershipsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<MembershipOrderBy>;
 };
 
 
@@ -10487,6 +10992,15 @@ export type UserSavedRecipesConnectionArgs = {
   orderBy?: InputMaybe<SavedRecipeOrderBy>;
 };
 
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserSuspiciousLoginActivityArgs = {
+  hours?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type UserActivityPayload = {
   __typename: 'UserActivityPayload';
   activityType: UserActivityType;
@@ -10513,7 +11027,7 @@ export enum UserActivityType {
  * User address information
  * Cache: 10 minutes - addresses rarely change, always private
  */
-export type UserAddress = {
+export type UserAddress = Node & {
   __typename: 'UserAddress';
   city: Scalars['String']['output'];
   country: Scalars['String']['output'];
@@ -10542,6 +11056,24 @@ export type UserAuthPayload = {
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['String']['output'];
 };
+
+export type UserChangeEvent = {
+  __typename: 'UserChangeEvent';
+  changeType: UserChangeType;
+  profile: Maybe<UserProfile>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  user: Maybe<User>;
+  userId: Scalars['ID']['output'];
+};
+
+export enum UserChangeType {
+  Activity = 'ACTIVITY',
+  ModerationChanged = 'MODERATION_CHANGED',
+  ProfileChanged = 'PROFILE_CHANGED',
+  StatusChanged = 'STATUS_CHANGED',
+  Updated = 'UPDATED'
+}
 
 export type UserConnection = Connection & {
   __typename: 'UserConnection';
@@ -10592,7 +11124,7 @@ export type UserModeration = Node & {
   underReview: Scalars['Boolean']['output'];
   updatedAt: Scalars['DateTime']['output'];
   user: User;
-  userId: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
   version: Scalars['Int']['output'];
   violationCount: Scalars['Int']['output'];
   warningCount: Scalars['Int']['output'];
@@ -10621,7 +11153,7 @@ export type UserModerationEdge = Edge & {
   node: UserModeration;
 };
 
-export type UserModerationPayload = {
+export type UserModerationPayload = MutationPayload & {
   __typename: 'UserModerationPayload';
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
@@ -10659,7 +11191,7 @@ export type UserPayload = MutationPayload & {
  * User profile information
  * Cache: 10 minutes - profile data rarely changes, always private
  */
-export type UserProfile = {
+export type UserProfile = Node & {
   __typename: 'UserProfile';
   avatar: Maybe<Scalars['String']['output']>;
   bio: Maybe<Scalars['String']['output']>;
@@ -10708,7 +11240,7 @@ export enum UserRole {
  * User settings and preferences
  * Cache: 10 minutes - settings rarely change, always private
  */
-export type UserSettings = {
+export type UserSettings = Node & {
   __typename: 'UserSettings';
   alwaysShowFractions: Scalars['Boolean']['output'];
   autoSync: Scalars['Boolean']['output'];
@@ -10754,7 +11286,7 @@ export type UserSocialPayload = {
  * User activity statistics
  * Cache: 3 minutes - stats update with user activity, always private
  */
-export type UserStatistics = {
+export type UserStatistics = Node & {
   __typename: 'UserStatistics';
   averageRatingGiven: Maybe<Scalars['Float']['output']>;
   helpfulVotesReceived: Scalars['Int']['output'];
@@ -10810,17 +11342,6 @@ export type ValidateTokenResponse = MutationPayload & {
   userId: Maybe<Scalars['String']['output']>;
 };
 
-/** Generic validation error for invalid input data */
-export type ValidationError = MutationError & {
-  __typename: 'ValidationError';
-  code: Scalars['String']['output'];
-  /** Validation constraint that was violated */
-  constraint: Maybe<Scalars['String']['output']>;
-  /** The field that failed validation (if applicable) */
-  field: Maybe<Scalars['String']['output']>;
-  message: Scalars['String']['output'];
-};
-
 export type ValidationResult = {
   __typename: 'ValidationResult';
   errors: Array<ItemValidationError>;
@@ -10850,19 +11371,6 @@ export type VariationImage = {
   size: Maybe<Scalars['String']['output']>;
   source: Maybe<Scalars['String']['output']>;
   url: Scalars['String']['output'];
-};
-
-/** Error when optimistic locking version mismatch occurs */
-export type VersionMismatchError = MutationError & {
-  __typename: 'VersionMismatchError';
-  /** Actual current version on server */
-  actualVersion: Scalars['Int']['output'];
-  code: Scalars['String']['output'];
-  /** Expected version from client */
-  expectedVersion: Scalars['Int']['output'];
-  message: Scalars['String']['output'];
-  /** The resource that had the version mismatch */
-  resourceId: Scalars['ID']['output'];
 };
 
 export enum Visibility {
@@ -10910,18 +11418,31 @@ export type WasteByReason = {
   totalQuantity: Scalars['Float']['output'];
 };
 
+/** Describes the reason why a pantry item was wasted or discarded */
 export enum WasteReason {
+  /** Overcooked or charred beyond edibility */
   Burnt = 'BURNT',
+  /** Ruined during the cooking or preparation process */
   CookingFail = 'COOKING_FAIL',
+  /** Item passed its expiration or best-by date */
   Expired = 'EXPIRED',
+  /** Given away to someone outside the household */
   GaveAway = 'GAVE_AWAY',
+  /** Developed visible mold growth */
   Mold = 'MOLD',
+  /** Wasted for a reason not covered by the other options */
   Other = 'OTHER',
+  /** Bought in excess and could not be used before going bad */
   Overstock = 'OVERSTOCK',
+  /** Contaminated or damaged by pests or insects */
   Pest = 'PEST',
+  /** Accidentally spilled or dropped */
   Spilled = 'SPILLED',
+  /** Item deteriorated in quality and is no longer safe to consume */
   Spoiled = 'SPOILED',
+  /** Discarded due to undesirable taste or flavor */
   Taste = 'TASTE',
+  /** Lost or unaccounted for with no clear explanation */
   UnknownLoss = 'UNKNOWN_LOSS'
 }
 
@@ -10985,7 +11506,7 @@ export type ForgotPasswordMutationVariables = Exact<{
 }>;
 
 
-export type ForgotPasswordMutation = { __typename: 'Mutation', forgotPassword: { __typename: 'ForgotPasswordResponse', success: boolean, message: string } };
+export type ForgotPasswordMutation = { __typename: 'Mutation', forgotPassword: { __typename: 'ForgotPasswordResponse', success: boolean, message: string, code: string } };
 
 export type ResetPasswordMutationVariables = Exact<{
   token: Scalars['String']['input'];
@@ -10993,7 +11514,7 @@ export type ResetPasswordMutationVariables = Exact<{
 }>;
 
 
-export type ResetPasswordMutation = { __typename: 'Mutation', resetPassword: { __typename: 'ResetPasswordResponse', success: boolean, message: string } };
+export type ResetPasswordMutation = { __typename: 'Mutation', resetPassword: { __typename: 'ResetPasswordResponse', success: boolean, message: string, code: string } };
 
 export type ResendVerificationEmailMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -11007,7 +11528,7 @@ export type ChangePasswordMutationVariables = Exact<{
 }>;
 
 
-export type ChangePasswordMutation = { __typename: 'Mutation', changePassword: { __typename: 'ChangePasswordResponse', success: boolean, message: string } };
+export type ChangePasswordMutation = { __typename: 'Mutation', changePassword: { __typename: 'ChangePasswordResponse', success: boolean, message: string, code: string } };
 
 export type GetMyDevicesQueryVariables = Exact<{
   filters?: InputMaybe<DeviceFilters>;
@@ -11067,47 +11588,19 @@ export type DeactivateDeviceMutationVariables = Exact<{
 
 export type DeactivateDeviceMutation = { __typename: 'Mutation', updateDevice: { __typename: 'DevicePayload', success: boolean, message: string, code: string, device: { __typename: 'Device', id: string, deviceId: string, deviceName: string | null, isActive: boolean, updatedAt: string } | null } };
 
-export type DeviceActivitySubscriptionVariables = Exact<{
+export type DeviceChangesSubscriptionVariables = Exact<{
   userId: Scalars['ID']['input'];
 }>;
 
 
-export type DeviceActivitySubscription = { __typename: 'Subscription', deviceActivity: { __typename: 'Device', id: string, userId: string, deviceId: string, deviceName: string | null, deviceType: DeviceType, platform: MobilePlatform | null, lastSeenAt: string, isActive: boolean, isTrusted: boolean, loginCount: number, user: { __typename: 'User', id: string, email: string } | null } };
+export type DeviceChangesSubscription = { __typename: 'Subscription', deviceChanged: { __typename: 'DeviceChangeEvent', changeType: DeviceChangeType, timestamp: string, userId: string, device: { __typename: 'Device', id: string, deviceId: string, deviceName: string | null, deviceType: DeviceType, platform: MobilePlatform | null, isActive: boolean, isTrusted: boolean, isVerified: boolean, lastSeenAt: string, createdAt: string, updatedAt: string } } };
 
-export type DeviceRegisteredSubscriptionVariables = Exact<{
+export type LoginActivityChangesSubscriptionVariables = Exact<{
   userId: Scalars['ID']['input'];
 }>;
 
 
-export type DeviceRegisteredSubscription = { __typename: 'Subscription', deviceRegistered: { __typename: 'Device', id: string, userId: string, deviceId: string, deviceName: string | null, deviceType: DeviceType, platform: MobilePlatform | null, userAgent: string | null, browserName: string | null, browserVersion: string | null, osName: string | null, osVersion: string | null, isActive: boolean, isTrusted: boolean, isVerified: boolean, createdAt: string } };
-
-export type DeviceStatusChangedSubscriptionVariables = Exact<{
-  userId: Scalars['ID']['input'];
-}>;
-
-
-export type DeviceStatusChangedSubscription = { __typename: 'Subscription', deviceStatusChanged: { __typename: 'Device', id: string, userId: string, deviceId: string, deviceName: string | null, isActive: boolean, lastSeenAt: string, updatedAt: string } };
-
-export type DeviceTrustChangedSubscriptionVariables = Exact<{
-  userId: Scalars['ID']['input'];
-}>;
-
-
-export type DeviceTrustChangedSubscription = { __typename: 'Subscription', deviceTrustChanged: { __typename: 'Device', id: string, userId: string, deviceId: string, deviceName: string | null, isTrusted: boolean, updatedAt: string } };
-
-export type DeviceVerifiedSubscriptionVariables = Exact<{
-  userId: Scalars['ID']['input'];
-}>;
-
-
-export type DeviceVerifiedSubscription = { __typename: 'Subscription', deviceVerified: { __typename: 'Device', id: string, userId: string, deviceId: string, deviceName: string | null, isVerified: boolean, verifiedAt: string | null } };
-
-export type LoginAttemptsSubscriptionVariables = Exact<{
-  userId: Scalars['ID']['input'];
-}>;
-
-
-export type LoginAttemptsSubscription = { __typename: 'Subscription', loginAttempted: { __typename: 'LoginHistory', id: string, userId: string, success: boolean, method: LoginMethod, provider: string | null, isVpn: boolean | null, isTor: boolean | null, isProxy: boolean | null, userAgent: string | null, browserName: string | null, browserVersion: string | null, osName: string | null, osVersion: string | null, deviceType: DeviceType | null, isMobileApp: boolean, isRisky: boolean, failureReason: LoginFailureReason | null, failureDetails: string | null, isNewLocation: boolean, isNewDevice: boolean, isNewBrowser: boolean, loggedInAt: string, user: { __typename: 'User', id: string, email: string } } };
+export type LoginActivityChangesSubscription = { __typename: 'Subscription', loginActivityChanged: { __typename: 'LoginActivityEvent', activityType: LoginActivityType, timestamp: string, userId: string, loginHistory: { __typename: 'LoginHistory', id: string, userId: string, success: boolean, method: LoginMethod, provider: string | null, isRisky: boolean, failureReason: LoginFailureReason | null, loggedInAt: string } | null, suspiciousActivity: { __typename: 'SuspiciousActivity', suspiciousActivity: boolean, failedFromSameIP: Array<{ __typename: 'FailedIPStat', ipAddress: string | null, count: number }>, riskyLogins: Array<{ __typename: 'LoginHistory', id: string, userId: string, success: boolean, isRisky: boolean, loggedInAt: string }> } | null } };
 
 export type GetMeQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -11120,12 +11613,12 @@ export type GetMeQuery = { __typename: 'Query', me: (
 export type GetUserSettingsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetUserSettingsQuery = { __typename: 'Query', userSettings: { __typename: 'UserSettings', id: string, theme: AppTheme, compactMode: boolean, showTutorials: boolean, autoSync: boolean, offlineMode: boolean, shareUsageData: boolean, shareWithPartners: boolean, personalizedAds: boolean, preferredUnitSystem: UnitSystem, language: string, timezone: string, preferredCurrency: string, enabledFeatures: Array<string>, betaFeatures: Array<string>, createdAt: string, updatedAt: string, user: { __typename: 'User', id: string, email: string } } | null };
+export type GetUserSettingsQuery = { __typename: 'Query', me: { __typename: 'User', id: string, settings: { __typename: 'UserSettings', id: string, theme: AppTheme, compactMode: boolean, showTutorials: boolean, autoSync: boolean, offlineMode: boolean, shareUsageData: boolean, shareWithPartners: boolean, personalizedAds: boolean, preferredUnitSystem: UnitSystem, language: string, timezone: string, preferredCurrency: string, enabledFeatures: Array<string>, betaFeatures: Array<string>, createdAt: string, updatedAt: string } | null } | null };
 
 export type GetUserProfileQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetUserProfileQuery = { __typename: 'Query', me: { __typename: 'User', profile: { __typename: 'UserProfile', id: string, userId: string, firstName: string | null, lastName: string | null, displayName: string | null, bio: string | null, avatar: string | null, coverImage: string | null, phone: string | null, website: string | null, dateOfBirth: string | null, gender: string | null, profileVisibility: ProfileVisibility, showEmail: boolean, showPhone: boolean, createdAt: string, updatedAt: string } | null } | null };
+export type GetUserProfileQuery = { __typename: 'Query', me: { __typename: 'User', id: string, profile: { __typename: 'UserProfile', id: string, userId: string, firstName: string | null, lastName: string | null, displayName: string | null, bio: string | null, avatar: string | null, coverImage: string | null, phone: string | null, website: string | null, dateOfBirth: string | null, gender: string | null, profileVisibility: ProfileVisibility, showEmail: boolean, showPhone: boolean, createdAt: string, updatedAt: string } | null } | null };
 
 export type CanDeleteAccountQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -11167,43 +11660,22 @@ export type CompleteOnboardingMutation = { __typename: 'Mutation', completeOnboa
       & AuthUserFragment
     ) | null } };
 
-export type UserUpdatedSubscriptionVariables = Exact<{
+export type UserChangesSubscriptionVariables = Exact<{
   userId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
-export type UserUpdatedSubscription = { __typename: 'Subscription', userUpdated: { __typename: 'UserUpdatedPayload', mutation: MutationType, updatedFields: Array<string> | null, userId: string, timestamp: string, node: { __typename: 'User', id: string, email: string, emailVerified: boolean, role: UserRole, onBoarded: boolean, timezone: string | null, preferredCurrency: string | null, language: string | null, lastActiveAt: string | null, profile: { __typename: 'UserProfile', id: string, firstName: string | null, lastName: string | null, displayName: string | null, avatar: string | null, bio: string | null } | null } } };
-
-export type UserStatusChangedSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-
-export type UserStatusChangedSubscription = { __typename: 'Subscription', userStatusChanged: { __typename: 'UserStatusChangedPayload', userId: string, newStatus: UserStatusType, previousStatus: UserStatusType | null, isOnline: boolean, lastActiveAt: string | null, timestamp: string } };
-
-export type UserActivitySubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-
-export type UserActivitySubscription = { __typename: 'Subscription', userActivity: { __typename: 'UserActivityPayload', userId: string, activityType: UserActivityType, description: string, metadata: any | null, timestamp: string } };
-
-export type UserProfileChangedSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-
-export type UserProfileChangedSubscription = { __typename: 'Subscription', userProfileChanged: { __typename: 'UserProfileChangedPayload', userId: string, mutation: string, updatedFields: Array<string> | null, timestamp: string, profile: { __typename: 'UserProfile', id: string, firstName: string | null, lastName: string | null, displayName: string | null, bio: string | null, avatar: string | null, coverImage: string | null, phone: string | null, website: string | null, profileVisibility: ProfileVisibility } } };
+export type UserChangesSubscription = { __typename: 'Subscription', userChanged: { __typename: 'UserChangeEvent', changeType: UserChangeType, updatedFields: Array<string> | null, timestamp: string, userId: string, user: { __typename: 'User', id: string, email: string, emailVerified: boolean, role: UserRole, onBoarded: boolean, timezone: string | null, preferredCurrency: string | null, language: string | null, lastActiveAt: string | null } | null, profile: { __typename: 'UserProfile', id: string, firstName: string | null, lastName: string | null, displayName: string | null, bio: string | null, avatar: string | null, coverImage: string | null, phone: string | null, website: string | null, profileVisibility: ProfileVisibility } | null } };
 
 export type ShoppingListItemCoreFragment = { __typename: 'ShoppingListItem', id: string, itemName: string | null, quantity: number | null, quantityInput: string | null, displayFormat: DisplayFormat, version: number, updatedAt: string, category: string | null, notes: string | null, unitName: string | null, purchaseInfo: { __typename: 'ShoppingListItemPurchaseInfo', isPurchased: boolean }, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null };
 
 export type ShoppingListItemDisplayFragment = (
-  { __typename: 'ShoppingListItem', sortOrder: string, brandId: string | null, netWeight: number | null, netWeightUnitId: string | null, brand: { __typename: 'Brand', id: string, name: string } | null, netWeightUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, item: { __typename: 'Item', id: string, imageUrl: string | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, category: { __typename: 'Category', id: string, name: string } }> | null } | null }
+  { __typename: 'ShoppingListItem', sortOrder: string, brandId: string | null, netWeight: number | null, netWeightUnitId: string | null, brand: { __typename: 'Brand', id: string, name: string } | null, netWeightUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, item: { __typename: 'Item', id: string, imageUrl: string | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, category: { __typename: 'Category', id: string, name: string } }> } | null }
   & ShoppingListItemCoreFragment
 );
 
 export type ShoppingListItemFragment = (
-  { __typename: 'ShoppingListItem', priority: number, sortOrder: string, createdAt: string, shoppingList: { __typename: 'ShoppingList', id: string, totalItems: number, completedItems: number, estimatedTotal: number }, item: { __typename: 'Item', id: string, name: string, description: string | null, imageUrl: string | null, netWeight: number | null, nutritions: any | null, images: any | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, confidence: number, source: CategorySource, assignedAt: string | null, category: { __typename: 'Category', id: string, name: string } }> | null } | null, unit: { __typename: 'Unit', type: UnitType, isMetric: boolean, baseUnitId: string | null, conversionFactor: number, notes: string | null, isCommon: boolean, sortOrder: number, createdAt: string, updatedAt: string } | null, priceEstimate: { __typename: 'PriceEstimate', estimated: number | null, budget: number | null, lastKnown: number | null, lowest: number | null, highest: number | null, lastUpdated: string | null }, purchaseInfo: { __typename: 'ShoppingListItemPurchaseInfo', isPurchased: boolean, purchasedQuantity: number | null, purchasedPrice: number | null, purchaseDate: string | null, purchasedBy: (
+  { __typename: 'ShoppingListItem', priority: number, sortOrder: string, createdAt: string, shoppingList: { __typename: 'ShoppingList', id: string, totalItems: number, completedItems: number, estimatedTotal: number }, item: { __typename: 'Item', id: string, name: string, description: string | null, imageUrl: string | null, netWeight: number | null, nutritions: any | null, images: Array<{ __typename: 'ItemImage', id: string, url: string, kind: ImageKind | null }>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, confidence: number, source: CategorySource, assignedAt: string | null, category: { __typename: 'Category', id: string, name: string } }> } | null, unit: { __typename: 'Unit', type: UnitType, isMetric: boolean, baseUnitId: string | null, conversionFactor: number, notes: string | null, isCommon: boolean, sortOrder: number, createdAt: string, updatedAt: string } | null, priceEstimate: { __typename: 'PriceEstimate', estimated: number | null, budget: number | null, lastKnown: number | null, lowest: number | null, highest: number | null, lastUpdated: string | null }, purchaseInfo: { __typename: 'ShoppingListItemPurchaseInfo', isPurchased: boolean, purchasedQuantity: number | null, purchasedPrice: number | null, purchaseDate: string | null, purchasedBy: (
       { __typename: 'User' }
       & UserSummaryFragment
     ) | null }, source: { __typename: 'ShoppingListItemSource', isAutoAdded: boolean, autoAddReason: string | null, isFromMealPlan: boolean, mealPlan: { __typename: 'MealPlan', id: string, name: string } | null }, storeInfo: { __typename: 'ShoppingListItemStoreInfo', aisle: string | null, storeSection: string | null, preferredStore: { __typename: 'Store', id: string, name: string } | null }, purchaseHistory: { __typename: 'PurchaseHistorySummary', previouslyPurchased: boolean, lastPurchaseDate: string | null, purchaseCount: number }, addedBy: (
@@ -11239,10 +11711,10 @@ export type BrandFragment = { __typename: 'ItemBrand', id: string, brand: { __ty
 
 export type ItemCoreFragment = { __typename: 'Item', id: string, name: string, version: number, updatedAt: string };
 
-export type ItemDisplayFragment = { __typename: 'Item', id: string, name: string, imageUrl: string | null, netWeight: number | null, displayUnit: { __typename: 'Unit', id: string, symbol: string } | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, color: string | null, icon: string | null } }> | null };
+export type ItemDisplayFragment = { __typename: 'Item', id: string, name: string, imageUrl: string | null, netWeight: number | null, displayUnit: { __typename: 'Unit', id: string, symbol: string } | null, categories: Array<{ __typename: 'ItemCategory', id: string, isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, color: string | null, icon: string | null } }> };
 
 export type ItemFragment = (
-  { __typename: 'Item', description: string | null, dataSource: DataSource, type: ItemType, storageState: StorageState, showInOnboarding: boolean, shelfLifeDays: number | null, popularity: number, status: ItemStatus, visibility: Visibility, tags: Array<string>, healthBenefits: any | null, allergens: any | null, nutritions: any | null, images: any | null, metadata: any | null, ingredients: any | null, createdAt: string, density: number | null, preferredTrackingUnitId: string | null, baseDimension: BaseDimension | null, defaultConsumeUnitId: string | null, defaultConsumeIncrement: number | null, preferredTrackingUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, defaultConsumeUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, units: Array<(
+  { __typename: 'Item', description: string | null, dataSource: DataSource, type: ItemType, storageState: StorageState, showInOnboarding: boolean, shelfLifeDays: number | null, popularity: number, status: ItemStatus, visibility: Visibility, tags: Array<string>, nutritions: any | null, metadata: any | null, ingredients: any | null, createdAt: string, density: number | null, preferredTrackingUnitId: string | null, baseDimension: BaseDimension | null, defaultConsumeUnitId: string | null, defaultConsumeIncrement: number | null, healthBenefits: Array<{ __typename: 'HealthBenefit', benefit: string, category: HealthBenefitCategory | null, description: string | null }>, allergens: Array<{ __typename: 'AllergenInfo', name: string, contains: boolean, severity: AllergenSeverity | null }>, images: Array<{ __typename: 'ItemImage', id: string, url: string, kind: ImageKind | null }>, preferredTrackingUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, defaultConsumeUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, units: Array<(
     { __typename: 'ItemUnit' }
     & UnitFragment
   )>, brands: Array<(
@@ -11251,8 +11723,6 @@ export type ItemFragment = (
   )> }
   & ItemDisplayFragment
 );
-
-export type NotificationSubscriptionFragment = { __typename: 'NotificationPayload', success: boolean, code: string, message: string, notification: { __typename: 'Notification', id: string, type: NotificationType, payload: any, status: NotificationStatus, sentAt: string, readAt: string | null, createdAt: string } | null };
 
 export type PantryItemCoreFragment = { __typename: 'PantryItem', id: string, pantryId: string, itemId: string, itemName: string, quantity: number, version: number | null, updatedAt: string | null, storageState: StorageState, expiresAt: string | null, lowStockAlert: boolean, minQuantity: number | null, lastUsedAt: string | null, netWeight: number | null, remainingNetWeight: number | null };
 
@@ -11265,7 +11735,7 @@ export type PantryItemFragment = (
   { __typename: 'PantryItem', storageNotes: string | null, createdAt: string, restockQuantity: number | null, condition: ItemCondition, acquisitionMethod: AcquisitionMethod, costPerUnit: number | null, totalCost: number | null, item: (
     { __typename: 'Item' }
     & ItemFragment
-  ), unit: { __typename: 'Unit', type: UnitType, isMetric: boolean, baseUnitId: string | null, conversionFactor: number, isCommon: boolean, displayAsFraction: boolean, minPrecision: number, autoConvertThreshold: number | null } | null, store: { __typename: 'Store', id: string, name: string } | null, purchase: { __typename: 'Purchase', id: string, purchaseDate: string, unitPrice: number, totalPrice: number, quantity: number } | null, usageRecords: Array<{ __typename: 'PantryItemUsage', id: string, quantityUsed: number, usedAt: string, purpose: UsagePurpose, notes: string | null, wasteReason: WasteReason | null, adjustmentReason: string | null, isComposted: boolean | null, isRecycled: boolean | null, usageUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, pantryItem: { __typename: 'PantryItem', id: string } | null, usedBy: { __typename: 'User', id: string } | null, cookingLog: { __typename: 'CookingLog', id: string } | null, mealPlanItem: { __typename: 'MealPlanItem', id: string } | null, recipe: { __typename: 'Recipe', id: string } | null }> }
+  ), unit: { __typename: 'Unit', type: UnitType, isMetric: boolean, baseUnitId: string | null, conversionFactor: number, isCommon: boolean, displayAsFraction: boolean, minPrecision: number, autoConvertThreshold: number | null } | null, store: { __typename: 'Store', id: string, name: string } | null, purchase: { __typename: 'Purchase', id: string, purchaseDate: string, unitPrice: number, totalPrice: number, quantity: number } | null, usageRecords: { __typename: 'PantryItemUsageConnection', edges: Array<{ __typename: 'PantryItemUsageEdge', node: { __typename: 'PantryItemUsage', id: string, quantityUsed: number, usedAt: string, purpose: UsagePurpose, notes: string | null, wasteReason: WasteReason | null, adjustmentReason: string | null, isComposted: boolean | null, isRecycled: boolean | null, usageUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, pantryItem: { __typename: 'PantryItem', id: string } | null, usedBy: { __typename: 'User', id: string } | null, cookingLog: { __typename: 'CookingLog', id: string } | null, mealPlanItem: { __typename: 'MealPlanItem', id: string } | null, recipe: { __typename: 'Recipe', id: string } | null } }> } }
   & PantryItemDisplayFragment
 );
 
@@ -11341,10 +11811,10 @@ export type RecipeReviewFragment = { __typename: 'RecipeReview', id: string, rat
 export type BasicRecipeFragment = { __typename: 'Recipe', id: string, name: string, description: string | null, imageUrl: string | null, servings: number, prepTimeMinutes: number | null, cookTimeMinutes: number | null, totalTimeMinutes: number | null, difficulty: Difficulty, category: RecipeCategory, cuisine: string | null, status: RecipeStatus, isExternal: boolean, externalSource: ExternalSource | null, externalId: string | null, primarySource: string | null, caloriesPerServing: number | null, createdAt: string, updatedAt: string, savedDetails: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number } | null };
 
 export type RecipeFragment = (
-  { __typename: 'Recipe', instructions: any, notes: string | null, tips: string | null, videoUrl: string | null, sourceUrl: string | null, source: string | null, originalAuthor: string | null, externalUrl: string | null, externalData: any | null, nutritionData: any | null, tags: Array<string>, visibility: Visibility, isPublished: boolean, publishedAt: string | null, averageRating: number | null, totalReviews: number, rating1Count: number, rating2Count: number, rating3Count: number, rating4Count: number, rating5Count: number, matchPercentage: number | null, reviews: Array<(
-    { __typename: 'RecipeReview' }
-    & RecipeReviewFragment
-  )>, createdBy: (
+  { __typename: 'Recipe', instructions: any, notes: string | null, tips: string | null, videoUrl: string | null, sourceUrl: string | null, source: string | null, originalAuthor: string | null, externalUrl: string | null, externalData: any | null, nutritionData: any | null, tags: Array<string>, visibility: Visibility, isPublished: boolean, publishedAt: string | null, averageRating: number | null, totalReviews: number, rating1Count: number, rating2Count: number, rating3Count: number, rating4Count: number, rating5Count: number, matchPercentage: number | null, reviews: { __typename: 'RecipeReviewConnection', totalCount: number, edges: Array<{ __typename: 'RecipeReviewEdge', node: (
+        { __typename: 'RecipeReview' }
+        & RecipeReviewFragment
+      ) }> }, createdBy: (
     { __typename: 'User' }
     & BasicUserFragment
   ) | null, ingredients: Array<(
@@ -11388,7 +11858,7 @@ export type GetHomesQuery = { __typename: 'Query', homes: { __typename: 'HomeCon
 export type GetMyPendingInvitesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetMyPendingInvitesQuery = { __typename: 'Query', me: { __typename: 'User', pendingHomeInvites: Array<(
+export type GetMyPendingInvitesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, pendingHomeInvites: Array<(
       { __typename: 'HomeInvite' }
       & HomeInviteFragment
     )> } | null };
@@ -11510,40 +11980,19 @@ export type HomeInviteChangedSubscription = { __typename: 'Subscription', homeIn
       & HomeInviteFragment
     ) } };
 
-export type MembershipUpdatedSubscriptionVariables = Exact<{
-  homeId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-
-export type MembershipUpdatedSubscription = { __typename: 'Subscription', membershipUpdated: { __typename: 'MembershipUpdatePayload', mutation: MembershipMutationType, updatedFields: Array<string> | null, userId: string, node: { __typename: 'Membership', id: string, homeId: string, userId: string, role: MembershipRole, status: MembershipStatus, displayName: string | null, canViewPantry: boolean, canEditPantry: boolean, canAddItems: boolean, canRemoveItems: boolean, canInviteOthers: boolean, canManageHome: boolean, lastActiveAt: string | null, joinedAt: string, home: { __typename: 'Home', id: string, name: string, type: HomeType }, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } } | null } };
-
-export type MemberJoinedSubscriptionVariables = Exact<{
+export type MembershipChangesSubscriptionVariables = Exact<{
   homeId: Scalars['ID']['input'];
 }>;
 
 
-export type MemberJoinedSubscription = { __typename: 'Subscription', memberJoined: { __typename: 'MembershipUpdatePayload', mutation: MembershipMutationType, updatedFields: Array<string> | null, userId: string, node: { __typename: 'Membership', id: string, homeId: string, userId: string, user: { __typename: 'User', id: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } } | null } };
-
-export type MemberLeftSubscriptionVariables = Exact<{
-  homeId: Scalars['ID']['input'];
-}>;
-
-
-export type MemberLeftSubscription = { __typename: 'Subscription', memberLeft: { __typename: 'MembershipUpdatePayload', mutation: MembershipMutationType, updatedFields: Array<string> | null, userId: string, node: { __typename: 'Membership', id: string, homeId: string, userId: string, role: MembershipRole, status: MembershipStatus, displayName: string | null, user: { __typename: 'User', id: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } } | null } };
-
-export type MembershipRoleChangedSubscriptionVariables = Exact<{
-  homeId: Scalars['ID']['input'];
-}>;
-
-
-export type MembershipRoleChangedSubscription = { __typename: 'Subscription', membershipRoleChanged: { __typename: 'MembershipRoleChangedPayload', homeId: string, userId: string, previousRole: MembershipRole, newRole: MembershipRole, changedBy: string, membership: { __typename: 'Membership', id: string, homeId: string, userId: string, role: MembershipRole, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } } } };
+export type MembershipChangesSubscription = { __typename: 'Subscription', membershipChanged: { __typename: 'MembershipChangeEvent', changeType: MembershipChangeType, homeId: string, previousRole: MembershipRole | null, newRole: MembershipRole | null, userId: string, timestamp: string, membership: { __typename: 'Membership', id: string, homeId: string, userId: string, role: MembershipRole, status: MembershipStatus, displayName: string | null, canViewPantry: boolean, canEditPantry: boolean, canAddItems: boolean, canRemoveItems: boolean, canInviteOthers: boolean, canManageHome: boolean, lastActiveAt: string | null, joinedAt: string, home: { __typename: 'Home', id: string, name: string, type: HomeType }, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } } } };
 
 export type SetDefaultHomeMutationVariables = Exact<{
   homeId: Scalars['ID']['input'];
 }>;
 
 
-export type SetDefaultHomeMutation = { __typename: 'Mutation', setDefaultHome: { __typename: 'SetDefaultHomePayload', settings: { __typename: 'UserSettings', id: string } | null, defaultPantry: { __typename: 'Pantry', id: string, name: string, isDefault: boolean } | null } };
+export type SetDefaultHomeMutation = { __typename: 'Mutation', setDefaultHome: { __typename: 'SetDefaultHomePayload', success: boolean, message: string, code: string, settings: { __typename: 'UserSettings', id: string } | null, defaultPantry: { __typename: 'Pantry', id: string, name: string, isDefault: boolean } | null } };
 
 export type CreateImageUploadUrlMutationVariables = Exact<{
   mime: Scalars['String']['input'];
@@ -11655,11 +12104,7 @@ export type CalculateRecipePantryDeficitQueryVariables = Exact<{
 export type CalculateRecipePantryDeficitQuery = { __typename: 'Query', calculateRecipePantryDeficit: Array<{ __typename: 'PantryDeficit', needed: number, available: number, deficit: number, needsToBuy: boolean, ingredient: { __typename: 'RecipeIngredient', id: string, name: string, quantity: number, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null }, unit: { __typename: 'Unit', id: string, name: string, symbol: string }, availableItems: Array<{ __typename: 'PantryItem', id: string, itemName: string, quantity: number, expiresAt: string | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null }> }> };
 
 export type UpsertItemUnitConversionMutationVariables = Exact<{
-  itemId: Scalars['ID']['input'];
-  fromUnitId: Scalars['ID']['input'];
-  toUnitId: Scalars['ID']['input'];
-  conversionRatio: Scalars['Float']['input'];
-  notes?: InputMaybe<Scalars['String']['input']>;
+  input: UpsertItemUnitConversionInput;
 }>;
 
 
@@ -11674,7 +12119,7 @@ export type SearchItemsQueryVariables = Exact<{
 }>;
 
 
-export type SearchItemsQuery = { __typename: 'Query', searchItems: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } | null };
+export type SearchItemsQuery = { __typename: 'Query', searchItems: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', cursor: string, node: { __typename: 'Item', id: string, name: string, imageUrl: string | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } };
 
 export type ItemByUpcFilterQueryVariables = Exact<{
   upc: Scalars['String']['input'];
@@ -11707,7 +12152,7 @@ export type AutocompleteItemsQueryVariables = Exact<{
 }>;
 
 
-export type AutocompleteItemsQuery = { __typename: 'Query', autocompleteItems: { __typename: 'AutocompleteResponse', totalCount: number, suggestions: Array<{ __typename: 'ItemSuggestion', id: string, name: string, type: ItemType, imageUrl: string | null, images: any | null, netWeight: number | null, displayUnit: string | null, defaultUnit: { __typename: 'ItemUnitSuggestion', id: string, name: string, symbol: string, type: UnitType, isDefault: boolean, isPreferred: boolean } | null, brands: Array<{ __typename: 'BrandSuggestion', id: string, name: string }>, category: { __typename: 'ItemCategorySuggestion', id: string, name: string, type: CategoryType, isPrimary: boolean } | null }> } | null };
+export type AutocompleteItemsQuery = { __typename: 'Query', autocompleteItems: { __typename: 'AutocompleteResponse', totalCount: number, suggestions: Array<{ __typename: 'ItemSuggestion', id: string, name: string, type: ItemType, imageUrl: string | null, images: any | null, netWeight: number | null, displayUnit: string | null, defaultUnit: { __typename: 'ItemUnitSuggestion', id: string, name: string, symbol: string, type: UnitType, isDefault: boolean, isPreferred: boolean } | null, brands: Array<{ __typename: 'BrandSuggestion', id: string, name: string }>, category: { __typename: 'ItemCategorySuggestion', id: string, name: string, type: CategoryType, isPrimary: boolean } | null }> } };
 
 export type SearchBrandsQueryVariables = Exact<{
   search: Scalars['String']['input'];
@@ -11729,7 +12174,7 @@ export type GetPopularItemsQueryVariables = Exact<{
 }>;
 
 
-export type GetPopularItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, popularity: number, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string, type: UnitType } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }> | null } }> } };
+export type GetPopularItemsQuery = { __typename: 'Query', items: { __typename: 'ItemConnection', totalCount: number, edges: Array<{ __typename: 'ItemEdge', node: { __typename: 'Item', id: string, name: string, imageUrl: string | null, popularity: number, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string, type: UnitType } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', isPrimary: boolean, category: { __typename: 'Category', id: string, name: string, type: CategoryType } }> } }> } };
 
 export type GetRecommendedItemsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -11737,7 +12182,7 @@ export type GetRecommendedItemsQueryVariables = Exact<{
 }>;
 
 
-export type GetRecommendedItemsQuery = { __typename: 'Query', recommendedItems: Array<{ __typename: 'ItemSuggestion', id: string, name: string, type: ItemType, imageUrl: string | null, netWeight: number | null, displayUnit: string | null, defaultUnit: { __typename: 'ItemUnitSuggestion', id: string, name: string, symbol: string, type: UnitType, isDefault: boolean, isPreferred: boolean } | null, brands: Array<{ __typename: 'BrandSuggestion', id: string, name: string }>, category: { __typename: 'ItemCategorySuggestion', id: string, name: string, type: CategoryType, isPrimary: boolean } | null }> | null };
+export type GetRecommendedItemsQuery = { __typename: 'Query', recommendedItems: Array<{ __typename: 'ItemSuggestion', id: string, name: string, type: ItemType, imageUrl: string | null, netWeight: number | null, displayUnit: string | null, defaultUnit: { __typename: 'ItemUnitSuggestion', id: string, name: string, symbol: string, type: UnitType, isDefault: boolean, isPreferred: boolean } | null, brands: Array<{ __typename: 'BrandSuggestion', id: string, name: string }>, category: { __typename: 'ItemCategorySuggestion', id: string, name: string, type: CategoryType, isPrimary: boolean } | null }> };
 
 export type GetPurchasesQueryVariables = Exact<{
   filters?: InputMaybe<PurchaseFilters>;
@@ -11757,7 +12202,7 @@ export type CreateItemMutationVariables = Exact<{
 }>;
 
 
-export type CreateItemMutation = { __typename: 'Mutation', createItem: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, name: string, description: string | null, netWeight: number | null, type: ItemType, storageState: StorageState, shelfLifeDays: number | null, imageUrl: string | null, tags: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, convertedNetWeight: { __typename: 'ConvertedValue', value: number, unit: { __typename: 'Unit', id: string, name: string, symbol: string } } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', category: { __typename: 'Category', id: string, name: string } }> | null, units: Array<{ __typename: 'ItemUnit', id: string, unitId: string, isDefault: boolean, packageSize: number | null, retailUnit: boolean, contentUnitId: string | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, contentUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null }> } | null } };
+export type CreateItemMutation = { __typename: 'Mutation', createItem: { __typename: 'ItemPayload', success: boolean, message: string, code: string, item: { __typename: 'Item', id: string, name: string, description: string | null, netWeight: number | null, type: ItemType, storageState: StorageState, shelfLifeDays: number | null, imageUrl: string | null, tags: Array<string>, displayUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, convertedNetWeight: { __typename: 'ConvertedValue', value: number, unit: { __typename: 'Unit', id: string, name: string, symbol: string } } | null, brands: Array<{ __typename: 'ItemBrand', brand: { __typename: 'Brand', id: string, name: string } }>, categories: Array<{ __typename: 'ItemCategory', category: { __typename: 'Category', id: string, name: string } }>, units: Array<{ __typename: 'ItemUnit', id: string, unitId: string, isDefault: boolean, packageSize: number | null, retailUnit: boolean, contentUnitId: string | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, contentUnit: { __typename: 'Unit', id: string, name: string, symbol: string } | null }> } | null } };
 
 export type GetUnitsQueryVariables = Exact<{
   isCommon?: InputMaybe<Scalars['Boolean']['input']>;
@@ -12020,7 +12465,7 @@ export type GetMyNotificationsQueryVariables = Exact<{
 }>;
 
 
-export type GetMyNotificationsQuery = { __typename: 'Query', me: { __typename: 'User', notificationsConnection: { __typename: 'NotificationConnection', totalCount: number, unreadCount: number, edges: Array<{ __typename: 'NotificationEdge', cursor: string, node: (
+export type GetMyNotificationsQuery = { __typename: 'Query', me: { __typename: 'User', id: string, notificationsConnection: { __typename: 'NotificationConnection', totalCount: number, unreadCount: number, edges: Array<{ __typename: 'NotificationEdge', cursor: string, node: (
           { __typename: 'Notification' }
           & NotificationFragment
         ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, hasPreviousPage: boolean, startCursor: string | null, endCursor: string | null } } } | null };
@@ -12066,21 +12511,13 @@ export type DeleteMultipleNotificationsMutationVariables = Exact<{
 
 export type DeleteMultipleNotificationsMutation = { __typename: 'Mutation', deleteMultipleNotifications: { __typename: 'BulkNotificationPayload', success: boolean, message: string, code: string, count: number } };
 
-export type NotificationReceivedSubscriptionVariables = Exact<{ [key: string]: never; }>;
+export type NotificationChangedSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type NotificationReceivedSubscription = { __typename: 'Subscription', notificationReceived: (
-    { __typename: 'NotificationPayload' }
-    & NotificationSubscriptionFragment
-  ) };
-
-export type NotificationUpdatedSubscriptionVariables = Exact<{ [key: string]: never; }>;
-
-
-export type NotificationUpdatedSubscription = { __typename: 'Subscription', notificationUpdated: (
-    { __typename: 'NotificationPayload' }
-    & NotificationSubscriptionFragment
-  ) };
+export type NotificationChangedSubscription = { __typename: 'Subscription', notificationChanged: { __typename: 'NotificationChangeEvent', changeType: NotificationChangeType, timestamp: string, notification: (
+      { __typename: 'Notification' }
+      & NotificationFragment
+    ) } };
 
 export type GetPantriesQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
@@ -12343,50 +12780,22 @@ export type SyncDeletePantryItemMutationVariables = Exact<{
 
 export type SyncDeletePantryItemMutation = { __typename: 'Mutation', syncDeletePantryItem: { __typename: 'SyncPantryItemResult', clientId: string, serverId: string | null, operation: SyncOperation, wasCreated: boolean, item: { __typename: 'PantryItem', id: string, itemName: string } | null, conflict: { __typename: 'SyncConflictInfo', clientVersion: number, serverVersion: number, message: string } | null } };
 
-export type PantryUpdatedSubscriptionVariables = Exact<{
+export type PantryChangesSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
 }>;
 
 
-export type PantryUpdatedSubscription = { __typename: 'Subscription', pantryUpdated: { __typename: 'PantryUpdatedPayload', mutation: MutationType, updatedFields: Array<string> | null, userId: string, timestamp: string, node: { __typename: 'Pantry', id: string, homeId: string, name: string, description: string | null, location: string | null, temperature: string | null, tags: Array<string>, metadata: any | null, version: number, updatedAt: string } | null } };
-
-export type PantryLowStockAlertSubscriptionVariables = Exact<{
-  pantryId: Scalars['ID']['input'];
-}>;
-
-
-export type PantryLowStockAlertSubscription = { __typename: 'Subscription', pantryLowStockAlert: { __typename: 'PantryLowStockAlertPayload', pantryId: string, currentQuantity: number, minimumQuantity: number, userId: string, timestamp: string, item: { __typename: 'PantryItem', id: string, itemId: string, itemName: string, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } } };
-
-export type PantryExpiringItemsAlertSubscriptionVariables = Exact<{
-  pantryId: Scalars['ID']['input'];
-}>;
-
-
-export type PantryExpiringItemsAlertSubscription = { __typename: 'Subscription', pantryExpiringItemsAlert: { __typename: 'PantryExpiringItemsAlertPayload', pantryId: string, expiresAt: string, daysUntilExpiration: number, userId: string, timestamp: string, item: { __typename: 'PantryItem', id: string, itemId: string, itemName: string, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } } };
-
-export type PantryItemsChangedSubscriptionVariables = Exact<{
-  pantryId: Scalars['ID']['input'];
-}>;
-
-
-export type PantryItemsChangedSubscription = { __typename: 'Subscription', pantryItemsChanged: { __typename: 'PantryItemChangedPayload', pantryId: string, updatedFields: Array<string>, mutation: MutationType, timestamp: string, userId: string, item: (
+export type PantryChangesSubscription = { __typename: 'Subscription', pantryChanged: { __typename: 'PantryChangeEvent', changeType: PantryChangeType, mutation: MutationType | null, updatedFields: Array<string> | null, timestamp: string, userId: string, pantryId: string, pantry: { __typename: 'Pantry', id: string, homeId: string, name: string, description: string | null, location: string | null, temperature: string | null, tags: Array<string>, metadata: any | null, version: number, updatedAt: string } | null, pantryItem: (
       { __typename: 'PantryItem' }
       & PantryItemDisplayFragment
-    ) } };
+    ) | null, usage: { __typename: 'PantryItemUsage', id: string, quantityUsed: number, usedAt: string, purpose: UsagePurpose, notes: string | null, pantryItem: { __typename: 'PantryItem', id: string } | null, usedBy: { __typename: 'User', id: string } | null } | null } };
 
-export type PantryItemUsageChangedSubscriptionVariables = Exact<{
+export type PantryAlertsSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
 }>;
 
 
-export type PantryItemUsageChangedSubscription = { __typename: 'Subscription', pantryItemUsageChanged: { __typename: 'PantryItemUsageChangedPayload', mutation: MutationType, pantryId: string, userId: string, timestamp: string, usage: { __typename: 'PantryItemUsage', id: string, quantityUsed: number, usedAt: string, purpose: UsagePurpose, notes: string | null, pantryItem: { __typename: 'PantryItem', id: string } | null, usedBy: { __typename: 'User', id: string } | null } } };
-
-export type PantryWasteAlertSubscriptionVariables = Exact<{
-  pantryId: Scalars['ID']['input'];
-}>;
-
-
-export type PantryWasteAlertSubscription = { __typename: 'Subscription', pantryWasteAlert: { __typename: 'PantryWasteAlertPayload', pantryId: string, wasteAmount: number, wasteReason: string, wasteValue: number | null, userId: string, timestamp: string, item: { __typename: 'PantryItem', id: string, itemId: string, itemName: string, pantryId: string, quantity: number, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } } };
+export type PantryAlertsSubscription = { __typename: 'Subscription', pantryAlert: { __typename: 'PantryAlertEvent', alertType: PantryAlertType, message: string | null, pantryId: string, timestamp: string, userId: string, pantryItem: { __typename: 'PantryItem', id: string, itemId: string, itemName: string, pantryId: string, quantity: number, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } } | null, items: Array<{ __typename: 'PantryItem', id: string, itemId: string, itemName: string, item: { __typename: 'Item', id: string, name: string, imageUrl: string | null } }> | null } };
 
 export type SearchRecipesQueryVariables = Exact<{
   query: Scalars['String']['input'];
@@ -12439,7 +12848,7 @@ export type MySavedRecipesQueryVariables = Exact<{
 }>;
 
 
-export type MySavedRecipesQuery = { __typename: 'Query', me: { __typename: 'User', savedRecipesConnection: { __typename: 'SavedRecipeConnection', totalCount: number, edges: Array<{ __typename: 'SavedRecipeEdge', cursor: string, node: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number, lastCookedAt: string | null, createdAt: string, updatedAt: string, recipe: (
+export type MySavedRecipesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, savedRecipesConnection: { __typename: 'SavedRecipeConnection', totalCount: number, edges: Array<{ __typename: 'SavedRecipeEdge', cursor: string, node: { __typename: 'SavedRecipe', id: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number, lastCookedAt: string | null, createdAt: string, updatedAt: string, recipe: (
             { __typename: 'Recipe' }
             & BasicRecipeFragment
           ) } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } | null };
@@ -12517,9 +12926,7 @@ export type UpdateFavoriteRecipeMutationVariables = Exact<{
 export type UpdateFavoriteRecipeMutation = { __typename: 'Mutation', updateFavoriteRecipe: { __typename: 'SavedRecipePayload', success: boolean, message: string, code: string, savedRecipe: { __typename: 'SavedRecipe', id: string, recipeId: string, userId: string, folder: string | null, tags: Array<string>, notes: string | null, personalRating: number | null, cookedCount: number, createdAt: string, updatedAt: string } | null } };
 
 export type CreateShoppingListItemsFromRecipeMutationVariables = Exact<{
-  recipeId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Int']['input']>;
+  input: CreateShoppingListItemsFromRecipeInput;
 }>;
 
 
@@ -12535,10 +12942,7 @@ export type CreateShoppingListItemFromRecipeIngredientMutationVariables = Exact<
 export type CreateShoppingListItemFromRecipeIngredientMutation = { __typename: 'Mutation', createShoppingListItemFromRecipeIngredient: { __typename: 'AddIngredientResult', previousQuantity: number | null, quantityAdded: number, wasUpdated: boolean, unitConversionApplied: boolean, shoppingListItem: { __typename: 'ShoppingListItem', id: string, itemName: string | null, quantity: number | null, unit: { __typename: 'Unit', id: string, name: string, symbol: string } | null } } };
 
 export type AddRecipeToShoppingListMutationVariables = Exact<{
-  recipeId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Float']['input']>;
-  checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
+  input: AddRecipeToShoppingListInput;
 }>;
 
 
@@ -12574,20 +12978,14 @@ export type GetRecipeCookingLogsQueryVariables = Exact<{
 export type GetRecipeCookingLogsQuery = { __typename: 'Query', recipeCookingLogs: { __typename: 'CookingLogConnection', totalCount: number, edges: Array<{ __typename: 'CookingLogEdge', cursor: string, node: { __typename: 'CookingLog', id: string, servingsMade: number | null, notes: string | null, cookedAt: string, recipe: { __typename: 'Recipe', id: string, name: string } } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type ConfirmRecipeConsumptionMutationVariables = Exact<{
-  recipeId: Scalars['ID']['input'];
-  pantryId: Scalars['ID']['input'];
-  consumptions: Array<ConfirmedIngredientConsumptionInput> | ConfirmedIngredientConsumptionInput;
+  input: ConfirmRecipeConsumptionInput;
 }>;
 
 
 export type ConfirmRecipeConsumptionMutation = { __typename: 'Mutation', confirmRecipeConsumption: { __typename: 'RecipeConsumptionResult', success: boolean, totalConsumed: number, totalFailed: number, cookingLog: { __typename: 'CookingLog', id: string, servingsMade: number | null, notes: string | null, cookedAt: string } | null } };
 
 export type MarkRecipeAsCookedMutationVariables = Exact<{
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Float']['input']>;
-  deductFromPantry: Scalars['Boolean']['input'];
-  ingredientsUsed?: InputMaybe<Array<IngredientUsageInput> | IngredientUsageInput>;
-  notes?: InputMaybe<Scalars['String']['input']>;
+  input: MarkRecipeAsCookedInput;
 }>;
 
 
@@ -12631,7 +13029,7 @@ export type ToggleReviewHelpfulMutation = { __typename: 'Mutation', toggleReview
 export type MyShoppingListInvitesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MyShoppingListInvitesQuery = { __typename: 'Query', me: { __typename: 'User', pendingCollaborationInvites: Array<{ __typename: 'ShoppingListCollaborator', id: string, token: string | null, shoppingListId: string, collaboratorId: string | null, email: string | null, role: CollaboratorRole, status: CollaboratorStatus, canEdit: boolean, canAddItems: boolean, canRemoveItems: boolean, canMarkPurchased: boolean, canInviteOthers: boolean, invitedAt: string, expiresAt: string | null, shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null }, collaborator: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } | null, invitedBy: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } | null }> } | null };
+export type MyShoppingListInvitesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, pendingCollaborationInvites: Array<{ __typename: 'ShoppingListCollaborator', id: string, token: string | null, shoppingListId: string, collaboratorId: string | null, email: string | null, role: CollaboratorRole, status: CollaboratorStatus, canEdit: boolean, canAddItems: boolean, canRemoveItems: boolean, canMarkPurchased: boolean, canInviteOthers: boolean, invitedAt: string, expiresAt: string | null, shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null }, collaborator: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } | null, invitedBy: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } | null }> } | null };
 
 export type AcceptShoppingListInviteMutationVariables = Exact<{
   token: Scalars['String']['input'];
@@ -12650,29 +13048,15 @@ export type DeclineShoppingListInviteMutationVariables = Exact<{
 
 export type DeclineShoppingListInviteMutation = { __typename: 'Mutation', declineShoppingListInvite: { __typename: 'ShoppingListCollaboratorPayload', success: boolean, message: string, code: string, collaborator: { __typename: 'ShoppingListCollaborator', id: string } | null } };
 
-export type CollaborationMemberAddedSubscriptionVariables = Exact<{
+export type CollaborationChangesSubscriptionVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
-  email: Scalars['String']['input'];
 }>;
 
 
-export type CollaborationMemberAddedSubscription = { __typename: 'Subscription', collaborationMemberAdded: { __typename: 'ShoppingListCollaborator', id: string, shoppingListId: string, collaboratorId: string | null, email: string | null, role: CollaboratorRole, status: CollaboratorStatus, canEdit: boolean, canAddItems: boolean, canRemoveItems: boolean, canMarkPurchased: boolean, canInviteOthers: boolean, invitedAt: string, shoppingList: { __typename: 'ShoppingList', id: string, name: string }, collaborator: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } | null, invitedBy: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } | null } };
-
-export type CollaborationMemberRemovedSubscriptionVariables = Exact<{
-  shoppingListId: Scalars['ID']['input'];
-  email: Scalars['String']['input'];
-}>;
-
-
-export type CollaborationMemberRemovedSubscription = { __typename: 'Subscription', collaborationMemberRemoved: { __typename: 'ShoppingListCollaborator', id: string, email: string | null, collaboratorId: string | null, shoppingList: { __typename: 'ShoppingList', id: string, name: string } } };
-
-export type CollaborationInviteSentSubscriptionVariables = Exact<{
-  shoppingListId: Scalars['ID']['input'];
-  email: Scalars['String']['input'];
-}>;
-
-
-export type CollaborationInviteSentSubscription = { __typename: 'Subscription', collaborationInviteSent: { __typename: 'ShoppingListCollaborator', id: string, shoppingListId: string, email: string | null, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: string, expiresAt: string | null, shoppingList: { __typename: 'ShoppingList', id: string, name: string }, invitedBy: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null } | null } | null } };
+export type CollaborationChangesSubscription = { __typename: 'Subscription', collaborationChanged: { __typename: 'CollaborationChangeEvent', changeType: CollaborationChangeType, shoppingListId: string, timestamp: string, userId: string, collaborator: (
+      { __typename: 'ShoppingListCollaborator', canEdit: boolean, invitedAt: string, lastViewedAt: string | null }
+      & ShoppingListCollaboratorFragment
+    ) } };
 
 export type GetShoppingListQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -12682,7 +13066,7 @@ export type GetShoppingListQueryVariables = Exact<{
 export type GetShoppingListQuery = { __typename: 'Query', shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, isPublic: boolean, shareCode: string | null, tags: Array<string>, budgetAmount: number | null, totalCost: number, estimatedTotal: number, currency: string | null, category: string | null, priority: number, status: ListStatus, isCompleted: boolean, completedAt: string | null, totalItems: number, completedItems: number, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string, myMembership: { __typename: 'Membership', id: string, role: MembershipRole, canAddItems: boolean, canRemoveItems: boolean, canEditPantry: boolean } | null } | null, ownerships: Array<(
       { __typename: 'ShoppingListOwnership' }
       & ShoppingListOwnershipFragment
-    )> | null, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
+    )>, itemsConnection: { __typename: 'ShoppingListItemConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListItemEdge', cursor: string, node: (
           { __typename: 'ShoppingListItem' }
           & ShoppingListItemDisplayFragment
         ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
@@ -12697,7 +13081,7 @@ export type GetShoppingListsLiteQueryVariables = Exact<{
 }>;
 
 
-export type GetShoppingListsLiteQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListEdge', cursor: string, node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, status: ListStatus, isCompleted: boolean, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string } | null, ownerships: Array<{ __typename: 'ShoppingListOwnership', id: string, userId: string, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } }> | null } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
+export type GetShoppingListsLiteQuery = { __typename: 'Query', shoppingLists: { __typename: 'ShoppingListConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListEdge', cursor: string, node: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, totalItems: number, completedItems: number, status: ListStatus, isCompleted: boolean, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string } | null, ownerships: Array<{ __typename: 'ShoppingListOwnership', id: string, userId: string, user: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } }> } }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } };
 
 export type GetDefaultShoppingListQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -12708,7 +13092,7 @@ export type GetDefaultShoppingListQuery = { __typename: 'Query', shoppingLists: 
             ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, ownerships: Array<(
           { __typename: 'ShoppingListOwnership' }
           & ShoppingListOwnershipFragment
-        )> | null, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
+        )>, collaboratorsConnection: { __typename: 'ShoppingListCollaboratorConnection', totalCount: number, edges: Array<{ __typename: 'ShoppingListCollaboratorEdge', cursor: string, node: (
               { __typename: 'ShoppingListCollaborator' }
               & ShoppingListCollaboratorFragment
             ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } } } }> } };
@@ -12755,7 +13139,7 @@ export type CreateShoppingListMutationVariables = Exact<{
 export type CreateShoppingListMutation = { __typename: 'Mutation', createShoppingList: { __typename: 'ShoppingListPayload', success: boolean, message: string, code: string, shoppingList: { __typename: 'ShoppingList', id: string, name: string, description: string | null, isDefault: boolean, isPublic: boolean, tags: Array<string>, totalItems: number, completedItems: number, estimatedTotal: number, currency: string | null, status: ListStatus, isCompleted: boolean, priority: number, metadata: any | null, createdAt: string, updatedAt: string, homeId: string | null, home: { __typename: 'Home', id: string, name: string } | null, ownerships: Array<(
         { __typename: 'ShoppingListOwnership' }
         & ShoppingListOwnershipFragment
-      )> | null } | null } };
+      )> } | null } };
 
 export type UpdateShoppingListMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -12769,7 +13153,7 @@ export type UpdateShoppingListMutation = { __typename: 'Mutation', updateShoppin
           ) }>, pageInfo: { __typename: 'PageInfo', hasNextPage: boolean, endCursor: string | null } }, ownerships: Array<(
         { __typename: 'ShoppingListOwnership' }
         & ShoppingListOwnershipFragment
-      )> | null } | null } };
+      )> } | null } };
 
 export type DeleteShoppingListMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -12849,9 +13233,7 @@ export type MoveShoppingListItemMutation = { __typename: 'Mutation', moveShoppin
     ) | null } };
 
 export type ToggleShoppingListItemPurchasedMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  purchased: Scalars['Boolean']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  input: ToggleShoppingListItemPurchasedInput;
 }>;
 
 
@@ -12898,9 +13280,7 @@ export type UpdateShoppingListItemPriorityMutation = { __typename: 'Mutation', u
     ) | null } };
 
 export type UpdateCollaboratorRoleMutationVariables = Exact<{
-  shoppingListId: Scalars['ID']['input'];
-  collaboratorId: Scalars['ID']['input'];
-  role: CollaboratorRole;
+  input: UpdateCollaboratorRoleInput;
 }>;
 
 
@@ -12967,51 +13347,23 @@ export type SyncMoveShoppingListItemMutation = { __typename: 'Mutation', syncMov
       & ShoppingListItemDisplayFragment
     ) | null, conflict: { __typename: 'SyncConflictInfo', clientVersion: number, serverVersion: number, message: string, serverItem: { __typename: 'ShoppingListItem', id: string, version: number, sortOrder: string } } | null } };
 
-export type ShoppingListUpdatedSubscriptionVariables = Exact<{
+export type ShoppingListChangesSubscriptionVariables = Exact<{
   listId: Scalars['ID']['input'];
 }>;
 
 
-export type ShoppingListUpdatedSubscription = { __typename: 'Subscription', shoppingListUpdated: { __typename: 'ShoppingListUpdatedPayload', mutation: MutationType, updatedFields: Array<string> | null, userId: string, timestamp: string, node: { __typename: 'ShoppingList', id: string, name: string, totalItems: number, completedItems: number, estimatedTotal: number, status: ListStatus, isCompleted: boolean, completedAt: string | null, budgetAmount: number | null, totalCost: number } | null } | null };
-
-export type MyShoppingListsUpdatedSubscriptionVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MyShoppingListsUpdatedSubscription = { __typename: 'Subscription', myShoppingListsUpdated: { __typename: 'ShoppingListUpdatedPayload', mutation: MutationType, updatedFields: Array<string> | null, userId: string, timestamp: string, node: { __typename: 'ShoppingList', id: string, name: string, totalItems: number, completedItems: number, estimatedTotal: number, status: ListStatus, isCompleted: boolean } | null } | null };
-
-export type ShoppingListItemsChangedSubscriptionVariables = Exact<{
-  listId: Scalars['ID']['input'];
-}>;
-
-
-export type ShoppingListItemsChangedSubscription = { __typename: 'Subscription', shoppingListItemsChanged: { __typename: 'ShoppingListItemChangedPayload', mutation: MutationType, listId: string, updatedFields: Array<string> | null, userId: string, timestamp: string, item: (
+export type ShoppingListChangesSubscription = { __typename: 'Subscription', shoppingListChanged: { __typename: 'ShoppingListChangeEvent', changeType: ShoppingListChangeType, clearedItemIds: Array<string> | null, clearedCount: number | null, mutation: MutationType | null, updatedFields: Array<string> | null, listId: string, timestamp: string, userId: string, item: (
       { __typename: 'ShoppingListItem' }
       & ShoppingListItemDisplayFragment
-    ) | null } | null };
-
-export type ShoppingListCollaboratorsChangedSubscriptionVariables = Exact<{
-  listId: Scalars['ID']['input'];
-}>;
-
-
-export type ShoppingListCollaboratorsChangedSubscription = { __typename: 'Subscription', shoppingListCollaboratorsChanged: { __typename: 'ShoppingListCollaboratorChangedPayload', mutation: MutationType, listId: string, userId: string, timestamp: string, collaborator: (
+    ) | null, shoppingList: { __typename: 'ShoppingList', id: string, name: string, totalItems: number, completedItems: number, estimatedTotal: number, status: ListStatus, isCompleted: boolean, completedAt: string | null, budgetAmount: number | null, totalCost: number } | null, collaborator: (
       { __typename: 'ShoppingListCollaborator', canEdit: boolean, invitedAt: string, lastViewedAt: string | null }
       & ShoppingListCollaboratorFragment
-    ) | null } | null };
+    ) | null } };
 
-export type ShoppingListStatusChangedSubscriptionVariables = Exact<{
-  listId: Scalars['ID']['input'];
-}>;
+export type MyShoppingListsChangesSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ShoppingListStatusChangedSubscription = { __typename: 'Subscription', shoppingListStatusChanged: { __typename: 'ShoppingListStatusChangedPayload', mutation: MutationType, listId: string, newStatus: ListStatus, previousStatus: ListStatus | null, userId: string, timestamp: string, completedBy: { __typename: 'User', id: string, email: string, profile: { __typename: 'UserProfile', displayName: string | null, avatar: string | null } | null } | null } | null };
-
-export type ShoppingListItemsBatchClearedSubscriptionVariables = Exact<{
-  listId: Scalars['ID']['input'];
-}>;
-
-
-export type ShoppingListItemsBatchClearedSubscription = { __typename: 'Subscription', shoppingListItemsBatchCleared: { __typename: 'ShoppingListItemsBatchClearedPayload', mutation: MutationType, listId: string, clearedItemIds: Array<string>, clearedCount: number, userId: string, timestamp: string } | null };
+export type MyShoppingListsChangesSubscription = { __typename: 'Subscription', myShoppingListsChanged: { __typename: 'ShoppingListChangeEvent', changeType: ShoppingListChangeType, mutation: MutationType | null, updatedFields: Array<string> | null, listId: string, timestamp: string, userId: string, shoppingList: { __typename: 'ShoppingList', id: string, name: string, totalItems: number, completedItems: number, estimatedTotal: number, status: ListStatus, isCompleted: boolean } | null } };
 
 export type GetStorageLocationsQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
@@ -13066,12 +13418,12 @@ export type SetDefaultStorageLocationMutation = { __typename: 'Mutation', setDef
 export type GetNotificationPreferencesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetNotificationPreferencesQuery = { __typename: 'Query', notificationPreferences: { __typename: 'NotificationPreferences', id: string, userId: string, emailEnabled: boolean, pushEnabled: boolean, smsEnabled: boolean, expirationNotifications: boolean, expirationNotificationFrequency: ExpirationFrequency, expirationDaysThreshold: number, lowStockAlerts: boolean, shoppingListUpdates: boolean, pantryChanges: boolean, recipeRecommendations: boolean, mealPlanReminders: boolean, cookingReminders: boolean, collaborationInvites: boolean, homeInvites: boolean, sharedListUpdates: boolean, weeklyDigest: boolean, monthlyReport: boolean, quietHoursEnabled: boolean, quietHoursStart: string | null, quietHoursEnd: string | null, quietHoursTimezone: string | null } | null };
+export type GetNotificationPreferencesQuery = { __typename: 'Query', me: { __typename: 'User', id: string, notificationPreferences: { __typename: 'NotificationPreferences', id: string, userId: string, emailEnabled: boolean, pushEnabled: boolean, smsEnabled: boolean, expirationNotifications: boolean, expirationNotificationFrequency: ExpirationFrequency, expirationDaysThreshold: number, lowStockAlerts: boolean, shoppingListUpdates: boolean, pantryChanges: boolean, recipeRecommendations: boolean, mealPlanReminders: boolean, cookingReminders: boolean, collaborationInvites: boolean, homeInvites: boolean, sharedListUpdates: boolean, weeklyDigest: boolean, monthlyReport: boolean, quietHoursEnabled: boolean, quietHoursStart: string | null, quietHoursEnd: string | null, quietHoursTimezone: string | null } | null } | null };
 
 export type GetDietaryProfileQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetDietaryProfileQuery = { __typename: 'Query', dietaryProfile: { __typename: 'DietaryProfile', id: string, userId: string, preferredCuisines: Array<string>, dislikedIngredients: Array<string>, favoriteIngredients: Array<string>, calorieTarget: number | null, proteinTarget: number | null, carbsTarget: number | null, fatTarget: number | null, mealsPerDay: number, snacksPerDay: number, cookingSkillLevel: string | null, maxPrepTimeMinutes: number | null, maxCookTimeMinutes: number | null, budgetPerMeal: number | null, createdAt: string, updatedAt: string, restrictions: Array<{ __typename: 'DietaryRestriction', id: string, diet: Diet | null, intolerance: Intolerance | null, healthGoal: HealthGoal | null, severity: RestrictionSeverity, notes: string | null, appliesToHomeId: string | null, createdAt: string }> } | null };
+export type GetDietaryProfileQuery = { __typename: 'Query', me: { __typename: 'User', id: string, dietaryProfile: { __typename: 'DietaryProfile', id: string, userId: string, preferredCuisines: Array<string>, dislikedIngredients: Array<string>, favoriteIngredients: Array<string>, calorieTarget: number | null, proteinTarget: number | null, carbsTarget: number | null, fatTarget: number | null, mealsPerDay: number, snacksPerDay: number, cookingSkillLevel: string | null, maxPrepTimeMinutes: number | null, maxCookTimeMinutes: number | null, budgetPerMeal: number | null, createdAt: string, updatedAt: string, restrictions: Array<{ __typename: 'DietaryRestriction', id: string, diet: Diet | null, intolerance: Intolerance | null, healthGoal: HealthGoal | null, severity: RestrictionSeverity, notes: string | null, appliesToHomeId: string | null, createdAt: string }> } | null } | null };
 
 export type UpdateNotificationPreferencesMutationVariables = Exact<{
   input: UpdateNotificationPreferencesInput;
@@ -13112,21 +13464,20 @@ export const ShoppingListItemCoreFragmentDoc = {"kind":"Document","definitions":
 export const ShoppingListItemDisplayFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]} as unknown as DocumentNode;
 export const UserSummaryFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]} as unknown as DocumentNode;
 export const PurchaseFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PurchaseFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Purchase"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"unitSymbol"}}]}}]} as unknown as DocumentNode;
-export const ShoppingListItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"assignedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priceEstimate"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"estimated"}},{"kind":"Field","name":{"kind":"Name","value":"budget"}},{"kind":"Field","name":{"kind":"Name","value":"lastKnown"}},{"kind":"Field","name":{"kind":"Name","value":"lowest"}},{"kind":"Field","name":{"kind":"Name","value":"highest"}},{"kind":"Field","name":{"kind":"Name","value":"lastUpdated"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"source"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isAutoAdded"}},{"kind":"Field","name":{"kind":"Name","value":"autoAddReason"}},{"kind":"Field","name":{"kind":"Name","value":"isFromMealPlan"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}},{"kind":"Field","name":{"kind":"Name","value":"storeSection"}},{"kind":"Field","name":{"kind":"Name","value":"preferredStore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"previouslyPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"lastPurchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"addedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchasesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PurchaseFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PurchaseFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Purchase"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"unitSymbol"}}]}}]} as unknown as DocumentNode;
+export const ShoppingListItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"assignedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priceEstimate"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"estimated"}},{"kind":"Field","name":{"kind":"Name","value":"budget"}},{"kind":"Field","name":{"kind":"Name","value":"lastKnown"}},{"kind":"Field","name":{"kind":"Name","value":"lowest"}},{"kind":"Field","name":{"kind":"Name","value":"highest"}},{"kind":"Field","name":{"kind":"Name","value":"lastUpdated"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"source"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isAutoAdded"}},{"kind":"Field","name":{"kind":"Name","value":"autoAddReason"}},{"kind":"Field","name":{"kind":"Name","value":"isFromMealPlan"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}},{"kind":"Field","name":{"kind":"Name","value":"storeSection"}},{"kind":"Field","name":{"kind":"Name","value":"preferredStore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"previouslyPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"lastPurchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"addedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchasesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PurchaseFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PurchaseFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Purchase"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"unitSymbol"}}]}}]} as unknown as DocumentNode;
 export const ShoppingListOwnershipFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredFrom"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}}]} as unknown as DocumentNode;
 export const ShoppingListCollaboratorFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
 export const AuthUserFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AuthUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}}]}}]} as unknown as DocumentNode;
 export const LoginUserFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"LoginUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"AuthUser"}},{"kind":"Field","name":{"kind":"Name","value":"defaultHomeId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultShoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"defaultHome"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}},{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"theme"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AuthUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}}]}}]} as unknown as DocumentNode;
 export const PartialUserFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PartialUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"defaultShoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultHomeId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}}]}},{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"theme"}}]}}]}}]} as unknown as DocumentNode;
 export const ItemCoreFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode;
-export const NotificationSubscriptionFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationSubscription"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationPayload"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode;
 export const PantryItemCoreFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}}]} as unknown as DocumentNode;
 export const PantryItemDisplayFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}}]} as unknown as DocumentNode;
 export const ItemDisplayFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}}]} as unknown as DocumentNode;
 export const UnitFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]} as unknown as DocumentNode;
 export const BrandFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]} as unknown as DocumentNode;
-export const ItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"}},{"kind":"Field","name":{"kind":"Name","value":"allergens"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}}]} as unknown as DocumentNode;
-export const PantryItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageNotes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"restockQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"store"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"condition"}},{"kind":"Field","name":{"kind":"Name","value":"acquisitionMethod"}},{"kind":"Field","name":{"kind":"Name","value":"costPerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"purchase"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usageRecords"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usageUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"wasteReason"}},{"kind":"Field","name":{"kind":"Name","value":"adjustmentReason"}},{"kind":"Field","name":{"kind":"Name","value":"isComposted"}},{"kind":"Field","name":{"kind":"Name","value":"isRecycled"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"}},{"kind":"Field","name":{"kind":"Name","value":"allergens"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const ItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"benefit"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"description"}}]}},{"kind":"Field","name":{"kind":"Name","value":"allergens"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"contains"}},{"kind":"Field","name":{"kind":"Name","value":"severity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const PantryItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageNotes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"restockQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"store"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"condition"}},{"kind":"Field","name":{"kind":"Name","value":"acquisitionMethod"}},{"kind":"Field","name":{"kind":"Name","value":"costPerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"purchase"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usageRecords"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usageUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"wasteReason"}},{"kind":"Field","name":{"kind":"Name","value":"adjustmentReason"}},{"kind":"Field","name":{"kind":"Name","value":"isComposted"}},{"kind":"Field","name":{"kind":"Name","value":"isRecycled"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"benefit"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"description"}}]}},{"kind":"Field","name":{"kind":"Name","value":"allergens"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"contains"}},{"kind":"Field","name":{"kind":"Name","value":"severity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}}]} as unknown as DocumentNode;
 export const BasicUserFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]} as unknown as DocumentNode;
 export const HomeInviteDisplayFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]} as unknown as DocumentNode;
 export const BasicPantryFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicPantryFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Pantry"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode;
@@ -13143,7 +13494,7 @@ export const MealTemplateDisplayFragmentDoc = {"kind":"Document","definitions":[
 export const MealTemplateItemFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MealTemplateItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"MealTemplateItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dayOffset"}},{"kind":"Field","name":{"kind":"Name","value":"mealType"}},{"kind":"Field","name":{"kind":"Name","value":"customMealName"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 export const RecipeReviewFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]} as unknown as DocumentNode;
 export const RecipeIngredientFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}}]} as unknown as DocumentNode;
-export const RecipeFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
+export const RecipeFragmentDoc = {"kind":"Document","definitions":[{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 export const GetAuthUserDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAuthUser"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"AuthUser"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"AuthUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -13284,7 +13635,7 @@ export function useVerifyEmailMutation(baseOptions?: ApolloReactHooks.MutationHo
 export type VerifyEmailMutationHookResult = ReturnType<typeof useVerifyEmailMutation>;
 export type VerifyEmailMutationResult = ApolloReactCommon.MutationResult<VerifyEmailMutation>;
 export type VerifyEmailMutationOptions = ApolloReactCommon.BaseMutationOptions<VerifyEmailMutation, VerifyEmailMutationVariables>;
-export const ForgotPasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ForgotPassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"forgotPassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode;
+export const ForgotPasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ForgotPassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"forgotPassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useForgotPasswordMutation__
@@ -13310,7 +13661,7 @@ export function useForgotPasswordMutation(baseOptions?: ApolloReactHooks.Mutatio
 export type ForgotPasswordMutationHookResult = ReturnType<typeof useForgotPasswordMutation>;
 export type ForgotPasswordMutationResult = ApolloReactCommon.MutationResult<ForgotPasswordMutation>;
 export type ForgotPasswordMutationOptions = ApolloReactCommon.BaseMutationOptions<ForgotPasswordMutation, ForgotPasswordMutationVariables>;
-export const ResetPasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ResetPassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"token"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"newPassword"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"resetPassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"token"},"value":{"kind":"Variable","name":{"kind":"Name","value":"token"}}},{"kind":"Argument","name":{"kind":"Name","value":"newPassword"},"value":{"kind":"Variable","name":{"kind":"Name","value":"newPassword"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode;
+export const ResetPasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ResetPassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"token"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"newPassword"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"resetPassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"token"},"value":{"kind":"Variable","name":{"kind":"Name","value":"token"}}},{"kind":"Argument","name":{"kind":"Name","value":"newPassword"},"value":{"kind":"Variable","name":{"kind":"Name","value":"newPassword"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useResetPasswordMutation__
@@ -13363,7 +13714,7 @@ export function useResendVerificationEmailMutation(baseOptions?: ApolloReactHook
 export type ResendVerificationEmailMutationHookResult = ReturnType<typeof useResendVerificationEmailMutation>;
 export type ResendVerificationEmailMutationResult = ApolloReactCommon.MutationResult<ResendVerificationEmailMutation>;
 export type ResendVerificationEmailMutationOptions = ApolloReactCommon.BaseMutationOptions<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>;
-export const ChangePasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ChangePassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ChangePasswordInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changePassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode;
+export const ChangePasswordDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ChangePassword"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ChangePasswordInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changePassword"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useChangePasswordMutation__
@@ -13621,150 +13972,54 @@ export function useDeactivateDeviceMutation(baseOptions?: ApolloReactHooks.Mutat
 export type DeactivateDeviceMutationHookResult = ReturnType<typeof useDeactivateDeviceMutation>;
 export type DeactivateDeviceMutationResult = ApolloReactCommon.MutationResult<DeactivateDeviceMutation>;
 export type DeactivateDeviceMutationOptions = ApolloReactCommon.BaseMutationOptions<DeactivateDeviceMutation, DeactivateDeviceMutationVariables>;
-export const DeviceActivityDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceActivity"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceActivity"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"deviceType"}},{"kind":"Field","name":{"kind":"Name","value":"platform"}},{"kind":"Field","name":{"kind":"Name","value":"lastSeenAt"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isTrusted"}},{"kind":"Field","name":{"kind":"Name","value":"loginCount"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const DeviceChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"device"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"deviceType"}},{"kind":"Field","name":{"kind":"Name","value":"platform"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isTrusted"}},{"kind":"Field","name":{"kind":"Name","value":"isVerified"}},{"kind":"Field","name":{"kind":"Name","value":"lastSeenAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useDeviceActivitySubscription__
+ * __useDeviceChangesSubscription__
  *
- * To run a query within a React component, call `useDeviceActivitySubscription` and pass it any options that fit your needs.
- * When your component renders, `useDeviceActivitySubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useDeviceChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useDeviceActivitySubscription({
+ * const { data, loading, error } = useDeviceChangesSubscription({
  *   variables: {
  *      userId: // value for 'userId'
  *   },
  * });
  */
-export function useDeviceActivitySubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceActivitySubscription, DeviceActivitySubscriptionVariables> & ({ variables: DeviceActivitySubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function useDeviceChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceChangesSubscription, DeviceChangesSubscriptionVariables> & ({ variables: DeviceChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<DeviceActivitySubscription, DeviceActivitySubscriptionVariables>(DeviceActivityDocument, options);
+        return ApolloReactHooks.useSubscription<DeviceChangesSubscription, DeviceChangesSubscriptionVariables>(DeviceChangesDocument, options);
       }
-export type DeviceActivitySubscriptionHookResult = ReturnType<typeof useDeviceActivitySubscription>;
-export type DeviceActivitySubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceActivitySubscription>;
-export const DeviceRegisteredDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceRegistered"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceRegistered"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"deviceType"}},{"kind":"Field","name":{"kind":"Name","value":"platform"}},{"kind":"Field","name":{"kind":"Name","value":"userAgent"}},{"kind":"Field","name":{"kind":"Name","value":"browserName"}},{"kind":"Field","name":{"kind":"Name","value":"browserVersion"}},{"kind":"Field","name":{"kind":"Name","value":"osName"}},{"kind":"Field","name":{"kind":"Name","value":"osVersion"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isTrusted"}},{"kind":"Field","name":{"kind":"Name","value":"isVerified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode;
+export type DeviceChangesSubscriptionHookResult = ReturnType<typeof useDeviceChangesSubscription>;
+export type DeviceChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceChangesSubscription>;
+export const LoginActivityChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"LoginActivityChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"loginActivityChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"activityType"}},{"kind":"Field","name":{"kind":"Name","value":"loginHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"method"}},{"kind":"Field","name":{"kind":"Name","value":"provider"}},{"kind":"Field","name":{"kind":"Name","value":"isRisky"}},{"kind":"Field","name":{"kind":"Name","value":"failureReason"}},{"kind":"Field","name":{"kind":"Name","value":"loggedInAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"suspiciousActivity"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"suspiciousActivity"}},{"kind":"Field","name":{"kind":"Name","value":"failedFromSameIP"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"ipAddress"}},{"kind":"Field","name":{"kind":"Name","value":"count"}}]}},{"kind":"Field","name":{"kind":"Name","value":"riskyLogins"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"isRisky"}},{"kind":"Field","name":{"kind":"Name","value":"loggedInAt"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useDeviceRegisteredSubscription__
+ * __useLoginActivityChangesSubscription__
  *
- * To run a query within a React component, call `useDeviceRegisteredSubscription` and pass it any options that fit your needs.
- * When your component renders, `useDeviceRegisteredSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useLoginActivityChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useLoginActivityChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useDeviceRegisteredSubscription({
+ * const { data, loading, error } = useLoginActivityChangesSubscription({
  *   variables: {
  *      userId: // value for 'userId'
  *   },
  * });
  */
-export function useDeviceRegisteredSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceRegisteredSubscription, DeviceRegisteredSubscriptionVariables> & ({ variables: DeviceRegisteredSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function useLoginActivityChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<LoginActivityChangesSubscription, LoginActivityChangesSubscriptionVariables> & ({ variables: LoginActivityChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<DeviceRegisteredSubscription, DeviceRegisteredSubscriptionVariables>(DeviceRegisteredDocument, options);
+        return ApolloReactHooks.useSubscription<LoginActivityChangesSubscription, LoginActivityChangesSubscriptionVariables>(LoginActivityChangesDocument, options);
       }
-export type DeviceRegisteredSubscriptionHookResult = ReturnType<typeof useDeviceRegisteredSubscription>;
-export type DeviceRegisteredSubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceRegisteredSubscription>;
-export const DeviceStatusChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceStatusChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceStatusChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"lastSeenAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useDeviceStatusChangedSubscription__
- *
- * To run a query within a React component, call `useDeviceStatusChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useDeviceStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDeviceStatusChangedSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useDeviceStatusChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceStatusChangedSubscription, DeviceStatusChangedSubscriptionVariables> & ({ variables: DeviceStatusChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<DeviceStatusChangedSubscription, DeviceStatusChangedSubscriptionVariables>(DeviceStatusChangedDocument, options);
-      }
-export type DeviceStatusChangedSubscriptionHookResult = ReturnType<typeof useDeviceStatusChangedSubscription>;
-export type DeviceStatusChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceStatusChangedSubscription>;
-export const DeviceTrustChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceTrustChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceTrustChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"isTrusted"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useDeviceTrustChangedSubscription__
- *
- * To run a query within a React component, call `useDeviceTrustChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useDeviceTrustChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDeviceTrustChangedSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useDeviceTrustChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceTrustChangedSubscription, DeviceTrustChangedSubscriptionVariables> & ({ variables: DeviceTrustChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<DeviceTrustChangedSubscription, DeviceTrustChangedSubscriptionVariables>(DeviceTrustChangedDocument, options);
-      }
-export type DeviceTrustChangedSubscriptionHookResult = ReturnType<typeof useDeviceTrustChangedSubscription>;
-export type DeviceTrustChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceTrustChangedSubscription>;
-export const DeviceVerifiedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"DeviceVerified"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deviceVerified"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceId"}},{"kind":"Field","name":{"kind":"Name","value":"deviceName"}},{"kind":"Field","name":{"kind":"Name","value":"isVerified"}},{"kind":"Field","name":{"kind":"Name","value":"verifiedAt"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useDeviceVerifiedSubscription__
- *
- * To run a query within a React component, call `useDeviceVerifiedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useDeviceVerifiedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useDeviceVerifiedSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useDeviceVerifiedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<DeviceVerifiedSubscription, DeviceVerifiedSubscriptionVariables> & ({ variables: DeviceVerifiedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<DeviceVerifiedSubscription, DeviceVerifiedSubscriptionVariables>(DeviceVerifiedDocument, options);
-      }
-export type DeviceVerifiedSubscriptionHookResult = ReturnType<typeof useDeviceVerifiedSubscription>;
-export type DeviceVerifiedSubscriptionResult = ApolloReactCommon.SubscriptionResult<DeviceVerifiedSubscription>;
-export const LoginAttemptsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"LoginAttempts"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"loginAttempted"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"method"}},{"kind":"Field","name":{"kind":"Name","value":"provider"}},{"kind":"Field","name":{"kind":"Name","value":"isVpn"}},{"kind":"Field","name":{"kind":"Name","value":"isTor"}},{"kind":"Field","name":{"kind":"Name","value":"isProxy"}},{"kind":"Field","name":{"kind":"Name","value":"userAgent"}},{"kind":"Field","name":{"kind":"Name","value":"browserName"}},{"kind":"Field","name":{"kind":"Name","value":"browserVersion"}},{"kind":"Field","name":{"kind":"Name","value":"osName"}},{"kind":"Field","name":{"kind":"Name","value":"osVersion"}},{"kind":"Field","name":{"kind":"Name","value":"deviceType"}},{"kind":"Field","name":{"kind":"Name","value":"isMobileApp"}},{"kind":"Field","name":{"kind":"Name","value":"isRisky"}},{"kind":"Field","name":{"kind":"Name","value":"failureReason"}},{"kind":"Field","name":{"kind":"Name","value":"failureDetails"}},{"kind":"Field","name":{"kind":"Name","value":"isNewLocation"}},{"kind":"Field","name":{"kind":"Name","value":"isNewDevice"}},{"kind":"Field","name":{"kind":"Name","value":"isNewBrowser"}},{"kind":"Field","name":{"kind":"Name","value":"loggedInAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useLoginAttemptsSubscription__
- *
- * To run a query within a React component, call `useLoginAttemptsSubscription` and pass it any options that fit your needs.
- * When your component renders, `useLoginAttemptsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useLoginAttemptsSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useLoginAttemptsSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<LoginAttemptsSubscription, LoginAttemptsSubscriptionVariables> & ({ variables: LoginAttemptsSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<LoginAttemptsSubscription, LoginAttemptsSubscriptionVariables>(LoginAttemptsDocument, options);
-      }
-export type LoginAttemptsSubscriptionHookResult = ReturnType<typeof useLoginAttemptsSubscription>;
-export type LoginAttemptsSubscriptionResult = ApolloReactCommon.SubscriptionResult<LoginAttemptsSubscription>;
+export type LoginActivityChangesSubscriptionHookResult = ReturnType<typeof useLoginActivityChangesSubscription>;
+export type LoginActivityChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<LoginActivityChangesSubscription>;
 export const GetMeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PartialUser"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PartialUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"defaultShoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultHomeId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}}]}},{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"theme"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -13801,7 +14056,7 @@ export type GetMeQueryHookResult = ReturnType<typeof useGetMeQuery>;
 export type GetMeLazyQueryHookResult = ReturnType<typeof useGetMeLazyQuery>;
 export type GetMeSuspenseQueryHookResult = ReturnType<typeof useGetMeSuspenseQuery>;
 export type GetMeQueryResult = ApolloReactCommon.QueryResult<GetMeQuery, GetMeQueryVariables>;
-export const GetUserSettingsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUserSettings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userSettings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"Field","name":{"kind":"Name","value":"theme"}},{"kind":"Field","name":{"kind":"Name","value":"compactMode"}},{"kind":"Field","name":{"kind":"Name","value":"showTutorials"}},{"kind":"Field","name":{"kind":"Name","value":"autoSync"}},{"kind":"Field","name":{"kind":"Name","value":"offlineMode"}},{"kind":"Field","name":{"kind":"Name","value":"shareUsageData"}},{"kind":"Field","name":{"kind":"Name","value":"shareWithPartners"}},{"kind":"Field","name":{"kind":"Name","value":"personalizedAds"}},{"kind":"Field","name":{"kind":"Name","value":"preferredUnitSystem"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"enabledFeatures"}},{"kind":"Field","name":{"kind":"Name","value":"betaFeatures"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode;
+export const GetUserSettingsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUserSettings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"theme"}},{"kind":"Field","name":{"kind":"Name","value":"compactMode"}},{"kind":"Field","name":{"kind":"Name","value":"showTutorials"}},{"kind":"Field","name":{"kind":"Name","value":"autoSync"}},{"kind":"Field","name":{"kind":"Name","value":"offlineMode"}},{"kind":"Field","name":{"kind":"Name","value":"shareUsageData"}},{"kind":"Field","name":{"kind":"Name","value":"shareWithPartners"}},{"kind":"Field","name":{"kind":"Name","value":"personalizedAds"}},{"kind":"Field","name":{"kind":"Name","value":"preferredUnitSystem"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"enabledFeatures"}},{"kind":"Field","name":{"kind":"Name","value":"betaFeatures"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetUserSettingsQuery__
@@ -13837,7 +14092,7 @@ export type GetUserSettingsQueryHookResult = ReturnType<typeof useGetUserSetting
 export type GetUserSettingsLazyQueryHookResult = ReturnType<typeof useGetUserSettingsLazyQuery>;
 export type GetUserSettingsSuspenseQueryHookResult = ReturnType<typeof useGetUserSettingsSuspenseQuery>;
 export type GetUserSettingsQueryResult = ApolloReactCommon.QueryResult<GetUserSettingsQuery, GetUserSettingsQueryVariables>;
-export const GetUserProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUserProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"coverImage"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}},{"kind":"Field","name":{"kind":"Name","value":"website"}},{"kind":"Field","name":{"kind":"Name","value":"dateOfBirth"}},{"kind":"Field","name":{"kind":"Name","value":"gender"}},{"kind":"Field","name":{"kind":"Name","value":"profileVisibility"}},{"kind":"Field","name":{"kind":"Name","value":"showEmail"}},{"kind":"Field","name":{"kind":"Name","value":"showPhone"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const GetUserProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetUserProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"coverImage"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}},{"kind":"Field","name":{"kind":"Name","value":"website"}},{"kind":"Field","name":{"kind":"Name","value":"dateOfBirth"}},{"kind":"Field","name":{"kind":"Name","value":"gender"}},{"kind":"Field","name":{"kind":"Name","value":"profileVisibility"}},{"kind":"Field","name":{"kind":"Name","value":"showEmail"}},{"kind":"Field","name":{"kind":"Name","value":"showPhone"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetUserProfileQuery__
@@ -14038,102 +14293,30 @@ export function useCompleteOnboardingMutation(baseOptions?: ApolloReactHooks.Mut
 export type CompleteOnboardingMutationHookResult = ReturnType<typeof useCompleteOnboardingMutation>;
 export type CompleteOnboardingMutationResult = ApolloReactCommon.MutationResult<CompleteOnboardingMutation>;
 export type CompleteOnboardingMutationOptions = ApolloReactCommon.BaseMutationOptions<CompleteOnboardingMutation, CompleteOnboardingMutationVariables>;
-export const UserUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"UserUpdated"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userUpdated"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
+export const UserChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"UserChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"emailVerified"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"onBoarded"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCurrency"}},{"kind":"Field","name":{"kind":"Name","value":"language"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"coverImage"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}},{"kind":"Field","name":{"kind":"Name","value":"website"}},{"kind":"Field","name":{"kind":"Name","value":"profileVisibility"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useUserUpdatedSubscription__
+ * __useUserChangesSubscription__
  *
- * To run a query within a React component, call `useUserUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useUserChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useUserUpdatedSubscription({
+ * const { data, loading, error } = useUserChangesSubscription({
  *   variables: {
  *      userId: // value for 'userId'
  *   },
  * });
  */
-export function useUserUpdatedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<UserUpdatedSubscription, UserUpdatedSubscriptionVariables>) {
+export function useUserChangesSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<UserChangesSubscription, UserChangesSubscriptionVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<UserUpdatedSubscription, UserUpdatedSubscriptionVariables>(UserUpdatedDocument, options);
+        return ApolloReactHooks.useSubscription<UserChangesSubscription, UserChangesSubscriptionVariables>(UserChangesDocument, options);
       }
-export type UserUpdatedSubscriptionHookResult = ReturnType<typeof useUserUpdatedSubscription>;
-export type UserUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<UserUpdatedSubscription>;
-export const UserStatusChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"UserStatusChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userStatusChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"newStatus"}},{"kind":"Field","name":{"kind":"Name","value":"previousStatus"}},{"kind":"Field","name":{"kind":"Name","value":"isOnline"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useUserStatusChangedSubscription__
- *
- * To run a query within a React component, call `useUserStatusChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserStatusChangedSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useUserStatusChangedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<UserStatusChangedSubscription, UserStatusChangedSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<UserStatusChangedSubscription, UserStatusChangedSubscriptionVariables>(UserStatusChangedDocument, options);
-      }
-export type UserStatusChangedSubscriptionHookResult = ReturnType<typeof useUserStatusChangedSubscription>;
-export type UserStatusChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<UserStatusChangedSubscription>;
-export const UserActivityDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"UserActivity"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userActivity"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"activityType"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useUserActivitySubscription__
- *
- * To run a query within a React component, call `useUserActivitySubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserActivitySubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserActivitySubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useUserActivitySubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<UserActivitySubscription, UserActivitySubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<UserActivitySubscription, UserActivitySubscriptionVariables>(UserActivityDocument, options);
-      }
-export type UserActivitySubscriptionHookResult = ReturnType<typeof useUserActivitySubscription>;
-export type UserActivitySubscriptionResult = ApolloReactCommon.SubscriptionResult<UserActivitySubscription>;
-export const UserProfileChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"UserProfileChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"userId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userProfileChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"userId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"userId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"firstName"}},{"kind":"Field","name":{"kind":"Name","value":"lastName"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"bio"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}},{"kind":"Field","name":{"kind":"Name","value":"coverImage"}},{"kind":"Field","name":{"kind":"Name","value":"phone"}},{"kind":"Field","name":{"kind":"Name","value":"website"}},{"kind":"Field","name":{"kind":"Name","value":"profileVisibility"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useUserProfileChangedSubscription__
- *
- * To run a query within a React component, call `useUserProfileChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserProfileChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserProfileChangedSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useUserProfileChangedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<UserProfileChangedSubscription, UserProfileChangedSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<UserProfileChangedSubscription, UserProfileChangedSubscriptionVariables>(UserProfileChangedDocument, options);
-      }
-export type UserProfileChangedSubscriptionHookResult = ReturnType<typeof useUserProfileChangedSubscription>;
-export type UserProfileChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<UserProfileChangedSubscription>;
+export type UserChangesSubscriptionHookResult = ReturnType<typeof useUserChangesSubscription>;
+export type UserChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<UserChangesSubscription>;
 export const GetHomeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetHome"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"home"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"invitedUserId"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"customPermissions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastReminderAt"}},{"kind":"Field","name":{"kind":"Name","value":"reminderCount"}},{"kind":"Field","name":{"kind":"Name","value":"acceptedAt"}},{"kind":"Field","name":{"kind":"Name","value":"declinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"revokedAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"MemberShipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Membership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"joinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"leftAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicPantryFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Pantry"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Home"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timezone"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"joinCode"}},{"kind":"Field","name":{"kind":"Name","value":"allowJoinCode"}},{"kind":"Field","name":{"kind":"Name","value":"maxMembers"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"invitesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"50"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeInviteFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"membersConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"MemberShipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantriesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"50"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicPantryFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -14246,7 +14429,7 @@ export type GetHomesQueryHookResult = ReturnType<typeof useGetHomesQuery>;
 export type GetHomesLazyQueryHookResult = ReturnType<typeof useGetHomesLazyQuery>;
 export type GetHomesSuspenseQueryHookResult = ReturnType<typeof useGetHomesSuspenseQuery>;
 export type GetHomesQueryResult = ApolloReactCommon.QueryResult<GetHomesQuery, GetHomesQueryVariables>;
-export const GetMyPendingInvitesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyPendingInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pendingHomeInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeInviteFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"invitedUserId"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"customPermissions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastReminderAt"}},{"kind":"Field","name":{"kind":"Name","value":"reminderCount"}},{"kind":"Field","name":{"kind":"Name","value":"acceptedAt"}},{"kind":"Field","name":{"kind":"Name","value":"declinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"revokedAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const GetMyPendingInvitesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyPendingInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pendingHomeInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"HomeInviteFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"HomeInviteFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"HomeInvite"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"invitedUserId"}},{"kind":"Field","name":{"kind":"Name","value":"recipientName"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"customPermissions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}}]}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastReminderAt"}},{"kind":"Field","name":{"kind":"Name","value":"reminderCount"}},{"kind":"Field","name":{"kind":"Name","value":"acceptedAt"}},{"kind":"Field","name":{"kind":"Name","value":"declinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"revokedAt"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"inviter"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetMyPendingInvitesQuery__
@@ -14631,103 +14814,31 @@ export function useHomeInviteChangedSubscription(baseOptions: ApolloReactHooks.S
       }
 export type HomeInviteChangedSubscriptionHookResult = ReturnType<typeof useHomeInviteChangedSubscription>;
 export type HomeInviteChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<HomeInviteChangedSubscription>;
-export const MembershipUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MembershipUpdated"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"membershipUpdated"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"joinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
+export const MembershipChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MembershipChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"membershipChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"membership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"canViewPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"canManageHome"}},{"kind":"Field","name":{"kind":"Name","value":"lastActiveAt"}},{"kind":"Field","name":{"kind":"Name","value":"joinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"previousRole"}},{"kind":"Field","name":{"kind":"Name","value":"newRole"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useMembershipUpdatedSubscription__
+ * __useMembershipChangesSubscription__
  *
- * To run a query within a React component, call `useMembershipUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMembershipUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useMembershipChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMembershipChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useMembershipUpdatedSubscription({
+ * const { data, loading, error } = useMembershipChangesSubscription({
  *   variables: {
  *      homeId: // value for 'homeId'
  *   },
  * });
  */
-export function useMembershipUpdatedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<MembershipUpdatedSubscription, MembershipUpdatedSubscriptionVariables>) {
+export function useMembershipChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<MembershipChangesSubscription, MembershipChangesSubscriptionVariables> & ({ variables: MembershipChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<MembershipUpdatedSubscription, MembershipUpdatedSubscriptionVariables>(MembershipUpdatedDocument, options);
+        return ApolloReactHooks.useSubscription<MembershipChangesSubscription, MembershipChangesSubscriptionVariables>(MembershipChangesDocument, options);
       }
-export type MembershipUpdatedSubscriptionHookResult = ReturnType<typeof useMembershipUpdatedSubscription>;
-export type MembershipUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<MembershipUpdatedSubscription>;
-export const MemberJoinedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MemberJoined"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"memberJoined"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useMemberJoinedSubscription__
- *
- * To run a query within a React component, call `useMemberJoinedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMemberJoinedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMemberJoinedSubscription({
- *   variables: {
- *      homeId: // value for 'homeId'
- *   },
- * });
- */
-export function useMemberJoinedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<MemberJoinedSubscription, MemberJoinedSubscriptionVariables> & ({ variables: MemberJoinedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<MemberJoinedSubscription, MemberJoinedSubscriptionVariables>(MemberJoinedDocument, options);
-      }
-export type MemberJoinedSubscriptionHookResult = ReturnType<typeof useMemberJoinedSubscription>;
-export type MemberJoinedSubscriptionResult = ApolloReactCommon.SubscriptionResult<MemberJoinedSubscription>;
-export const MemberLeftDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MemberLeft"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"memberLeft"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useMemberLeftSubscription__
- *
- * To run a query within a React component, call `useMemberLeftSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMemberLeftSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMemberLeftSubscription({
- *   variables: {
- *      homeId: // value for 'homeId'
- *   },
- * });
- */
-export function useMemberLeftSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<MemberLeftSubscription, MemberLeftSubscriptionVariables> & ({ variables: MemberLeftSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<MemberLeftSubscription, MemberLeftSubscriptionVariables>(MemberLeftDocument, options);
-      }
-export type MemberLeftSubscriptionHookResult = ReturnType<typeof useMemberLeftSubscription>;
-export type MemberLeftSubscriptionResult = ApolloReactCommon.SubscriptionResult<MemberLeftSubscription>;
-export const MembershipRoleChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MembershipRoleChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"membershipRoleChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"membership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"previousRole"}},{"kind":"Field","name":{"kind":"Name","value":"newRole"}},{"kind":"Field","name":{"kind":"Name","value":"changedBy"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useMembershipRoleChangedSubscription__
- *
- * To run a query within a React component, call `useMembershipRoleChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMembershipRoleChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMembershipRoleChangedSubscription({
- *   variables: {
- *      homeId: // value for 'homeId'
- *   },
- * });
- */
-export function useMembershipRoleChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<MembershipRoleChangedSubscription, MembershipRoleChangedSubscriptionVariables> & ({ variables: MembershipRoleChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<MembershipRoleChangedSubscription, MembershipRoleChangedSubscriptionVariables>(MembershipRoleChangedDocument, options);
-      }
-export type MembershipRoleChangedSubscriptionHookResult = ReturnType<typeof useMembershipRoleChangedSubscription>;
-export type MembershipRoleChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<MembershipRoleChangedSubscription>;
-export const SetDefaultHomeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetDefaultHome"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setDefaultHome"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultPantry"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}}]}}]}}]}}]} as unknown as DocumentNode;
+export type MembershipChangesSubscriptionHookResult = ReturnType<typeof useMembershipChangesSubscription>;
+export type MembershipChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<MembershipChangesSubscription>;
+export const SetDefaultHomeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetDefaultHome"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setDefaultHome"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"settings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultPantry"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useSetDefaultHomeMutation__
@@ -15197,7 +15308,7 @@ export type CalculateRecipePantryDeficitQueryHookResult = ReturnType<typeof useC
 export type CalculateRecipePantryDeficitLazyQueryHookResult = ReturnType<typeof useCalculateRecipePantryDeficitLazyQuery>;
 export type CalculateRecipePantryDeficitSuspenseQueryHookResult = ReturnType<typeof useCalculateRecipePantryDeficitSuspenseQuery>;
 export type CalculateRecipePantryDeficitQueryResult = ApolloReactCommon.QueryResult<CalculateRecipePantryDeficitQuery, CalculateRecipePantryDeficitQueryVariables>;
-export const UpsertItemUnitConversionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpsertItemUnitConversion"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"conversionRatio"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"notes"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"upsertItemUnitConversion"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"itemId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"itemId"}}},{"kind":"Argument","name":{"kind":"Name","value":"fromUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fromUnitId"}}},{"kind":"Argument","name":{"kind":"Name","value":"toUnitId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"toUnitId"}}},{"kind":"Argument","name":{"kind":"Name","value":"conversionRatio"},"value":{"kind":"Variable","name":{"kind":"Name","value":"conversionRatio"}}},{"kind":"Argument","name":{"kind":"Name","value":"notes"},"value":{"kind":"Variable","name":{"kind":"Name","value":"notes"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"unitConversion"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"fromUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"toUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"conversionRatio"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const UpsertItemUnitConversionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpsertItemUnitConversion"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpsertItemUnitConversionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"upsertItemUnitConversion"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"unitConversion"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"fromUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"toUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"conversionRatio"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpsertItemUnitConversionMutation__
@@ -15212,11 +15323,7 @@ export const UpsertItemUnitConversionDocument = {"kind":"Document","definitions"
  * @example
  * const [upsertItemUnitConversionMutation, { data, loading, error }] = useUpsertItemUnitConversionMutation({
  *   variables: {
- *      itemId: // value for 'itemId'
- *      fromUnitId: // value for 'fromUnitId'
- *      toUnitId: // value for 'toUnitId'
- *      conversionRatio: // value for 'conversionRatio'
- *      notes: // value for 'notes'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -16413,7 +16520,7 @@ export function useCreateTemplateFromMealPlanMutation(baseOptions?: ApolloReactH
 export type CreateTemplateFromMealPlanMutationHookResult = ReturnType<typeof useCreateTemplateFromMealPlanMutation>;
 export type CreateTemplateFromMealPlanMutationResult = ApolloReactCommon.MutationResult<CreateTemplateFromMealPlanMutation>;
 export type CreateTemplateFromMealPlanMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateTemplateFromMealPlanMutation, CreateTemplateFromMealPlanMutationVariables>;
-export const GetMyNotificationsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyNotifications"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationFilters"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"first"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"last"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"before"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationOrderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filter"}}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"first"}}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}},{"kind":"Argument","name":{"kind":"Name","value":"last"},"value":{"kind":"Variable","name":{"kind":"Name","value":"last"}}},{"kind":"Argument","name":{"kind":"Name","value":"before"},"value":{"kind":"Variable","name":{"kind":"Name","value":"before"}}},{"kind":"Argument","name":{"kind":"Name","value":"orderBy"},"value":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}},{"kind":"Field","name":{"kind":"Name","value":"unreadCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
+export const GetMyNotificationsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMyNotifications"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"filter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationFilters"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"first"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"last"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"before"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationOrderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"filter"}}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"first"}}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}},{"kind":"Argument","name":{"kind":"Name","value":"last"},"value":{"kind":"Variable","name":{"kind":"Name","value":"last"}}},{"kind":"Argument","name":{"kind":"Name","value":"before"},"value":{"kind":"Variable","name":{"kind":"Name","value":"before"}}},{"kind":"Argument","name":{"kind":"Name","value":"orderBy"},"value":{"kind":"Variable","name":{"kind":"Name","value":"orderBy"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}},{"kind":"Field","name":{"kind":"Name","value":"unreadCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetMyNotificationsQuery__
@@ -16620,52 +16727,29 @@ export function useDeleteMultipleNotificationsMutation(baseOptions?: ApolloReact
 export type DeleteMultipleNotificationsMutationHookResult = ReturnType<typeof useDeleteMultipleNotificationsMutation>;
 export type DeleteMultipleNotificationsMutationResult = ApolloReactCommon.MutationResult<DeleteMultipleNotificationsMutation>;
 export type DeleteMultipleNotificationsMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteMultipleNotificationsMutation, DeleteMultipleNotificationsMutationVariables>;
-export const NotificationReceivedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"NotificationReceived"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationReceived"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationSubscription"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationSubscription"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationPayload"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode;
+export const NotificationChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"NotificationChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Notification"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useNotificationReceivedSubscription__
+ * __useNotificationChangedSubscription__
  *
- * To run a query within a React component, call `useNotificationReceivedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useNotificationReceivedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useNotificationChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNotificationChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useNotificationReceivedSubscription({
+ * const { data, loading, error } = useNotificationChangedSubscription({
  *   variables: {
  *   },
  * });
  */
-export function useNotificationReceivedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<NotificationReceivedSubscription, NotificationReceivedSubscriptionVariables>) {
+export function useNotificationChangedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<NotificationChangedSubscription, NotificationChangedSubscriptionVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<NotificationReceivedSubscription, NotificationReceivedSubscriptionVariables>(NotificationReceivedDocument, options);
+        return ApolloReactHooks.useSubscription<NotificationChangedSubscription, NotificationChangedSubscriptionVariables>(NotificationChangedDocument, options);
       }
-export type NotificationReceivedSubscriptionHookResult = ReturnType<typeof useNotificationReceivedSubscription>;
-export type NotificationReceivedSubscriptionResult = ApolloReactCommon.SubscriptionResult<NotificationReceivedSubscription>;
-export const NotificationUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"NotificationUpdated"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationUpdated"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"NotificationSubscription"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"NotificationSubscription"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"NotificationPayload"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"notification"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"payload"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"sentAt"}},{"kind":"Field","name":{"kind":"Name","value":"readAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useNotificationUpdatedSubscription__
- *
- * To run a query within a React component, call `useNotificationUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useNotificationUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useNotificationUpdatedSubscription({
- *   variables: {
- *   },
- * });
- */
-export function useNotificationUpdatedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<NotificationUpdatedSubscription, NotificationUpdatedSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<NotificationUpdatedSubscription, NotificationUpdatedSubscriptionVariables>(NotificationUpdatedDocument, options);
-      }
-export type NotificationUpdatedSubscriptionHookResult = ReturnType<typeof useNotificationUpdatedSubscription>;
-export type NotificationUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<NotificationUpdatedSubscription>;
+export type NotificationChangedSubscriptionHookResult = ReturnType<typeof useNotificationChangedSubscription>;
+export type NotificationChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<NotificationChangedSubscription>;
 export const GetPantriesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPantries"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"first"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantries"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"first"}}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -16746,7 +16830,7 @@ export type GetPantryQueryHookResult = ReturnType<typeof useGetPantryQuery>;
 export type GetPantryLazyQueryHookResult = ReturnType<typeof useGetPantryLazyQuery>;
 export type GetPantrySuspenseQueryHookResult = ReturnType<typeof useGetPantrySuspenseQuery>;
 export type GetPantryQueryResult = ApolloReactCommon.QueryResult<GetPantryQuery, GetPantryQueryVariables>;
-export const GetPantryItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPantryItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"}},{"kind":"Field","name":{"kind":"Name","value":"allergens"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageNotes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"restockQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"store"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"condition"}},{"kind":"Field","name":{"kind":"Name","value":"acquisitionMethod"}},{"kind":"Field","name":{"kind":"Name","value":"costPerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"purchase"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usageRecords"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usageUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"wasteReason"}},{"kind":"Field","name":{"kind":"Name","value":"adjustmentReason"}},{"kind":"Field","name":{"kind":"Name","value":"isComposted"}},{"kind":"Field","name":{"kind":"Name","value":"isRecycled"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const GetPantryItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetPantryItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UnitFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemUnit"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"unitId"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPreferred"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"packageSize"}},{"kind":"Field","name":{"kind":"Name","value":"packageDescription"}},{"kind":"Field","name":{"kind":"Name","value":"retailUnit"}},{"kind":"Field","name":{"kind":"Name","value":"usageContext"}},{"kind":"Field","name":{"kind":"Name","value":"recommendedFor"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"maxQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityStep"}},{"kind":"Field","name":{"kind":"Name","value":"averagePricePerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"displayNameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"displayNamePlural"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BrandFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ItemBrand"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Item"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"dataSource"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"showInOnboarding"}},{"kind":"Field","name":{"kind":"Name","value":"shelfLifeDays"}},{"kind":"Field","name":{"kind":"Name","value":"popularity"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"healthBenefits"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"benefit"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"description"}}]}},{"kind":"Field","name":{"kind":"Name","value":"allergens"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"contains"}},{"kind":"Field","name":{"kind":"Name","value":"severity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"density"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredTrackingUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"baseDimension"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"defaultConsumeIncrement"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"units"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UnitFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brands"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BrandFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ItemFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"displayAsFraction"}},{"kind":"Field","name":{"kind":"Name","value":"minPrecision"}},{"kind":"Field","name":{"kind":"Name","value":"autoConvertThreshold"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageNotes"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"restockQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"store"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"condition"}},{"kind":"Field","name":{"kind":"Name","value":"acquisitionMethod"}},{"kind":"Field","name":{"kind":"Name","value":"costPerUnit"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"purchase"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usageRecords"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usageUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"wasteReason"}},{"kind":"Field","name":{"kind":"Name","value":"adjustmentReason"}},{"kind":"Field","name":{"kind":"Name","value":"isComposted"}},{"kind":"Field","name":{"kind":"Name","value":"isRecycled"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetPantryItemQuery__
@@ -17508,150 +17592,54 @@ export function useSyncDeletePantryItemMutation(baseOptions?: ApolloReactHooks.M
 export type SyncDeletePantryItemMutationHookResult = ReturnType<typeof useSyncDeletePantryItemMutation>;
 export type SyncDeletePantryItemMutationResult = ApolloReactCommon.MutationResult<SyncDeletePantryItemMutation>;
 export type SyncDeletePantryItemMutationOptions = ApolloReactCommon.BaseMutationOptions<SyncDeletePantryItemMutation, SyncDeletePantryItemMutationVariables>;
-export const PantryUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryUpdated"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryUpdated"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
+export const PantryChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"pantry"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"location"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"metadata"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __usePantryUpdatedSubscription__
+ * __usePantryChangesSubscription__
  *
- * To run a query within a React component, call `usePantryUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `usePantryChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = usePantryUpdatedSubscription({
+ * const { data, loading, error } = usePantryChangesSubscription({
  *   variables: {
  *      pantryId: // value for 'pantryId'
  *   },
  * });
  */
-export function usePantryUpdatedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryUpdatedSubscription, PantryUpdatedSubscriptionVariables> & ({ variables: PantryUpdatedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function usePantryChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryChangesSubscription, PantryChangesSubscriptionVariables> & ({ variables: PantryChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryUpdatedSubscription, PantryUpdatedSubscriptionVariables>(PantryUpdatedDocument, options);
+        return ApolloReactHooks.useSubscription<PantryChangesSubscription, PantryChangesSubscriptionVariables>(PantryChangesDocument, options);
       }
-export type PantryUpdatedSubscriptionHookResult = ReturnType<typeof usePantryUpdatedSubscription>;
-export type PantryUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryUpdatedSubscription>;
-export const PantryLowStockAlertDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryLowStockAlert"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryLowStockAlert"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"currentQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"minimumQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
+export type PantryChangesSubscriptionHookResult = ReturnType<typeof usePantryChangesSubscription>;
+export type PantryChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryChangesSubscription>;
+export const PantryAlertsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryAlerts"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryAlert"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"alertType"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"items"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __usePantryLowStockAlertSubscription__
+ * __usePantryAlertsSubscription__
  *
- * To run a query within a React component, call `usePantryLowStockAlertSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryLowStockAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `usePantryAlertsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryAlertsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = usePantryLowStockAlertSubscription({
+ * const { data, loading, error } = usePantryAlertsSubscription({
  *   variables: {
  *      pantryId: // value for 'pantryId'
  *   },
  * });
  */
-export function usePantryLowStockAlertSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryLowStockAlertSubscription, PantryLowStockAlertSubscriptionVariables> & ({ variables: PantryLowStockAlertSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function usePantryAlertsSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryAlertsSubscription, PantryAlertsSubscriptionVariables> & ({ variables: PantryAlertsSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryLowStockAlertSubscription, PantryLowStockAlertSubscriptionVariables>(PantryLowStockAlertDocument, options);
+        return ApolloReactHooks.useSubscription<PantryAlertsSubscription, PantryAlertsSubscriptionVariables>(PantryAlertsDocument, options);
       }
-export type PantryLowStockAlertSubscriptionHookResult = ReturnType<typeof usePantryLowStockAlertSubscription>;
-export type PantryLowStockAlertSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryLowStockAlertSubscription>;
-export const PantryExpiringItemsAlertDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryExpiringItemsAlert"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryExpiringItemsAlert"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"daysUntilExpiration"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __usePantryExpiringItemsAlertSubscription__
- *
- * To run a query within a React component, call `usePantryExpiringItemsAlertSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryExpiringItemsAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePantryExpiringItemsAlertSubscription({
- *   variables: {
- *      pantryId: // value for 'pantryId'
- *   },
- * });
- */
-export function usePantryExpiringItemsAlertSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryExpiringItemsAlertSubscription, PantryExpiringItemsAlertSubscriptionVariables> & ({ variables: PantryExpiringItemsAlertSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryExpiringItemsAlertSubscription, PantryExpiringItemsAlertSubscriptionVariables>(PantryExpiringItemsAlertDocument, options);
-      }
-export type PantryExpiringItemsAlertSubscriptionHookResult = ReturnType<typeof usePantryExpiringItemsAlertSubscription>;
-export type PantryExpiringItemsAlertSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryExpiringItemsAlertSubscription>;
-export const PantryItemsChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryItemsChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryItemsChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemDisplay"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"storageState"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlert"}},{"kind":"Field","name":{"kind":"Name","value":"minQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"lastUsedAt"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingNetWeight"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PantryItemDisplay"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"PantryItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PantryItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storageLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"packageBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"count"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeight"}},{"kind":"Field","name":{"kind":"Name","value":"perUnitNetWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalNetWeight"}}]}},{"kind":"Field","name":{"kind":"Name","value":"quantityBreakdown"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"fullPackages"}},{"kind":"Field","name":{"kind":"Name","value":"looseContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"contentUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalContentUnits"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeight"}},{"kind":"Field","name":{"kind":"Name","value":"remainingWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __usePantryItemsChangedSubscription__
- *
- * To run a query within a React component, call `usePantryItemsChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryItemsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePantryItemsChangedSubscription({
- *   variables: {
- *      pantryId: // value for 'pantryId'
- *   },
- * });
- */
-export function usePantryItemsChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryItemsChangedSubscription, PantryItemsChangedSubscriptionVariables> & ({ variables: PantryItemsChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryItemsChangedSubscription, PantryItemsChangedSubscriptionVariables>(PantryItemsChangedDocument, options);
-      }
-export type PantryItemsChangedSubscriptionHookResult = ReturnType<typeof usePantryItemsChangedSubscription>;
-export type PantryItemsChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryItemsChangedSubscription>;
-export const PantryItemUsageChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryItemUsageChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryItemUsageChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"usage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"quantityUsed"}},{"kind":"Field","name":{"kind":"Name","value":"usedAt"}},{"kind":"Field","name":{"kind":"Name","value":"purpose"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"pantryItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}},{"kind":"Field","name":{"kind":"Name","value":"usedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __usePantryItemUsageChangedSubscription__
- *
- * To run a query within a React component, call `usePantryItemUsageChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryItemUsageChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePantryItemUsageChangedSubscription({
- *   variables: {
- *      pantryId: // value for 'pantryId'
- *   },
- * });
- */
-export function usePantryItemUsageChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryItemUsageChangedSubscription, PantryItemUsageChangedSubscriptionVariables> & ({ variables: PantryItemUsageChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryItemUsageChangedSubscription, PantryItemUsageChangedSubscriptionVariables>(PantryItemUsageChangedDocument, options);
-      }
-export type PantryItemUsageChangedSubscriptionHookResult = ReturnType<typeof usePantryItemUsageChangedSubscription>;
-export type PantryItemUsageChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryItemUsageChangedSubscription>;
-export const PantryWasteAlertDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PantryWasteAlert"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryWasteAlert"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemId"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"pantryId"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"wasteAmount"}},{"kind":"Field","name":{"kind":"Name","value":"wasteReason"}},{"kind":"Field","name":{"kind":"Name","value":"wasteValue"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __usePantryWasteAlertSubscription__
- *
- * To run a query within a React component, call `usePantryWasteAlertSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryWasteAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePantryWasteAlertSubscription({
- *   variables: {
- *      pantryId: // value for 'pantryId'
- *   },
- * });
- */
-export function usePantryWasteAlertSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<PantryWasteAlertSubscription, PantryWasteAlertSubscriptionVariables> & ({ variables: PantryWasteAlertSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<PantryWasteAlertSubscription, PantryWasteAlertSubscriptionVariables>(PantryWasteAlertDocument, options);
-      }
-export type PantryWasteAlertSubscriptionHookResult = ReturnType<typeof usePantryWasteAlertSubscription>;
-export type PantryWasteAlertSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryWasteAlertSubscription>;
+export type PantryAlertsSubscriptionHookResult = ReturnType<typeof usePantryAlertsSubscription>;
+export type PantryAlertsSubscriptionResult = ApolloReactCommon.SubscriptionResult<PantryAlertsSubscription>;
 export const SearchRecipesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SearchRecipes"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"query"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"first"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"searchRecipes"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"query"},"value":{"kind":"Variable","name":{"kind":"Name","value":"query"}}},{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"first"}}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -17769,7 +17757,7 @@ export type MyRecipesQueryHookResult = ReturnType<typeof useMyRecipesQuery>;
 export type MyRecipesLazyQueryHookResult = ReturnType<typeof useMyRecipesLazyQuery>;
 export type MyRecipesSuspenseQueryHookResult = ReturnType<typeof useMyRecipesSuspenseQuery>;
 export type MyRecipesQueryResult = ApolloReactCommon.QueryResult<MyRecipesQuery, MyRecipesQueryVariables>;
-export const GetRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"recipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
+export const GetRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"recipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetRecipeQuery__
@@ -17806,7 +17794,7 @@ export type GetRecipeQueryHookResult = ReturnType<typeof useGetRecipeQuery>;
 export type GetRecipeLazyQueryHookResult = ReturnType<typeof useGetRecipeLazyQuery>;
 export type GetRecipeSuspenseQueryHookResult = ReturnType<typeof useGetRecipeSuspenseQuery>;
 export type GetRecipeQueryResult = ApolloReactCommon.QueryResult<GetRecipeQuery, GetRecipeQueryVariables>;
-export const MySavedRecipesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySavedRecipes"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"folder"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"savedRecipesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"folder"},"value":{"kind":"Variable","name":{"kind":"Name","value":"folder"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastCookedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
+export const MySavedRecipesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MySavedRecipes"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"folder"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"savedRecipesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"folder"},"value":{"kind":"Variable","name":{"kind":"Name","value":"folder"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastCookedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useMySavedRecipesQuery__
@@ -17879,7 +17867,7 @@ export type SavedRecipeFoldersQueryHookResult = ReturnType<typeof useSavedRecipe
 export type SavedRecipeFoldersLazyQueryHookResult = ReturnType<typeof useSavedRecipeFoldersLazyQuery>;
 export type SavedRecipeFoldersSuspenseQueryHookResult = ReturnType<typeof useSavedRecipeFoldersSuspenseQuery>;
 export type SavedRecipeFoldersQueryResult = ApolloReactCommon.QueryResult<SavedRecipeFoldersQuery, SavedRecipeFoldersQueryVariables>;
-export const CreateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
+export const CreateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useCreateRecipeMutation__
@@ -17931,7 +17919,7 @@ export function useUpsertExternalRecipeMutation(baseOptions?: ApolloReactHooks.M
 export type UpsertExternalRecipeMutationHookResult = ReturnType<typeof useUpsertExternalRecipeMutation>;
 export type UpsertExternalRecipeMutationResult = ApolloReactCommon.MutationResult<UpsertExternalRecipeMutation>;
 export type UpsertExternalRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<UpsertExternalRecipeMutation, UpsertExternalRecipeMutationVariables>;
-export const UpdateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
+export const UpdateRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeFragment"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicUser"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeIngredientFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeIngredient"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"image"}},{"kind":"Field","name":{"kind":"Name","value":"isOptional"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"preparation"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"section"}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeReviewFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RecipeReview"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"rating"}},{"kind":"Field","name":{"kind":"Name","value":"comment"}},{"kind":"Field","name":{"kind":"Name","value":"helpful"}},{"kind":"Field","name":{"kind":"Name","value":"verified"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"helpfulVotes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"BasicRecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"servings"}},{"kind":"Field","name":{"kind":"Name","value":"prepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"cookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"totalTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"difficulty"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"cuisine"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isExternal"}},{"kind":"Field","name":{"kind":"Name","value":"externalSource"}},{"kind":"Field","name":{"kind":"Name","value":"externalId"}},{"kind":"Field","name":{"kind":"Name","value":"primarySource"}},{"kind":"Field","name":{"kind":"Name","value":"caloriesPerServing"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"savedDetails"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"folder"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"personalRating"}},{"kind":"Field","name":{"kind":"Name","value":"cookedCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RecipeFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Recipe"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicRecipeFragment"}},{"kind":"Field","name":{"kind":"Name","value":"instructions"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"tips"}},{"kind":"Field","name":{"kind":"Name","value":"videoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"originalAuthor"}},{"kind":"Field","name":{"kind":"Name","value":"externalUrl"}},{"kind":"Field","name":{"kind":"Name","value":"externalData"}},{"kind":"Field","name":{"kind":"Name","value":"nutritionData"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"visibility"}},{"kind":"Field","name":{"kind":"Name","value":"isPublished"}},{"kind":"Field","name":{"kind":"Name","value":"publishedAt"}},{"kind":"Field","name":{"kind":"Name","value":"averageRating"}},{"kind":"Field","name":{"kind":"Name","value":"totalReviews"}},{"kind":"Field","name":{"kind":"Name","value":"rating1Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating2Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating3Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating4Count"}},{"kind":"Field","name":{"kind":"Name","value":"rating5Count"}},{"kind":"Field","name":{"kind":"Name","value":"reviews"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeReviewFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"matchPercentage"}},{"kind":"Field","name":{"kind":"Name","value":"createdBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"BasicUser"}}]}},{"kind":"Field","name":{"kind":"Name","value":"ingredients"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RecipeIngredientFragment"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpdateRecipeMutation__
@@ -18089,7 +18077,7 @@ export function useUpdateFavoriteRecipeMutation(baseOptions?: ApolloReactHooks.M
 export type UpdateFavoriteRecipeMutationHookResult = ReturnType<typeof useUpdateFavoriteRecipeMutation>;
 export type UpdateFavoriteRecipeMutationResult = ApolloReactCommon.MutationResult<UpdateFavoriteRecipeMutation>;
 export type UpdateFavoriteRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateFavoriteRecipeMutation, UpdateFavoriteRecipeMutationVariables>;
-export const CreateShoppingListItemsFromRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateShoppingListItemsFromRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"servings"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createShoppingListItemsFromRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"recipeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}}},{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"servings"},"value":{"kind":"Variable","name":{"kind":"Name","value":"servings"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"addedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"skippedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalAdded"}},{"kind":"Field","name":{"kind":"Name","value":"totalUpdated"}},{"kind":"Field","name":{"kind":"Name","value":"totalSkipped"}}]}}]}}]} as unknown as DocumentNode;
+export const CreateShoppingListItemsFromRecipeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateShoppingListItemsFromRecipe"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateShoppingListItemsFromRecipeInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createShoppingListItemsFromRecipe"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"addedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"skippedItems"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalAdded"}},{"kind":"Field","name":{"kind":"Name","value":"totalUpdated"}},{"kind":"Field","name":{"kind":"Name","value":"totalSkipped"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useCreateShoppingListItemsFromRecipeMutation__
@@ -18104,9 +18092,7 @@ export const CreateShoppingListItemsFromRecipeDocument = {"kind":"Document","def
  * @example
  * const [createShoppingListItemsFromRecipeMutation, { data, loading, error }] = useCreateShoppingListItemsFromRecipeMutation({
  *   variables: {
- *      recipeId: // value for 'recipeId'
- *      shoppingListId: // value for 'shoppingListId'
- *      servings: // value for 'servings'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -18145,7 +18131,7 @@ export function useCreateShoppingListItemFromRecipeIngredientMutation(baseOption
 export type CreateShoppingListItemFromRecipeIngredientMutationHookResult = ReturnType<typeof useCreateShoppingListItemFromRecipeIngredientMutation>;
 export type CreateShoppingListItemFromRecipeIngredientMutationResult = ApolloReactCommon.MutationResult<CreateShoppingListItemFromRecipeIngredientMutation>;
 export type CreateShoppingListItemFromRecipeIngredientMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateShoppingListItemFromRecipeIngredientMutation, CreateShoppingListItemFromRecipeIngredientMutationVariables>;
-export const AddRecipeToShoppingListDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"AddRecipeToShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"servings"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"checkPantry"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Boolean"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"addRecipeToShoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"recipeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}}},{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"servings"},"value":{"kind":"Variable","name":{"kind":"Name","value":"servings"}}},{"kind":"Argument","name":{"kind":"Name","value":"checkPantry"},"value":{"kind":"Variable","name":{"kind":"Name","value":"checkPantry"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const AddRecipeToShoppingListDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"AddRecipeToShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"AddRecipeToShoppingListInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"addRecipeToShoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useAddRecipeToShoppingListMutation__
@@ -18160,10 +18146,7 @@ export const AddRecipeToShoppingListDocument = {"kind":"Document","definitions":
  * @example
  * const [addRecipeToShoppingListMutation, { data, loading, error }] = useAddRecipeToShoppingListMutation({
  *   variables: {
- *      recipeId: // value for 'recipeId'
- *      shoppingListId: // value for 'shoppingListId'
- *      servings: // value for 'servings'
- *      checkPantry: // value for 'checkPantry'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -18290,7 +18273,7 @@ export type GetRecipeCookingLogsQueryHookResult = ReturnType<typeof useGetRecipe
 export type GetRecipeCookingLogsLazyQueryHookResult = ReturnType<typeof useGetRecipeCookingLogsLazyQuery>;
 export type GetRecipeCookingLogsSuspenseQueryHookResult = ReturnType<typeof useGetRecipeCookingLogsSuspenseQuery>;
 export type GetRecipeCookingLogsQueryResult = ApolloReactCommon.QueryResult<GetRecipeCookingLogsQuery, GetRecipeCookingLogsQueryVariables>;
-export const ConfirmRecipeConsumptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ConfirmRecipeConsumption"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"consumptions"}},"type":{"kind":"NonNullType","type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ConfirmedIngredientConsumptionInput"}}}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"confirmRecipeConsumption"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"recipeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}}},{"kind":"Argument","name":{"kind":"Name","value":"pantryId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"pantryId"}}},{"kind":"Argument","name":{"kind":"Name","value":"consumptions"},"value":{"kind":"Variable","name":{"kind":"Name","value":"consumptions"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"totalConsumed"}},{"kind":"Field","name":{"kind":"Name","value":"totalFailed"}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"servingsMade"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"cookedAt"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const ConfirmRecipeConsumptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ConfirmRecipeConsumption"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ConfirmRecipeConsumptionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"confirmRecipeConsumption"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"totalConsumed"}},{"kind":"Field","name":{"kind":"Name","value":"totalFailed"}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"servingsMade"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"cookedAt"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useConfirmRecipeConsumptionMutation__
@@ -18305,9 +18288,7 @@ export const ConfirmRecipeConsumptionDocument = {"kind":"Document","definitions"
  * @example
  * const [confirmRecipeConsumptionMutation, { data, loading, error }] = useConfirmRecipeConsumptionMutation({
  *   variables: {
- *      recipeId: // value for 'recipeId'
- *      pantryId: // value for 'pantryId'
- *      consumptions: // value for 'consumptions'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -18318,7 +18299,7 @@ export function useConfirmRecipeConsumptionMutation(baseOptions?: ApolloReactHoo
 export type ConfirmRecipeConsumptionMutationHookResult = ReturnType<typeof useConfirmRecipeConsumptionMutation>;
 export type ConfirmRecipeConsumptionMutationResult = ApolloReactCommon.MutationResult<ConfirmRecipeConsumptionMutation>;
 export type ConfirmRecipeConsumptionMutationOptions = ApolloReactCommon.BaseMutationOptions<ConfirmRecipeConsumptionMutation, ConfirmRecipeConsumptionMutationVariables>;
-export const MarkRecipeAsCookedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkRecipeAsCooked"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"servings"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"deductFromPantry"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Boolean"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ingredientsUsed"}},"type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"IngredientUsageInput"}}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"notes"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markRecipeAsCooked"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"recipeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"recipeId"}}},{"kind":"Argument","name":{"kind":"Name","value":"servings"},"value":{"kind":"Variable","name":{"kind":"Name","value":"servings"}}},{"kind":"Argument","name":{"kind":"Name","value":"deductFromPantry"},"value":{"kind":"Variable","name":{"kind":"Name","value":"deductFromPantry"}}},{"kind":"Argument","name":{"kind":"Name","value":"ingredientsUsed"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ingredientsUsed"}}},{"kind":"Argument","name":{"kind":"Name","value":"notes"},"value":{"kind":"Variable","name":{"kind":"Name","value":"notes"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"servingsMade"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"cookedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
+export const MarkRecipeAsCookedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"MarkRecipeAsCooked"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"MarkRecipeAsCookedInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"markRecipeAsCooked"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"cookingLog"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"servingsMade"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"cookedAt"}},{"kind":"Field","name":{"kind":"Name","value":"recipe"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useMarkRecipeAsCookedMutation__
@@ -18333,11 +18314,7 @@ export const MarkRecipeAsCookedDocument = {"kind":"Document","definitions":[{"ki
  * @example
  * const [markRecipeAsCookedMutation, { data, loading, error }] = useMarkRecipeAsCookedMutation({
  *   variables: {
- *      recipeId: // value for 'recipeId'
- *      servings: // value for 'servings'
- *      deductFromPantry: // value for 'deductFromPantry'
- *      ingredientsUsed: // value for 'ingredientsUsed'
- *      notes: // value for 'notes'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -18453,7 +18430,7 @@ export function useToggleReviewHelpfulMutation(baseOptions?: ApolloReactHooks.Mu
 export type ToggleReviewHelpfulMutationHookResult = ReturnType<typeof useToggleReviewHelpfulMutation>;
 export type ToggleReviewHelpfulMutationResult = ApolloReactCommon.MutationResult<ToggleReviewHelpfulMutation>;
 export type ToggleReviewHelpfulMutationOptions = ApolloReactCommon.BaseMutationOptions<ToggleReviewHelpfulMutation, ToggleReviewHelpfulMutationVariables>;
-export const MyShoppingListInvitesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MyShoppingListInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pendingCollaborationInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode;
+export const MyShoppingListInvitesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MyShoppingListInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"pendingCollaborationInvites"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"token"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useMyShoppingListInvitesQuery__
@@ -18541,81 +18518,30 @@ export function useDeclineShoppingListInviteMutation(baseOptions?: ApolloReactHo
 export type DeclineShoppingListInviteMutationHookResult = ReturnType<typeof useDeclineShoppingListInviteMutation>;
 export type DeclineShoppingListInviteMutationResult = ApolloReactCommon.MutationResult<DeclineShoppingListInviteMutation>;
 export type DeclineShoppingListInviteMutationOptions = ApolloReactCommon.BaseMutationOptions<DeclineShoppingListInviteMutation, DeclineShoppingListInviteMutationVariables>;
-export const CollaborationMemberAddedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"CollaborationMemberAdded"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"collaborationMemberAdded"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
+export const CollaborationChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"CollaborationChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"collaborationChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastViewedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useCollaborationMemberAddedSubscription__
+ * __useCollaborationChangesSubscription__
  *
- * To run a query within a React component, call `useCollaborationMemberAddedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useCollaborationMemberAddedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useCollaborationChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCollaborationChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useCollaborationMemberAddedSubscription({
+ * const { data, loading, error } = useCollaborationChangesSubscription({
  *   variables: {
  *      shoppingListId: // value for 'shoppingListId'
- *      email: // value for 'email'
  *   },
  * });
  */
-export function useCollaborationMemberAddedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<CollaborationMemberAddedSubscription, CollaborationMemberAddedSubscriptionVariables> & ({ variables: CollaborationMemberAddedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function useCollaborationChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<CollaborationChangesSubscription, CollaborationChangesSubscriptionVariables> & ({ variables: CollaborationChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<CollaborationMemberAddedSubscription, CollaborationMemberAddedSubscriptionVariables>(CollaborationMemberAddedDocument, options);
+        return ApolloReactHooks.useSubscription<CollaborationChangesSubscription, CollaborationChangesSubscriptionVariables>(CollaborationChangesDocument, options);
       }
-export type CollaborationMemberAddedSubscriptionHookResult = ReturnType<typeof useCollaborationMemberAddedSubscription>;
-export type CollaborationMemberAddedSubscriptionResult = ApolloReactCommon.SubscriptionResult<CollaborationMemberAddedSubscription>;
-export const CollaborationMemberRemovedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"CollaborationMemberRemoved"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"collaborationMemberRemoved"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useCollaborationMemberRemovedSubscription__
- *
- * To run a query within a React component, call `useCollaborationMemberRemovedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useCollaborationMemberRemovedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useCollaborationMemberRemovedSubscription({
- *   variables: {
- *      shoppingListId: // value for 'shoppingListId'
- *      email: // value for 'email'
- *   },
- * });
- */
-export function useCollaborationMemberRemovedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<CollaborationMemberRemovedSubscription, CollaborationMemberRemovedSubscriptionVariables> & ({ variables: CollaborationMemberRemovedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<CollaborationMemberRemovedSubscription, CollaborationMemberRemovedSubscriptionVariables>(CollaborationMemberRemovedDocument, options);
-      }
-export type CollaborationMemberRemovedSubscriptionHookResult = ReturnType<typeof useCollaborationMemberRemovedSubscription>;
-export type CollaborationMemberRemovedSubscriptionResult = ApolloReactCommon.SubscriptionResult<CollaborationMemberRemovedSubscription>;
-export const CollaborationInviteSentDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"CollaborationInviteSent"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"email"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"collaborationInviteSent"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"email"},"value":{"kind":"Variable","name":{"kind":"Name","value":"email"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"expiresAt"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useCollaborationInviteSentSubscription__
- *
- * To run a query within a React component, call `useCollaborationInviteSentSubscription` and pass it any options that fit your needs.
- * When your component renders, `useCollaborationInviteSentSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useCollaborationInviteSentSubscription({
- *   variables: {
- *      shoppingListId: // value for 'shoppingListId'
- *      email: // value for 'email'
- *   },
- * });
- */
-export function useCollaborationInviteSentSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<CollaborationInviteSentSubscription, CollaborationInviteSentSubscriptionVariables> & ({ variables: CollaborationInviteSentSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<CollaborationInviteSentSubscription, CollaborationInviteSentSubscriptionVariables>(CollaborationInviteSentDocument, options);
-      }
-export type CollaborationInviteSentSubscriptionHookResult = ReturnType<typeof useCollaborationInviteSentSubscription>;
-export type CollaborationInviteSentSubscriptionResult = ApolloReactCommon.SubscriptionResult<CollaborationInviteSentSubscription>;
+export type CollaborationChangesSubscriptionHookResult = ReturnType<typeof useCollaborationChangesSubscription>;
+export type CollaborationChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<CollaborationChangesSubscription>;
 export const GetShoppingListDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingList"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"isPublic"}},{"kind":"Field","name":{"kind":"Name","value":"shareCode"}},{"kind":"Field","name":{"kind":"Name","value":"tags"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"homeId"}},{"kind":"Field","name":{"kind":"Name","value":"home"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"myMembership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditPantry"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"ownerships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"itemsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}},{"kind":"Argument","name":{"kind":"Name","value":"orderBy"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"sortOrder"},"value":{"kind":"EnumValue","value":"ASC"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorsConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"20"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"canInviteOthers"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastViewedAt"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"targetStore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"address"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListOwnershipFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListOwnership"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredAt"}},{"kind":"Field","name":{"kind":"Name","value":"transferredFrom"}},{"kind":"Field","name":{"kind":"Name","value":"user"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -18768,7 +18694,7 @@ export type GetShoppingListItemsPaginatedQueryHookResult = ReturnType<typeof use
 export type GetShoppingListItemsPaginatedLazyQueryHookResult = ReturnType<typeof useGetShoppingListItemsPaginatedLazyQuery>;
 export type GetShoppingListItemsPaginatedSuspenseQueryHookResult = ReturnType<typeof useGetShoppingListItemsPaginatedSuspenseQuery>;
 export type GetShoppingListItemsPaginatedQueryResult = ApolloReactCommon.QueryResult<GetShoppingListItemsPaginatedQuery, GetShoppingListItemsPaginatedQueryVariables>;
-export const GetShoppingListItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingListItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListItem"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"assignedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priceEstimate"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"estimated"}},{"kind":"Field","name":{"kind":"Name","value":"budget"}},{"kind":"Field","name":{"kind":"Name","value":"lastKnown"}},{"kind":"Field","name":{"kind":"Name","value":"lowest"}},{"kind":"Field","name":{"kind":"Name","value":"highest"}},{"kind":"Field","name":{"kind":"Name","value":"lastUpdated"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"source"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isAutoAdded"}},{"kind":"Field","name":{"kind":"Name","value":"autoAddReason"}},{"kind":"Field","name":{"kind":"Name","value":"isFromMealPlan"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}},{"kind":"Field","name":{"kind":"Name","value":"storeSection"}},{"kind":"Field","name":{"kind":"Name","value":"preferredStore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"previouslyPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"lastPurchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"addedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchasesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PurchaseFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PurchaseFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Purchase"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"unitSymbol"}}]}}]} as unknown as DocumentNode;
+export const GetShoppingListItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetShoppingListItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListItem"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}}]}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"nutritions"}},{"kind":"Field","name":{"kind":"Name","value":"images"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"url"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}},{"kind":"Field","name":{"kind":"Name","value":"displayUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"confidence"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"assignedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"isMetric"}},{"kind":"Field","name":{"kind":"Name","value":"baseUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"conversionFactor"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"isCommon"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priceEstimate"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"estimated"}},{"kind":"Field","name":{"kind":"Name","value":"budget"}},{"kind":"Field","name":{"kind":"Name","value":"lastKnown"}},{"kind":"Field","name":{"kind":"Name","value":"lowest"}},{"kind":"Field","name":{"kind":"Name","value":"highest"}},{"kind":"Field","name":{"kind":"Name","value":"lastUpdated"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"source"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isAutoAdded"}},{"kind":"Field","name":{"kind":"Name","value":"autoAddReason"}},{"kind":"Field","name":{"kind":"Name","value":"isFromMealPlan"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlan"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"storeInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aisle"}},{"kind":"Field","name":{"kind":"Name","value":"storeSection"}},{"kind":"Field","name":{"kind":"Name","value":"preferredStore"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchaseHistory"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"previouslyPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"lastPurchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseCount"}}]}},{"kind":"Field","name":{"kind":"Name","value":"priority"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"addedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"UserSummary"}}]}},{"kind":"Field","name":{"kind":"Name","value":"purchasesConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"10"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cursor"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"PurchaseFragment"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"UserSummary"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"User"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"PurchaseFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"Purchase"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"unitPrice"}},{"kind":"Field","name":{"kind":"Name","value":"totalPrice"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"unitSymbol"}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetShoppingListItemQuery__
@@ -19132,7 +19058,7 @@ export function useMoveShoppingListItemMutation(baseOptions?: ApolloReactHooks.M
 export type MoveShoppingListItemMutationHookResult = ReturnType<typeof useMoveShoppingListItemMutation>;
 export type MoveShoppingListItemMutationResult = ApolloReactCommon.MutationResult<MoveShoppingListItemMutation>;
 export type MoveShoppingListItemMutationOptions = ApolloReactCommon.BaseMutationOptions<MoveShoppingListItemMutation, MoveShoppingListItemMutationVariables>;
-export const ToggleShoppingListItemPurchasedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ToggleShoppingListItemPurchased"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"purchased"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Boolean"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"version"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"toggleShoppingListItemPurchased"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"purchased"},"value":{"kind":"Variable","name":{"kind":"Name","value":"purchased"}}},{"kind":"Argument","name":{"kind":"Name","value":"version"},"value":{"kind":"Variable","name":{"kind":"Name","value":"version"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"normalizedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
+export const ToggleShoppingListItemPurchasedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ToggleShoppingListItemPurchased"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ToggleShoppingListItemPurchasedInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"toggleShoppingListItemPurchased"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListItem"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}},{"kind":"Field","name":{"kind":"Name","value":"normalizedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"purchasedQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"purchasedPrice"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseDate"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useToggleShoppingListItemPurchasedMutation__
@@ -19147,9 +19073,7 @@ export const ToggleShoppingListItemPurchasedDocument = {"kind":"Document","defin
  * @example
  * const [toggleShoppingListItemPurchasedMutation, { data, loading, error }] = useToggleShoppingListItemPurchasedMutation({
  *   variables: {
- *      id: // value for 'id'
- *      purchased: // value for 'purchased'
- *      version: // value for 'version'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -19245,7 +19169,7 @@ export function useUpdateShoppingListItemPriorityMutation(baseOptions?: ApolloRe
 export type UpdateShoppingListItemPriorityMutationHookResult = ReturnType<typeof useUpdateShoppingListItemPriorityMutation>;
 export type UpdateShoppingListItemPriorityMutationResult = ApolloReactCommon.MutationResult<UpdateShoppingListItemPriorityMutation>;
 export type UpdateShoppingListItemPriorityMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateShoppingListItemPriorityMutation, UpdateShoppingListItemPriorityMutationVariables>;
-export const UpdateCollaboratorRoleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateCollaboratorRole"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"collaboratorId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"role"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CollaboratorRole"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateCollaboratorRole"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"shoppingListId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"shoppingListId"}}},{"kind":"Argument","name":{"kind":"Name","value":"collaboratorId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"collaboratorId"}}},{"kind":"Argument","name":{"kind":"Name","value":"role"},"value":{"kind":"Variable","name":{"kind":"Name","value":"role"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode;
+export const UpdateCollaboratorRoleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateCollaboratorRole"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateCollaboratorRoleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateCollaboratorRole"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"success"}},{"kind":"Field","name":{"kind":"Name","value":"message"}},{"kind":"Field","name":{"kind":"Name","value":"code"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useUpdateCollaboratorRoleMutation__
@@ -19260,9 +19184,7 @@ export const UpdateCollaboratorRoleDocument = {"kind":"Document","definitions":[
  * @example
  * const [updateCollaboratorRoleMutation, { data, loading, error }] = useUpdateCollaboratorRoleMutation({
  *   variables: {
- *      shoppingListId: // value for 'shoppingListId'
- *      collaboratorId: // value for 'collaboratorId'
- *      role: // value for 'role'
+ *      input: // value for 'input'
  *   },
  * });
  */
@@ -19436,149 +19358,53 @@ export function useSyncMoveShoppingListItemMutation(baseOptions?: ApolloReactHoo
 export type SyncMoveShoppingListItemMutationHookResult = ReturnType<typeof useSyncMoveShoppingListItemMutation>;
 export type SyncMoveShoppingListItemMutationResult = ApolloReactCommon.MutationResult<SyncMoveShoppingListItemMutation>;
 export type SyncMoveShoppingListItemMutationOptions = ApolloReactCommon.BaseMutationOptions<SyncMoveShoppingListItemMutation, SyncMoveShoppingListItemMutationVariables>;
-export const ShoppingListUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListUpdated"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListUpdated"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
+export const ShoppingListChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListChanges"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}},{"kind":"Field","name":{"kind":"Name","value":"completedAt"}},{"kind":"Field","name":{"kind":"Name","value":"budgetAmount"}},{"kind":"Field","name":{"kind":"Name","value":"totalCost"}}]}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastViewedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"clearedItemIds"}},{"kind":"Field","name":{"kind":"Name","value":"clearedCount"}},{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useShoppingListUpdatedSubscription__
+ * __useShoppingListChangesSubscription__
  *
- * To run a query within a React component, call `useShoppingListUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useShoppingListUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useShoppingListChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useShoppingListUpdatedSubscription({
+ * const { data, loading, error } = useShoppingListChangesSubscription({
  *   variables: {
  *      listId: // value for 'listId'
  *   },
  * });
  */
-export function useShoppingListUpdatedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListUpdatedSubscription, ShoppingListUpdatedSubscriptionVariables> & ({ variables: ShoppingListUpdatedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+export function useShoppingListChangesSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListChangesSubscription, ShoppingListChangesSubscriptionVariables> & ({ variables: ShoppingListChangesSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<ShoppingListUpdatedSubscription, ShoppingListUpdatedSubscriptionVariables>(ShoppingListUpdatedDocument, options);
+        return ApolloReactHooks.useSubscription<ShoppingListChangesSubscription, ShoppingListChangesSubscriptionVariables>(ShoppingListChangesDocument, options);
       }
-export type ShoppingListUpdatedSubscriptionHookResult = ReturnType<typeof useShoppingListUpdatedSubscription>;
-export type ShoppingListUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListUpdatedSubscription>;
-export const MyShoppingListsUpdatedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MyShoppingListsUpdated"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myShoppingListsUpdated"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
+export type ShoppingListChangesSubscriptionHookResult = ReturnType<typeof useShoppingListChangesSubscription>;
+export type ShoppingListChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListChangesSubscription>;
+export const MyShoppingListsChangesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"MyShoppingListsChanges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myShoppingListsChanged"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"changeType"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingList"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"totalItems"}},{"kind":"Field","name":{"kind":"Name","value":"completedItems"}},{"kind":"Field","name":{"kind":"Name","value":"estimatedTotal"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"isCompleted"}}]}},{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
- * __useMyShoppingListsUpdatedSubscription__
+ * __useMyShoppingListsChangesSubscription__
  *
- * To run a query within a React component, call `useMyShoppingListsUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMyShoppingListsUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useMyShoppingListsChangesSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMyShoppingListsChangesSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useMyShoppingListsUpdatedSubscription({
+ * const { data, loading, error } = useMyShoppingListsChangesSubscription({
  *   variables: {
  *   },
  * });
  */
-export function useMyShoppingListsUpdatedSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<MyShoppingListsUpdatedSubscription, MyShoppingListsUpdatedSubscriptionVariables>) {
+export function useMyShoppingListsChangesSubscription(baseOptions?: ApolloReactHooks.SubscriptionHookOptions<MyShoppingListsChangesSubscription, MyShoppingListsChangesSubscriptionVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<MyShoppingListsUpdatedSubscription, MyShoppingListsUpdatedSubscriptionVariables>(MyShoppingListsUpdatedDocument, options);
+        return ApolloReactHooks.useSubscription<MyShoppingListsChangesSubscription, MyShoppingListsChangesSubscriptionVariables>(MyShoppingListsChangesDocument, options);
       }
-export type MyShoppingListsUpdatedSubscriptionHookResult = ReturnType<typeof useMyShoppingListsUpdatedSubscription>;
-export type MyShoppingListsUpdatedSubscriptionResult = ApolloReactCommon.SubscriptionResult<MyShoppingListsUpdatedSubscription>;
-export const ShoppingListItemsChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListItemsChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListItemsChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedFields"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemCore"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"itemName"}},{"kind":"Field","name":{"kind":"Name","value":"quantity"}},{"kind":"Field","name":{"kind":"Name","value":"quantityInput"}},{"kind":"Field","name":{"kind":"Name","value":"displayFormat"}},{"kind":"Field","name":{"kind":"Name","value":"purchaseInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"isPurchased"}}]}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"category"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"unitName"}},{"kind":"Field","name":{"kind":"Name","value":"unit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListItemDisplayFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListItem"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListItemCore"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"brand"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"brandId"}},{"kind":"Field","name":{"kind":"Name","value":"netWeight"}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnit"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"symbol"}}]}},{"kind":"Field","name":{"kind":"Name","value":"netWeightUnitId"}},{"kind":"Field","name":{"kind":"Name","value":"item"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"imageUrl"}},{"kind":"Field","name":{"kind":"Name","value":"categories"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"isPrimary"}},{"kind":"Field","name":{"kind":"Name","value":"category"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useShoppingListItemsChangedSubscription__
- *
- * To run a query within a React component, call `useShoppingListItemsChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useShoppingListItemsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useShoppingListItemsChangedSubscription({
- *   variables: {
- *      listId: // value for 'listId'
- *   },
- * });
- */
-export function useShoppingListItemsChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListItemsChangedSubscription, ShoppingListItemsChangedSubscriptionVariables> & ({ variables: ShoppingListItemsChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<ShoppingListItemsChangedSubscription, ShoppingListItemsChangedSubscriptionVariables>(ShoppingListItemsChangedDocument, options);
-      }
-export type ShoppingListItemsChangedSubscriptionHookResult = ReturnType<typeof useShoppingListItemsChangedSubscription>;
-export type ShoppingListItemsChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListItemsChangedSubscription>;
-export const ShoppingListCollaboratorsChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListCollaboratorsChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListCollaboratorsChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"}},{"kind":"Field","name":{"kind":"Name","value":"canEdit"}},{"kind":"Field","name":{"kind":"Name","value":"invitedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastViewedAt"}}]}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ShoppingListCollaboratorFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ShoppingListCollaborator"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"role"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"collaboratorId"}},{"kind":"Field","name":{"kind":"Name","value":"canAddItems"}},{"kind":"Field","name":{"kind":"Name","value":"canRemoveItems"}},{"kind":"Field","name":{"kind":"Name","value":"canEditItems"}},{"kind":"Field","name":{"kind":"Name","value":"canMarkPurchased"}},{"kind":"Field","name":{"kind":"Name","value":"collaborator"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"invitedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}}]}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useShoppingListCollaboratorsChangedSubscription__
- *
- * To run a query within a React component, call `useShoppingListCollaboratorsChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useShoppingListCollaboratorsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useShoppingListCollaboratorsChangedSubscription({
- *   variables: {
- *      listId: // value for 'listId'
- *   },
- * });
- */
-export function useShoppingListCollaboratorsChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListCollaboratorsChangedSubscription, ShoppingListCollaboratorsChangedSubscriptionVariables> & ({ variables: ShoppingListCollaboratorsChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<ShoppingListCollaboratorsChangedSubscription, ShoppingListCollaboratorsChangedSubscriptionVariables>(ShoppingListCollaboratorsChangedDocument, options);
-      }
-export type ShoppingListCollaboratorsChangedSubscriptionHookResult = ReturnType<typeof useShoppingListCollaboratorsChangedSubscription>;
-export type ShoppingListCollaboratorsChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListCollaboratorsChangedSubscription>;
-export const ShoppingListStatusChangedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListStatusChanged"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListStatusChanged"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"newStatus"}},{"kind":"Field","name":{"kind":"Name","value":"previousStatus"}},{"kind":"Field","name":{"kind":"Name","value":"completedBy"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"profile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"avatar"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useShoppingListStatusChangedSubscription__
- *
- * To run a query within a React component, call `useShoppingListStatusChangedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useShoppingListStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useShoppingListStatusChangedSubscription({
- *   variables: {
- *      listId: // value for 'listId'
- *   },
- * });
- */
-export function useShoppingListStatusChangedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListStatusChangedSubscription, ShoppingListStatusChangedSubscriptionVariables> & ({ variables: ShoppingListStatusChangedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<ShoppingListStatusChangedSubscription, ShoppingListStatusChangedSubscriptionVariables>(ShoppingListStatusChangedDocument, options);
-      }
-export type ShoppingListStatusChangedSubscriptionHookResult = ReturnType<typeof useShoppingListStatusChangedSubscription>;
-export type ShoppingListStatusChangedSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListStatusChangedSubscription>;
-export const ShoppingListItemsBatchClearedDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"ShoppingListItemsBatchCleared"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"listId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"shoppingListItemsBatchCleared"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"listId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"listId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mutation"}},{"kind":"Field","name":{"kind":"Name","value":"listId"}},{"kind":"Field","name":{"kind":"Name","value":"clearedItemIds"}},{"kind":"Field","name":{"kind":"Name","value":"clearedCount"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"timestamp"}}]}}]}}]} as unknown as DocumentNode;
-
-/**
- * __useShoppingListItemsBatchClearedSubscription__
- *
- * To run a query within a React component, call `useShoppingListItemsBatchClearedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useShoppingListItemsBatchClearedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useShoppingListItemsBatchClearedSubscription({
- *   variables: {
- *      listId: // value for 'listId'
- *   },
- * });
- */
-export function useShoppingListItemsBatchClearedSubscription(baseOptions: ApolloReactHooks.SubscriptionHookOptions<ShoppingListItemsBatchClearedSubscription, ShoppingListItemsBatchClearedSubscriptionVariables> & ({ variables: ShoppingListItemsBatchClearedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return ApolloReactHooks.useSubscription<ShoppingListItemsBatchClearedSubscription, ShoppingListItemsBatchClearedSubscriptionVariables>(ShoppingListItemsBatchClearedDocument, options);
-      }
-export type ShoppingListItemsBatchClearedSubscriptionHookResult = ReturnType<typeof useShoppingListItemsBatchClearedSubscription>;
-export type ShoppingListItemsBatchClearedSubscriptionResult = ApolloReactCommon.SubscriptionResult<ShoppingListItemsBatchClearedSubscription>;
+export type MyShoppingListsChangesSubscriptionHookResult = ReturnType<typeof useMyShoppingListsChangesSubscription>;
+export type MyShoppingListsChangesSubscriptionResult = ApolloReactCommon.SubscriptionResult<MyShoppingListsChangesSubscription>;
 export const GetStorageLocationsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetStorageLocations"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"storageLocations"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"homeId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"homeId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"color"}},{"kind":"Field","name":{"kind":"Name","value":"temperature"}},{"kind":"Field","name":{"kind":"Name","value":"sortOrder"}},{"kind":"Field","name":{"kind":"Name","value":"isDefault"}},{"kind":"Field","name":{"kind":"Name","value":"currentItemCount"}},{"kind":"Field","name":{"kind":"Name","value":"parentLocation"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"cursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"totalCount"}}]}}]}}]} as unknown as DocumentNode;
 
 /**
@@ -19795,7 +19621,7 @@ export function useSetDefaultStorageLocationMutation(baseOptions?: ApolloReactHo
 export type SetDefaultStorageLocationMutationHookResult = ReturnType<typeof useSetDefaultStorageLocationMutation>;
 export type SetDefaultStorageLocationMutationResult = ApolloReactCommon.MutationResult<SetDefaultStorageLocationMutation>;
 export type SetDefaultStorageLocationMutationOptions = ApolloReactCommon.BaseMutationOptions<SetDefaultStorageLocationMutation, SetDefaultStorageLocationMutationVariables>;
-export const GetNotificationPreferencesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNotificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"notificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"emailEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"pushEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"smsEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotifications"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotificationFrequency"}},{"kind":"Field","name":{"kind":"Name","value":"expirationDaysThreshold"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlerts"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"pantryChanges"}},{"kind":"Field","name":{"kind":"Name","value":"recipeRecommendations"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanReminders"}},{"kind":"Field","name":{"kind":"Name","value":"cookingReminders"}},{"kind":"Field","name":{"kind":"Name","value":"collaborationInvites"}},{"kind":"Field","name":{"kind":"Name","value":"homeInvites"}},{"kind":"Field","name":{"kind":"Name","value":"sharedListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"weeklyDigest"}},{"kind":"Field","name":{"kind":"Name","value":"monthlyReport"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursStart"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnd"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursTimezone"}}]}}]}}]} as unknown as DocumentNode;
+export const GetNotificationPreferencesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNotificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"notificationPreferences"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"emailEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"pushEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"smsEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotifications"}},{"kind":"Field","name":{"kind":"Name","value":"expirationNotificationFrequency"}},{"kind":"Field","name":{"kind":"Name","value":"expirationDaysThreshold"}},{"kind":"Field","name":{"kind":"Name","value":"lowStockAlerts"}},{"kind":"Field","name":{"kind":"Name","value":"shoppingListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"pantryChanges"}},{"kind":"Field","name":{"kind":"Name","value":"recipeRecommendations"}},{"kind":"Field","name":{"kind":"Name","value":"mealPlanReminders"}},{"kind":"Field","name":{"kind":"Name","value":"cookingReminders"}},{"kind":"Field","name":{"kind":"Name","value":"collaborationInvites"}},{"kind":"Field","name":{"kind":"Name","value":"homeInvites"}},{"kind":"Field","name":{"kind":"Name","value":"sharedListUpdates"}},{"kind":"Field","name":{"kind":"Name","value":"weeklyDigest"}},{"kind":"Field","name":{"kind":"Name","value":"monthlyReport"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnabled"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursStart"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursEnd"}},{"kind":"Field","name":{"kind":"Name","value":"quietHoursTimezone"}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetNotificationPreferencesQuery__
@@ -19831,7 +19657,7 @@ export type GetNotificationPreferencesQueryHookResult = ReturnType<typeof useGet
 export type GetNotificationPreferencesLazyQueryHookResult = ReturnType<typeof useGetNotificationPreferencesLazyQuery>;
 export type GetNotificationPreferencesSuspenseQueryHookResult = ReturnType<typeof useGetNotificationPreferencesSuspenseQuery>;
 export type GetNotificationPreferencesQueryResult = ApolloReactCommon.QueryResult<GetNotificationPreferencesQuery, GetNotificationPreferencesQueryVariables>;
-export const GetDietaryProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetDietaryProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"dietaryProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCuisines"}},{"kind":"Field","name":{"kind":"Name","value":"dislikedIngredients"}},{"kind":"Field","name":{"kind":"Name","value":"favoriteIngredients"}},{"kind":"Field","name":{"kind":"Name","value":"calorieTarget"}},{"kind":"Field","name":{"kind":"Name","value":"proteinTarget"}},{"kind":"Field","name":{"kind":"Name","value":"carbsTarget"}},{"kind":"Field","name":{"kind":"Name","value":"fatTarget"}},{"kind":"Field","name":{"kind":"Name","value":"mealsPerDay"}},{"kind":"Field","name":{"kind":"Name","value":"snacksPerDay"}},{"kind":"Field","name":{"kind":"Name","value":"cookingSkillLevel"}},{"kind":"Field","name":{"kind":"Name","value":"maxPrepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"maxCookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"budgetPerMeal"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"restrictions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"diet"}},{"kind":"Field","name":{"kind":"Name","value":"intolerance"}},{"kind":"Field","name":{"kind":"Name","value":"healthGoal"}},{"kind":"Field","name":{"kind":"Name","value":"severity"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"appliesToHomeId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]}}]} as unknown as DocumentNode;
+export const GetDietaryProfileDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetDietaryProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"me"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dietaryProfile"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"preferredCuisines"}},{"kind":"Field","name":{"kind":"Name","value":"dislikedIngredients"}},{"kind":"Field","name":{"kind":"Name","value":"favoriteIngredients"}},{"kind":"Field","name":{"kind":"Name","value":"calorieTarget"}},{"kind":"Field","name":{"kind":"Name","value":"proteinTarget"}},{"kind":"Field","name":{"kind":"Name","value":"carbsTarget"}},{"kind":"Field","name":{"kind":"Name","value":"fatTarget"}},{"kind":"Field","name":{"kind":"Name","value":"mealsPerDay"}},{"kind":"Field","name":{"kind":"Name","value":"snacksPerDay"}},{"kind":"Field","name":{"kind":"Name","value":"cookingSkillLevel"}},{"kind":"Field","name":{"kind":"Name","value":"maxPrepTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"maxCookTimeMinutes"}},{"kind":"Field","name":{"kind":"Name","value":"budgetPerMeal"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"restrictions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"diet"}},{"kind":"Field","name":{"kind":"Name","value":"intolerance"}},{"kind":"Field","name":{"kind":"Name","value":"healthGoal"}},{"kind":"Field","name":{"kind":"Name","value":"severity"}},{"kind":"Field","name":{"kind":"Name","value":"notes"}},{"kind":"Field","name":{"kind":"Name","value":"appliesToHomeId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}}]}}]}}]}}]}}]} as unknown as DocumentNode;
 
 /**
  * __useGetDietaryProfileQuery__

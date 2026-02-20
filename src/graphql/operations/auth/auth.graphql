@@ -54,6 +54,7 @@ mutation ForgotPassword($email: String!) {
   forgotPassword(email: $email) {
     success
     message
+    code
   }
 }
 
@@ -61,6 +62,7 @@ mutation ResetPassword($token: String!, $newPassword: String!) {
   resetPassword(token: $token, newPassword: $newPassword) {
     success
     message
+    code
   }
 }
 
@@ -76,5 +78,6 @@ mutation ChangePassword($input: ChangePasswordInput!) {
   changePassword(input: $input) {
     success
     message
+    code
   }
 }

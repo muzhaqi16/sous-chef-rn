@@ -154,8 +154,8 @@ export const useDeviceRegistration = () => {
         },
       });
 
-      if (!result.data?.registerDevice) {
-        throw new Error('Device registration failed - no data returned');
+      if (!result.data?.registerDevice?.success) {
+        throw new Error(result.data?.registerDevice?.message || 'Device registration failed');
       }
       logger.info('Device registered successfully:', {
         deviceId: deviceInfo.deviceId,

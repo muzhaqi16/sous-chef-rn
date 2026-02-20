@@ -78,7 +78,7 @@ export const OnBoardingWrapper = ({
           <View style={styles.iconButton} />
         )}
         {displayTitle && (
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={styles.headerTitle}>
             {displayTitle}
           </Text>
         )}

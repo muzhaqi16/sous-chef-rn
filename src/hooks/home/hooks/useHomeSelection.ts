@@ -67,6 +67,9 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
       __typename: 'Mutation',
       setDefaultHome: {
         __typename: 'SetDefaultHomePayload',
+        success: true,
+        code: 'SUCCESS',
+        message: 'Default home set',
         settings: {
           __typename: 'UserSettings',
           id: variables.homeId,
@@ -193,7 +196,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
           variables: { homeId },
         });
 
-        if (result.data?.setDefaultHome) {
+        if (result.data?.setDefaultHome?.success) {
           // Update pantry from server response (server is source of truth)
           const serverPantry = result.data.setDefaultHome.defaultPantry;
           if (serverPantry?.id) {

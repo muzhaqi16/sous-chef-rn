@@ -57,7 +57,7 @@ export const useNotificationSettings = () => {
     errorPolicy: 'all',
   });
 
-  const preferences = data?.notificationPreferences;
+  const preferences = data?.me?.notificationPreferences;
 
   // Log partial errors in development
   useEffect(() => {

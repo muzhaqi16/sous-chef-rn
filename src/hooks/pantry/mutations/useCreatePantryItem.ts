@@ -53,10 +53,11 @@ export function useCreatePantryItem({
   const [createMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
     update: (cache, { data: mutationData }) => {
-      if (!mutationData?.createPantryItem || !pantryId) return;
+      const pantryItem = mutationData?.createPantryItem?.pantryItem;
+      if (!pantryItem || !pantryId) return;
 
       try {
-        addToPantryItemsCache(cache, pantryId, mutationData.createPantryItem);
+        addToPantryItemsCache(cache, pantryId, pantryItem);
       } catch (error) {
         console.warn('Cache update failed:', error);
       }
@@ -134,7 +135,7 @@ export function useCreatePantryItem({
         variables: { input: mutationInput },
       });
 
-      if (result.data?.createPantryItem) {
+      if (result.data?.createPantryItem?.success) {
         onSuccess?.();
         return true;
       }
@@ -180,7 +181,7 @@ export function useCreatePantryItem({
                           input: { ...mutationInput, forceAdd: true },
                         },
                       });
-                      if (retryResult.data?.createPantryItem) {
+                      if (retryResult.data?.createPantryItem?.success) {
                         onSuccess?.();
                         resolve(true);
                       } else {

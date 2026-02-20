@@ -620,10 +620,10 @@ mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription PantryUpdated($pantryId: ID!) {
-  pantryUpdated(pantryId: $pantryId) {
-    mutation
-    node {
+subscription PantryChanges($pantryId: ID!) {
+  pantryChanged(pantryId: $pantryId) {
+    changeType
+    pantry {
       id
       homeId
       name
@@ -635,69 +635,9 @@ subscription PantryUpdated($pantryId: ID!) {
       version
       updatedAt
     }
-    updatedFields
-    userId
-    timestamp
-  }
-}
-
-subscription PantryLowStockAlert($pantryId: ID!) {
-  pantryLowStockAlert(pantryId: $pantryId) {
-    pantryId
-    currentQuantity
-    minimumQuantity
-    userId
-    timestamp
-    item {
-      id
-      itemId
-      itemName
-      item {
-        id
-        name
-        imageUrl
-      }
-    }
-  }
-}
-
-subscription PantryExpiringItemsAlert($pantryId: ID!) {
-  pantryExpiringItemsAlert(pantryId: $pantryId) {
-    pantryId
-    expiresAt
-    daysUntilExpiration
-    userId
-    timestamp
-    item {
-      id
-      itemId
-      itemName
-      item {
-        id
-        name
-        imageUrl
-      }
-    }
-  }
-}
-
-subscription PantryItemsChanged($pantryId: ID!) {
-  pantryItemsChanged(pantryId: $pantryId) {
-    pantryId
-    item {
+    pantryItem {
       ...PantryItemDisplay
     }
-    updatedFields
-    mutation
-    timestamp
-    userId
-  }
-}
-
-subscription PantryItemUsageChanged($pantryId: ID!) {
-  pantryItemUsageChanged(pantryId: $pantryId) {
-    mutation
-    pantryId
     usage {
       id
       quantityUsed
@@ -711,15 +651,18 @@ subscription PantryItemUsageChanged($pantryId: ID!) {
         id
       }
     }
-    userId
+    mutation
+    updatedFields
     timestamp
+    userId
+    pantryId
   }
 }
 
-subscription PantryWasteAlert($pantryId: ID!) {
-  pantryWasteAlert(pantryId: $pantryId) {
-    pantryId
-    item {
+subscription PantryAlerts($pantryId: ID!) {
+  pantryAlert(pantryId: $pantryId) {
+    alertType
+    pantryItem {
       id
       itemId
       itemName
@@ -736,10 +679,19 @@ subscription PantryWasteAlert($pantryId: ID!) {
         imageUrl
       }
     }
-    wasteAmount
-    wasteReason
-    wasteValue
-    userId
+    items {
+      id
+      itemId
+      itemName
+      item {
+        id
+        name
+        imageUrl
+      }
+    }
+    message
+    pantryId
     timestamp
+    userId
   }
 }

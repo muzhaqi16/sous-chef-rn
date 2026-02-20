@@ -32,6 +32,7 @@ query GetHomes($first: Int, $after: String) {
 
 query GetMyPendingInvites {
   me {
+    id
     pendingHomeInvites {
       ...HomeInviteFragment
     }

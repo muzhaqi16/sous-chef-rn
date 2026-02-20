@@ -212,19 +212,9 @@ query CalculateRecipePantryDeficit(
 # ============================================
 
 mutation UpsertItemUnitConversion(
-  $itemId: ID!
-  $fromUnitId: ID!
-  $toUnitId: ID!
-  $conversionRatio: Float!
-  $notes: String
+  $input: UpsertItemUnitConversionInput!
 ) {
-  upsertItemUnitConversion(
-    itemId: $itemId
-    fromUnitId: $fromUnitId
-    toUnitId: $toUnitId
-    conversionRatio: $conversionRatio
-    notes: $notes
-  ) {
+  upsertItemUnitConversion(input: $input) {
     success
     message
     code

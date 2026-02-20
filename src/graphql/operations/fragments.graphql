@@ -78,7 +78,11 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     imageUrl
     netWeight
     nutritions
-    images
+    images {
+      id
+      url
+      kind
+    }
     displayUnit {
       id
       name
@@ -403,10 +407,22 @@ fragment ItemFragment on Item {
   status
   visibility
   tags
-  healthBenefits
-  allergens
+  healthBenefits {
+    benefit
+    category
+    description
+  }
+  allergens {
+    name
+    contains
+    severity
+  }
   nutritions
-  images
+  images {
+    id
+    url
+    kind
+  }
   metadata
   ingredients
   createdAt
@@ -438,21 +454,6 @@ fragment ItemFragment on Item {
   }
   # categories already included in ItemDisplay spread above
   # REMOVED: creations and edits (audit trails) - not used in UI
-}
-
-fragment NotificationSubscription on NotificationPayload {
-  success
-  code
-  message
-  notification {
-    id
-    type
-    payload
-    status
-    sentAt
-    readAt
-    createdAt
-  }
 }
 
 # ============================================
@@ -587,35 +588,39 @@ fragment PantryItemFragment on PantryItem {
     totalPrice
     quantity
   }
-  usageRecords {
-    id
-    quantityUsed
-    usageUnit {
-      id
-      name
-      symbol
-    }
-    usedAt
-    purpose
-    notes
-    wasteReason
-    adjustmentReason
-    isComposted
-    isRecycled
-    pantryItem {
-      id
-    }
-    usedBy {
-      id
-    }
-    cookingLog {
-      id
-    }
-    mealPlanItem {
-      id
-    }
-    recipe {
-      id
+  usageRecords(first: 20) {
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        notes
+        wasteReason
+        adjustmentReason
+        isComposted
+        isRecycled
+        pantryItem {
+          id
+        }
+        usedBy {
+          id
+        }
+        cookingLog {
+          id
+        }
+        mealPlanItem {
+          id
+        }
+        recipe {
+          id
+        }
+      }
     }
   }
 }
@@ -1067,7 +1072,14 @@ fragment RecipeFragment on Recipe {
   rating3Count
   rating4Count
   rating5Count
-  reviews { ...RecipeReviewFragment }
+  reviews {
+    edges {
+      node {
+        ...RecipeReviewFragment
+      }
+    }
+    totalCount
+  }
   matchPercentage
 
   # Relations

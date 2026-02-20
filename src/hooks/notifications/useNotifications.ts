@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
-  useNotificationReceivedSubscription,
+  useNotificationChangedSubscription,
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
@@ -236,20 +236,21 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   }, []);
 
   // General notifications
-  useNotificationReceivedSubscription({
+  useNotificationChangedSubscription({
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
       console.log(
-        '🔔 [NotificationReceived] Raw subscription data received:',
+        '🔔 [NotificationChanged] Raw subscription data received:',
         data,
       );
-      if (data.data?.notificationReceived?.notification) {
-        const rawNotification = data.data.notificationReceived.notification;
+      if (data.data?.notificationChanged?.notification) {
+        const rawNotification = data.data.notificationChanged.notification;
 
-        console.log('🔔 [NotificationReceived] Processing notification:', {
+        console.log('🔔 [NotificationChanged] Processing notification:', {
           type: rawNotification.type,
           id: rawNotification.id,
           payload: rawNotification.payload,
+          changeType: data.data.notificationChanged.changeType,
         });
 
         // Create properly structured notification using helper functions
@@ -271,13 +272,13 @@ export const useNotifications = (config: NotificationConfig = {}) => {
         );
       } else {
         console.warn(
-          '⚠️ [NotificationReceived] Data received but no notification payload',
+          '⚠️ [NotificationChanged] Data received but no notification payload',
         );
       }
     },
     onError: (error: Error) => {
       // Let handleError decide whether to log based on error type
-      handleError('NotificationReceived', error);
+      handleError('NotificationChanged', error);
     },
   });
 
@@ -300,16 +301,16 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   useEffect(() => {
     if (!config.skip && user?.id) {
       console.log(
-        '✅ [NotificationReceived] Subscription ACTIVE for user:',
+        '✅ [NotificationChanged] Subscription ACTIVE for user:',
         user.id,
       );
     } else if (config.skip) {
       console.log(
-        '⏸️ [NotificationReceived] Subscription DEFERRED - startup delay',
+        '⏸️ [NotificationChanged] Subscription DEFERRED - startup delay',
       );
     } else {
       console.log(
-        '⏸️ [NotificationReceived] Subscription SKIPPED - no user ID',
+        '⏸️ [NotificationChanged] Subscription SKIPPED - no user ID',
       );
     }
   }, [user?.id, config.skip]);

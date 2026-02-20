@@ -52,8 +52,12 @@ export function useFolderActions() {
           },
         });
         const payload = result.data?.deleteRecipeFolder;
-        toastService.success(`Renamed "${oldName}" to "${newName}"${payload?.message ? ` - ${payload.message}` : ''}`);
-        return true;
+        if (payload?.success) {
+          toastService.success(`Renamed "${oldName}" to "${newName}"${payload.message ? ` - ${payload.message}` : ''}`);
+          return true;
+        }
+        toastService.error(payload?.message || 'Failed to rename folder.');
+        return false;
       } catch (error) {
         console.error('Failed to rename folder:', error);
         toastService.error('Failed to rename folder. Please try again.');

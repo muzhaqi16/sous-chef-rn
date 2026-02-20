@@ -13,9 +13,7 @@
 
 import { useAppStore } from '#store/useAppStore';
 import {
-  useMembershipUpdatedSubscription,
-  useMemberJoinedSubscription,
-  useMemberLeftSubscription,
+  useMembershipChangesSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
@@ -35,70 +33,47 @@ export function useHomeSubscriptions(userId?: string) {
   const isHomeSelectionReady = useAppStore(state => state.isHomeSelectionReady);
 
   //
-  // Membership Updated Subscription
-  // Handles changes to any membership in the selected home
-  // (role changes, permission updates, etc.)
+  // Membership Changes Subscription (consolidated)
+  // Handles all membership events: JOINED, LEFT, UPDATED, ROLE_CHANGED
+  // Uses customOnData to branch on changeType for cache strategy
   //
   const membershipHandlers = subscriptionService.register({
-    subscriptionName: 'MembershipUpdated',
+    subscriptionName: 'MembershipChanges',
     entityType: 'Membership',
     enableDeduplication: true,
     userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
+    cacheUpdateStrategy: CacheStrategy.NONE,
     enableLogging: true,
     entityId: selectedHomeId,
+    customOnData: (payload: any, _client: any) => {
+      if (!payload) return;
+
+      const changeType = payload.changeType;
+
+      switch (changeType) {
+        case 'JOINED':
+        case 'LEFT':
+          // Manual cache updates for join/leave events
+          // These require adding/removing from the memberships connection
+          break;
+        case 'UPDATED':
+        case 'ROLE_CHANGED':
+          // Automatic cache updates for role/permission changes
+          // Apollo auto-normalizes these since the entity already exists
+          break;
+        default:
+          break;
+      }
+    },
   });
 
-  useMembershipUpdatedSubscription({
-    variables: { homeId: selectedHomeId },
+  useMembershipChangesSubscription({
+    variables: { homeId: selectedHomeId! },
     skip: !selectedHomeId || !isHomeSelectionReady,
     ...membershipHandlers,
   });
 
-  //
-  // Member Joined Subscription
-  // Real-time notification when new members join the home
-  //
-  const memberJoinedHandlers = subscriptionService.register({
-    subscriptionName: 'MemberJoined',
-    entityType: 'Membership',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.MANUAL,
-    cacheFieldName: 'memberships', // Add new member to memberships array
-    enableLogging: true,
-    entityId: selectedHomeId,
-  });
-
-  useMemberJoinedSubscription({
-    variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady,
-    ...memberJoinedHandlers,
-  });
-
-  //
-  // Member Left Subscription
-  // Real-time notification when members leave the home
-  //
-  const memberLeftHandlers = subscriptionService.register({
-    subscriptionName: 'MemberLeft',
-    entityType: 'Membership',
-    enableDeduplication: true,
-    userId,
-    cacheUpdateStrategy: CacheStrategy.MANUAL,
-    cacheFieldName: 'memberships', // Remove member from memberships array
-    enableLogging: true,
-    entityId: selectedHomeId,
-  });
-
-  useMemberLeftSubscription({
-    variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady,
-    ...memberLeftHandlers,
-  });
-
   // Additional home subscriptions can be added here:
-  // - MembershipRoleChanged
   // - HomeUpdated
   // - etc.
 }

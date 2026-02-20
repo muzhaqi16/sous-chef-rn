@@ -77,7 +77,7 @@ const CreateHomeScreenComponent = () => {
   }, [user?.id, setUserNavigationState]);
 
   // GraphQL Queries
-  const { data: homesData, loading: homesLoading } = useGetHomesQuery({
+  const { data: homesData, loading: homesLoading, refetch: refetchHomes } = useGetHomesQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-and-network',
   });
@@ -289,8 +289,8 @@ const CreateHomeScreenComponent = () => {
       try {
         let homeId = selectedHomeId;
 
-        // Create home if needed
         if (needsHome) {
+          // Single mutation: create home + default pantry together
           const response = await createHome({
             variables: {
               input: {
@@ -299,23 +299,38 @@ const CreateHomeScreenComponent = () => {
                 type: HomeType.Household,
                 isPublic: false,
                 allowJoinCode: true,
+                createDefaultPantry: true,
+                defaultPantryName: data.pantryName.trim(),
                 tags: ['onboarding'],
               },
             },
           });
 
-          if (response.data?.createHome?.home) {
-            homeId = response.data.createHome.home.id;
-            setSelectedHomeId(homeId);
-          } else {
-            throw new Error('Failed to create home');
-          }
-        }
+          const payload = response.data?.createHome;
 
-        // Create pantry if needed
-        if (needsPantry && homeId) {
+          if (payload?.success) {
+            if (payload.home) {
+              homeId = payload.home.id;
+              setSelectedHomeId(homeId);
+            } else {
+              // Success but home object null — refetch to get the ID
+              const refetchResult = await refetchHomes();
+              const refetchedHomes = normalizeHomes(extractNodes(refetchResult.data?.homes));
+              const newHome = refetchedHomes.find((h: any) => h.name === data.homeName.trim());
+              if (newHome) {
+                homeId = newHome.id;
+                setSelectedHomeId(homeId);
+              } else {
+                throw new Error('Home was created but could not be found. Please try again.');
+              }
+            }
+          } else {
+            throw new Error(payload?.message || 'Failed to create home');
+          }
+        } else if (needsPantry && selectedHomeId) {
+          // Only create pantry separately if home already exists but pantry doesn't
           const success = await createPantryForHome(
-            homeId,
+            selectedHomeId,
             data.pantryName,
             createPantry,
             setSelectedPantryId,
@@ -340,6 +355,7 @@ const CreateHomeScreenComponent = () => {
       selectedHomeId,
       createHome,
       createPantry,
+      refetchHomes,
       setSelectedHomeId,
       setSelectedPantryId,
       navigateToNextStep,

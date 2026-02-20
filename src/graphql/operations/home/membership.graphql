@@ -2,10 +2,11 @@
 # SUBSCRIPTIONS
 # ============================================
 
-subscription MembershipUpdated($homeId: ID) {
-  membershipUpdated(homeId: $homeId) {
-    mutation
-    node {
+subscription MembershipChanges($homeId: ID!) {
+  membershipChanged(homeId: $homeId) {
+    changeType
+    homeId
+    membership {
       id
       homeId
       userId
@@ -34,72 +35,9 @@ subscription MembershipUpdated($homeId: ID) {
         }
       }
     }
-    updatedFields
-    userId
-  }
-}
-
-subscription MemberJoined($homeId: ID!) {
-  memberJoined(homeId: $homeId) {
-    mutation
-    node {
-      id
-      homeId
-      userId
-      user {
-        id
-        profile {
-          displayName
-        }
-      }
-    }
-    updatedFields
-    userId
-  }
-}
-
-subscription MemberLeft($homeId: ID!) {
-  memberLeft(homeId: $homeId) {
-    mutation
-    node {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      user {
-        id
-        profile {
-          displayName
-          avatar
-        }
-      }
-    }
-    updatedFields
-    userId
-  }
-}
-
-subscription MembershipRoleChanged($homeId: ID!) {
-  membershipRoleChanged(homeId: $homeId) {
-    membership {
-      id
-      homeId
-      userId
-      role
-      user {
-        id
-        email
-        profile {
-          displayName
-        }
-      }
-    }
-    homeId
-    userId
     previousRole
     newRole
-    changedBy
+    userId
+    timestamp
   }
 }

@@ -142,75 +142,23 @@ mutation DeactivateDevice($id: ID!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription DeviceActivity($userId: ID!) {
-  deviceActivity(userId: $userId) {
-    id
-    userId
-    deviceId
-    deviceName
-    deviceType
-    platform
-    lastSeenAt
-    isActive
-    isTrusted
-    loginCount
-    user {
+subscription DeviceChanges($userId: ID!) {
+  deviceChanged(userId: $userId) {
+    changeType
+    device {
       id
-      email
+      deviceId
+      deviceName
+      deviceType
+      platform
+      isActive
+      isTrusted
+      isVerified
+      lastSeenAt
+      createdAt
+      updatedAt
     }
-  }
-}
-
-subscription DeviceRegistered($userId: ID!) {
-  deviceRegistered(userId: $userId) {
-    id
+    timestamp
     userId
-    deviceId
-    deviceName
-    deviceType
-    platform
-    userAgent
-    browserName
-    browserVersion
-    osName
-    osVersion
-    isActive
-    isTrusted
-    isVerified
-    createdAt
-  }
-}
-
-subscription DeviceStatusChanged($userId: ID!) {
-  deviceStatusChanged(userId: $userId) {
-    id
-    userId
-    deviceId
-    deviceName
-    isActive
-    lastSeenAt
-    updatedAt
-  }
-}
-
-subscription DeviceTrustChanged($userId: ID!) {
-  deviceTrustChanged(userId: $userId) {
-    id
-    userId
-    deviceId
-    deviceName
-    isTrusted
-    updatedAt
-  }
-}
-
-subscription DeviceVerified($userId: ID!) {
-  deviceVerified(userId: $userId) {
-    id
-    userId
-    deviceId
-    deviceName
-    isVerified
-    verifiedAt
   }
 }

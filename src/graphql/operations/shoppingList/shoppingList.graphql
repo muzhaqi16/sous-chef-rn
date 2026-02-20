@@ -468,15 +468,9 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
 # ============================================
 
 mutation ToggleShoppingListItemPurchased(
-  $id: ID!
-  $purchased: Boolean!
-  $version: Int
+  $input: ToggleShoppingListItemPurchasedInput!
 ) {
-  toggleShoppingListItemPurchased(
-    id: $id
-    purchased: $purchased
-    version: $version
-  ) {
+  toggleShoppingListItemPurchased(input: $input) {
     success
     message
     code
@@ -544,15 +538,9 @@ mutation UpdateShoppingListItemPriority(
 }
 
 mutation UpdateCollaboratorRole(
-  $shoppingListId: ID!
-  $collaboratorId: ID!
-  $role: CollaboratorRole!
+  $input: UpdateCollaboratorRoleInput!
 ) {
-  updateCollaboratorRole(
-    shoppingListId: $shoppingListId
-    collaboratorId: $collaboratorId
-    role: $role
-  ) {
+  updateCollaboratorRole(input: $input) {
     success
     message
     code
@@ -687,10 +675,13 @@ mutation SyncMoveShoppingListItem(
 # SUBSCRIPTIONS
 # ============================================
 
-subscription ShoppingListUpdated($listId: ID!) {
-  shoppingListUpdated(listId: $listId) {
-    mutation
-    node {
+subscription ShoppingListChanges($listId: ID!) {
+  shoppingListChanged(listId: $listId) {
+    changeType
+    item {
+      ...ShoppingListItemDisplayFragment
+    }
+    shoppingList {
       id
       name
       totalItems
@@ -702,16 +693,26 @@ subscription ShoppingListUpdated($listId: ID!) {
       budgetAmount
       totalCost
     }
+    collaborator {
+      ...ShoppingListCollaboratorFragment
+      canEdit
+      invitedAt
+      lastViewedAt
+    }
+    clearedItemIds
+    clearedCount
+    mutation
     updatedFields
-    userId
+    listId
     timestamp
+    userId
   }
 }
 
-subscription MyShoppingListsUpdated {
-  myShoppingListsUpdated {
-    mutation
-    node {
+subscription MyShoppingListsChanges {
+  myShoppingListsChanged {
+    changeType
+    shoppingList {
       id
       name
       totalItems
@@ -720,66 +721,10 @@ subscription MyShoppingListsUpdated {
       status
       isCompleted
     }
+    mutation
     updatedFields
-    userId
-    timestamp
-  }
-}
-
-subscription ShoppingListItemsChanged($listId: ID!) {
-  shoppingListItemsChanged(listId: $listId) {
-    mutation
     listId
-    item {
-      ...ShoppingListItemDisplayFragment
-    }
-    updatedFields
-    userId
     timestamp
-  }
-}
-
-subscription ShoppingListCollaboratorsChanged($listId: ID!) {
-  shoppingListCollaboratorsChanged(listId: $listId) {
-    mutation
-    listId
-    collaborator {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      invitedAt
-      lastViewedAt
-    }
     userId
-    timestamp
-  }
-}
-
-subscription ShoppingListStatusChanged($listId: ID!) {
-  shoppingListStatusChanged(listId: $listId) {
-    mutation
-    listId
-    newStatus
-    previousStatus
-    completedBy {
-      id
-      email
-      profile {
-        displayName
-        avatar
-      }
-    }
-    userId
-    timestamp
-  }
-}
-
-subscription ShoppingListItemsBatchCleared($listId: ID!) {
-  shoppingListItemsBatchCleared(listId: $listId) {
-    mutation
-    listId
-    clearedItemIds
-    clearedCount
-    userId
-    timestamp
   }
 }

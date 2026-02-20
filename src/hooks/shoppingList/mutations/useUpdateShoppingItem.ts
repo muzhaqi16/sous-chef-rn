@@ -91,7 +91,7 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
         ),
       });
 
-      return result.data?.updateShoppingListItem ?? false;
+      return result.data?.updateShoppingListItem?.success ?? false;
     } catch (error: any) {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [
