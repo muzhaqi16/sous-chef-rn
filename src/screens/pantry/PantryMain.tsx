@@ -464,8 +464,7 @@ const PantryMainScreen: React.FC = () => {
             subtitle:
               'Click the home icon to switch between homes or manage home settings',
             icon: {
-              name: 'home-switch-outline',
-              library: 'MaterialDesignIcons',
+              name: 'swap-horizontal-outline',
               size: 40,
             },
             onDismiss: homeSwitchHint.actions.dismiss,

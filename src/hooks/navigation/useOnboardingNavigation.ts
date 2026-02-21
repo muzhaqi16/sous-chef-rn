@@ -38,7 +38,18 @@ export function useOnboardingNavigation() {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex < ONBOARDING_STEPS.length - 1) {
         const nextScreen = ONBOARDING_STEPS[currentIndex + 1];
-        navigation.dispatch(CommonActions.navigate(nextScreen));
+
+        // When navigating to OnboardingComplete, reset the stack to prevent back navigation
+        if (nextScreen === 'OnboardingComplete') {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: nextScreen }],
+            }),
+          );
+        } else {
+          navigation.dispatch(CommonActions.navigate(nextScreen));
+        }
 
         // Update store with enum value
         const stepEnum = STEP_TO_ENUM[nextScreen];

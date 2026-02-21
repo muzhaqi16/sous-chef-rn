@@ -14,6 +14,10 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { useStore } from '#store';
+import {
+  saveTempRegistrationPassword,
+  clearTempRegistrationPassword,
+} from '#/storage/keychain';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -440,6 +444,14 @@ export const useAuthOperations = ({
         if (result.data?.register) {
           // Store password temporarily for onboarding biometric setup
           authState.onSetRegistrationPassword(input.password);
+
+          // Persist to keychain so it survives app restart during onboarding
+          try {
+            await clearTempRegistrationPassword();
+            await saveTempRegistrationPassword(input.email, input.password);
+          } catch {
+            // Non-fatal — modal fallback still works
+          }
 
           // Clear any previous credential declination state since this is a new user
           if (result.data.register.user?.id) {

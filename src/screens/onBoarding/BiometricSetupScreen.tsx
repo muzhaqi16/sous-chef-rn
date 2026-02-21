@@ -9,6 +9,10 @@ import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigati
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import {
+  loadTempRegistrationPassword,
+  clearTempRegistrationPassword,
+} from '#/storage/keychain';
 
 export const BiometricSetupScreen = () => {
   useScreenTransition('BiometricSetupScreen');
@@ -52,6 +56,7 @@ export const BiometricSetupScreen = () => {
     (biometricEnabled: boolean) => {
       // Clear registration password since onboarding is complete
       clearRegistrationPassword();
+      clearTempRegistrationPassword(); // fire-and-forget keychain cleanup
 
       // Track biometric decision using preference hooks
       if (biometricEnabled) {
@@ -125,9 +130,20 @@ export const BiometricSetupScreen = () => {
     }
 
     if (!registrationPassword) {
-      // Password lost (app restart) — ask the user to re-enter it
+      // Password lost from memory (app restart) — try loading from keychain first
+      try {
+        const keychainPassword = await loadTempRegistrationPassword(user.email);
+        if (keychainPassword) {
+          await enableBiometricWithPassword(user.email, keychainPassword);
+          return;
+        }
+      } catch {
+        // Fall through to modal
+      }
+
+      // Keychain didn't have it either — ask the user to re-enter
       showPasswordModal({
-        title: 'Enter Your Password',
+        title: 'Re-Enter Your Password',
         placeholder: 'Password',
         submitText: 'Enable',
         textInputProps: { secureTextEntry: true, autoCapitalize: 'none' },
@@ -171,12 +187,12 @@ export const BiometricSetupScreen = () => {
   const getBiometricIcon = () => {
     switch (biometricInfo.biometryType) {
       case 'Face ID':
-        return 'face-recognition';
+        return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
-        return 'fingerprint';
+        return 'finger-print';
       default:
-        return 'fingerprint';
+        return 'finger-print';
     }
   };
 

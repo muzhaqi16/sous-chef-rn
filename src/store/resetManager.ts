@@ -1,6 +1,7 @@
 import { RootState } from './index';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
+import { clearTempRegistrationPassword } from '#/storage/keychain';
 
 // Simplified reset options
 export interface ResetOptions {
@@ -179,6 +180,9 @@ const clearAuthFromStorage = async () => {
     // Note: We intentionally do NOT clear keychain credentials during logout
     // This allows users to use biometric login after logging out
     // Keychain credentials are only cleared during full reset or explicit user action
+
+    // Clear temp registration password from keychain (if any)
+    await clearTempRegistrationPassword();
 
     // Clear individual auth-related keys
     storage.remove('accessToken');

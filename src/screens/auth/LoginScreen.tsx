@@ -144,16 +144,16 @@ export function LoginScreen() {
 
   // Get appropriate biometric icon
   const getBiometricIcon = () => {
-    if (!biometricInfo.isAvailable) return 'fingerprint';
+    if (!biometricInfo.isAvailable) return 'finger-print';
 
     switch (biometricInfo.biometryType) {
       case 'Face ID':
-        return 'face-recognition';
+        return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
-        return 'fingerprint';
+        return 'finger-print';
       default:
-        return 'fingerprint';
+        return 'finger-print';
     }
   };
 

@@ -67,12 +67,12 @@ export const PostLoginBiometricPrompt = ({
   const getBiometricIcon = () => {
     switch (biometricInfo.biometryType) {
       case 'Face ID':
-        return 'face-recognition';
+        return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
-        return 'fingerprint';
+        return 'finger-print';
       default:
-        return 'fingerprint';
+        return 'finger-print';
     }
   };
 

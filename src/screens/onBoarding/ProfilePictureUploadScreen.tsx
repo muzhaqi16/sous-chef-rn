@@ -7,6 +7,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
@@ -33,6 +34,8 @@ import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { CachedImage } from '#components/atoms/CachedImage';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -56,6 +59,13 @@ export const ProfilePictureUploadScreen = () => {
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
+
+  const { profile, loading: profileLoading } = useProfileData();
+
+  const hasLocalImage = !!(croppedImage || selectedImage);
+  const hasExistingAvatar = !!existingAvatarUrl && !hasLocalImage;
+  const hasAnyImage = hasExistingAvatar || hasLocalImage;
 
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(
@@ -84,6 +94,13 @@ export const ProfilePictureUploadScreen = () => {
       storage.remove('temp_cropped_image');
     };
   }, []);
+
+  // Seed existing avatar from profile on initial load
+  useEffect(() => {
+    if (profile?.avatar && !hasLocalImage) {
+      setExistingAvatarUrl(profile.avatar);
+    }
+  }, [profile?.avatar, hasLocalImage]);
 
   const handleImageResponse = useCallback((response: ImagePickerResponse) => {
     if (response.didCancel || response.errorCode || !response.assets?.[0]) {
@@ -173,6 +190,7 @@ export const ProfilePictureUploadScreen = () => {
   const handleRemoveImage = () => {
     setSelectedImage(null);
     setCroppedImage(null);
+    setExistingAvatarUrl(null);
   };
 
   return (
@@ -190,7 +208,7 @@ export const ProfilePictureUploadScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.avatarPreview}>
-          {croppedImage || selectedImage ? (
+          {hasLocalImage ? (
             <>
               <Image
                 alt="Profile preview"
@@ -203,13 +221,33 @@ export const ProfilePictureUploadScreen = () => {
                 disabled={isUploading}
               >
                 <Icon
-
                   color={theme.colors.error}
                   name="close-circle"
                   size={24}
                 />
               </Pressable>
             </>
+          ) : hasExistingAvatar ? (
+            <>
+              <CachedImage
+                uri={existingAvatarUrl}
+                style={styles.avatarImage}
+              />
+              <Pressable
+                onPress={handleRemoveImage}
+                style={({pressed}) => [styles.avatarRemove, pressed && styles.pressed]}
+              >
+                <Icon
+                  color={theme.colors.error}
+                  name="close-circle"
+                  size={24}
+                />
+              </Pressable>
+            </>
+          ) : profileLoading ? (
+            <View style={styles.avatarPlaceholder}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon
@@ -246,7 +284,7 @@ export const ProfilePictureUploadScreen = () => {
           </View>
         )}
 
-        {!selectedImage && (
+        {!hasAnyImage && !profileLoading && (
           <View style={styles.formAction}>
             <Pressable
               onPress={handleSelectPhoto}
@@ -390,10 +428,10 @@ export const ProfilePictureUploadScreen = () => {
       </ScrollView>
 
       <Button
-        title={isUploading ? 'Uploading...' : 'Upload & Continue'}
-        onPress={croppedImage || selectedImage ? handleUpload : () => {}}
+        title={isUploading ? 'Uploading...' : hasExistingAvatar ? 'Continue' : 'Upload & Continue'}
+        onPress={hasExistingAvatar ? () => navigateToNextStep('ProfilePictureUpload') : hasLocalImage ? handleUpload : () => {}}
         variant="primary"
-        disabled={!(selectedImage || croppedImage) || isUploading}
+        disabled={!hasAnyImage || isUploading}
       />
     </OnBoardingWrapper>
   );

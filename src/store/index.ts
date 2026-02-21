@@ -221,6 +221,10 @@ export const useStore = create<RootState>()(
             // Logout state (session-only flag)
             isLoggingOut,
 
+            // Passwords (must not persist to MMKV — keychain only)
+            registrationPassword,
+            postLoginCredentials,
+
             ...persistedState
           } = state;
           // ========== PERSISTENT STATE (everything else) ==========

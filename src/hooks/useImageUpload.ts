@@ -72,9 +72,13 @@ export const useImageUpload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
+            console.error(
+              `MinIO upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
+            );
+            const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
             reject(
               new Error(
-                `Upload failed: ${xhr.status} ${xhr.statusText}`,
+                `Upload failed: ${xhr.status}${statusText}`,
               ),
             );
           }
@@ -225,6 +229,7 @@ export const useImageUpload = () => {
           options,
         );
       } catch (error) {
+        console.error('Profile image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
 

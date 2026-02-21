@@ -67,7 +67,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Show loading empty state when loading with no items
   const effectiveEmptyState = isLoading
     ? {
-        icon: emptyState?.icon || 'inventory',
+        icon: emptyState?.icon || 'cube-outline',
         title: 'Loading...',
         description: emptyState?.loadingDescription || 'Loading your items',
       }

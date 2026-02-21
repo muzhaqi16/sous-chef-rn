@@ -367,7 +367,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Empty state when no lists exist
     if (lists.length === 0) {
       const noListsEmptyState = {
-        icon: 'add-shopping-cart' as const,
+        icon: 'cart-outline' as const,
         title: 'No shopping lists',
         description: 'Create a shopping list to get started',
         action: {
@@ -395,7 +395,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     }
 
     const emptyStateConfig = {
-      icon: 'add-shopping-cart' as const,
+      icon: 'cart-outline' as const,
       title: 'No items in this list',
       description: 'Add some items to get started',
       action: {

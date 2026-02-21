@@ -13,6 +13,7 @@ import {
 
 const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
 const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
+const TEMP_REGISTRATION_SERVICE = 'dev.souschef.app.temp.registration';
 
 export interface SaveOptions {
   /** namespace of this item */
@@ -268,6 +269,60 @@ export async function getEmailOnly(): Promise<string | null> {
   } catch (error) {
     console.error('Failed to get email:', error);
     return null;
+  }
+}
+
+/**
+ * Store the registration password temporarily in the keychain during onboarding.
+ * No biometric gate — uses WHEN_UNLOCKED_THIS_DEVICE_ONLY for basic protection.
+ * The email is stored as the username so we can validate ownership on load.
+ */
+export async function saveTempRegistrationPassword(
+  email: string,
+  password: string,
+): Promise<void> {
+  return queueOperation(async () => {
+    await setGenericPassword(email, password, {
+      service: TEMP_REGISTRATION_SERVICE,
+      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    });
+  });
+}
+
+/**
+ * Load the temp registration password from the keychain.
+ * Returns the password only if the stored username matches the provided email.
+ * If there's a mismatch (different user), returns null and clears the stale entry.
+ */
+export async function loadTempRegistrationPassword(
+  email: string,
+): Promise<string | null> {
+  try {
+    const creds = await getGenericPassword({
+      service: TEMP_REGISTRATION_SERVICE,
+    });
+    if (!creds) return null;
+
+    if (creds.username !== email) {
+      // Stale entry from a different user — clear it
+      await clearTempRegistrationPassword();
+      return null;
+    }
+
+    return creds.password;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear the temp registration password from the keychain.
+ */
+export async function clearTempRegistrationPassword(): Promise<void> {
+  try {
+    await resetGenericPassword({ service: TEMP_REGISTRATION_SERVICE });
+  } catch {
+    // Non-fatal — entry may not exist
   }
 }
 
