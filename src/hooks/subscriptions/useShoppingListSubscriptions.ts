@@ -98,6 +98,14 @@ export function useShoppingListSubscriptions(
 
           if (!item) return;
 
+          if (!item.id) {
+            console.warn('⚠️ [ShoppingListChanges] Received item with no id, skipping cache update', {
+              changeType,
+              mutation: payload.mutation,
+            });
+            return;
+          }
+
           // Skip self-echo
           if (payloadUserId && userId && payloadUserId === userId) {
             if (__DEV__) {

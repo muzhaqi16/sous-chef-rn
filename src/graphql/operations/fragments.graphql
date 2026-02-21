@@ -559,9 +559,25 @@ fragment PantryItemDisplay on PantryItem {
 # Used in: GetPantryItem query (detail screen), analytics queries
 fragment PantryItemFragment on PantryItem {
   ...PantryItemDisplay
-  # Extended fields not in Display - only for detail views
+  # Extended item fields for detail view (images, nutrition, categories)
+  # NOTE: id, name, imageUrl, displayUnit already provided by PantryItemDisplay
+  # Intentionally avoids ...ItemFragment to stay under 175-field complexity limit
   item {
-    ...ItemFragment
+    images {
+      id
+      url
+      kind
+    }
+    nutritions
+    defaultConsumeIncrement
+    defaultConsumeUnitId
+    categories {
+      isPrimary
+      category {
+        id
+        name
+      }
+    }
   }
   unit {
     type

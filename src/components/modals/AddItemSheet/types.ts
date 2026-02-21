@@ -59,7 +59,7 @@ export interface AddItemSheetConfig {
   /** Test ID prefix for testing */
   testIDPrefix: string;
   /** Icon for placeholder images */
-  placeholderIcon: 'inventory-2' | 'shopping-cart';
+  placeholderIcon: 'cube-outline' | 'cart-outline';
   /** Search bar placeholder text */
   searchPlaceholder: string;
   /** Suggestion groups to display */

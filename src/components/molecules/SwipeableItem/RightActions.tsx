@@ -32,7 +32,7 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
         >
           <AnimatedActionButton
             onPress={handleDeletePress}
-            icon="delete"
+            icon="trash-outline"
             backgroundColor={theme.colors.danger}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
@@ -68,7 +68,7 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
         {onEdit && (
           <AnimatedActionButton
             onPress={handleEditPress}
-            icon="edit"
+            icon="create-outline"
             backgroundColor={theme.colors.info}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
@@ -79,7 +79,7 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
         {onDelete && (
           <AnimatedActionButton
             onPress={handleDeletePress}
-            icon="delete"
+            icon="trash-outline"
             backgroundColor={theme.colors.danger}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}

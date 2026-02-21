@@ -23,15 +23,15 @@ interface ItemRecentCardProps<T extends RecentItem> {
   item: T;
   onQuickAdd: (item: T) => void;
   disabled?: boolean;
-  /** Icon to show in placeholder when no image (default: 'inventory-2') */
-  placeholderIcon?: 'inventory-2' | 'shopping-cart';
+  /** Icon to show in placeholder when no image (default: 'cube-outline') */
+  placeholderIcon?: 'cube-outline' | 'cart-outline';
 }
 
 export function ItemRecentCard<T extends RecentItem>({
   item,
   onQuickAdd,
   disabled,
-  placeholderIcon = 'inventory-2',
+  placeholderIcon = 'cube-outline',
 }: ItemRecentCardProps<T>) {
   useRenderTime('ItemRecentCard');
   const { theme } = useUnistyles();

@@ -44,7 +44,7 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
   imageUrl,
   title,
   subtitle,
-  placeholderIcon = 'inventory-2',
+  placeholderIcon = 'cube-outline',
   placeholderIconLibrary = 'Ionicons',
   onPress,
   onQuickAdd,

@@ -21,8 +21,8 @@ interface ItemSuggestionsListProps {
   onSelectSuggestion: (item: ItemSuggestion) => void;
   /** Whether quick add is disabled (e.g., during mutation) */
   quickAddDisabled?: boolean;
-  /** Icon to show in suggestion placeholder (default: 'inventory-2') */
-  placeholderIcon?: 'inventory-2' | 'shopping-cart';
+  /** Icon to show in suggestion placeholder (default: 'cube-outline') */
+  placeholderIcon?: 'cube-outline' | 'cart-outline';
   /** Whether to show brand names (default: true) */
   showBrands?: boolean;
 }
@@ -34,7 +34,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
   onAddManually,
   onSelectSuggestion,
   quickAddDisabled = false,
-  placeholderIcon = 'inventory-2',
+  placeholderIcon = 'cube-outline',
   showBrands = true,
 }) => {
   const { theme } = useUnistyles();

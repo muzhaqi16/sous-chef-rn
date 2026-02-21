@@ -221,7 +221,7 @@ export function AddItemSheet({
               isLoading={autocomplete.isLoading && hasSearchQuery}
               rightActions={[
                 {
-                  icon: 'qr-code-scanner',
+                  icon: 'barcode-outline',
                   onPress: onScanPress,
                 },
               ]}
@@ -246,7 +246,7 @@ export function AddItemSheet({
             {!showSearchResults && (
               <View style={styles.actionButtons}>
                 <ActionCard
-                  icon="qr-code-scanner"
+                  icon="barcode-outline"
                   label="Scan Barcode"
                   onPress={onScanPress}
                 />

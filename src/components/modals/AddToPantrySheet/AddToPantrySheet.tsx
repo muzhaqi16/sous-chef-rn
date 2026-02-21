@@ -157,8 +157,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         input: {
           pantryId,
           itemId: item.id,
-          itemName: item.name,
-          quantity: null,
         },
       };
 
@@ -216,8 +214,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         input: {
           pantryId,
           itemId: pantryItem.itemId,
-          itemName: pantryItem.name,
-          quantity: null,
         },
       };
 

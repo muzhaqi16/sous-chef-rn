@@ -246,6 +246,12 @@ export function makeCache(): InMemoryCache {
             },
           },
           itemsConnection: itemsConnectionFieldPolicy(),
+          suggestions: {
+            merge(existing = [], incoming) {
+              if (incoming == null) return existing;
+              return incoming;
+            },
+          },
         },
       },
       Home: {
