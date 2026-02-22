@@ -49,30 +49,20 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   useEffect(() => {
     if (loading) {
       // Shrink to circular loading indicator
-      loadingProgress.value = withSpring(1, SPRING.GENTLE);
-      textOpacity.value = withTiming(0, { duration: TIMING.FAST });
+      loadingProgress.set(withSpring(1, SPRING.GENTLE));
+      textOpacity.set(withTiming(0, { duration: TIMING.FAST }));
     } else {
       // Expand back to full width
-      loadingProgress.value = withSpring(0, SPRING.GENTLE);
-      textOpacity.value = withTiming(1, { duration: TIMING.STANDARD });
+      loadingProgress.set(withSpring(0, SPRING.GENTLE));
+      textOpacity.set(withTiming(1, { duration: TIMING.STANDARD }));
     }
   }, [loading, loadingProgress, textOpacity]);
 
-  const animatedButtonStyle = useAnimatedStyle(() => {
-    const minWidth = 48; // Circular button size when loading
-    const maxWidth = fullWidth ? '100%' : 120;
-
-    return {
-      width: loading
-        ? interpolate(loadingProgress.value, [0, 1], [120, minWidth])
-        : maxWidth,
-      paddingHorizontal: interpolate(
-        loadingProgress.value,
-        [0, 1],
-        [16, 0]
-      ),
-    };
-  });
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scaleX: interpolate(loadingProgress.value, [0, 1], [1, 48 / 120]) },
+    ],
+  }));
 
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
@@ -124,6 +114,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       style={[
         styles.button(isDisabled),
         getButtonStyle(),
+        fullWidth && styles.fullWidth,
         style,
       ]}
     >
@@ -166,6 +157,9 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     opacity: isDisabled ? 0.5 : 1,
   }),
+  fullWidth: {
+    width: '100%',
+  },
   pressableInner: {
     flex: 1,
     alignItems: 'center' as const,

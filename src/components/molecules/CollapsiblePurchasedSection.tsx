@@ -87,7 +87,7 @@ export const CollapsiblePurchasedSection: React.FC<
 
   // Update chevron rotation when expanded state changes
   useEffect(() => {
-    chevronRotation.value = withSpring(expanded ? 180 : 0, SPRING.EXPAND);
+    chevronRotation.set(withSpring(expanded ? 180 : 0, SPRING.EXPAND));
   }, [expanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => {

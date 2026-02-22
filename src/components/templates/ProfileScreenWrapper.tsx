@@ -39,7 +39,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
             color={theme.colors.textPrimary}
             accessibilityLabel="Go back"
           />
-          {title && <Text style={styles.title}>{title}</Text>}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
           <View style={styles.headerSpacer} />
         </View>
       )}

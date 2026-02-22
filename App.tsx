@@ -18,7 +18,6 @@ import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -126,9 +125,6 @@ const App = () => {
         });
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
-
-      // Initialize native performance metrics (startup marks, bundle load times)
-      NativePerformanceService.initialize();
 
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');

@@ -68,7 +68,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
 
   return (
     <View style={styles.container} testID={testID}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <Pressable
         style={({pressed}) => [styles.input, error && styles.inputError, pressed && styles.pressed]}
         onPress={handlePress}
@@ -82,7 +82,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
           {value ? formatDate(value) : placeholder}
         </Text>
       </Pressable>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {showPicker && (
           <DateTimePicker

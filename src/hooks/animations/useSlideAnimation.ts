@@ -88,9 +88,9 @@ export function useSlideAnimation({
     if (itemIdRef.current !== itemId) {
       cancelAnimation(translateX);
       cancelAnimation(opacity);
-      translateX.value = 0;
-      opacity.value = 1;
-      isAnimatingShared.value = false;
+      translateX.set(0);
+      opacity.set(1);
+      isAnimatingShared.set(false);
       setIsAnimating(false);
       onCompleteRef.current = null; // Clear pending callback
       itemIdRef.current = itemId;

@@ -44,7 +44,7 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
     <View style={circleStyles.container}>
       <View style={[circleStyles.circle, { borderColor: color }]}>
         <Text style={[circleStyles.value, { color }]}>{value}</Text>
-        {unit && <Text style={[circleStyles.unit, { color }]}>{unit}</Text>}
+        {unit ? <Text style={[circleStyles.unit, { color }]}>{unit}</Text> : null}
       </View>
       <Text style={circleStyles.label}>{label}</Text>
     </View>

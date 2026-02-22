@@ -67,37 +67,37 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
     };
 
     // Baguette bounce (first)
-    baguetteY.value = withRepeat(
+    baguetteY.set(withRepeat(
       withSequence(
         withTiming(-12, bounceConfig),
         withTiming(0, bounceConfig),
       ),
       -1,
       false,
-    );
+    ));
 
     // Tomato bounce (delayed by 200ms)
     setTimeout(() => {
-      tomatoY.value = withRepeat(
+      tomatoY.set(withRepeat(
         withSequence(
           withTiming(-10, bounceConfig),
           withTiming(0, bounceConfig),
         ),
         -1,
         false,
-      );
+      ));
     }, 200);
 
     // Leaves bounce (delayed by 400ms)
     setTimeout(() => {
-      leavesY.value = withRepeat(
+      leavesY.set(withRepeat(
         withSequence(
           withTiming(-8, bounceConfig),
           withTiming(0, bounceConfig),
         ),
         -1,
         false,
-      );
+      ));
     }, 400);
   }, [baguetteY, tomatoY, leavesY]);
 

@@ -46,9 +46,9 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
           </View>
         )}
       </View>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
-    {trailingText && <Text style={styles.trailingText}>{trailingText}</Text>}
+    {trailingText ? <Text style={styles.trailingText}>{trailingText}</Text> : null}
   </View>
 );
 

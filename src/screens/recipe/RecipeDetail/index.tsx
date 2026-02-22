@@ -14,6 +14,7 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
+import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -33,6 +34,8 @@ import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
+
+const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
@@ -305,8 +308,10 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Recipe Image with Back Button and Favorite Button */}
         {displayData.image && (
           <View style={styles.imageContainer}>
-            <Animated.Image
+            <AnimatedTurboImage
               source={{ uri: displayData.image }}
+              cachePolicy="dataCache"
+              resizeMode="cover"
               style={[styles.recipeImage, imageAnimatedStyle]}
               sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
@@ -869,7 +874,6 @@ const styles = StyleSheet.create(theme => ({
   recipeImage: {
     width: '100%',
     height: 300,
-    resizeMode: 'cover',
   },
   backButton: {
     position: 'absolute',

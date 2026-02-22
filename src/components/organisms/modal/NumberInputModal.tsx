@@ -302,7 +302,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           />
 
           {/* Error message */}
-          {error && <Text style={localStyles.errorText}>{error}</Text>}
+          {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
 
           {/* Buttons */}
           <View style={localStyles.modalButtons}>

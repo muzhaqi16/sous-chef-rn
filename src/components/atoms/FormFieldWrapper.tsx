@@ -34,7 +34,7 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
         {required && <Text style={styles.required}> *</Text>}
       </Text>
       {children}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };

@@ -233,7 +233,7 @@ export const CreateShoppingListScreen = () => {
         disabled={isCreating}
       />
 
-      {graphqlError && <Text style={styles.errorText}>{graphqlError}</Text>}
+      {graphqlError ? <Text style={styles.errorText}>{graphqlError}</Text> : null}
     </OnBoardingWrapper>
   );
 };

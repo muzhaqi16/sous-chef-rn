@@ -17,7 +17,7 @@ export const SettingSection: React.FC<SettingSectionProps> = ({
     <View style={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{title}</Text>
-        {description && <Text style={styles.description}>{description}</Text>}
+        {description ? <Text style={styles.description}>{description}</Text> : null}
       </View>
       <View style={styles.content}>{children}</View>
     </View>

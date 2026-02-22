@@ -10,7 +10,6 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useTabBarState, useTabBarSetters } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
-import NavigationService from '#/services/NavigationService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
@@ -19,14 +18,6 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SPRING, TIMING } from '#/constants/animations';
 
 export const TAB_BAR_HEIGHT = 65;
-
-// Adjacent tab mapping for preloading neighbors
-const ADJACENT_TABS: Record<string, string[]> = {
-  Pantry: ['ShoppingList'],
-  ShoppingList: ['Pantry', 'Recipe'],
-  Recipe: ['ShoppingList', 'MealPlan'],
-  MealPlan: ['Recipe'],
-};
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descriptors, navigation }) => {
     const {
@@ -64,7 +55,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
 
     // Sync shared value with React Navigation state
     useEffect(() => {
-      activeTabIndex.value = state.index;
+      activeTabIndex.set(state.index);
     }, [state.index, activeTabIndex]);
 
     // Animated values for smooth hide/show
@@ -91,10 +82,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
       const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
       // Fast timing for opacity (linear, no spring)
-      opacity.value = withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST });
+      opacity.set(withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST }));
 
       // Snappy spring with subtle bounce (higher damping = less bounce)
-      translateY.value = withSpring(shouldHide ? 150 : 0, SPRING.HEAVY);
+      translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
     }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
 
     // Animated style for smooth transitions
@@ -126,7 +117,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
         targetIndex: number,
       ) => {
         // Set shared value immediately for instant UI-thread icon feedback
-        activeTabIndex.value = targetIndex;
+        activeTabIndex.set(targetIndex);
         HapticService.selection();
 
         const event = navigation.emit({
@@ -159,11 +150,6 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
             }
           }
 
-          // Preload adjacent tabs after navigation animation completes
-          requestAnimationFrame(() => {
-            const neighbors = ADJACENT_TABS[route.name];
-            neighbors?.forEach(tab => NavigationService.preload(tab));
-          });
         }
       },
       [navigation, activeTabIndex],

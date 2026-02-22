@@ -30,7 +30,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
   const animatedValue = useSharedValue(0);
 
   useEffect(() => {
-    animatedValue.value = withRepeat(withTiming(1, {duration}), -1, true);
+    animatedValue.set(withRepeat(withTiming(1, {duration}), -1, true));
   }, [animatedValue, duration]);
 
   const animatedStyle = useAnimatedStyle(() => {

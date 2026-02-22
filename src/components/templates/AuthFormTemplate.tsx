@@ -64,7 +64,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         )}
 
         <Text style={styles.title}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />

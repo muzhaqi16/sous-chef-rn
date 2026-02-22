@@ -69,7 +69,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
             onChangeText={setEmail}
           />
           <Button onPress={handleShare} disabled={isOffline}>Share</Button>
-          {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          {error ? <Text style={styles.errorText}>Error: {error}</Text> : null}
         </BottomSheet>
       )}
     </>

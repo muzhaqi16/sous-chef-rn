@@ -588,7 +588,7 @@ const CreateHomeScreenComponent = () => {
         onPress={form.handleSubmit(onSubmit)}
       />
 
-      {graphqlError && <ErrorMessage message={graphqlError} />}
+      {graphqlError ? <ErrorMessage message={graphqlError} /> : null}
     </OnBoardingWrapper>
   );
 };

@@ -84,7 +84,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
       <Animated.View style={animatedStyle}>
         <Icon name={icon} size={iconSize} color={iconColor} library={library} />
-        {label && <Text style={styles.deleteText}>{label}</Text>}
+        {label ? <Text style={styles.deleteText}>{label}</Text> : null}
       </Animated.View>
     </Pressable>
   );

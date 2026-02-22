@@ -74,10 +74,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   // Trigger highlight animation when isHighlighted changes
   useEffect(() => {
-    highlightOpacity.value = withTiming(isHighlighted ? 1 : 0, {
+    highlightOpacity.set(withTiming(isHighlighted ? 1 : 0, {
       duration: 150, // Fast - matches slide animation
       easing: Easing.out(Easing.ease),
-    });
+    }));
   }, [isHighlighted, highlightOpacity]);
 
   // Static card style - backgroundColor doesn't animate

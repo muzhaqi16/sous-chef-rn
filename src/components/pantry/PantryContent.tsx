@@ -30,7 +30,7 @@ import {
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
 import { StorageState, type PantryStats } from '#generated';
-import { AnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
+import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
@@ -138,6 +138,7 @@ interface PantryContentProps {
   onAvatarPress?: () => void;
   onHomePress?: () => void;
   onSettingsPress?: () => void;
+  onAnalyticsPress?: () => void;
   onLowStockPress?: () => void;
   lowStockLoading?: boolean;
 
@@ -209,6 +210,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   onAvatarPress,
   onHomePress,
   onSettingsPress,
+  onAnalyticsPress,
   onLowStockPress,
   lowStockLoading = false,
   totalCount,
@@ -249,11 +251,11 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   useEffect(() => {
     const duration = 200;
     if (showSkeletons) {
-      skeletonOpacity.value = withTiming(1, { duration });
-      contentOpacity.value = withTiming(0, { duration });
+      skeletonOpacity.set(withTiming(1, { duration }));
+      contentOpacity.set(withTiming(0, { duration }));
     } else {
-      skeletonOpacity.value = withTiming(0, { duration });
-      contentOpacity.value = withTiming(1, { duration });
+      skeletonOpacity.set(withTiming(0, { duration }));
+      contentOpacity.set(withTiming(1, { duration }));
     }
   }, [showSkeletons, skeletonOpacity, contentOpacity]);
 
@@ -540,38 +542,12 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
             }
           />
 
-          {/* Stats Summary Cards */}
+          {/* Alert Bar */}
           {stats && (
-            <View style={styles.statsContainer}>
-              <View style={styles.statsRow}>
-                <AnalyticsSummaryCard
-                  title="Total Items"
-                  value={stats.totalItems}
-                  subtitle={`${stats.activeItems} active`}
-                  icon="cube-outline"
-                />
-                <AnalyticsSummaryCard
-                  title="Expiring Soon"
-                  value={stats.expiringCount}
-                  icon="time-outline"
-                  color={stats.expiringCount > 0 ? theme.colors.warning : undefined}
-                />
-              </View>
-              <View style={styles.statsRow}>
-                <AnalyticsSummaryCard
-                  title="Low Stock"
-                  value={stats.lowStockCount}
-                  icon="alert-circle-outline"
-                  color={stats.lowStockCount > 0 ? theme.colors.error : undefined}
-                />
-                <AnalyticsSummaryCard
-                  title="Total Value"
-                  value={`$${stats.totalValue.toFixed(2)}`}
-                  icon="cash-outline"
-                  color={theme.colors.success}
-                />
-              </View>
-            </View>
+            <PantryAlertBar
+              stats={stats}
+              onAnalyticsPress={onAnalyticsPress}
+            />
           )}
         </View>
 
@@ -662,14 +638,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xs,
-  },
-  statsContainer: {
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
   },
   listContainer: {
     flex: 1,

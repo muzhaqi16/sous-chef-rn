@@ -105,7 +105,7 @@ export const CreateShoppingListBottomSheet: React.FC<
             autoFocus
             maxLength={50}
           />
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </BottomSheetView>
     </BottomSheetModal>

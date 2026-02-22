@@ -347,6 +347,15 @@ const PantryMainScreen: React.FC = () => {
     [navigate, selectedHomeId],
   );
 
+  const handleAnalyticsPress = useCallback(
+    () => {
+      if (pantry?.id) {
+        navigate('PantryAnalytics', { pantryId: pantry.id });
+      }
+    },
+    [navigate, pantry?.id],
+  );
+
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetch(), refetchHome()]);
   }, [refetch, refetchHome]);
@@ -396,6 +405,7 @@ const PantryMainScreen: React.FC = () => {
         onAvatarPress={handleAvatarPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
+        onAnalyticsPress={handleAnalyticsPress}
         onLowStockPress={addLowStockToShoppingList}
         lowStockLoading={lowStockLoading}
         totalCount={totalCount}

@@ -54,7 +54,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
         </Pressable>
         <View style={styles.counterValue}>
           <Text style={styles.counterText}>{quantity || 0}</Text>
-          {unit && <Text style={styles.counterUnit}>{unit}</Text>}
+          {unit ? <Text style={styles.counterUnit}>{unit}</Text> : null}
         </View>
         <Pressable
           onPress={onIncrement}
@@ -74,9 +74,9 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
   // Default to meta
   return (
     <View style={styles.metaContainer}>
-      {primary && <Text style={styles.primary}>{primary}</Text>}
-      {secondary && <Text style={styles.secondary}>{secondary}</Text>}
-      {tertiary && <Text style={styles.secondary}>{tertiary}</Text>}
+      {primary ? <Text style={styles.primary}>{primary}</Text> : null}
+      {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
+      {tertiary ? <Text style={styles.secondary}>{tertiary}</Text> : null}
     </View>
   );
 };

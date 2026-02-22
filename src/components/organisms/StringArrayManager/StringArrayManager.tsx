@@ -271,7 +271,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               editable={!loading}
             />
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <View style={styles.modalButtons}>
               <Pressable

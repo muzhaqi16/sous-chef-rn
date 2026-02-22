@@ -72,7 +72,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
             ) : null}
 
             <Text style={styles.hintTitle}>{title}</Text>
-            {subtitle && <Text style={styles.hintSubtitle}>{subtitle}</Text>}
+            {subtitle ? <Text style={styles.hintSubtitle}>{subtitle}</Text> : null}
           </View>
 
           <Pressable

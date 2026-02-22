@@ -42,14 +42,14 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   useEffect(() => {
     if (isHighlighted) {
       // Pulse animation with rotation
-      scale.value = withSequence(
+      scale.set(withSequence(
         withTiming(1.1, { duration: TIMING.STANDARD }),
         withTiming(1, { duration: TIMING.STANDARD }),
-      );
-      rotation.value = withSequence(
+      ));
+      rotation.set(withSequence(
         withTiming(1, { duration: TIMING.STANDARD }),
         withTiming(0, { duration: TIMING.STANDARD }),
-      );
+      ));
     }
   }, [isHighlighted, scale, rotation]);
 

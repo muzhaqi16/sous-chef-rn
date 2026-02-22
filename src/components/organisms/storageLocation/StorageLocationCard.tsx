@@ -36,7 +36,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
         disabled={!onPress}
       >
         <View style={commonStyles.row}>
-          {location.icon && <Text style={styles.icon}>{location.icon}</Text>}
+          {location.icon ? <Text style={styles.icon}>{location.icon}</Text> : null}
           <View style={styles.info}>
             <View style={commonStyles.rowSpaceBetween}>
               <Text style={commonStyles.title}>{location.name}</Text>

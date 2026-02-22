@@ -67,12 +67,17 @@ jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native');
   const noOp = jest.fn();
   const returnSelf = jest.fn(function () { return this; });
-  const mockSharedValue = (initialValue) => ({
-    value: initialValue,
-    addListener: noOp,
-    removeListener: noOp,
-    modify: noOp,
-  });
+  const mockSharedValue = (initialValue) => {
+    const sv = {
+      value: initialValue,
+      addListener: noOp,
+      removeListener: noOp,
+      modify: noOp,
+      get: jest.fn(() => sv.value),
+      set: jest.fn((v) => { sv.value = v; }),
+    };
+    return sv;
+  };
 
   return {
     __esModule: true,

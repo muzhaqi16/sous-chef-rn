@@ -56,11 +56,11 @@ export const Button: React.FC<ButtonProps> = ({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
   }, [scale]);
 
   const handlePress = useCallback(() => {

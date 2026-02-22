@@ -49,7 +49,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         )}
       </View>
 
-      {value && <Text style={styles.value}>{value}</Text>}
+      {value ? <Text style={styles.value}>{value}</Text> : null}
 
       {showArrow && (
         <Icon

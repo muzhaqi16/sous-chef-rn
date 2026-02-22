@@ -26,7 +26,7 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
     >
       {(title || showCloseButton) && (
         <View style={styles.header}>
-          {title && <Text style={styles.title}>{title}</Text>}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
           <View style={styles.fill} />
           {showCloseButton && onClose && (
             <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>

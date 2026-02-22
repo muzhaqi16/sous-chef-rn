@@ -29,10 +29,10 @@ export const Counter = ({
 
   // Bounce animation when count changes
   useEffect(() => {
-    countScale.value = withSequence(
+    countScale.set(withSequence(
       withSpring(1.15, SPRING.SNAPPY),
       withSpring(1, SPRING.SNAPPY),
-    );
+    ));
   }, [count, countScale]);
 
   const countAnimatedStyle = useAnimatedStyle(() => ({

@@ -62,10 +62,10 @@ export const TabItem: React.FC<TabItemProps> = ({
 
   const handlePress = () => {
     // Animate icon scale on press (squeeze then expand to active size)
-    iconScale.value = withSequence(
+    iconScale.set(withSequence(
       withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
       withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) })
-    );
+    ));
     onPress();
   };
 
