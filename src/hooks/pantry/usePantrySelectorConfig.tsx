@@ -1,4 +1,7 @@
-import { useMemo, RefObject } from 'react';
+import React, { useMemo, useCallback, RefObject } from 'react';
+import { Pressable, Text } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -36,32 +39,6 @@ interface UsePantrySelectorConfigOptions {
   navigate: (screen: string, params?: any) => void;
 }
 
-/**
- * Hook to create pantry selector configuration
- *
- * Provides a complete SelectorConfig for AnimatedItemSelector with:
- * - Pantry selection handling
- * - Create and edit actions
- * - Proper selector close coordination
- * - Loading state management
- *
- * @param options - Configuration options
- * @returns SelectorConfig ready for AnimatedItemSelector
- *
- * @example
- * ```typescript
- * const pantryConfig = usePantrySelectorConfig({
- *   pantries: currentHomeData?.home?.pantries || [],
- *   selectedPantryId: pantry?.id,
- *   loading,
- *   setSelectedPantryId,
- *   selectorRef,
- *   navigate,
- * });
- *
- * <AnimatedItemSelector ref={selectorRef} config={pantryConfig} />
- * ```
- */
 export function usePantrySelectorConfig(
   options: UsePantrySelectorConfigOptions,
 ): SelectorConfig<any> {
@@ -73,6 +50,31 @@ export function usePantrySelectorConfig(
     selectorRef,
     navigate,
   } = options;
+
+  const {
+    theme: { colors },
+  } = useUnistyles();
+
+  const renderPantryItem = useCallback(
+    (item: any, isSelected: boolean, onPress: () => void) => {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            styles.itemContainer,
+            isSelected && styles.itemSelected,
+            pressed && styles.pressed,
+          ]}
+          onPress={onPress}
+        >
+          <Text style={styles.itemName}>{item.name}</Text>
+          {isSelected && (
+            <Icon name="checkmark" size={20} color={colors.primary} />
+          )}
+        </Pressable>
+      );
+    },
+    [colors],
+  );
 
   return useMemo(
     () => ({
@@ -86,6 +88,7 @@ export function usePantrySelectorConfig(
       displayProperty: 'name',
       loading,
       emptyMessage: 'No pantries available',
+      renderCustomItem: renderPantryItem,
       actions: [
         {
           icon: 'add',
@@ -126,6 +129,35 @@ export function usePantrySelectorConfig(
       setSelectedPantryId,
       selectorRef,
       navigate,
+      renderPantryItem,
     ],
   );
 }
+
+const styles = StyleSheet.create(theme => ({
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  itemSelected: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  itemName: {
+    flex: 1,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
+}));

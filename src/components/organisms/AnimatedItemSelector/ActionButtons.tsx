@@ -13,9 +13,6 @@ interface ActionButtonsProps {
   actions: ActionButtonConfig[];
 }
 
-const AnimatedPressable =
-  Animated.createAnimatedComponent(Pressable);
-
 const ActionButton: React.FC<{
   action: ActionButtonConfig;
   index: number;
@@ -24,39 +21,42 @@ const ActionButton: React.FC<{
   const variant = action.variant || 'secondary';
 
   return (
-    <AnimatedPressable
+    <Animated.View
       entering={FadeInUp.delay(index * 15).duration(150)}
       layout={LinearTransition}
-      style={({pressed}) => [
-        styles.actionButton,
-        variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
-        action.disabled && styles.disabledButton,
-        pressed && styles.pressed,
-      ]}
-      onPress={action.onPress}
-      disabled={action.disabled}
     >
-      <Icon
-        name={action.icon}
-        size={20}
-        color={
-          action.color ||
-          (variant === 'primary' ? theme.colors.onPrimary : theme.colors.secondary)
-        }
-        library={action.iconLibrary}
-      />
-      <Text
-        style={[
-          styles.actionButtonText,
-          variant === 'primary'
-            ? styles.primaryButtonText
-            : styles.secondaryButtonText,
-          action.disabled && styles.disabledButtonText,
+      <Pressable
+        style={({pressed}) => [
+          styles.actionButton,
+          variant === 'primary' ? styles.primaryButton : styles.secondaryButton,
+          action.disabled && styles.disabledButton,
+          pressed && styles.pressed,
         ]}
+        onPress={action.onPress}
+        disabled={action.disabled}
       >
-        {action.label}
-      </Text>
-    </AnimatedPressable>
+        <Icon
+          name={action.icon}
+          size={20}
+          color={
+            action.color ||
+            (variant === 'primary' ? theme.colors.onPrimary : theme.colors.secondary)
+          }
+          library={action.iconLibrary}
+        />
+        <Text
+          style={[
+            styles.actionButtonText,
+            variant === 'primary'
+              ? styles.primaryButtonText
+              : styles.secondaryButtonText,
+            action.disabled && styles.disabledButtonText,
+          ]}
+        >
+          {action.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
 };
 
