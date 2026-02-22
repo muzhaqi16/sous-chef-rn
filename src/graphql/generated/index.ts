@@ -1981,6 +1981,13 @@ export enum DisplayFormat {
   Mixed = 'MIXED'
 }
 
+export type DuplicateMealPlanInput = {
+  mealPlanId: Scalars['ID']['input'];
+  newEndDate: Scalars['DateTime']['input'];
+  newName: Scalars['String']['input'];
+  newStartDate: Scalars['DateTime']['input'];
+};
+
 export type Edge = {
   cursor: Scalars['String']['output'];
 };
@@ -2255,6 +2262,16 @@ export type ForgotPasswordResponse = MutationPayload & {
   code: Scalars['String']['output'];
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
+};
+
+export type GenerateShoppingListFromMealPlanInput = {
+  /** Deduct pantry availability from needed quantities (default true) */
+  checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
+  mealPlanId: Scalars['ID']['input'];
+  /** Name for new list (defaults to "Shopping List for {planName}") */
+  name?: InputMaybe<Scalars['String']['input']>;
+  /** Optional: add to existing list instead of creating a new one */
+  shoppingListId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type GetExpirationNotificationsInput = {
@@ -3779,6 +3796,12 @@ export type MealPlanEdge = Edge & {
 
 export type MealPlanFilters = {
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Filter to only active meal plans (current date within start/end range) */
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Filter by meal plan type */
+  planType?: InputMaybe<MealPlanType>;
+  /** Search by name or description (case-insensitive) */
+  search?: InputMaybe<Scalars['String']['input']>;
   startDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
@@ -3934,6 +3957,7 @@ export type MealTemplateOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   name?: InputMaybe<SortOrder>;
   updatedAt?: InputMaybe<SortOrder>;
+  usageCount?: InputMaybe<SortOrder>;
 };
 
 export type MealTemplatePayload = MutationPayload & {
@@ -4501,6 +4525,8 @@ export type Mutation = {
   deleteUserAddress: UserAddressPayload;
   /** Dismiss an expiration notification so it no longer appears. */
   dismissExpirationNotification: ExpirationNotificationPayload;
+  /** Duplicate a meal plan with all its items, shifted to new dates. */
+  duplicateMealPlan: MealPlanPayload;
   /** Duplicate a template with a new name */
   duplicateTemplate: MealTemplatePayload;
   /**
@@ -4517,6 +4543,8 @@ export type Mutation = {
   forkRecipe: RecipePayload;
   /** Generate the next recurring shopping list instance. */
   generateNextRecurringList: ShoppingListPayload;
+  /** Generate a shopping list from all recipe-based items in a meal plan. */
+  generateShoppingListFromMealPlan: ShoppingListPayload;
   /** Hard delete a device permanently (admin only) */
   hardDeleteDevice: DevicePayload;
   /**
@@ -5299,6 +5327,11 @@ export type MutationDismissExpirationNotificationArgs = {
 };
 
 
+export type MutationDuplicateMealPlanArgs = {
+  input: DuplicateMealPlanInput;
+};
+
+
 export type MutationDuplicateTemplateArgs = {
   id: Scalars['ID']['input'];
   newName: Scalars['String']['input'];
@@ -5334,6 +5367,11 @@ export type MutationForkRecipeArgs = {
 
 export type MutationGenerateNextRecurringListArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationGenerateShoppingListFromMealPlanArgs = {
+  input: GenerateShoppingListFromMealPlanInput;
 };
 
 
@@ -10395,6 +10433,8 @@ export type UpdateMealPlanItemInput = {
   protein?: InputMaybe<Scalars['Float']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
+  /** Pantry items used for this meal: [{pantryItemId, quantityUsed}] */
+  usedPantryItems?: InputMaybe<Scalars['JSON']['input']>;
 };
 
 export type UpdateMealTemplateInput = {

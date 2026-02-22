@@ -2026,6 +2026,13 @@ enum DisplayFormat {
   MIXED
 }
 
+input DuplicateMealPlanInput {
+  mealPlanId: ID!
+  newEndDate: DateTime!
+  newName: String!
+  newStartDate: DateTime!
+}
+
 interface Edge {
   cursor: String!
 }
@@ -2291,6 +2298,16 @@ type ForgotPasswordResponse implements MutationPayload {
   code: String!
   message: String!
   success: Boolean!
+}
+
+input GenerateShoppingListFromMealPlanInput {
+  """Deduct pantry availability from needed quantities (default true)"""
+  checkPantry: Boolean
+  mealPlanId: ID!
+  """Name for new list (defaults to "Shopping List for {planName}")"""
+  name: String
+  """Optional: add to existing list instead of creating a new one"""
+  shoppingListId: ID
 }
 
 input GetExpirationNotificationsInput {
@@ -3694,6 +3711,12 @@ type MealPlanEdge implements Edge {
 
 input MealPlanFilters {
   endDate: DateTime
+  """Filter to only active meal plans (current date within start/end range)"""
+  isActive: Boolean
+  """Filter by meal plan type"""
+  planType: MealPlanType
+  """Search by name or description (case-insensitive)"""
+  search: String
   startDate: DateTime
 }
 
@@ -3840,6 +3863,7 @@ input MealTemplateOrderBy {
   createdAt: SortOrder
   name: SortOrder
   updatedAt: SortOrder
+  usageCount: SortOrder
 }
 
 type MealTemplatePayload implements MutationPayload {
@@ -4396,6 +4420,8 @@ type Mutation {
   deleteUserAddress(id: ID!): UserAddressPayload!
   """Dismiss an expiration notification so it no longer appears."""
   dismissExpirationNotification(input: DismissNotificationInput!): ExpirationNotificationPayload!
+  """Duplicate a meal plan with all its items, shifted to new dates."""
+  duplicateMealPlan(input: DuplicateMealPlanInput!): MealPlanPayload!
   """Duplicate a template with a new name"""
   duplicateTemplate(id: ID!, newName: String!): MealTemplatePayload!
   """Export items to file"""
@@ -4409,6 +4435,8 @@ type Mutation {
   forkRecipe(id: ID!): RecipePayload!
   """Generate the next recurring shopping list instance."""
   generateNextRecurringList(id: ID!): ShoppingListPayload!
+  """Generate a shopping list from all recipe-based items in a meal plan."""
+  generateShoppingListFromMealPlan(input: GenerateShoppingListFromMealPlanInput!): ShoppingListPayload!
   """Hard delete a device permanently (admin only)"""
   hardDeleteDevice(id: ID!): DevicePayload!
   """Import items from CSV file"""
@@ -8176,6 +8204,8 @@ input UpdateMealPlanItemInput {
   protein: Float
   recipeId: ID
   servings: Int
+  """Pantry items used for this meal: [{pantryItemId, quantityUsed}]"""
+  usedPantryItems: JSON
 }
 
 input UpdateMealTemplateInput {
