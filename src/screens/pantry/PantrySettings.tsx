@@ -433,7 +433,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
           </View>
         </View>
 
-        {pantryId && pantry && (
+        {!!pantryId && !!pantry && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Information</Text>
 
@@ -454,7 +454,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show danger zone if editing existing pantry */}
-        {pantryId && (
+        {!!pantryId && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 

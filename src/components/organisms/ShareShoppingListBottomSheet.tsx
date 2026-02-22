@@ -58,7 +58,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
         style={{margin: 16}}>
         Share Shopping List
       </Button>
-      {renderBottomSheet && (
+      {!!renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={['40%', '60%']}

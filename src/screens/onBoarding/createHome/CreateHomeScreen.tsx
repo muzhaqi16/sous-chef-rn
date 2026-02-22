@@ -535,7 +535,7 @@ const CreateHomeScreenComponent = () => {
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Pantry</Text>
             <Text style={styles.resourceName}>{existingPantry.name}</Text>
-            {existingPantry.isDefault && (
+            {!!existingPantry.isDefault && (
               <View style={styles.defaultBadge}>
                 <Text style={styles.defaultBadgeText}>Default</Text>
               </View>
@@ -567,7 +567,7 @@ const CreateHomeScreenComponent = () => {
       onSkip={() => skipToStep('CreateShoppingList')}
       testID="onboarding-create-home-screen"
     >
-      {existingHome && (
+      {!!existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Existing Home</Text>

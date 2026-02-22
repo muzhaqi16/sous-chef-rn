@@ -86,6 +86,6 @@ module.exports = {
     'react/no-unstable-nested-components': ['warn', { allowAsProps: true }],
 
     // Prevent falsy values (0, "", NaN) from leaking into JSX rendering
-    'react/jsx-no-leaked-render': ['warn', { validStrategies: ['ternary', 'coerce'] }],
+    'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
   },
 };

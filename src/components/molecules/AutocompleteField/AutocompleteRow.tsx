@@ -40,7 +40,7 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     <View style={styles.content}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
-        {badge && (
+        {!!badge && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
           </View>

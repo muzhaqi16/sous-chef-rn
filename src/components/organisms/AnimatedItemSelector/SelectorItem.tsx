@@ -38,7 +38,7 @@ export const SelectorItem = <T extends SelectableItem>({
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
           {String(item[displayProperty])}
         </Text>
-        {isSelected && (
+        {!!isSelected && (
           <Animated.View
             entering={FadeInUp.duration(200).springify()}
             style={styles.checkIcon}

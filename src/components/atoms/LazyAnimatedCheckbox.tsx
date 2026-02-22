@@ -91,7 +91,7 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
             },
           ]}
         >
-          {checked && <Icon name="checkmark" size={size * 0.66} color="white" />}
+          {!!checked && <Icon name="checkmark" size={size * 0.66} color="white" />}
         </RNAnimated.View>
       </Pressable>
     );

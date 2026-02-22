@@ -39,7 +39,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   if (chartData.length === 0) {
     return (
       <View style={[styles.container, { height }]}>
-        {title && (
+        {!!title && (
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
@@ -55,12 +55,12 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
 
   return (
     <View style={styles.container}>
-      {title && (
+      {!!title && (
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
           {title}
         </Text>
       )}
-      {subtitle && (
+      {!!subtitle && (
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           {subtitle}
         </Text>
@@ -84,7 +84,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
         >
           {({ points, chartBounds }) => (
             <>
-              {showArea && (
+              {!!showArea && (
                 <Area
                   points={points.y}
                   y0={chartBounds.bottom}
@@ -99,7 +99,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
                 strokeWidth={2}
                 animate={{ type: 'timing', duration: 300 }}
               />
-              {chartData.length === 1 && points.y[0] && points.y[0].y != null && (
+              {chartData.length === 1 && !!points.y[0] && points.y[0].y != null && (
                 <Circle
                   cx={points.y[0].x}
                   cy={points.y[0].y}

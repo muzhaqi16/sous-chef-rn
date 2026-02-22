@@ -67,9 +67,7 @@ export function usePantrySelectorConfig(
           onPress={onPress}
         >
           <Text style={styles.itemName}>{item.name}</Text>
-          {isSelected && (
-            <Icon name="checkmark" size={20} color={colors.primary} />
-          )}
+          {!!isSelected && <Icon name="checkmark" size={20} color={colors.primary} />}
         </Pressable>
       );
     },

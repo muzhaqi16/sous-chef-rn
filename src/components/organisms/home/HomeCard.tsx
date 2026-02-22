@@ -129,12 +129,12 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
             </Text>
           </View>
-          {isDefault && (
+          {!!isDefault && (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultText}>Default</Text>
             </View>
           )}
-          {onPress && (
+          {!!onPress && (
             <Icon
               name="chevron-forward"
               size={20}

@@ -70,7 +70,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   return (
     <ToastContext.Provider value={showToast}>
       {children}
-      {visible && Platform.OS === 'ios' && (
+      {!!visible && Platform.OS === 'ios' && (
         <Animated.View
           testID={`toast-${opts.type || 'default'}`}
           entering={SlideInDown.springify().damping(20)}

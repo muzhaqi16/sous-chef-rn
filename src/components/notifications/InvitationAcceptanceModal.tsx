@@ -309,7 +309,7 @@ export const InvitationAcceptanceModal: React.FC<
           <View style={styles.content}>
             <Text style={styles.description}>{invitation.description}</Text>
 
-            {invitation.inviterName && (
+            {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
                 <Icon name="person" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.inviterText}>

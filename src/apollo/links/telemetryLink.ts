@@ -1,4 +1,5 @@
 import { ApolloLink, Observable } from '@apollo/client';
+import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
@@ -7,6 +8,7 @@ interface GraphQLTiming {
   operationName: string;
   operationType: string;
   startTime: number;
+  markName: string;
 }
 
 // Sample rate for production telemetry (10% of operations)
@@ -25,18 +27,23 @@ export const createTelemetryLink = () => {
       return forward(operation);
     }
 
-    const startTime = Date.now();
+    const startTime = performance.now();
     const operationName = operation.operationName || 'unnamed';
     const operationType = operation.query.definitions[0]?.kind === 'OperationDefinition'
       ? operation.query.definitions[0]?.operation || 'unknown'
       : 'unknown';
 
     const operationId = `${operationName}_${startTime}`;
+    const markName = `gql:${operationName}:${operationId}`;
+
+    // Place a mark for timeline visibility
+    performance.mark(markName);
 
     timings.set(operationId, {
       operationName,
       operationType,
       startTime,
+      markName,
     });
 
     Telemetry.debug(`GraphQL ${operationType}: ${operationName} started`, {
@@ -50,19 +57,38 @@ export const createTelemetryLink = () => {
       name: operationName,
     });
 
+    const finalizeTiming = (
+      timing: GraphQLTiming,
+      hasErrors: boolean,
+    ) => {
+      const duration = performance.now() - timing.startTime;
+      timings.delete(operationId);
+
+      // Create a measure for timeline visibility, then clean up the mark
+      try {
+        performance.measure(`gql:${operationName}`, timing.markName);
+      } catch {
+        // Mark may have been cleared
+      }
+      performance.clearMarks(timing.markName);
+
+      // Report directly with full labels (central observer skips gql:* measures)
+      Telemetry.histogram('graphql_request_duration_ms', duration, {
+        type: operationType,
+        name: operationName,
+        has_errors: String(hasErrors),
+      });
+
+      return duration;
+    };
+
     return new Observable(observer => {
       const subscription = forward(operation).subscribe({
         next: (response) => {
           const timing = timings.get(operationId);
           if (timing) {
-            const duration = Date.now() - timing.startTime;
-            timings.delete(operationId);
-
-            Telemetry.histogram('graphql_request_duration_ms', duration, {
-              type: operationType,
-              name: operationName,
-              has_errors: String(!!response.errors),
-            });
+            const hasErrors = !!(response.errors && response.errors.length > 0);
+            const duration = finalizeTiming(timing, hasErrors);
 
             if (response.errors && response.errors.length > 0) {
               response.errors.forEach((error: any) => {
@@ -125,8 +151,7 @@ export const createTelemetryLink = () => {
         error: (error: any) => {
           const timing = timings.get(operationId);
           if (timing) {
-            const duration = Date.now() - timing.startTime;
-            timings.delete(operationId);
+            const duration = finalizeTiming(timing, true);
 
             // Serialize error to avoid circular reference issues from WebSocket timers
             const serializedError = serializeError(error);

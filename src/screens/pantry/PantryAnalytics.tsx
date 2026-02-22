@@ -478,7 +478,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         </View>
 
         {/* Cost Analytics */}
-        {ledgerData?.costAnalytics && (
+        {!!ledgerData?.costAnalytics && (
           <View style={styles.summaryRow}>
             <AnalyticsSummaryCard
               title="Total Spent"
@@ -539,7 +539,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         </ChartSection>
 
         {/* Unit Breakdown - Additions */}
-        {ledgerData?.summary?.additionsByUnit && ledgerData.summary.additionsByUnit.length > 0 && (
+        {!!ledgerData?.summary?.additionsByUnit && ledgerData.summary.additionsByUnit.length > 0 && (
           <ChartSection
             title="Additions by Unit"
             loading={ledgerLoading}
@@ -560,7 +560,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         )}
 
         {/* Unit Breakdown - Consumption */}
-        {ledgerData?.summary?.consumptionByUnit && ledgerData.summary.consumptionByUnit.length > 0 && (
+        {!!ledgerData?.summary?.consumptionByUnit && ledgerData.summary.consumptionByUnit.length > 0 && (
           <ChartSection
             title="Consumption by Unit"
             loading={ledgerLoading}

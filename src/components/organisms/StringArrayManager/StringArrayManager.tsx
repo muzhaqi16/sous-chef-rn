@@ -211,7 +211,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        {showAddButton && (
+        {!!showAddButton && (
           <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
             <Icon
               name="add"

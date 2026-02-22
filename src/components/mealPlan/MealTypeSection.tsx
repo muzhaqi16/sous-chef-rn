@@ -28,7 +28,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{label}</Text>
-        {onAddMeal && (
+        {!!onAddMeal && (
           <Pressable
             onPress={() => onAddMeal(mealType)}
             style={styles.addButton}

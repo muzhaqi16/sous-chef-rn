@@ -40,7 +40,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
           <View style={styles.info}>
             <View style={commonStyles.rowSpaceBetween}>
               <Text style={commonStyles.title}>{location.name}</Text>
-              {isDefault && (
+              {!!isDefault && (
                 <View style={commonStyles.badge}>
                   <Text style={commonStyles.badgeText}>Default</Text>
                 </View>
@@ -49,7 +49,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             <Text style={[commonStyles.caption, styles.subtitle]}>
               {formatType(location.type)} • {location.currentItemCount}{' '}
               {location.currentItemCount === 1 ? 'item' : 'items'}
-              {location.parentLocation && (
+              {!!location.parentLocation && (
                 <Text style={styles.parentInfo}>
                   {' '}
                   • Inside {location.parentLocation.name}

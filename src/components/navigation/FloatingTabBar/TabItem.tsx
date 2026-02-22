@@ -97,7 +97,7 @@ export const TabItem: React.FC<TabItemProps> = ({
       <Animated.View style={animatedIconStyle}>
         {renderIcon()}
       </Animated.View>
-      {showLabel && (
+      {!!showLabel && (
         <Text maxFontSizeMultiplier={1.2} style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
           {label}
         </Text>

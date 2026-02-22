@@ -18,9 +18,11 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
+import { useAppStore, selectIsAdminUser } from '#/store/useAppStore';
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
+  const isAdminUser = useAppStore(selectIsAdminUser);
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, biometricLoading } =
@@ -106,7 +108,7 @@ export const ProfileScreen = () => {
           .filter(section => {
             // Filter out Developer section if debug features are not enabled
             if (section.title === 'Developer') {
-              return Environment.shouldEnableDebugFeatures();
+              return Environment.shouldEnableDebugFeatures() || isAdminUser;
             }
             return true;
           })

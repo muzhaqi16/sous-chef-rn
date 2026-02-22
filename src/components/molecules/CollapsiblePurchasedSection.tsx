@@ -146,7 +146,7 @@ export const CollapsiblePurchasedSection: React.FC<
         </View>
 
         <View style={styles.headerRight}>
-          {onClearAll && (
+          {!!onClearAll && (
             <Pressable
               style={({pressed}) => [
                 styles.clearButton,
@@ -176,7 +176,7 @@ export const CollapsiblePurchasedSection: React.FC<
       </Pressable>
 
       {/* Expanded List */}
-      {expanded && (
+      {!!expanded && (
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(150)}

@@ -75,6 +75,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   initialStepIndex = 0,
 }) => {
   const activeStepIndex = useSharedValue(initialStepIndex);
+  const currentIndex = activeStepIndex.get();
   const {
     navigateToNextStep,
     navigateToPreviousStep,
@@ -83,13 +84,13 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
 
   // Current step calculation
   const currentStep = useMemo(() => {
-    const index = Math.floor(activeStepIndex.get());
+    const index = Math.floor(currentIndex);
     return ONBOARDING_STEPS[index] || null;
-  }, [activeStepIndex.get()]);
+  }, [currentIndex]);
 
   // Navigation state
-  const isFirstStep = useMemo(() => activeStepIndex.get() <= 0, [activeStepIndex.get()]);
-  const isLastStep = useMemo(() => activeStepIndex.get() >= ONBOARDING_STEPS.length - 1, [activeStepIndex.get()]);
+  const isFirstStep = useMemo(() => currentIndex <= 0, [currentIndex]);
+  const isLastStep = useMemo(() => currentIndex >= ONBOARDING_STEPS.length - 1, [currentIndex]);
   const canGoBack = useMemo(() => !isFirstStep, [isFirstStep]);
   const canGoNext = useMemo(() => !isLastStep, [isLastStep]);
 
@@ -133,8 +134,8 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({
   }, []);
 
   const getStepProgress = useCallback(() => {
-    return Math.round(((activeStepIndex.get() + 1) / ONBOARDING_STEPS.length) * 100);
-  }, [activeStepIndex.get()]);
+    return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);
+  }, [currentIndex]);
 
   const contextValue: OnboardingContextType = useMemo(() => ({
     steps: ONBOARDING_STEPS,

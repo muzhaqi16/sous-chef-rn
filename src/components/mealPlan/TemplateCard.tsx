@@ -27,7 +27,7 @@ export const TemplateCard: React.FC<TemplateCardProps> =
           )}
         </View>
 
-        {template.description && (
+        {!!template.description && (
           <Text style={styles.description} numberOfLines={2}>
             {template.description}
           </Text>

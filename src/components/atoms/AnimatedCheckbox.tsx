@@ -134,9 +134,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}
         {/* The container scale/color animation provides sufficient visual feedback */}
-        {visuallyChecked && (
-          <Icon name="checkmark" size={size * 0.66} color="white" />
-        )}
+        {!!visuallyChecked && <Icon name="checkmark" size={size * 0.66} color="white" />}
       </Animated.View>
     </Pressable>
   );

@@ -43,12 +43,10 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             <Text style={styles.roleText}>{formatRole(member.role)}</Text>
           </View>
         </View>
-        {member.user?.email && !isCurrentUser && (
-          <Text style={styles.memberEmail}>{member.user.email}</Text>
-        )}
+        {!!member.user?.email && !isCurrentUser && <Text style={styles.memberEmail}>{member.user.email}</Text>}
       </View>
 
-      {canManageMember && (
+      {!!canManageMember && (
         <View style={styles.memberActions}>
           <Pressable style={({pressed}) => [styles.actionButton, pressed && styles.pressed]} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} />

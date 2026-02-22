@@ -543,7 +543,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
           />
 
           {/* Alert Bar */}
-          {stats && (
+          {!!stats && (
             <PantryAlertBar
               stats={stats}
               onAnalyticsPress={onAnalyticsPress}
@@ -601,7 +601,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
           </Animated.View>
 
           {/* Skeleton layer (absolute on top, fades out) */}
-          {showSkeletons && (
+          {!!showSkeletons && (
             <Animated.View
               testID="pantry-loading"
               style={[styles.absoluteFill, skeletonAnimatedStyle]}

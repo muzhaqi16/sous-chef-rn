@@ -76,7 +76,7 @@ export const OnBoardingWrapper = ({
         ) : (
           <View style={styles.iconButton} />
         )}
-        {displayTitle && (
+        {!!displayTitle && (
           <Text style={styles.headerTitle}>
             {displayTitle}
           </Text>
@@ -85,7 +85,7 @@ export const OnBoardingWrapper = ({
       </View>
 
       {/* Animated Step Indicator */}
-      {showSteps && !isLegacyMode && onboardingContext && (
+      {!!showSteps && !isLegacyMode && !!onboardingContext && (
         <View style={styles.stepsContainer}>
           <OnboardingSteps
             steps={onboardingContext.steps}
@@ -107,9 +107,7 @@ export const OnBoardingWrapper = ({
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {displaySubtitle && (
-            <Text style={styles.subtitle}>{displaySubtitle}</Text>
-          )}
+          {!!displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -140,7 +138,7 @@ export const OnBoardingWrapper = ({
         />
       ) : (
         <View style={styles.bottomNavigation}>
-          {onSkip && (
+          {!!onSkip && (
             <Pressable
               onPress={onSkip}
               style={({pressed}) => [styles.skipButton, pressed && styles.pressed]}

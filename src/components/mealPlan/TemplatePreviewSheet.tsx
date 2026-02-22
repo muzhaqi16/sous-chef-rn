@@ -102,9 +102,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
         {/* Template header */}
         <View style={styles.templateHeader}>
           <Text style={styles.templateName}>{template.name}</Text>
-          {template.description && (
-            <Text style={styles.templateDescription}>{template.description}</Text>
-          )}
+          {!!template.description && <Text style={styles.templateDescription}>{template.description}</Text>}
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>
               {template.durationDays} days · {template.defaultServings} servings

@@ -181,7 +181,7 @@ export const CreateShoppingListScreen = () => {
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Shopping List</Text>
             <Text style={styles.resourceName}>{existingList.name}</Text>
-            {existingList.isDefault && (
+            {!!existingList.isDefault && (
               <View style={styles.defaultBadge}>
                 <Text style={styles.defaultBadgeText}>Default</Text>
               </View>

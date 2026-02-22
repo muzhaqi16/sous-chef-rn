@@ -24,7 +24,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
       <Text style={styles.addItemHint}>
         You can add this item to the database by tapping the button below.
       </Text>
-      {onAddItem && (
+      {!!onAddItem && (
         <Button
           onPress={onAddItem}
           variant="primary"

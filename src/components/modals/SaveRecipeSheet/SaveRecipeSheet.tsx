@@ -112,7 +112,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>Save Recipe</Text>
-            {recipeName && (
+            {!!recipeName && (
               <Text style={styles.recipeName} numberOfLines={1}>
                 {recipeName}
               </Text>
@@ -175,13 +175,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                 >
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
-                {isSelected && (
-                  <Icon
+                {!!isSelected && (
+                                     <Icon
                     name="checkmark"
                     size={18}
                     color={theme.colors.primary}
                                      />
-                )}
+                                   )}
               </Pressable>
             );
           })}

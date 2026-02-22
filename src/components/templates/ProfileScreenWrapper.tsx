@@ -31,7 +31,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
       edges={['bottom']}
       testID={testID}
     >
-      {showBackButton && (
+      {!!showBackButton && (
         <View style={styles.header}>
           <IconButton
             name="arrow-left"

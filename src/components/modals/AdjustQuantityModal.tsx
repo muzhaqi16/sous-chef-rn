@@ -84,8 +84,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
           confirmLabel="Adjust"
         />
 
-        {pantryItem && (
-          <>
+        {!!pantryItem && <>
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
@@ -145,8 +144,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                     useBottomSheetInput
                   />
               )}
-          </>
-        )}
+          </>}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

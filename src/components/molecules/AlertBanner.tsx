@@ -87,16 +87,14 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         <Text style={[styles.title, { color: variantColors.text }]}>
           {title}
         </Text>
-        {subtitle && (
+        {!!subtitle && (
           <Text style={[styles.subtitle, { color: variantColors.text }]}>
             {subtitle}
           </Text>
         )}
       </View>
 
-      {shouldShowChevron && (
-        <Icon name="chevron-forward" size={24} color={variantColors.text} />
-      )}
+      {!!shouldShowChevron && <Icon name="chevron-forward" size={24} color={variantColors.text} />}
     </View>
   );
 

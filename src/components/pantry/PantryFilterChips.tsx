@@ -124,7 +124,7 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
                 selected={isSelected}
                 onPress={() => handleFilterToggle(config.id)}
               />
-              {isSelected && count > 0 && (
+              {!!isSelected && count > 0 && (
                 <View style={badgeStyles[config.id]}>
                   <Text style={styles.badgeText}>{count}</Text>
                 </View>

@@ -246,7 +246,7 @@ export const BiometricSetupModal = ({
                 {getBiometricDescription()}
               </Text>
 
-              {needsPassword && (
+              {!!needsPassword && (
                 <View style={styles.passwordSection}>
                   <Text style={styles.passwordLabel}>
                     {mode === 'settings'

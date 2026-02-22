@@ -55,7 +55,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
           />
         ))}
       </ScrollView>
-      {actionButton && (
+      {!!actionButton && (
         <Pressable
           onPress={actionButton.onPress}
           testID={actionButton.testID || `${testIDPrefix}-action`}

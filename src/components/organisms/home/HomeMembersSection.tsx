@@ -71,7 +71,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
       )}
 
       {/* Pending Invites */}
-      {pendingInvites && pendingInvites.length > 0 && (
+      {!!pendingInvites && pendingInvites.length > 0 && (
         <View style={styles.invitesSection}>
           <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
           {pendingInvites.map(invite => {

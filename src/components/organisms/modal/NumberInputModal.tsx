@@ -268,14 +268,14 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           <Text style={commonStyles.h3}>{title}</Text>
 
           {/* Label and helper text */}
-          {(label || helperText) && (
+          {!!(label || helperText) && (
             <View style={localStyles.labelContainer}>
-              {label && (
+              {!!label && (
                 <Text style={commonStyles.body}>
                   {label} {getRangeText()}
                 </Text>
               )}
-              {helperText && (
+              {!!helperText && (
                 <Text style={[commonStyles.bodySecondary, localStyles.helperText]}>
                   {helperText}
                 </Text>

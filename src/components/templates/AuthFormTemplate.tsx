@@ -52,7 +52,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   return (
     <View style={styles.formContainer}>
       <View>
-        {onBackPress && (
+        {!!onBackPress && (
           <IconButton
             name="chevron-left"
             onPress={onBackPress}
@@ -69,7 +69,7 @@ export function AuthFormTemplate<T extends FieldValues>({
 
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
-      {linkText && onLinkPress && (
+      {!!linkText && !!onLinkPress && (
         <Pressable onPress={onLinkPress} testID={linkTestID} style={({pressed}) => pressed && styles.pressed}>
           <Text style={styles.link}>{linkText}</Text>
         </Pressable>
@@ -84,7 +84,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         />
       </View>
 
-      {footerText && footerLinkText && onFooterLinkPress && (
+      {!!footerText && !!footerLinkText && !!onFooterLinkPress && (
         <Pressable
           onPress={onFooterLinkPress}
           disabled={footerLinkDisabled}

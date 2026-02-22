@@ -284,7 +284,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       },
                     ]}
                   >
-                    {isSelected && (
+                    {!!isSelected && (
                       <View
                         style={[
                           styles.radioInner,
@@ -296,7 +296,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                 </View>
 
                 {/* Show permissions preview for selected role */}
-                {isSelected && (
+                {!!isSelected && (
                   <View style={styles.permissionsContainer}>
                     <Text style={styles.permissionsTitle}>Permissions:</Text>
                     <View style={styles.permissionsList}>

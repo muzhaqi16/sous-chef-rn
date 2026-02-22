@@ -103,7 +103,7 @@ export const Button: React.FC<ButtonProps> = ({
         />
       ) : (
         <>
-          {icon && (
+          {!!icon && (
             <Icon
               name={icon}
               size={size === 'small' ? 16 : size === 'large' ? 24 : 20}

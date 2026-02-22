@@ -33,7 +33,7 @@ const DefaultErrorFallback: React.FC<{
         <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
           {__DEV__ ? error.message : 'An unexpected error occurred'}
         </Text>
-        {context && __DEV__ && (
+        {!!context && !!__DEV__ && (
           <Text style={[styles.context, { color: theme.colors.textTertiary }]}>
             Context: {context}
           </Text>

@@ -78,7 +78,7 @@ export const OnboardingCompleteScreen = () => {
           collaborate with family members!
         </Text>
 
-        {error && (
+        {!!error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
@@ -92,7 +92,7 @@ export const OnboardingCompleteScreen = () => {
         disabled={isCompleting}
       />
 
-      {isCompleting && (
+      {!!isCompleting && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="small"

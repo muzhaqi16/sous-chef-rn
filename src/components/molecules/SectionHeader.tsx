@@ -67,7 +67,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         </Text>
       </View>
 
-      {actionLabel && onActionPress && (
+      {!!actionLabel && !!onActionPress && (
         <Pressable onPress={onActionPress} hitSlop={8}>
           <Text style={styles.actionLabel}>{actionLabel}</Text>
         </Pressable>

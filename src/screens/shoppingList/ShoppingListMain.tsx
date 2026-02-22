@@ -449,9 +449,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         />
 
         {/* Swipe gesture hint overlay */}
-        {swipeHint.isVisible && (
-          <SwipeHintOverlay onDismiss={swipeHint.actions.dismiss} />
-        )}
+        {!!swipeHint.isVisible && <SwipeHintOverlay onDismiss={swipeHint.actions.dismiss} />}
 
         {/* Modals are rendered inside ShoppingListModalsProvider */}
       </View>

@@ -147,7 +147,7 @@ export const StorageLocationsScreen: React.FC<{
       content: (
         <>
           {/* Error Message */}
-          {error && (
+          {!!error && (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>
                 Error loading storage locations: {error.message}

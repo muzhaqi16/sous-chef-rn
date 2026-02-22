@@ -128,7 +128,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
               <Icon name="trash-outline" size={20} color={theme.colors.error} />
             </Pressable>
           </View>
-          {entry.packageSize && parseFloat(entry.packageSize) > 0 && (
+          {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
             <View style={styles.contentUnitRow}>
               <UnitAutocompleteField
                 variant="modal"

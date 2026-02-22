@@ -325,7 +325,7 @@ export const MealPlanMain: React.FC = () => {
             onNotificationPress={() => navigate('Notifications')}
           />
         </View>
-        {activePlanId && (
+        {!!activePlanId && (
           <View style={styles.headerActions}>
             <Pressable
               onPress={() => setShoppingListSheetVisible(true)}

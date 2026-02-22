@@ -300,24 +300,22 @@ export const DietaryProfileScreen: React.FC = () => {
               />
             </Pressable>
           </View>
-          {profile.cookingSkillLevel && (
-            <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
-          )}
-          {profile.maxPrepTimeMinutes && (
+          {!!profile.cookingSkillLevel && <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />}
+          {!!profile.maxPrepTimeMinutes && (
             <InfoRow
               label="Max Prep Time"
               value={profile.maxPrepTimeMinutes}
               unit="minutes"
             />
           )}
-          {profile.maxCookTimeMinutes && (
+          {!!profile.maxCookTimeMinutes && (
             <InfoRow
               label="Max Cook Time"
               value={profile.maxCookTimeMinutes}
               unit="minutes"
             />
           )}
-          {profile.budgetPerMeal && (
+          {!!profile.budgetPerMeal && (
             <InfoRow
               label="Budget per Meal"
               value={profile.budgetPerMeal}
@@ -329,7 +327,7 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
 
       {/* Macro Targets Section (Advanced) */}
-      {(profile.calorieTarget ||
+      {!!(profile.calorieTarget ||
         profile.proteinTarget ||
         profile.carbsTarget ||
         profile.fatTarget) && (
@@ -352,20 +350,16 @@ export const DietaryProfileScreen: React.FC = () => {
                 />
               </Pressable>
             </View>
-            {profile.calorieTarget && (
+            {!!profile.calorieTarget && (
               <InfoRow
                 label="Daily Calories"
                 value={profile.calorieTarget}
                 unit="kcal"
               />
             )}
-            {profile.proteinTarget && (
-              <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />
-            )}
-            {profile.carbsTarget && (
-              <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />
-            )}
-            {profile.fatTarget && (
+            {!!profile.proteinTarget && <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />}
+            {!!profile.carbsTarget && <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />}
+            {!!profile.fatTarget && (
               <InfoRow
                 label="Fat"
                 value={profile.fatTarget}

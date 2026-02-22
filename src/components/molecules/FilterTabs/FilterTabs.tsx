@@ -69,7 +69,7 @@ function FilterTabsComponent<T extends string = string>({
             testID={`${testIDPrefix}-${tab.id}`}
           />
         ))}
-        {actionButton && (
+        {!!actionButton && (
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
             testID={actionButton.testID || `${testIDPrefix}-action`}
@@ -81,7 +81,7 @@ function FilterTabsComponent<T extends string = string>({
             ]}
             disabled={actionButton.disabled}
           >
-            {actionButton.icon && (
+            {!!actionButton.icon && (
               <Icon
                 name={actionButton.icon}
                 size={isCompact ? 14 : 16}
@@ -89,7 +89,7 @@ function FilterTabsComponent<T extends string = string>({
                 library={actionButton.iconLibrary}
               />
             )}
-            {actionButton.label && (
+            {!!actionButton.label && (
               <Text
                 style={[
                   styles.tabLabel,

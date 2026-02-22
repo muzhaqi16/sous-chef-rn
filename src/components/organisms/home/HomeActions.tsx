@@ -38,7 +38,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </Pressable>
       )}
 
-      {canInvite && (
+      {!!canInvite && (
         <Pressable
           style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onInvite(homeId)}>
@@ -47,7 +47,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </Pressable>
       )}
 
-      {canDelete && (
+      {!!canDelete && (
         <Pressable
           style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onDelete(homeId)}>

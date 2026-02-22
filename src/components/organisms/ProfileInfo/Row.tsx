@@ -83,7 +83,7 @@ export const Row: React.FC<RowProps> = ({
         pressed && (onSave || onPress) && styles.pressed,
       ]}>
       <View style={styles.row}>
-        {leadingIcon && <View style={styles.iconContainer}>{leadingIcon}</View>}
+        {!!leadingIcon && <View style={styles.iconContainer}>{leadingIcon}</View>}
 
         <Text
           style={[
@@ -105,7 +105,7 @@ export const Row: React.FC<RowProps> = ({
           </Text>
         ) : null}
 
-        {(onSave || onPress) && (
+        {!!(onSave || onPress) && (
           <Icon
             name={onSave ? 'pencil' : 'chevron-forward'}
             size={20}

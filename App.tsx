@@ -18,6 +18,7 @@ import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
@@ -117,6 +118,11 @@ const App = () => {
       Telemetry.updateConfig(telemetryConfig);
       Telemetry.initialize();
 
+      // Initialize native performance metrics (startup marks, bundle load, HTTP timing)
+      if (!detoxBackgroundServicesDisabledRef.current) {
+        NativePerformanceService.initialize();
+      }
+
       // Report JS startup duration (time from index.js entry to store hydration)
       if (global.__APP_START_TIMESTAMP) {
         const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
@@ -149,6 +155,10 @@ const App = () => {
       // Cleanup memory monitor on unmount
       if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
         MemoryMonitor.stop();
+      }
+      // Cleanup native performance observers
+      if (!detoxBackgroundServicesDisabledRef.current) {
+        NativePerformanceService.cleanup();
       }
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();

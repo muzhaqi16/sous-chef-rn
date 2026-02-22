@@ -42,18 +42,14 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
 
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
-        {item.brandName && (
-          <Text style={styles.itemBrand}>{item.brandName}</Text>
-        )}
+        {!!item.brandName && <Text style={styles.itemBrand}>{item.brandName}</Text>}
         {item.netWeight != null && (
           <Text style={styles.itemWeight}>
             {formatWeight(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}
-        {item?.price && (
-          <Text style={styles.itemPrice}>${item?.price.toFixed(2)}</Text>
-        )}
+        {!!item?.price && <Text style={styles.itemPrice}>${item?.price.toFixed(2)}</Text>}
         <Text style={styles.itemBarcode}>Barcode: {item.upc}</Text>
         {format ? <Text style={styles.itemFormat}>Format: {format}</Text> : null}
       </View>

@@ -341,7 +341,7 @@ export function Navigation() {
       </Suspense>
 
       {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
-      {showBiometricSetup && user && postLoginCredentials && (
+      {!!showBiometricSetup && !!user && !!postLoginCredentials && (
         <PostLoginBiometricPrompt
           visible={showBiometricSetup}
           onComplete={handlePostLoginBiometricComplete}

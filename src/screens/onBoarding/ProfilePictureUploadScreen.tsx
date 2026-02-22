@@ -259,7 +259,7 @@ export const ProfilePictureUploadScreen = () => {
           )}
         </View>
 
-        {selectedImage && !croppedImage && (
+        {!!selectedImage && !croppedImage && (
           <View style={styles.cropContainer}>
             <Pressable
               onPress={handleCropImage}

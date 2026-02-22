@@ -199,7 +199,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
         height={200}
         edgeColor={theme.colors.primary}
         backgroundColor={theme.colors.overlay}
-        showAnimatedLine={isScanning && !hasScanned}
+        showAnimatedLine={!!isScanning && !hasScanned}
         lineAnimationDuration={2000}
       />
 
@@ -227,7 +227,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
             ? 'Barcode scanned! Navigating…'
             : 'Point your camera at a barcode'}
         </Text>
-        {isScanning && !hasScanned && (
+        {!!isScanning && !hasScanned && (
           <Text style={styles.subInstructionsText}>
             Make sure the barcode is clearly visible
           </Text>

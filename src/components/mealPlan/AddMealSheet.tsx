@@ -122,9 +122,7 @@ export const AddMealSheet = forwardRef<AddMealSheetRef, AddMealSheetProps>(
               onPress={() => handleSelectRecipe(recipe.recipeId)}
               style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
             >
-              {recipe.imageUrl && (
-                <CachedImage uri={recipe.imageUrl} style={styles.recipeImage} />
-              )}
+              {!!recipe.imageUrl && <CachedImage uri={recipe.imageUrl} style={styles.recipeImage} />}
               <View style={styles.recipeInfo}>
                 <Text style={styles.recipeName} numberOfLines={1}>{recipe.name}</Text>
                 <Text style={styles.recipeMeta}>

@@ -58,7 +58,7 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
       </View>
 
       {/* Goal progress */}
-      {nutritionGoalProgress && (
+      {!!nutritionGoalProgress && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Goal Progress</Text>
           <NutritionGoalProgress

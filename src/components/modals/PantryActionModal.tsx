@@ -145,8 +145,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           confirmColor={confirmColor}
         />
 
-        {pantryItem && (
-          <>
+        {!!pantryItem && <>
             {/* Item Info */}
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
@@ -161,7 +160,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                   displayAsFraction={pantryItem.unit?.displayAsFraction}
                   unitSymbol={pantryItem.unit?.symbol}
                 />
-                {isDualTracked && (
+                {!!isDualTracked && (
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     {' '}({pantryItem.quantityBreakdown
                       ? `${pantryItem.quantityBreakdown.fullPackages} full + ${Math.floor(pantryItem.quantityBreakdown.looseContentUnits)} loose ${pantryItem.quantityBreakdown.contentUnit?.symbol || ''}`
@@ -175,7 +174,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
             </View>
 
             {/* Unit Toggle for dual-tracked items */}
-            {isDualTracked && (
+            {!!isDualTracked && (
               <View style={commonStyles.bottomSheetSection}>
                 <Text style={commonStyles.bottomSheetSectionLabel}>
                   {unitToggleLabel}
@@ -187,7 +186,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                     onPress={() => setSelectedUnit('tracking')}
                     primaryColor={theme.colors.primary}
                   />
-                  {hasContentUnit && (
+                  {!!hasContentUnit && (
                     <UnitOption
                       label={pantryItem.packageBreakdown!.contentUnit.symbol || pantryItem.packageBreakdown!.contentUnit.name}
                       selected={selectedUnit === 'content'}
@@ -207,8 +206,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
             {/* Action-specific fields */}
             {renderActionFields(shared)}
-          </>
-        )}
+          </>}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );
@@ -237,9 +235,7 @@ const UnitOption: React.FC<{
     >
       {label}
     </Text>
-    {selected && (
-      <Icon name="checkmark" size={16} color={primaryColor} />
-    )}
+    {!!selected && <Icon name="checkmark" size={16} color={primaryColor} />}
   </Pressable>
 );
 

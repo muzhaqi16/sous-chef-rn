@@ -107,7 +107,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
       />
 
       {/* Animated scanning line */}
-      {showAnimatedLine && (
+      {!!showAnimatedLine && (
         <AnimatedScanLine
           left={left}
           top={top}

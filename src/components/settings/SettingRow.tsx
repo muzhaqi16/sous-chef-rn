@@ -28,7 +28,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       style={({pressed}) => [styles.container, disabled && styles.containerDisabled, pressed && styles.pressed]}
       onPress={onPress}
       disabled={disabled}>
-      {icon && (
+      {!!icon && (
         <View style={styles.iconContainer}>
           <Icon name={icon} size={24} color={theme.colors.textSecondary} />
         </View>
@@ -38,7 +38,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}
         </Text>
-        {description && (
+        {!!description && (
           <Text
             style={[
               styles.description,
@@ -51,7 +51,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
       {value ? <Text style={styles.value}>{value}</Text> : null}
 
-      {showArrow && (
+      {!!showArrow && (
         <Icon
           name="chevron-right"
           size={24}

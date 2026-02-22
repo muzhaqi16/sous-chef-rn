@@ -89,7 +89,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           confirmColor="primary"
         />
 
-        {mealPlan && (
+        {!!mealPlan && (
           <View style={styles.currentInfo}>
             <Text style={styles.currentLabel}>Current Plan</Text>
             <Text style={styles.currentValue}>

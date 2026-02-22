@@ -241,7 +241,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           </View>
 
           {/* Show crop icon below image if not cropped yet */}
-          {selectedImage && !croppedImage && (
+          {!!selectedImage && !croppedImage && (
             <Pressable
               onPress={handleCropImage}
               style={({pressed}) => [

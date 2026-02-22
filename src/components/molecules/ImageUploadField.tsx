@@ -109,10 +109,10 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
 
   return (
     <View style={commonStyles.inputGroup}>
-      {label && (
+      {!!label && (
         <Text style={[commonStyles.label, required && styles.requiredLabel]}>
           {label}
-          {required && ' *'}
+          {required ? ' *' : null}
         </Text>
       )}
 
@@ -128,7 +128,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
               resizeMode="cover"
             />
 
-            {uploading && (
+            {!!uploading && (
               <View style={styles.uploadOverlay}>
                 <ActivityIndicator size="large" color={theme.colors.white} />
                 <Text style={styles.progressText}>
@@ -175,7 +175,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
               <Text style={styles.placeholderText}>
                 {uploading ? 'Uploading...' : placeholder}
               </Text>
-              {uploading && (
+              {!!uploading && (
                 <View style={styles.progressContainer}>
                   <ActivityIndicator
                     size="small"

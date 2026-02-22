@@ -297,9 +297,7 @@ export const InviteMemberScreen = () => {
                     >
                       <Text style={styles.typeText}>
                         {getInviteTypeLabel(invite.type)}
-                        {hasBoth && (
-                          <Text style={styles.typeHint}> (tap to change)</Text>
-                        )}
+                        {!!hasBoth && <Text style={styles.typeHint}> (tap to change)</Text>}
                       </Text>
                     </Pressable>
                   </View>

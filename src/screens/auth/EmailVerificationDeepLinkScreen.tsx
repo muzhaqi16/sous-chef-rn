@@ -145,13 +145,11 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
       </View>
 
       <View style={styles.content}>
-        {isVerifying && (
-          <>
+        {!!isVerifying && <>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.title}>Verifying your email...</Text>
             <Text style={styles.subtitle}>Please wait while we verify your email address.</Text>
-          </>
-        )}
+          </>}
 
         {verificationResult === 'success' && (
           <>

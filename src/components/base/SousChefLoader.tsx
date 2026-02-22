@@ -190,7 +190,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
 
   return (
     <View style={componentStyles.container}>
-      {showBrand && (
+      {!!showBrand && (
         <View style={componentStyles.brandContainer}>
           <Text
             style={[

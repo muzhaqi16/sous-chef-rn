@@ -62,7 +62,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
       ))}
 
       {/* Add a meal button */}
-      {onAddMeal && (
+      {!!onAddMeal && (
         <Pressable
           onPress={() => onAddMeal()}
           style={({ pressed }) => [styles.addMealButton, pressed && styles.pressed]}

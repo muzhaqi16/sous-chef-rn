@@ -79,7 +79,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           numberOfLines={1}>
           {item}
         </Text>
-        {isSelected && (
+        {!!isSelected && (
           <Icon
             name="checkmark"
             size={20}

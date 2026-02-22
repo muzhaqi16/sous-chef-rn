@@ -72,7 +72,8 @@ module.exports = {
       'immer|' +
       'zustand|' +
       'uuid|' +
-      'react-native-launch-arguments' +
+      'react-native-launch-arguments|' +
+      'react-native-performance' +
       ')/)',
   ],
 };

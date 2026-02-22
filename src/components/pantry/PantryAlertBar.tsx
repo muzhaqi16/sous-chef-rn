@@ -36,7 +36,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         )}
       </View>
 
-      {onAnalyticsPress && (
+      {!!onAnalyticsPress && (
         <Pressable
           onPress={onAnalyticsPress}
           hitSlop={8}

@@ -247,9 +247,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         bottomOffset={16}
       >
         {/* Item Header */}
-        {item && (
+        {!!item && (
           <View style={styles.header}>
-            {item.imageUrl && (
+            {!!item.imageUrl && (
               <CachedImage
                 uri={item.imageUrl}
                 style={styles.itemImage}
@@ -262,7 +262,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               >
                 {item.itemName}
               </Text>
-              {item.category && (
+              {!!item.category && (
                 <Text
                   style={[
                     styles.category,

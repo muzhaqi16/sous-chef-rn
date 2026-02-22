@@ -127,7 +127,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           </Text>
         </Pressable>
 
-        {showPackageDetails && (
+        {!!showPackageDetails && (
           <View style={styles.packageDetailsContainer}>
             <Text style={styles.sectionDescription}>
               Define what's inside a package (e.g., 12 cans of 335ml each).

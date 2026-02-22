@@ -181,8 +181,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           ]}
         />
 
-        {shoppingListItem && (
-          <>
+        {!!shoppingListItem && <>
             {/* Item Info */}
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{shoppingListItem.itemName}</Text>
@@ -230,7 +229,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       >
                         {pantry.name}
                       </Text>
-                      {pantry.isDefault && (
+                      {!!pantry.isDefault && (
                         <View
                           style={[
                             styles.defaultBadge,
@@ -330,7 +329,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       : 'Select date'}
                   </Text>
                 </Pressable>
-                {expirationDate && (
+                {!!expirationDate && (
                   <Pressable
                     style={({pressed}) => [styles.clearDateButton, pressed && styles.pressed]}
                     onPress={clearExpirationDate}
@@ -343,7 +342,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   </Pressable>
                 )}
               </View>
-              {showDatePicker && (
+              {!!showDatePicker && (
                 <DateTimePicker
                   value={expirationDate || new Date()}
                   mode="date"
@@ -396,8 +395,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 thumbColor={theme.colors.white}
               />
             </View>
-          </>
-        )}
+          </>}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );

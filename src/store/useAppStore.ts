@@ -175,5 +175,9 @@ export const selectSearchState = (state: RootState) => ({
   addToRecentlyScanned: state.addToRecentlyScanned,
 });
 
+// Admin role selector
+export const selectIsAdminUser = (state: RootState) =>
+  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
+
 // Single property selector for network status
 export const selectIsOnline = (state: RootState) => state.isOnline;

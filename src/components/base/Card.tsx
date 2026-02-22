@@ -149,12 +149,12 @@ export const Card: React.FC<CardProps> = ({
         layout === 'horizontal' && styles.contentHorizontal,
       ]}
     >
-      {badge && (
+      {!!badge && (
         <Badge variant={badge.variant} style={styles.badge}>
           {badge.text}
         </Badge>
       )}
-      {title && (
+      {!!title && (
         <Text
           style={[
             styles.title,
@@ -166,7 +166,7 @@ export const Card: React.FC<CardProps> = ({
           {title}
         </Text>
       )}
-      {subtitle && (
+      {!!subtitle && (
         <Text
           style={[styles.subtitle, { color: theme.colors.textSecondary }]}
           numberOfLines={1}
@@ -174,7 +174,7 @@ export const Card: React.FC<CardProps> = ({
           {subtitle}
         </Text>
       )}
-      {description && (
+      {!!description && (
         <Text
           style={[styles.description, { color: theme.colors.textSecondary }]}
           numberOfLines={2}
@@ -187,7 +187,7 @@ export const Card: React.FC<CardProps> = ({
           ${price.toFixed(2)}
         </Text>
       )}
-      {meta && (
+      {!!meta && (
         <View style={styles.metaContainer}>
           {Array.isArray(meta) ? (
             meta.map((m, i) => (
@@ -234,22 +234,16 @@ export const Card: React.FC<CardProps> = ({
         <>
           {leftElement || renderImage()}
           {renderContent()}
-          {rightElement && (
-            <View style={styles.rightSection}>{rightElement}</View>
-          )}
+          {!!rightElement && <View style={styles.rightSection}>{rightElement}</View>}
         </>
       ) : (
         <>
           {renderImage()}
           {renderContent()}
-          {rightElement && (
-            <View style={styles.rightSection}>{rightElement}</View>
-          )}
+          {!!rightElement && <View style={styles.rightSection}>{rightElement}</View>}
         </>
       )}
-      {bottomElement && (
-        <View style={styles.bottomSection}>{bottomElement}</View>
-      )}
+      {!!bottomElement && <View style={styles.bottomSection}>{bottomElement}</View>}
     </View>
   );
 

@@ -71,7 +71,7 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
         )}
       </View>
 
-      {showAddControls && (
+      {!!showAddControls && (
         <View style={styles.addControls}>
           <Text style={styles.addText}>Add "{value}" to list</Text>
           <View style={styles.quantityRow}>

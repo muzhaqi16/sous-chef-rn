@@ -57,7 +57,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   if (isLoadingMore) {
     return (
       <View style={styles.footerLoader}>
-        {showActivityIndicator && (
+        {!!showActivityIndicator && (
           <ActivityIndicator
             size="small"
             color={theme.colors.primary}

@@ -117,13 +117,13 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle && (
+          {!!subtitle && (
             <Text style={styles.subtitle} numberOfLines={1}>
               {subtitle}
             </Text>
           )}
         </View>
-        {onQuickAdd && (
+        {!!onQuickAdd && (
           <Pressable
             style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
             onPress={onQuickAdd}

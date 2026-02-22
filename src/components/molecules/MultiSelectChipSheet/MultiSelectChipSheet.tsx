@@ -92,7 +92,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         />
 
         {/* Search Input */}
-        {showSearch && (
+        {!!showSearch && (
           <View style={styles.searchContainer}>
             <Icon
               name="search"

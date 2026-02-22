@@ -44,23 +44,21 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <Text style={styles.displayName} numberOfLines={1}>{displayName}</Text>
-            {review.verified && (
-              <Ionicons name="checkmark-circle" size={14} color={theme.colors.success} />
-            )}
+            {!!review.verified && <Ionicons name="checkmark-circle" size={14} color={theme.colors.success} />}
           </View>
           <Text style={styles.date}>
             {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
           </Text>
         </View>
         {/* Own review actions */}
-        {isOwn && (
+        {!!isOwn && (
           <View style={styles.ownActions}>
-            {onEdit && (
+            {!!onEdit && (
               <Pressable onPress={onEdit} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
                 <Ionicons name="create-outline" size={18} color={theme.colors.primary} />
               </Pressable>
             )}
-            {onDelete && (
+            {!!onDelete && (
               <Pressable onPress={onDelete} hitSlop={8} style={({ pressed }) => pressed && styles.pressed}>
                 <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
               </Pressable>
@@ -82,9 +80,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       </View>
 
       {/* Comment */}
-      {review.comment && (
-        <Text style={styles.comment}>{review.comment}</Text>
-      )}
+      {!!review.comment && <Text style={styles.comment}>{review.comment}</Text>}
 
       {/* Helpful button */}
       <Pressable

@@ -26,7 +26,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
       <Text style={styles.subtitle}>
         {format(selectedDate, 'EEEE, MMMM d')}
       </Text>
-      {onAddMeal && (
+      {!!onAddMeal && (
         <Pressable
           onPress={() => onAddMeal()}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}

@@ -451,7 +451,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         showsVerticalScrollIndicator={false}
       >
         {/* Image Gallery - show if images or fallback URL exists */}
-        {showImages && (
+        {!!showImages && (
           <View style={styles.imageSection}>
             <ImageGalleryTabs
               images={itemImages}
@@ -469,7 +469,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Category Badge with Storage Location */}
-        {(categoryName || storageStateDisplay) && (
+        {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon
               name="restaurant-outline"
@@ -519,7 +519,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Nutrition Summary - navigates to NutritionScreen */}
-        {showNutrition && (
+        {!!showNutrition && (
           <View style={styles.nutritionSection}>
             <Text style={styles.nutritionTitle}>Nutrition</Text>
             <NutritionSummary
@@ -555,7 +555,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Net Weight Row */}
-        {netWeightText && (
+        {!!netWeightText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Net Weight</Text>
             <View style={styles.infoValueContainer}>
@@ -568,7 +568,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 />
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
-              {item.lastUsedAt && (
+              {!!item.lastUsedAt && (
                 <Pressable
                   onPress={() => setCorrectWeightVisible(true)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -587,7 +587,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Remaining Weight Row - only show for dual-tracked items */}
-        {remainingNetWeightText && (
+        {!!remainingNetWeightText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Remaining Weight</Text>
             <View style={styles.infoValueContainer}>
@@ -605,7 +605,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Inventory Breakdown Row - live remaining decomposition */}
-        {quantityBreakdownText && (
+        {!!quantityBreakdownText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Inventory</Text>
             <View style={styles.infoValueContainer}>
@@ -623,7 +623,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Package Details Row - only show if breakdown is available */}
-        {packageBreakdownText && (
+        {!!packageBreakdownText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Package</Text>
             <View style={styles.infoValueContainer}>
@@ -641,7 +641,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Brand Row - only show if brand is set */}
-        {brandName && (
+        {!!brandName && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Brand</Text>
             <View style={styles.infoValueContainer}>
@@ -659,7 +659,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Storage Location */}
-        {item.storageLocation && (
+        {!!item.storageLocation && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Storage</Text>
             <View style={styles.infoValueContainer}>
@@ -681,7 +681,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Store Row */}
-        {item.store?.name && (
+        {!!item.store?.name && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Store</Text>
             <View style={styles.infoValueContainer}>
@@ -829,7 +829,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Purchase Date Row */}
-        {item.purchase?.purchaseDate && (
+        {!!item.purchase?.purchaseDate && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Purchased</Text>
             <View style={styles.infoValueContainer}>
@@ -852,7 +852,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Usage Info Row - show last used date if available */}
-        {item.lastUsedAt && (
+        {!!item.lastUsedAt && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Last Used</Text>
             <View style={styles.infoValueContainer}>
@@ -872,7 +872,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Notes Section */}
-        {item.storageNotes && (
+        {!!item.storageNotes && (
           <View style={styles.notesSection}>
             <View style={styles.notesHeader}>
               <Icon
@@ -888,7 +888,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Tags Section */}
-        {item.tags && item.tags.length > 0 && (
+        {!!item.tags && item.tags.length > 0 && (
           <View style={styles.tagsSection}>
             <Text style={styles.tagsLabel}>Tags</Text>
             <View style={styles.tagsContainer}>
@@ -918,8 +918,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Usage Records Section - only show if there are usage records */}
-        {item.usageRecords && item.usageRecords.edges.length > 0 && (
-          <>
+        {!!item.usageRecords && item.usageRecords.edges.length > 0 && <>
             <Pressable
               style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
               onPress={() =>
@@ -937,7 +936,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               />
             </Pressable>
 
-            {purchaseHistoryExpanded && (
+            {!!purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
                 {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
                   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
@@ -953,7 +952,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                         <Text style={styles.purchaseDate}>
                           {formatDate(usage.usedAt)}
                         </Text>
-                        {purposeLabel && (
+                        {!!purposeLabel && (
                           <Text style={[
                             styles.purchaseStore,
                             isAdjustment && styles.adjustmentPurpose,
@@ -961,7 +960,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                             {purposeLabel}
                           </Text>
                         )}
-                        {isAdjustment && usage.adjustmentReason && (
+                        {!!isAdjustment && !!usage.adjustmentReason && (
                           <Text style={styles.adjustmentReason}>
                             {usage.adjustmentReason}
                           </Text>
@@ -983,8 +982,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 )}
               </View>
             )}
-          </>
-        )}
+          </>}
 
         {/* Recipes to try */}
         <View style={styles.recipesSection}>
@@ -1015,7 +1013,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
 
-      {adjustModalVisible && (
+      {!!adjustModalVisible && (
         <AdjustQuantityModal
           visible={adjustModalVisible}
           pantryItem={item}
@@ -1024,7 +1022,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         />
       )}
 
-      {correctWeightVisible && (
+      {!!correctWeightVisible && (
         <CorrectWeightModal
           visible={correctWeightVisible}
           pantryItem={item}

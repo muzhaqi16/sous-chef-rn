@@ -86,7 +86,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
           <Text style={styles.suggestionName} numberOfLines={1}>
             {item.name}
           </Text>
-          {showBrands && item.brands && item.brands.length > 0 && (
+          {!!showBrands && !!item.brands && item.brands.length > 0 && (
             <Text style={styles.suggestionBrands} numberOfLines={1}>
               {item.brands[0].name}
             </Text>

@@ -43,9 +43,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       </Pressable>
 
       {/* Image */}
-      {imageUrl && (
-        <CachedImage uri={imageUrl} style={styles.image} />
-      )}
+      {!!imageUrl && <CachedImage uri={imageUrl} style={styles.image} />}
 
       {/* Content */}
       <View style={styles.content}>
@@ -74,7 +72,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
             </Text>
           )}
         </View>
-        {hasPantryDeductions && (
+        {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
             <Icon name="leaf-outline" size={12} color={styles.pantryBadgeText.color} />
             <Text style={styles.pantryBadgeText}>Pantry updated</Text>
@@ -83,7 +81,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
       </View>
 
       {/* Delete */}
-      {onDelete && (
+      {!!onDelete && (
         <Pressable onPress={() => onDelete(item.id)} style={styles.deleteButton} hitSlop={8}>
           <Icon name="close-circle-outline" size={20} color={styles.deleteIcon.color} />
         </Pressable>

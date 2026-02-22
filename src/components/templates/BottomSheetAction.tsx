@@ -36,7 +36,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
 
   const content = (
     <>
-      {(sheetTitle || headerRight) && (
+      {!!(sheetTitle || headerRight) && (
         <View style={styles.headerRow}>
           {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
           {headerRight}
@@ -63,7 +63,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         </BottomSheetScrollView>
       ) : (
         <>
-          {(sheetTitle || headerRight) && (
+          {!!(sheetTitle || headerRight) && (
             <View style={styles.nonScrollableHeader}>
               {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
               {headerRight}

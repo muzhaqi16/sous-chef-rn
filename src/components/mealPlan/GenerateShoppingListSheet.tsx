@@ -174,7 +174,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
           </View>
         )}
 
-        {loading && (
+        {!!loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={theme.colors.primary} />
             <Text style={styles.loadingText}>Generating shopping list...</Text>

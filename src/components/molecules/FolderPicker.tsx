@@ -233,7 +233,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         >
           {item}
         </Text>
-        {isSelected && (
+        {!!isSelected && (
           <Icon
             name="checkmark"
             size={20}
@@ -323,8 +323,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           <View style={styles.divider} />
 
           {/* Create New Folder - only shown if allowCreate is true */}
-          {allowCreate &&
-            (showNewFolder ? (
+          {!!allowCreate && (showNewFolder ? (
               <View style={styles.newFolderContainer}>
                 <BottomSheetTextInput
                   style={styles.newFolderInput}
@@ -394,14 +393,14 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : null}
 
           {/* Hint text for folder management */}
-          {hasFolderActions && filteredFolders.length > 0 && (
+          {!!hasFolderActions && filteredFolders.length > 0 && (
             <Text style={styles.hintText}>
               Long press a folder to edit or delete
             </Text>
           )}
 
           {/* Loading overlay */}
-          {folderActionLoading && (
+          {!!folderActionLoading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
@@ -495,7 +494,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : (
             <>
               {/* Rename Section */}
-              {onRenameFolder && (
+              {!!onRenameFolder && (
                 <View style={styles.renameSection}>
                   <Text style={styles.sectionLabel}>Rename</Text>
                   <View style={styles.renameInputRow}>
@@ -547,7 +546,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               )}
 
               {/* Delete Section */}
-              {onDeleteFolder && (
+              {!!onDeleteFolder && (
                 <View style={styles.deleteSection}>
                   <Pressable
                     style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}

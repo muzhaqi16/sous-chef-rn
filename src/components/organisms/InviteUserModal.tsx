@@ -218,7 +218,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                   </View>
                   <Text style={styles.roleOptionLabel}>{role.label}</Text>
                   <Text style={styles.roleDescription}>{role.description}</Text>
-                  {role.warning && selectedRole === role.value && (
+                  {!!role.warning && selectedRole === role.value && (
                     <Text
                       style={[
                         styles.warningText,

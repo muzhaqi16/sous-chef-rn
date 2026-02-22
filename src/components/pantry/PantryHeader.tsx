@@ -65,7 +65,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         </View>
 
         {/* Low Stock to Shopping List */}
-        {onLowStockPress && (
+        {!!onLowStockPress && (
           <Pressable
             onPress={onLowStockPress}
             disabled={lowStockLoading}

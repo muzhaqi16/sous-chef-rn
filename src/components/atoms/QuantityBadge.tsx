@@ -70,7 +70,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({ quantity, quantity
           >
             {formattedQuantity}
           </Text>
-          {unit && (
+          {!!unit && (
             <Text
               maxFontSizeMultiplier={1.5}
               style={[

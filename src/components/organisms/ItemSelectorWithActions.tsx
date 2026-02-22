@@ -78,7 +78,7 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
           {String(item[displayProperty])}
         </Text>
-        {isSelected && (
+        {!!isSelected && (
           <Icon
             name="checkmark-circle"
             size={20}
@@ -115,9 +115,7 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
         />
       )}
 
-      {showActions && actions.length > 0 && (
-        <ListActionButtons actions={actions} />
-      )}
+      {!!showActions && actions.length > 0 && <ListActionButtons actions={actions} />}
     </View>
   );
 }

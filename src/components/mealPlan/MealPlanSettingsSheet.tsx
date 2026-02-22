@@ -49,9 +49,7 @@ function ActionItem({
       <Icon name={icon} size={22} color={iconColor} />
       <View style={actionStyles.content}>
         <Text style={[actionStyles.label, color ? { color } : undefined]}>{label}</Text>
-        {description && (
-          <Text style={actionStyles.description}>{description}</Text>
-        )}
+        {!!description && <Text style={actionStyles.description}>{description}</Text>}
       </View>
       <Icon name="chevron-forward" size={18} color={theme.colors.textTertiary} />
     </Pressable>
@@ -156,7 +154,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         </View>
 
         {/* Nutrition details */}
-        {showNutrition && mealPlan.nutritionSummary && (
+        {!!showNutrition && !!mealPlan.nutritionSummary && (
           <View style={styles.nutritionContainer}>
             <NutritionSummaryCard
               nutritionSummary={mealPlan.nutritionSummary}
@@ -166,7 +164,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         )}
 
         {/* Generated shopping lists */}
-        {mealPlan.generatedShoppingLists && mealPlan.generatedShoppingLists.length > 0 && (
+        {!!mealPlan.generatedShoppingLists && mealPlan.generatedShoppingLists.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Generated Lists</Text>
             <View style={styles.actionsCard}>

@@ -37,9 +37,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
         <Icon name={icon} size={24} color={iconColor} />
         <View style={styles.navigationText}>
           <Text style={styles.navigationTitle}>{title}</Text>
-          {subtitle && (
-            <Text style={styles.navigationSubtitle}>{subtitle}</Text>
-          )}
+          {!!subtitle && <Text style={styles.navigationSubtitle}>{subtitle}</Text>}
         </View>
       </View>
       <Icon name="chevron-forward" size={20} />

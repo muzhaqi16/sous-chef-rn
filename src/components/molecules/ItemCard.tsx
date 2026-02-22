@@ -42,9 +42,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
         />
         {/* unitName from server already includes item-specific display name
             with proper singular/plural form based on quantity */}
-        {item?.unitName && (
-          <Text style={styles.cardDescription}>{item?.unitName}</Text>
-        )}
+        {!!item?.unitName && <Text style={styles.cardDescription}>{item?.unitName}</Text>}
       </View>
     </Pressable>
   );
