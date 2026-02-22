@@ -184,7 +184,7 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
 
-export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
@@ -627,7 +627,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       </View>
     </PantryActionsProvider>
   );
-});
+}));
 
 const styles = StyleSheet.create(theme => ({
   container: {

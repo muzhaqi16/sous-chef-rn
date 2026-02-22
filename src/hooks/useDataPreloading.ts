@@ -1,11 +1,7 @@
-import { useEffect, useRef, useState, startTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
-import {
-  useGetCommonUnitsLazyQuery,
-  useGetShoppingListsLiteLazyQuery,
-  useMySavedRecipesLazyQuery,
-} from '#generated';
-import { useAppStore, selectAuthState, selectIsHomeSelectionReady } from '#store/useAppStore';
+import { useGetCommonUnitsLazyQuery } from '#generated';
+import { useAppStore, selectAuthState, selectIsPantryQueryComplete } from '#store/useAppStore';
 
 /**
  * Preloads essential reference data for offline access
@@ -20,9 +16,8 @@ import { useAppStore, selectAuthState, selectIsHomeSelectionReady } from '#store
  * - For full unit search, use SearchUnits query in autocomplete components
  *
  * Event-driven preloading:
- * - Waits for `isHomeSelectionReady` (GetHomes + pantry selection complete)
- * - Uses `startTransition` to deprioritize vs user interactions
- * - No arbitrary timeouts — React's concurrent scheduler handles timing
+ * - Waits for `isPantryQueryComplete` — fires only after GetPantry settles
+ * - No artificial delays — the semantic gate provides correct ordering
  */
 export function useDataPreloading() {
   // Access auth state directly from store to avoid circular dependency with useAuth
@@ -32,7 +27,7 @@ export function useDataPreloading() {
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const isOnline = useAppStore(state => state.isOnline);
-  const isHomeSelectionReady = useAppStore(selectIsHomeSelectionReady);
+  const isPantryQueryComplete = useAppStore(selectIsPantryQueryComplete);
 
   // PERFORMANCE: Track if units have been cached to prevent infinite loop
   const hasCachedUnitsRef = useRef(false);
@@ -51,43 +46,26 @@ export function useDataPreloading() {
     errorPolicy: 'ignore', // Don't fail on network errors, use cached data
   });
 
-  // Lazy queries for background preloading (non-blocking)
-  const [fetchShoppingLists] = useGetShoppingListsLiteLazyQuery({
-    fetchPolicy: 'network-only',
-    errorPolicy: 'ignore',
-  });
-
-  const [fetchSavedRecipes] = useMySavedRecipesLazyQuery({
-    fetchPolicy: 'network-only',
-    errorPolicy: 'ignore',
-  });
-
-  // Trigger all preloading when home selection is ready (purely event-driven)
-  // startTransition ensures React deprioritizes these vs user interactions
+  // Trigger preloading once GetPantry has settled (semantic gate, no timing hacks)
   useEffect(() => {
-    if (!isAuthenticated || !isOnline || !isHomeSelectionReady) return;
+    if (!isAuthenticated || !isOnline || !isPantryQueryComplete) return;
     if (hasPreloadedRef.current) return;
     hasPreloadedRef.current = true;
     hasUnitsQueryFetchedRef.current = true;
 
     if (__DEV__) {
-      console.log('📦 [useDataPreloading] Home ready — starting background preload');
+      console.log('📦 [useDataPreloading] GetPantry settled — fetching GetCommonUnits');
     }
 
     setUnitsLoading(true);
-
-    startTransition(() => {
-      fetchShoppingLists();
-      fetchSavedRecipes();
-      fetchCommonUnits()
-        .catch(err => {
-          setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
-        })
-        .finally(() => {
-          setUnitsLoading(false);
-        });
-    });
-  }, [isAuthenticated, isOnline, isHomeSelectionReady, fetchShoppingLists, fetchSavedRecipes, fetchCommonUnits]);
+    fetchCommonUnits()
+      .catch(err => {
+        setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
+      })
+      .finally(() => {
+        setUnitsLoading(false);
+      });
+  }, [isAuthenticated, isOnline, isPantryQueryComplete, fetchCommonUnits]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)

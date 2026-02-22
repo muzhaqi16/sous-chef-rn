@@ -29,7 +29,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   subtitle,
   onPress,
   leftIcon,
-  rightIcon = 'chevron-right',
+  rightIcon = 'chevron-forward',
   badge,
   rightElement,
   leftElement,

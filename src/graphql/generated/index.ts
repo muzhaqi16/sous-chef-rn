@@ -8325,20 +8325,28 @@ export type RecipeIngredient = {
 };
 
 export type RecipeIngredientInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
   externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
   measurements?: InputMaybe<MultiUnitMeasurementInput>;
   meta?: InputMaybe<Array<Scalars['String']['input']>>;
+  metricAmount?: InputMaybe<Scalars['Float']['input']>;
+  metricUnit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
   preparation?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   section?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   spoonacular?: InputMaybe<SpoonacularDataInput>;
+  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
+  usAmount?: InputMaybe<Scalars['Float']['input']>;
+  usUnit?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RecipeIngredientMatch = {

@@ -543,8 +543,9 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.radii.md,
   },
   suggestedTextContainer: {
     flex: 1,

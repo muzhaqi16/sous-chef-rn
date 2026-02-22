@@ -20,9 +20,9 @@
 // @ts-expect-error - Apollo Client uses Symbol.for() to configure LRU cache sizes
 globalThis[Symbol.for('apollo.cacheSize')] = {
   // Core caches - sized for mobile (queries visible on screen at once)
-  'inMemoryCache.executeSelectionSet': 2000, // Default: 10,000 - reduced for mobile
-  'inMemoryCache.executeSubSelectedArray': 1000, // Default: 5,000 - reduced for mobile
-  'inMemoryCache.maybeBroadcastWatch': 1000, // Default: 5,000 - reduced for mobile
+  'inMemoryCache.executeSelectionSet': 3000, // Default: 10,000 - increased for 126+ entities
+  'inMemoryCache.executeSubSelectedArray': 2000, // Default: 5,000 - increased to reduce cache thrashing
+  'inMemoryCache.maybeBroadcastWatch': 2000, // Default: 5,000 - increased to reduce cache thrashing
 
   // Document caches
   parser: 500, // User-supplied DocumentNodes - base value

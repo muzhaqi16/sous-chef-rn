@@ -60,6 +60,9 @@ export interface NavigationState {
   // Gates pantry queries to prevent race conditions on first login
   isHomeSelectionReady: boolean;
 
+  // Set to true once GetPantry first settles — gates GetCommonUnits preload
+  isPantryQueryComplete: boolean;
+
   // User-specific navigation states
   userNavigationStates: Record<string, UserNavigationState>;
 
@@ -73,6 +76,7 @@ export interface NavigationState {
   setSelectedShoppingListId: (id: string | null) => void;
   setHasInitializedHomeData: (value: boolean) => void;
   setIsHomeSelectionReady: (value: boolean) => void;
+  setIsPantryQueryComplete: (value: boolean) => void;
   setHomeAndPantry: (homeId: string | null, pantryId: string | null) => void;
   setUserNavigationState: (
     userId: string,
@@ -91,6 +95,7 @@ const initialNavigationState = {
   selectedShoppingListId: null,
   hasInitializedHomeData: false,
   isHomeSelectionReady: false,
+  isPantryQueryComplete: false,
   userNavigationStates: {},
   pendingDeepLinkAction: null,
 };
@@ -145,6 +150,12 @@ export const createNavigationSlice: StateCreator<
   setIsHomeSelectionReady: value => {
     set(state => {
       state.isHomeSelectionReady = value;
+    });
+  },
+
+  setIsPantryQueryComplete: value => {
+    set(state => {
+      state.isPantryQueryComplete = value;
     });
   },
 

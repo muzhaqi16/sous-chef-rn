@@ -6330,20 +6330,28 @@ type RecipeIngredient {
 }
 
 input RecipeIngredientInput {
+  aisle: String
+  consistency: String
   externalSources: [RecipeIngredientSourceInput!]
   image: String
   isOptional: Boolean
   itemId: ID
   measurements: MultiUnitMeasurementInput
   meta: [String!]
+  metricAmount: Float
+  metricUnit: String
   name: String!
   notes: String
+  originalString: String
   preparation: String
   quantity: Float!
   section: String
   sortOrder: Int
   spoonacular: SpoonacularDataInput
+  spoonacularIngredientId: Int
   unitId: ID
+  usAmount: Float
+  usUnit: String
 }
 
 type RecipeIngredientMatch {
