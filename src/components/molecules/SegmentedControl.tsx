@@ -28,7 +28,7 @@ export const SegmentedControl = <T extends string>({
 }: SegmentedControlProps<T>) => {
   return (
     <View style={styles.container} testID={testID}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.segmentedControl}>
         {options.map(option => (
           <Pressable

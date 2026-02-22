@@ -61,13 +61,13 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   return (
     <View style={styles.container} testID={testID}>
       <View style={styles.leftContent}>
-        {icon && <Text style={styles.icon}>{icon}</Text>}
+        {icon ? <Text style={styles.icon}>{icon}</Text> : null}
         <Text style={[styles.title, { color: getTitleColor() }]}>
           {title}{count !== undefined ? ` (${count})` : ''}
         </Text>
       </View>
 
-      {actionLabel && onActionPress && (
+      {!!actionLabel && !!onActionPress && (
         <Pressable onPress={onActionPress} hitSlop={8}>
           <Text style={styles.actionLabel}>{actionLabel}</Text>
         </Pressable>

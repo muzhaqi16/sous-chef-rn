@@ -53,7 +53,7 @@ export const IngredientMatchRow: React.FC<IngredientMatchRowProps> =
             </View>
           </View>
 
-          {match.matchedPantryItem && (
+          {!!match.matchedPantryItem && (
             <Text style={styles.matchInfo} numberOfLines={1}>
               Matched: {match.matchedPantryItem.itemName} (
               {match.matchedPantryItem.quantity}
@@ -79,9 +79,7 @@ export const IngredientMatchRow: React.FC<IngredientMatchRowProps> =
                 keyboardType="decimal-pad"
                 editable={isIncluded}
               />
-              {match.suggestedUnit?.symbol && (
-                <Text style={styles.unitText}>{match.suggestedUnit.symbol}</Text>
-              )}
+              {!!match.suggestedUnit?.symbol && <Text style={styles.unitText}>{match.suggestedUnit.symbol}</Text>}
             </View>
             <Switch
               value={isIncluded}

@@ -162,6 +162,7 @@ const PantryMainScreen: React.FC = () => {
   const {
     items: pantryItems,
     allItems,
+    stats,
     totalCount,
     searchQuery,
     setSearchQuery,
@@ -346,6 +347,15 @@ const PantryMainScreen: React.FC = () => {
     [navigate, selectedHomeId],
   );
 
+  const handleAnalyticsPress = useCallback(
+    () => {
+      if (pantry?.id) {
+        navigate('PantryAnalytics', { pantryId: pantry.id });
+      }
+    },
+    [navigate, pantry?.id],
+  );
+
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetch(), refetchHome()]);
   }, [refetch, refetchHome]);
@@ -374,6 +384,7 @@ const PantryMainScreen: React.FC = () => {
         householdName={householdName}
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
+        stats={stats}
         items={locationFilteredItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
@@ -394,6 +405,7 @@ const PantryMainScreen: React.FC = () => {
         onAvatarPress={handleAvatarPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
+        onAnalyticsPress={handleAnalyticsPress}
         onLowStockPress={addLowStockToShoppingList}
         lowStockLoading={lowStockLoading}
         totalCount={totalCount}
@@ -411,7 +423,7 @@ const PantryMainScreen: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-      {consumeModal.visible && (
+      {!!consumeModal.visible && (
         <ConsumePantryItemModal
           visible={consumeModal.visible}
           pantryItem={consumeModal.item}
@@ -419,7 +431,7 @@ const PantryMainScreen: React.FC = () => {
           onConfirm={handleConfirmConsume}
         />
       )}
-      {wasteModal.visible && (
+      {!!wasteModal.visible && (
         <RecordWastePantryItemModal
           visible={wasteModal.visible}
           pantryItem={wasteModal.item}
@@ -427,7 +439,7 @@ const PantryMainScreen: React.FC = () => {
           onConfirm={handleConfirmWaste}
         />
       )}
-      {restockModal.visible && (
+      {!!restockModal.visible && (
         <RestockPantryItemModal
           visible={restockModal.visible}
           pantryItem={restockModal.item}
@@ -437,7 +449,7 @@ const PantryMainScreen: React.FC = () => {
       )}
 
       {/* Add to Pantry Sheet */}
-      {addSheetVisible && (
+      {!!addSheetVisible && (
         <AddToPantrySheet
           visible={addSheetVisible}
           pantryId={pantry?.id}
@@ -447,7 +459,7 @@ const PantryMainScreen: React.FC = () => {
       )}
 
       {/* Add Storage Location Sheet */}
-      {addLocationSheetVisible && (
+      {!!addLocationSheetVisible && (
         <AddStorageLocationSheet
           visible={addLocationSheetVisible}
           onClose={() => setAddLocationSheetVisible(false)}
@@ -457,7 +469,7 @@ const PantryMainScreen: React.FC = () => {
       )}
 
       {/* Home switch hint overlay */}
-      {homeSwitchHint.isVisible && (
+      {!!homeSwitchHint.isVisible && (
         <FeatureHintOverlay
           config={{
             title: 'Tap to manage homes',

@@ -27,7 +27,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
 }) => {
   return (
     <>
-      {state.difficulty && (
+      {!!state.difficulty && (
         <SegmentedControl
           label="Difficulty"
           options={DIFFICULTIES}
@@ -53,7 +53,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
         placeholder="e.g., Italian, Mexican, Thai..."
       />
 
-      {state.visibility && (
+      {!!state.visibility && (
         <SegmentedControl
           label="Visibility"
           options={VISIBILITIES}

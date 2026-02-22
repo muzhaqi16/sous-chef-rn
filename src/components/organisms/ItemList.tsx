@@ -108,8 +108,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   if (items.length === 0 && emptyState) {
     return (
       <>
-        {ListHeaderComponent &&
-          (typeof ListHeaderComponent === 'function' ? (
+        {!!ListHeaderComponent && (typeof ListHeaderComponent === 'function' ? (
             <ListHeaderComponent />
           ) : (
             ListHeaderComponent
@@ -136,20 +135,18 @@ export const ItemList: React.FC<ItemListProps> = ({
       onEndReached={onEndReached}
       onEndReachedThreshold={onEndReachedThreshold}
       ListHeaderComponent={
-        ListHeaderComponent &&
-        (typeof ListHeaderComponent === 'function' ? (
+        ListHeaderComponent ? (typeof ListHeaderComponent === 'function' ? (
           <ListHeaderComponent />
         ) : (
           ListHeaderComponent
-        ))
+        )) : null
       }
       ListFooterComponent={
-        ListFooterComponent &&
-        (typeof ListFooterComponent === 'function' ? (
+        ListFooterComponent ? (typeof ListFooterComponent === 'function' ? (
           <ListFooterComponent />
         ) : (
           ListFooterComponent
-        ))
+        )) : null
       }
     />
   );

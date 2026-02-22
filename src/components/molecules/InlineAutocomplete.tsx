@@ -151,7 +151,7 @@ export function InlineAutocomplete<T>({
 
   return (
     <View style={styles.container}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.inputContainer}>
         <BottomSheetTextInput
           style={[styles.input, error && styles.inputError]}
@@ -163,7 +163,7 @@ export function InlineAutocomplete<T>({
           autoCapitalize={autoCapitalize}
           testID={testID}
         />
-        {loading && hasSearchQuery && (
+        {!!loading && !!hasSearchQuery && (
           <ActivityIndicator
             size="small"
             color={theme.colors.primary}
@@ -171,9 +171,9 @@ export function InlineAutocomplete<T>({
           />
         )}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {shouldShowDropdown && (slicedItems.length > 0 || footerComponent) && (
+      {!!shouldShowDropdown && !!(slicedItems.length > 0 || footerComponent) && (
         <View style={styles.suggestionsContainer}>
           <ScrollView
             style={styles.scrollView}

@@ -44,7 +44,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
           textStyle,
         ]}
       >
-        {action.iconVisible && action.icon}
+        {!!action.iconVisible && action.icon}
         {action.label}
       </AnimatedText>
     </AnimatedPressable>

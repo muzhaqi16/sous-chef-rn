@@ -605,7 +605,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                   />
                 </FieldRow>
               </View>
-              {isWeightLocked && (
+              {!!isWeightLocked && (
                 <Text style={styles.lockedHint}>
                   Weight locked after use — correct from item details
                 </Text>

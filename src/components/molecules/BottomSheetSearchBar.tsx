@@ -181,14 +181,14 @@ export const BottomSheetSearchBar = forwardRef<
           autoCorrect={autoCorrect}
           testID={testID}
         />
-        {isLoading && (
+        {!!isLoading && (
           <ActivityIndicator
             size="small"
             color={theme.colors.primary}
             style={styles.loadingIndicator}
           />
         )}
-        {hasText && (
+        {!!hasText && (
           <Pressable
             style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}
             onPress={handleClear}

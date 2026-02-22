@@ -14,11 +14,11 @@ jest.mock('../src/navigation/RootNavigator', () => ({ Navigation: () => null }))
 
 // Hooks / services that pull in native SDKs
 jest.mock('../src/hooks/useNetworkStatus', () => ({ useNetworkStatus: jest.fn() }));
-jest.mock('../src/services/performance/NativePerformanceService', () => ({
-  NativePerformanceService: { initialize: jest.fn() },
-}));
 jest.mock('../src/services/performance/MemoryMonitor', () => ({
   MemoryMonitor: { start: jest.fn(), stop: jest.fn() },
+}));
+jest.mock('../src/services/performance/NativePerformanceService', () => ({
+  NativePerformanceService: { initialize: jest.fn(), cleanup: jest.fn() },
 }));
 jest.mock('react-native-screens', () => ({
   enableScreens: jest.fn(),

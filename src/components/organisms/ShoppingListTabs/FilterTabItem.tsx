@@ -29,7 +29,7 @@ const FilterTabItemComponent: React.FC<FilterTabItemProps> = ({
       style={[styles.tab, isActive && styles.tabActive]}
     >
       <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{title}</Text>
-      {hasCount && (
+      {!!hasCount && (
         <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
           <Text style={[styles.countText, isActive && styles.countTextActive]}>{count}</Text>
         </View>

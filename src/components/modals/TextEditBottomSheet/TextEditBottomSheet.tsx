@@ -136,7 +136,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
         {/* Input Field */}
         <View style={styles.inputContainer}>
-          {label && (
+          {!!label && (
             <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
               {label}
             </Text>
@@ -170,7 +170,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                   keyboardType={keyboardType}
                   textAlignVertical={multiline ? 'top' : 'center'}
                 />
-                {fieldState.error && (
+                {!!fieldState.error && (
                   <Text
                     style={[styles.errorText, { color: theme.colors.error }]}
                   >

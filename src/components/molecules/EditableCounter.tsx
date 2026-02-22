@@ -63,7 +63,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <View
         style={[
           styles.container,

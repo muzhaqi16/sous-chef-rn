@@ -107,7 +107,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             isPurchased={item.isPurchased}
             themeColors={themeColors}
           />
-          {item.isPurchased && onMoveToPantry && (
+          {!!item.isPurchased && !!onMoveToPantry && (
             <Pressable
               onPress={() => onMoveToPantry(item.id)}
               style={({pressed}) => [styles.moveToPantryButton, pressed && styles.pressed]}

@@ -91,6 +91,7 @@ export interface User {
   email: string;
   emailVerified: boolean;
   onBoarded: boolean;
+  role?: string;
   firstName?: string;
   lastName?: string;
   profilePicture?: string;

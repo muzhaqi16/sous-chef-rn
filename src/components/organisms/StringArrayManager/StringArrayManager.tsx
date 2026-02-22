@@ -211,7 +211,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        {showAddButton && (
+        {!!showAddButton && (
           <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
             <Icon
               name="add"
@@ -271,7 +271,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               editable={!loading}
             />
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <View style={styles.modalButtons}>
               <Pressable

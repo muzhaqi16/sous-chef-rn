@@ -318,13 +318,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 return <></>;
               }}
             />
-            {errors[name] &&
-              props?.componentType !== 'checkbox' &&
-              Input !== FormInput &&
-              Input !== 'itemAutocomplete' &&
-              Input !== 'brandAutocomplete' &&
-              Input !== 'unitAutocomplete' &&
-              Input !== 'categoryAutocomplete' && (
+            {!!errors[name] && props?.componentType !== 'checkbox' && Input !== FormInput && Input !== 'itemAutocomplete' && Input !== 'brandAutocomplete' && Input !== 'unitAutocomplete' && Input !== 'categoryAutocomplete' && (
                 <Text
                   style={styles.errorText}
                   testID={

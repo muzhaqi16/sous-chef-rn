@@ -123,7 +123,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         </View>
 
         {/* Deduction Mode - only shown when deductFromPantry is ON and user has a pantry */}
-        {deductFromPantry && hasPantry && (
+        {!!deductFromPantry && !!hasPantry && (
           <View style={styles.toggleSection}>
             <View style={styles.toggleInfo}>
               <Text style={styles.toggleLabel}>Smart Deduction</Text>

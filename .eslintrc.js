@@ -84,5 +84,8 @@ module.exports = {
 
     // Allow unstable nested components in forms (common pattern in React Native)
     'react/no-unstable-nested-components': ['warn', { allowAsProps: true }],
+
+    // Prevent falsy values (0, "", NaN) from leaking into JSX rendering
+    'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
   },
 };

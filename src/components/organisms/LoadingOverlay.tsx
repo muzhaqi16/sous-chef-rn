@@ -45,7 +45,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
             color={theme.colors.primary}
             style={styles.spinner}
           />
-          {message && (
+          {!!message && (
             <Text style={[
               styles.message,
               { color: theme.colors.textPrimary }

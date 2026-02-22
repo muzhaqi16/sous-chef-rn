@@ -1,10 +1,30 @@
 {
   "version": 1,
   "skills": {
+    "react-native-architecture": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "12174e2a3f79ffa969a92c69fc7dcd81bb8e3cfdb00af495f0d00f3eaf04b240"
+    },
+    "react-native-best-practices": {
+      "source": "callstackincubator/agent-skills",
+      "sourceType": "github",
+      "computedHash": "2ed3fe70a80a1ab21cc797501624b583b1be5bddb7b43b4516e46d8788723a23"
+    },
+    "react-native-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "26c9e2198b8534330ff7862a6c33d2eee07e2302810b80473deaced469db1b12"
+    },
     "react-state-management": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "ab7ca5f3ff515b873a8446bdf88b9edc156741cf32c07accbbb3804f25543179"
+    },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
     }
   }
 }

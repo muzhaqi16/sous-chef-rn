@@ -40,7 +40,7 @@ export const ShoppingListItemCounter = ({
           onDecrement={onDecrement}
           disabled={disabled}
         />
-        {unit && (
+        {!!unit && (
           <Text
             style={[styles.unitText, { color: theme.colors.textSecondary }]}
           >
@@ -50,7 +50,7 @@ export const ShoppingListItemCounter = ({
       </View>
 
       {/* Right Column: Drag Handle */}
-      {rightElement && <View style={styles.rightColumn}>{rightElement}</View>}
+      {!!rightElement && <View style={styles.rightColumn}>{rightElement}</View>}
     </View>
   );
 };

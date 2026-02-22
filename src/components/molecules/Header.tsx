@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
     >
       {/* Left side */}
       <View style={styles.actions}>
-        {showCloseButton && (
+        {!!showCloseButton && (
           <Pressable
             style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onClose}
@@ -155,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
           </Pressable>
         )}
-        {showBackButton && (
+        {!!showBackButton && (
           <Pressable
             style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onBack}

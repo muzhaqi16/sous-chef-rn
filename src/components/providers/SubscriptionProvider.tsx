@@ -126,14 +126,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
           eliminating "Socket closed" 401 errors by ensuring token is validated first */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
-      {isAuthenticated && user?.id && isTokenReady && (
-        <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />
-      )}
+      {!!isAuthenticated && !!user?.id && !!isTokenReady && <AuthenticatedDataProvider key={`data-${user.id}`} userId={user.id} />}
       {/* Subscriptions deferred by 3s — initial data comes from queries, real-time
           updates can safely start after the startup window completes */}
-      {isAuthenticated && user?.id && subscriptionsReady && (
-        <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />
-      )}
+      {!!isAuthenticated && !!user?.id && !!subscriptionsReady && <AuthenticatedSubscriptions key={`subs-${user.id}`} userId={user.id} />}
       {children}
     </ListAnimationProvider>
   );

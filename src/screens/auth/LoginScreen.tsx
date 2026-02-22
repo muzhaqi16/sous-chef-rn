@@ -214,12 +214,10 @@ export function LoginScreen() {
       />
 
       {/* Loading indicator */}
-      {(isLoggingIn || isBiometricLoading) && (
-        <ActivityIndicator testID="login-loading" size="small" />
-      )}
+      {!!(isLoggingIn || isBiometricLoading) && <ActivityIndicator testID="login-loading" size="small" />}
 
       {/* Biometric Authentication Section */}
-      {shouldShowBiometricButton && (
+      {!!shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
           {/* Main Biometric Login Button */}
           <Pressable

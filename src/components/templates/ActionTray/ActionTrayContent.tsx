@@ -24,11 +24,11 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
       exiting={FadeOut}
       style={styles.content}
     >
-      {(title || showCloseButton) && (
+      {!!(title || showCloseButton) && (
         <View style={styles.header}>
-          {title && <Text style={styles.title}>{title}</Text>}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
           <View style={styles.fill} />
-          {showCloseButton && onClose && (
+          {!!showCloseButton && !!onClose && (
             <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>
               <Icon name="close" size={16} color={theme.colors.textSecondary} />
             </Pressable>

@@ -140,6 +140,10 @@ export const selectSetHasInitializedHomeData = (state: RootState) => state.setHa
 export const selectIsHomeSelectionReady = (state: RootState) => state.isHomeSelectionReady;
 export const selectSetIsHomeSelectionReady = (state: RootState) => state.setIsHomeSelectionReady;
 
+// Pantry query complete flag selectors - gates GetCommonUnits until GetPantry first settles
+export const selectIsPantryQueryComplete = (state: RootState) => state.isPantryQueryComplete;
+export const selectSetIsPantryQueryComplete = (state: RootState) => state.setIsPantryQueryComplete;
+
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({
   theme: state.theme,
@@ -174,6 +178,10 @@ export const selectSearchState = (state: RootState) => ({
   clearSearch: state.clearSearch,
   addToRecentlyScanned: state.addToRecentlyScanned,
 });
+
+// Admin role selector
+export const selectIsAdminUser = (state: RootState) =>
+  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
 
 // Single property selector for network status
 export const selectIsOnline = (state: RootState) => state.isOnline;

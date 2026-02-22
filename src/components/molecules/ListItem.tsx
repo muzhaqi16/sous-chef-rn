@@ -29,7 +29,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   subtitle,
   onPress,
   leftIcon,
-  rightIcon = 'chevron-right',
+  rightIcon = 'chevron-forward',
   badge,
   rightElement,
   leftElement,
@@ -49,12 +49,10 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   const content = (
     <>
       {/* Optional checkbox element (for shopping list items) */}
-      {checkboxElement && (
-        <View style={styles.checkboxContainer}>{checkboxElement}</View>
-      )}
+      {!!checkboxElement && <View style={styles.checkboxContainer}>{checkboxElement}</View>}
       {/* Optional left element for image or icon */}
       {leftElement}
-      {leftIcon && (
+      {!!leftIcon && (
         <View style={styles.leftIcon}>
           <Icon name={leftIcon} size={24} color={iconColor} />
         </View>
@@ -67,8 +65,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         >
           {title}
         </Text>
-        {subtitle && (
-          typeof subtitle === 'string' ? (
+        {!!subtitle && (typeof subtitle === 'string' ? (
             <Text
               style={styles.subtitle}
               numberOfLines={1}
@@ -80,14 +77,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
             <View style={styles.subtitleContainer}>
               {subtitle}
             </View>
-          )
-        )}
+          ))}
       </View>
-      {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
+      {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
-      {rightIcon && !rightElement && (
-        <Icon name={rightIcon} size={24} color={iconColor} />
-      )}
+      {!!rightIcon && !rightElement && <Icon name={rightIcon} size={24} color={iconColor} />}
       {/* Optional drag handle element (for reordering) - on right side */}
       {dragHandleElement}
     </>

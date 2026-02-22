@@ -1,12 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { InteractionManager } from 'react-native';
 
 /**
  * Hook that defers a callback until after navigation animations complete.
  *
- * Uses InteractionManager.runAfterInteractions() to ensure heavy work
- * (data fetches, expensive computations) doesn't interfere with
- * navigation transitions.
+ * Uses requestIdleCallback() to ensure heavy work (data fetches, expensive
+ * computations) doesn't interfere with navigation transitions.
  *
  * @param callback - Function to run after interactions complete
  * @param options - Configuration options
@@ -38,11 +36,11 @@ export function useAfterInteraction(
   useEffect(() => {
     if (!enabled) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- runAfterInteractions is still the recommended approach per RN docs
-    const task = InteractionManager.runAfterInteractions(() => {
+    // Defer until JS thread is idle — fires after navigation animations settle
+    const handle = requestIdleCallback(() => {
       callbackRef.current();
     });
 
-    return () => task.cancel();
+    return () => cancelIdleCallback(handle);
   }, [enabled]);
 }

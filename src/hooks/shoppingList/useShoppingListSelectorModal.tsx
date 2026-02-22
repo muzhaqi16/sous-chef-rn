@@ -147,7 +147,7 @@ export function useShoppingListSelectorModal({
               </Text>
             )}
           </View>
-          {isSelected && (
+          {!!isSelected && (
             <Icon
               name="checkmark"
               size={20}

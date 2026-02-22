@@ -50,7 +50,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         testID={testID}
       >
         <Icon name={icon} size={iconSize} color={iconColor} library={library} />
-        {label && <Text style={styles.deleteText}>{label}</Text>}
+        {label ? <Text style={styles.deleteText}>{label}</Text> : null}
       </Animated.View>
     </GestureDetector>
   );

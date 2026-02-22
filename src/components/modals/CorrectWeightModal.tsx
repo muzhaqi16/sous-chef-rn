@@ -104,20 +104,19 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
           confirmLabel="Correct"
         />
 
-        {pantryItem && (
-          <>
+        {!!pantryItem && <>
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
               </Text>
-              {currentWeightText && (
+              {!!currentWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     Net Weight: {currentWeightText}
                   </Text>
                 </View>
               )}
-              {remainingWeightText && (
+              {!!remainingWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     Remaining: {remainingWeightText}
@@ -169,8 +168,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
                 useBottomSheetInput
               />
             </View>
-          </>
-        )}
+          </>}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

@@ -61,7 +61,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
               >
                 {format(day, 'd')}
               </Text>
-              {hasMeals && (
+              {!!hasMeals && (
                 <View
                   style={[
                     styles.mealDot,

@@ -98,3 +98,27 @@ mutation DeleteMealPlanItem($id: ID!) {
     }
   }
 }
+
+mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
+  duplicateMealPlan(input: $input) {
+    success
+    message
+    code
+    mealPlan {
+      ...MealPlanDisplay
+    }
+  }
+}
+
+mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
+  generateShoppingListFromMealPlan(input: $input) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      name
+      totalItems
+    }
+  }
+}

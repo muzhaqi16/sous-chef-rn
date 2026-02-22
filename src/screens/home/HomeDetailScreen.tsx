@@ -142,7 +142,7 @@ export const HomeDetailScreen: React.FC<{
             loading={joinCodeLoading}
             containerStyle={styles.joinCodeSwitch}
           />
-          {home.allowJoinCode && home.joinCode && (
+          {!!home.allowJoinCode && !!home.joinCode && (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
                 <Text style={styles.joinCodeLabel}>Join Code</Text>

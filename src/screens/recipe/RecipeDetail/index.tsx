@@ -14,6 +14,7 @@ import Animated, {
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
+import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
@@ -33,6 +34,8 @@ import { IngredientCard } from './components/IngredientCard';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuth } from '#hooks/auth/useAuth';
+
+const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
@@ -220,7 +223,7 @@ const RecipeDetailScreen: React.FC = () => {
             {item.totalItems ?? 0} items
           </Text>
         </View>
-        {item.isDefault && (
+        {!!item.isDefault && (
           <View
             style={[
               styles.defaultBadge,
@@ -285,7 +288,7 @@ const RecipeDetailScreen: React.FC = () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{errorMessage}</Text>
-        {backendError && (
+        {!!backendError && (
           <Text style={styles.errorDetails}>
             {JSON.stringify(backendError, null, 2)}
           </Text>
@@ -303,10 +306,12 @@ const RecipeDetailScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Recipe Image with Back Button and Favorite Button */}
-        {displayData.image && (
+        {!!displayData.image && (
           <View style={styles.imageContainer}>
-            <Animated.Image
+            <AnimatedTurboImage
               source={{ uri: displayData.image }}
+              cachePolicy="dataCache"
+              resizeMode="cover"
               style={[styles.recipeImage, imageAnimatedStyle]}
               sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
@@ -316,7 +321,7 @@ const RecipeDetailScreen: React.FC = () => {
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
               {/* Edit button - shown when user is recipe creator */}
-              {isOwner && (
+              {!!isOwner && (
                 <Pressable
                   onPress={handleEditRecipe}
                   style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
@@ -325,7 +330,7 @@ const RecipeDetailScreen: React.FC = () => {
                 </Pressable>
               )}
               {/* Folder button - shown when not saved or saved to non-Favorites folder */}
-              {showFolderIcon && (
+              {!!showFolderIcon && (
                 <Pressable
                   onPress={handleFolderPress}
                   style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
@@ -339,7 +344,7 @@ const RecipeDetailScreen: React.FC = () => {
                 </Pressable>
               )}
               {/* Heart button - shown when not saved or saved to Favorites */}
-              {showHeartIcon && (
+              {!!showHeartIcon && (
                 <Pressable
                   onPress={handleHeartPress}
                   style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
@@ -382,7 +387,7 @@ const RecipeDetailScreen: React.FC = () => {
                 </Text>
               )}
             {/* Cooked count - inline with metadata */}
-            {isBackendRecipe && recipeId && isSaved && (
+            {!!isBackendRecipe && !!recipeId && !!isSaved && (
               <Pressable
                 style={({pressed}) => [styles.cookedMetadata, pressed && styles.pressed]}
                 onPress={() => setCookedModalVisible(true)}
@@ -425,7 +430,7 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
 
           {/* Folder, Tags, Notes, Rating Section - Only for saved recipes */}
-          {isBackendRecipe && recipeId && isSaved && (
+          {!!isBackendRecipe && !!recipeId && !!isSaved && (
             <View style={styles.folderTagsSection}>
               {/* Rating - interactive */}
               <View style={styles.detailRow}>
@@ -491,7 +496,7 @@ const RecipeDetailScreen: React.FC = () => {
               )}
 
               {/* Notes */}
-              {savedNotes && (
+              {!!savedNotes && (
                 <View style={styles.notesDisplayRow}>
                   <Text style={styles.detailLabel}>Notes</Text>
                   <Text style={styles.notesText}>{savedNotes}</Text>
@@ -503,22 +508,22 @@ const RecipeDetailScreen: React.FC = () => {
           {/* Dietary Tags */}
           {!isBackendRecipe && (
             <View style={styles.tags}>
-              {displayData.vegetarian && (
+              {!!displayData.vegetarian && (
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>Vegetarian</Text>
                 </View>
               )}
-              {displayData.vegan && (
+              {!!displayData.vegan && (
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>Vegan</Text>
                 </View>
               )}
-              {displayData.glutenFree && (
+              {!!displayData.glutenFree && (
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>Gluten Free</Text>
                 </View>
               )}
-              {displayData.dairyFree && (
+              {!!displayData.dairyFree && (
                 <View style={styles.tag}>
                   <Text style={styles.tagText}>Dairy Free</Text>
                 </View>
@@ -527,7 +532,7 @@ const RecipeDetailScreen: React.FC = () => {
           )}
 
           {/* Description */}
-          {displayData.summary && (
+          {!!displayData.summary && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
               <Text style={styles.description}>
@@ -539,7 +544,7 @@ const RecipeDetailScreen: React.FC = () => {
           )}
 
           {/* Ingredients */}
-          {displayData.ingredients && displayData.ingredients.length > 0 && (
+          {!!displayData.ingredients && displayData.ingredients.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
@@ -592,8 +597,7 @@ const RecipeDetailScreen: React.FC = () => {
             return (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Recipe</Text>
-                {hasBackendInstructions &&
-                  displayData.instructions.map((step: any, index: number) => (
+                {!!hasBackendInstructions && displayData.instructions.map((step: any, index: number) => (
                     <View key={index} style={styles.instructionStep}>
                       <Text style={styles.stepNumber}>
                         {step.number || index + 1}.
@@ -601,8 +605,7 @@ const RecipeDetailScreen: React.FC = () => {
                       <Text style={styles.stepText}>{step.step}</Text>
                     </View>
                   ))}
-                {hasAnalyzedInstructions &&
-                  displayData.instructions[0].steps.map(
+                {!!hasAnalyzedInstructions && displayData.instructions[0].steps.map(
                     (step: any, index: number) => (
                       <View key={index} style={styles.instructionStep}>
                         <Text style={styles.stepNumber}>{step.number}.</Text>
@@ -610,9 +613,7 @@ const RecipeDetailScreen: React.FC = () => {
                       </View>
                     ),
                   )}
-                {!hasBackendInstructions &&
-                  !hasAnalyzedInstructions &&
-                  hasHtmlInstructions && (
+                {!hasBackendInstructions && !hasAnalyzedInstructions && !!hasHtmlInstructions && (
                     <Text style={styles.description}>
                       {displayData.instructionsHtml
                         ?.replace(/<[^>]*>/g, '\n')
@@ -624,12 +625,10 @@ const RecipeDetailScreen: React.FC = () => {
           })()}
 
           {/* Reviews Section */}
-          {isBackendRecipe && recipeId && (
-            <ReviewSection {...recipeReviews} />
-          )}
+          {!!isBackendRecipe && !!recipeId && <ReviewSection {...recipeReviews} />}
 
           {/* Source Attribution */}
-          {(displayData.sourceName || displayData.sourceUrl) && (
+          {!!(displayData.sourceName || displayData.sourceUrl) && (
             <Pressable
               style={({pressed}) => [styles.attribution, displayData.sourceUrl && pressed && styles.pressed]}
               onPress={() =>
@@ -640,7 +639,7 @@ const RecipeDetailScreen: React.FC = () => {
               <Text style={styles.attributionText}>
                 Recipe from {displayData.sourceName || 'External Source'}
               </Text>
-              {displayData.sourceUrl && (
+              {!!displayData.sourceUrl && (
                 <View style={styles.viewOriginalLink}>
                   <Text style={styles.viewOriginalText}>
                     View Original Recipe
@@ -869,7 +868,6 @@ const styles = StyleSheet.create(theme => ({
   recipeImage: {
     width: '100%',
     height: 300,
-    resizeMode: 'cover',
   },
   backButton: {
     position: 'absolute',

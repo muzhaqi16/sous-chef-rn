@@ -42,7 +42,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
       disabled={disabled || !onPress}
       testID={testID}
     >
-      {icon && (
+      {!!icon && (
         <View style={styles.iconContainer}>
           <Icon
             name={icon}
@@ -56,7 +56,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}
         </Text>
-        {subtitle && (
+        {!!subtitle && (
           <Text style={[styles.subtitle, disabled && styles.subtitleDisabled]}>
             {subtitle}
           </Text>
@@ -65,7 +65,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
 
       {rightElement}
 
-      {showChevron && (
+      {!!showChevron && (
         <Icon
           name="chevron-forward"
           size={24}

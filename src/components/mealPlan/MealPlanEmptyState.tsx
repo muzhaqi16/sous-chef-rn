@@ -31,7 +31,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
         <Icon name="add" size={20} color={styles.buttonIcon.color} />
         <Text style={styles.buttonText}>Create Your First Meal Plan</Text>
       </Pressable>
-      {onCreateFromTemplate && (
+      {!!onCreateFromTemplate && (
         <Pressable
           onPress={onCreateFromTemplate}
           style={({ pressed }) => [styles.templateButton, pressed && styles.pressed]}

@@ -175,7 +175,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
             returnKeyType="done"
             onSubmitEditing={handleCreate}
           />
-          {error && (
+          {!!error && (
             <Text style={[styles.errorText, { color: theme.colors.error }]}>
               {error}
             </Text>

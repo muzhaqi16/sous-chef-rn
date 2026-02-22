@@ -83,7 +83,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         {tags.map((tag, index) => (
           <View key={`${tag}-${index}`} style={styles.tagChip}>
             <Text style={styles.tagText}>{tag}</Text>
-            {editable && (
+            {!!editable && (
               <Pressable
                 onPress={() => handleRemoveTag(tag)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -99,7 +99,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         ))}
 
         {/* Input field */}
-        {editable && tags.length < maxTags && (
+        {!!editable && tags.length < maxTags && (
           <BottomSheetTextInput
             style={styles.input}
             value={inputValue}
@@ -130,14 +130,14 @@ export const TagInput: React.FC<TagInputProps> = ({
       </View>
 
       {/* Tag limit indicator */}
-      {editable && tags.length >= maxTags && (
+      {!!editable && tags.length >= maxTags && (
         <Text style={styles.limitText}>
           Maximum {maxTags} tags reached
         </Text>
       )}
 
       {/* Suggestions dropdown */}
-      {isFocused && filteredSuggestions.length > 0 && (
+      {!!isFocused && filteredSuggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           <ScrollView
             horizontal

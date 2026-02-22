@@ -70,7 +70,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
   return (
     <View style={[styles.container, style]}>
       {/* Serving size header */}
-      {displayServingSize && (
+      {!!displayServingSize && (
         <View style={styles.servingHeader}>
           <Text style={styles.servingLabel}>Serving Size</Text>
           <Text style={styles.servingValue}>{displayServingSize}</Text>

@@ -40,15 +40,15 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     <View style={styles.content}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
-        {badge && (
+        {!!badge && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
           </View>
         )}
       </View>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
-    {trailingText && <Text style={styles.trailingText}>{trailingText}</Text>}
+    {trailingText ? <Text style={styles.trailingText}>{trailingText}</Text> : null}
   </View>
 );
 

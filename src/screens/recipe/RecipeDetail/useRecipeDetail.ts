@@ -621,11 +621,15 @@ export function useRecipeDetail() {
               itemName:
                 ingredient.name || ingredient.original || 'Unknown ingredient',
               quantity: ingredient.amount || 0,
-              unitName:
-                ingredient.measures?.us?.unitShort ||
-                ingredient.measures?.metric?.unitShort ||
-                '',
-              aisle: ingredient.aisle || '',
+              unit: {
+                unitName:
+                  ingredient.measures?.us?.unitShort ||
+                  ingredient.measures?.metric?.unitShort ||
+                  '',
+              },
+              storePrefs: ingredient.aisle
+                ? { aisle: ingredient.aisle }
+                : undefined,
             }));
 
           const result = await addItemsToShoppingListMutation({

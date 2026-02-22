@@ -265,10 +265,10 @@ export const AcceptInvite: React.FC = () => {
           </Text>
         </View>
 
-        {((invitationType === 'shopping_list' &&
+        {!!((invitationType === 'shopping_list' &&
           (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
           (invitationType === 'home' &&
-            (homeInvite as any)?.home?.description)) && ( // Acceptable: optional field
+            (homeInvite as any)?.home?.description)) && (
           <View style={styles.messageContainer}>
             <Text style={styles.messageLabel}>Description:</Text>
             <Text style={styles.message}>

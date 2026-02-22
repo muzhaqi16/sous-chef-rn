@@ -68,7 +68,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         </Text>
       </View>
 
-      {onDismiss && (
+      {!!onDismiss && (
         <Pressable
           style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
           onPress={handleDismiss}

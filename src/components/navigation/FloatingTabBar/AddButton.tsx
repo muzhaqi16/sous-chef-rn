@@ -27,11 +27,11 @@ export const AddButton: React.FC<AddButtonProps> = ({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.9, SPRING.PRESS);
+    scale.set(withSpring(0.9, SPRING.PRESS));
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, SPRING.PRESS);
+    scale.set(withSpring(1, SPRING.PRESS));
   }, [scale]);
 
   const handlePress = useCallback(() => {

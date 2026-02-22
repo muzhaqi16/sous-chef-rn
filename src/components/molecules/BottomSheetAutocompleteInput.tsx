@@ -215,7 +215,7 @@ export function BottomSheetAutocompleteInput<T>({
         style={styles.messageContainer}
       >
         <Text style={styles.emptyText}>{emptyText}</Text>
-        {emptySubtext && <Text style={styles.emptySubtext}>{emptySubtext}</Text>}
+        {emptySubtext ? <Text style={styles.emptySubtext}>{emptySubtext}</Text> : null}
       </BottomSheetView>
     );
   };

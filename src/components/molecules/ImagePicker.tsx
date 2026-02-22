@@ -8,7 +8,6 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -16,6 +15,7 @@ import {
   ImageValidationError,
 } from '#utils/imageValidation';
 import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
+import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from './ImagePickerSheet';
 
 export interface ImageFile {
@@ -54,6 +54,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
+  const { request: requestCamera, isBlocked, openSettings } = usePermission('camera');
 
   const handleImageResponse = useCallback(
     (response: ImagePickerResponse) => {
@@ -107,47 +108,23 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
     [onImageSelected, onMultiImageSelected, multiSelect, onError, isProfile],
   );
 
-  // PERFORMANCE: Consolidated permission request logic
-  const requestPermissionAndLaunch = useCallback(
-    async (
-      permission: any,
-      launchFn: (
-        options: CameraOptions | ImageLibraryOptions,
-        callback: (response: ImagePickerResponse) => void,
-      ) => void,
-      permissionName: string,
-      allowLaunchWithoutPermission: boolean = false,
-    ) => {
-      try {
-        const result = await request(permission);
-
-        if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
-          launchFn(DEFAULT_OPTIONS, handleImageResponse);
-        } else if (allowLaunchWithoutPermission) {
-          // Modern iOS doesn't need permission for photo library
-          launchFn(DEFAULT_OPTIONS, handleImageResponse);
-        } else {
-          Alert.alert(
-            `${permissionName} Permission`,
-            `${permissionName} permission is required. Please enable it in your device settings.`,
-          );
-        }
-      } catch {
-        // Fallback: try launching without permission check
-        launchFn(DEFAULT_OPTIONS, handleImageResponse);
-      }
-    },
-    [handleImageResponse],
-  );
-
-  const handleCameraPress = useCallback(() => {
-    requestPermissionAndLaunch(
-      PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
-      launchCamera,
-      'Camera',
-      false,
-    );
-  }, [requestPermissionAndLaunch]);
+  const handleCameraPress = useCallback(async () => {
+    if (isBlocked) {
+      Alert.alert(
+        'Camera Permission',
+        'Camera permission is required. Please enable it in your device settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: openSettings },
+        ],
+      );
+      return;
+    }
+    const result = await requestCamera();
+    if (result === 'granted') {
+      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+    }
+  }, [isBlocked, requestCamera, openSettings, handleImageResponse]);
 
   const handleLibraryPress = useCallback(() => {
     const libraryOptions: ImageLibraryOptions = {

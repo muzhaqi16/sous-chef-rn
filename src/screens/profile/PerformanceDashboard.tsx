@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -6,6 +6,8 @@ import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
+import { useAppStore, selectIsAdminUser } from '#/store/useAppStore';
+import performance from 'react-native-performance';
 
 export const PerformanceDashboard: React.FC = () => {
   // Performance state (from isolated performance store)
@@ -73,12 +75,44 @@ export const PerformanceDashboard: React.FC = () => {
     return date.toLocaleTimeString();
   };
 
-  if (!Environment.shouldEnableDebugFeatures()) {
+  const isAdminUser = useAppStore(selectIsAdminUser);
+
+  const startupMetrics = useMemo(() => {
+    const entries = performance.getEntriesByType('react-native-mark');
+    const find = (name: string) => entries.find(e => e.name === name);
+
+    const launchStart = find('nativeLaunchStart');
+    const launchEnd = find('nativeLaunchEnd');
+    const bundleStart = find('runJsBundleStart');
+    const bundleEnd = find('runJsBundleEnd');
+    const contentAppeared = find('contentAppeared');
+
+    return {
+      nativeLaunch: launchStart && launchEnd ? launchEnd.startTime - launchStart.startTime : null,
+      bundleLoad: bundleStart && bundleEnd ? bundleEnd.startTime - bundleStart.startTime : null,
+      contentAppeared: contentAppeared?.startTime ?? null,
+    };
+  }, []);
+
+  const recentHttpRequests = useMemo(() => {
+    const entries = performance.getEntriesByType('resource');
+    return entries.slice(-10).reverse().map(entry => {
+      let host = 'unknown';
+      try {
+        host = new URL(entry.name).host;
+      } catch {
+        // Keep 'unknown'
+      }
+      return { host, duration: entry.duration, url: entry.name };
+    });
+  }, []);
+
+  if (!Environment.shouldEnableDebugFeatures() && !isAdminUser) {
     return (
       <ProfileScreenWrapper title="Performance Dashboard">
         <View style={styles.notAvailableContainer}>
           <Text style={styles.notAvailableText}>
-            Performance dashboard is only available in development and staging builds.
+            Performance dashboard is only available to administrators.
           </Text>
         </View>
       </ProfileScreenWrapper>
@@ -118,8 +152,85 @@ export const PerformanceDashboard: React.FC = () => {
           />
         </SettingSection>
 
+        {/* Startup Metrics */}
+        {(startupMetrics.nativeLaunch !== null ||
+          startupMetrics.bundleLoad !== null ||
+          startupMetrics.contentAppeared !== null) && (
+          <View style={styles.metricsSection}>
+            <Text style={styles.sectionTitle}>Startup Metrics</Text>
+            <Text style={styles.sectionSubtitle}>
+              One-shot timing from app launch
+            </Text>
+            <View style={styles.startupCard}>
+              {startupMetrics.nativeLaunch !== null && (
+                <View style={styles.startupRow}>
+                  <Text style={styles.startupLabel}>Native Launch</Text>
+                  <Text style={styles.startupValue}>
+                    {formatTime(startupMetrics.nativeLaunch)}
+                  </Text>
+                </View>
+              )}
+              {startupMetrics.bundleLoad !== null && (
+                <View style={styles.startupRow}>
+                  <Text style={styles.startupLabel}>JS Bundle Load</Text>
+                  <Text style={styles.startupValue}>
+                    {formatTime(startupMetrics.bundleLoad)}
+                  </Text>
+                </View>
+              )}
+              {startupMetrics.contentAppeared !== null && (
+                <View style={styles.startupRow}>
+                  <Text style={styles.startupLabel}>Content Appeared</Text>
+                  <Text style={styles.startupValue}>
+                    {formatTime(startupMetrics.contentAppeared)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* HTTP Resource Summary */}
+        {recentHttpRequests.length > 0 && (
+          <View style={styles.metricsSection}>
+            <Text style={styles.sectionTitle}>HTTP Resource Summary</Text>
+            <Text style={styles.sectionSubtitle}>
+              Last {recentHttpRequests.length} HTTP requests
+            </Text>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
+                  Host
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
+                  Duration
+                </Text>
+              </View>
+              {recentHttpRequests.map((req, index) => (
+                <View
+                  key={`${req.url}-${index}`}
+                  style={[
+                    styles.tableRow,
+                    index % 2 === 0 && styles.tableRowEven,
+                  ]}
+                >
+                  <Text
+                    style={[styles.tableCell, styles.nameColumn]}
+                    numberOfLines={1}
+                  >
+                    {req.host}
+                  </Text>
+                  <Text style={[styles.tableCell, styles.avgColumn]}>
+                    {formatTime(req.duration)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Slowest Components */}
-        {trackRenders && slowestComponents.length > 0 && (
+        {!!trackRenders && slowestComponents.length > 0 && (
           <View style={styles.metricsSection}>
             <Text style={styles.sectionTitle}>Slowest Components</Text>
             <Text style={styles.sectionSubtitle}>
@@ -170,7 +281,7 @@ export const PerformanceDashboard: React.FC = () => {
         )}
 
         {/* Slowest Screens */}
-        {trackScreens && slowestScreens.length > 0 && (
+        {!!trackScreens && slowestScreens.length > 0 && (
           <View style={styles.metricsSection}>
             <Text style={styles.sectionTitle}>Slowest Screen Transitions</Text>
             <Text style={styles.sectionSubtitle}>
@@ -221,7 +332,7 @@ export const PerformanceDashboard: React.FC = () => {
         )}
 
         {/* Memory Snapshots */}
-        {trackMemory && recentMemorySnapshots.length > 0 && (
+        {!!trackMemory && recentMemorySnapshots.length > 0 && (
           <View style={styles.metricsSection}>
             <Text style={styles.sectionTitle}>Recent Memory Snapshots</Text>
             <Text style={styles.sectionSubtitle}>
@@ -246,9 +357,8 @@ export const PerformanceDashboard: React.FC = () => {
                   </View>
                   <Text style={styles.memoryDetails}>
                     {formatMemory(snapshot.usedBytes)}
-                    {snapshot.limitBytes &&
-                      ` / ${formatMemory(snapshot.limitBytes)}`}
-                    {snapshot.context && ` • ${snapshot.context}`}
+                    {!!snapshot.limitBytes && ` / ${formatMemory(snapshot.limitBytes)}`}
+                    {!!snapshot.context && ` • ${snapshot.context}`}
                   </Text>
                 </View>
               ))}
@@ -257,10 +367,7 @@ export const PerformanceDashboard: React.FC = () => {
         )}
 
         {/* Empty State */}
-        {isEnabled &&
-          slowestComponents.length === 0 &&
-          slowestScreens.length === 0 &&
-          recentMemorySnapshots.length === 0 && (
+        {!!isEnabled && slowestComponents.length === 0 && slowestScreens.length === 0 && recentMemorySnapshots.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 No performance data collected yet.
@@ -436,6 +543,31 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  startupCard: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  startupRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  startupLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+  },
+  startupValue: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
   },
 }));
 

@@ -75,7 +75,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
           </Pressable>
         )}
 
-        {showAllCuisines && (
+        {!!showAllCuisines && (
           <Pressable
             style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
             onPress={() => setShowAllCuisines(false)}

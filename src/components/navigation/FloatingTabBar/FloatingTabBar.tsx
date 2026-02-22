@@ -55,7 +55,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
 
     // Sync shared value with React Navigation state
     useEffect(() => {
-      activeTabIndex.value = state.index;
+      activeTabIndex.set(state.index);
     }, [state.index, activeTabIndex]);
 
     // Animated values for smooth hide/show
@@ -82,10 +82,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
       const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
       // Fast timing for opacity (linear, no spring)
-      opacity.value = withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST });
+      opacity.set(withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST }));
 
       // Snappy spring with subtle bounce (higher damping = less bounce)
-      translateY.value = withSpring(shouldHide ? 150 : 0, SPRING.HEAVY);
+      translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
     }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
 
     // Animated style for smooth transitions
@@ -117,7 +117,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
         targetIndex: number,
       ) => {
         // Set shared value immediately for instant UI-thread icon feedback
-        activeTabIndex.value = targetIndex;
+        activeTabIndex.set(targetIndex);
         HapticService.selection();
 
         const event = navigation.emit({
@@ -149,6 +149,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
               navigation.navigate(route.name, route.params);
             }
           }
+
         }
       },
       [navigation, activeTabIndex],

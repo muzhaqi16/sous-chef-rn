@@ -71,7 +71,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           value={value}
           {...textInputProps}
         />
-        {showClear && (
+        {!!showClear && (
           <Pressable
             style={({pressed}) => [styles.iconWrapper, pressed && styles.pressed]}
             onPress={onClear}
@@ -90,7 +90,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </View>
         )}
       </View>
-      {hasError && (
+      {!!hasError && (
         <Text
           testID={textInputProps.testID ? `${textInputProps.testID}-error` : undefined}
           style={styles.errorText}

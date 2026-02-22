@@ -58,7 +58,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
         style={{margin: 16}}>
         Share Shopping List
       </Button>
-      {renderBottomSheet && (
+      {!!renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={['40%', '60%']}
@@ -69,7 +69,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
             onChangeText={setEmail}
           />
           <Button onPress={handleShare} disabled={isOffline}>Share</Button>
-          {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          {error ? <Text style={styles.errorText}>Error: {error}</Text> : null}
         </BottomSheet>
       )}
     </>

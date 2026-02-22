@@ -40,7 +40,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   // https://shopify.github.io/flash-list/docs/guides/reanimated
   useEffect(() => {
     if (itemId) {
-      isPressed.value = false;
+      isPressed.set(false);
       setPendingChecked(null);
     }
   }, [itemId, isPressed]);
@@ -91,7 +91,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 
   const handlePressIn = useCallback(() => {
     if (!disabled) {
-      isPressed.value = true;
+      isPressed.set(true);
       // Short haptic feedback for checkbox toggle
       HapticService.light();
     }
@@ -99,7 +99,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 
   const handlePressOut = useCallback(() => {
     if (!disabled) {
-      isPressed.value = false;
+      isPressed.set(false);
     }
   }, [disabled, isPressed]);
 
@@ -134,9 +134,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}
         {/* The container scale/color animation provides sufficient visual feedback */}
-        {visuallyChecked && (
-          <Icon name="checkmark" size={size * 0.66} color="white" />
-        )}
+        {!!visuallyChecked && <Icon name="checkmark" size={size * 0.66} color="white" />}
       </Animated.View>
     </Pressable>
   );

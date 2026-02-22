@@ -66,10 +66,10 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       setImageSize({ width: displayWidth, height: displayHeight });
 
       // Reset transforms
-      scale.value = 1;
-      startScale.value = 1;
-      offset.value = { x: 0, y: 0 };
-      startOffset.value = { x: 0, y: 0 };
+      scale.set(1);
+      startScale.set(1);
+      offset.set({ x: 0, y: 0 });
+      startOffset.set({ x: 0, y: 0 });
     });
   }, [imageFile.uri, scale, startScale, offset, startOffset]);
 
@@ -145,8 +145,9 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       const cropCenterY = CROP_SIZE / 2;
 
       // Calculate where the image center is positioned on screen after transforms
-      const imageCenterX = CROP_SIZE / 2 + offset.value.x;
-      const imageCenterY = CROP_SIZE / 2 + offset.value.y;
+      const currentOffset = offset.get();
+      const imageCenterX = CROP_SIZE / 2 + currentOffset.x;
+      const imageCenterY = CROP_SIZE / 2 + currentOffset.y;
 
       // Calculate the offset from image center to crop center
       const offsetFromImageCenter = {
@@ -161,16 +162,16 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
       const cropX = Math.max(
         0,
         originalImageSize.width / 2 +
-          (offsetFromImageCenter.x * scaleRatio) / scale.value,
+          (offsetFromImageCenter.x * scaleRatio) / scale.get(),
       );
       const cropY = Math.max(
         0,
         originalImageSize.height / 2 +
-          (offsetFromImageCenter.y * scaleRatio) / scale.value,
+          (offsetFromImageCenter.y * scaleRatio) / scale.get(),
       );
 
       // Calculate crop size in original image coordinates
-      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.value;
+      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.get();
 
       // Ensure crop doesn't go outside image boundaries
       const finalCropX = Math.max(
@@ -250,10 +251,10 @@ export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile 
   };
 
   const resetTransforms = () => {
-    scale.value = withSpring(1);
-    startScale.value = 1;
-    offset.value = withSpring({ x: 0, y: 0 });
-    startOffset.value = { x: 0, y: 0 };
+    scale.set(withSpring(1));
+    startScale.set(1);
+    offset.set(withSpring({ x: 0, y: 0 }));
+    startOffset.set({ x: 0, y: 0 });
   };
 
   return (

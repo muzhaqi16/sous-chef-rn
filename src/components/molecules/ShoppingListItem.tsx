@@ -88,13 +88,11 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
           testID={`shopping-item-checkbox-${id}`}
         >
           <View style={styles.checkbox}>
-            {isPurchased && <Icon name="checkmark" size={16} color="white" />}
+            {!!isPurchased && <Icon name="checkmark" size={16} color="white" />}
           </View>
         </Pressable>
 
-        {imageUrl && (
-          <CachedImage uri={imageUrl} style={styles.itemImage} />
-        )}
+        {!!imageUrl && <CachedImage uri={imageUrl} style={styles.itemImage} />}
 
         <View style={styles.contentContainer}>
           <Text style={styles.itemName}>

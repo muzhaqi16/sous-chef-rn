@@ -9,7 +9,7 @@ interface MealTypeSectionProps {
   mealType: MealType;
   label: string;
   items: MealPlanItemFragment[];
-  onToggleCompleted: (id: string, isCompleted: boolean) => void;
+  onToggleCompleted: (id: string, isCompleted: boolean, hasRecipe: boolean) => void;
   onItemPress?: (item: MealPlanItemFragment) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType: MealType) => void;
@@ -28,7 +28,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{label}</Text>
-        {onAddMeal && (
+        {!!onAddMeal && (
           <Pressable
             onPress={() => onAddMeal(mealType)}
             style={styles.addButton}

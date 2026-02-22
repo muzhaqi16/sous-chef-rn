@@ -105,7 +105,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
     <View style={[styles.container, style]}>
       {/* Image display */}
       <View style={[styles.imageContainer, { height: imageHeight }]}>
-        {imageLoading && (
+        {!!imageLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
@@ -139,7 +139,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
       </View>
 
       {/* Dot indicators at bottom */}
-      {showTabs && (
+      {!!showTabs && (
         <View style={styles.dotsContainer}>
           {tabOptions.map(key => (
             <Pressable

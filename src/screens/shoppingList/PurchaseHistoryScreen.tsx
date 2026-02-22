@@ -69,7 +69,7 @@ export const PurchaseHistoryScreen: React.FC<{
             </Text>
           </View>
 
-          {purchase.user && (
+          {!!purchase.user && (
             <View style={styles.purchaseDetailRow}>
               <Icon
                 name="person-outline"

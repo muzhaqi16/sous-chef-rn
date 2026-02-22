@@ -153,7 +153,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>Manage Recipe</Text>
-            {recipeName && (
+            {!!recipeName && (
               <Text style={styles.recipeName} numberOfLines={1}>
                 {recipeName}
               </Text>
@@ -187,7 +187,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         </View>
 
         {/* Loading indicator */}
-        {updating && (
+        {!!updating && (
           <View style={styles.updatingBanner}>
             <ActivityIndicator size="small" color={theme.colors.primary} />
             <Text style={styles.updatingText}>Updating...</Text>
@@ -256,7 +256,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
                 >
                   {isNoFolder ? 'No Folder' : folder}
                 </Text>
-                {isSelected && (
+                {!!isSelected && (
                   <Ionicons
                     name="checkmark"
                     size={18}

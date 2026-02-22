@@ -1008,6 +1008,11 @@
           "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
           "refId": "D",
           "legendFormat": "Bundle Load P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "refId": "E",
+          "legendFormat": "Content Appeared P95"
         }
       ],
       "title": "App Startup (P50/P95)",
@@ -1092,6 +1097,11 @@
           "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
           "refId": "C",
           "legendFormat": "JS→Hydrated"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "refId": "D",
+          "legendFormat": "Content Appeared"
         }
       ],
       "title": "Cold Start Breakdown",
@@ -1257,6 +1267,191 @@
         }
       ],
       "title": "Bundle Load P95",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "95th percentile time to content appeared (from process start)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2000 },
+              { "color": "red", "value": 4000 }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 48
+      },
+      "id": 55,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "refId": "A",
+          "legendFormat": "Content Appeared P95"
+        }
+      ],
+      "title": "Content Appeared P95",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "HTTP request duration P50 and P95 by host",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 3000 }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 52
+      },
+      "id": 56,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (host, le))",
+          "refId": "A",
+          "legendFormat": "P50: {{host}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (host, le))",
+          "refId": "B",
+          "legendFormat": "P95: {{host}}"
+        }
+      ],
+      "title": "HTTP Request Duration by Host",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Overall 95th percentile HTTP request duration",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 3000 }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 48
+      },
+      "id": 57,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket{job=\"sous-chef-app\"}[5m])) by (le))",
+          "refId": "A",
+          "legendFormat": "HTTP P95"
+        }
+      ],
+      "title": "HTTP Request Duration P95",
       "type": "stat"
     }
   ],

@@ -31,7 +31,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}
         </Text>
-        {description && (
+        {!!description && (
           <Text
             style={[styles.description, disabled && styles.descriptionDisabled]}
           >

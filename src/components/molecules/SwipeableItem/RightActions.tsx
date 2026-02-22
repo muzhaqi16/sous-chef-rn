@@ -65,7 +65,7 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
         style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
         pointerEvents="box-none"
       >
-        {onEdit && (
+        {!!onEdit && (
           <AnimatedActionButton
             onPress={handleEditPress}
             icon="create-outline"
@@ -76,7 +76,7 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
             index={0}
           />
         )}
-        {onDelete && (
+        {!!onDelete && (
           <AnimatedActionButton
             onPress={handleDeletePress}
             icon="trash-outline"

@@ -60,7 +60,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         onTouchEnd={disabled ? undefined : onPress}
         style={[styles.chip, animatedContainerStyle]}
       >
-        {imageUrl && (
+        {!!imageUrl && (
           <CachedImage
             uri={imageUrl}
             style={styles.image}
@@ -69,7 +69,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         <Animated.Text style={[styles.label, animatedTextStyle]}>
           {label}
         </Animated.Text>
-        {selected && (
+        {!!selected && (
           <Animated.View
             style={styles.iconContainer}
             layout={LinearTransition}

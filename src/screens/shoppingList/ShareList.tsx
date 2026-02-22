@@ -220,7 +220,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                     {statusText}
                   </Text>
                 </View>
-                {member.invitedAt && (
+                {!!member.invitedAt && (
                   <Text style={styles.invitedText}>
                     Invited {new Date(member.invitedAt).toLocaleDateString()}
                   </Text>
@@ -306,7 +306,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
         )}
 
         {/* Leave List section - only show for non-owners who are collaborators */}
-        {currentUserCollaborator && !isOwner && (
+        {!!currentUserCollaborator && !isOwner && (
           <View style={styles.leaveSection}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
             <Text style={styles.leaveDescription}>

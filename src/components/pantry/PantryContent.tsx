@@ -29,7 +29,8 @@ import {
   formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
-import { StorageState } from '#generated';
+import { StorageState, type PantryStats } from '#generated';
+import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
@@ -101,6 +102,9 @@ interface PantryContentProps {
   avatarUrl?: string | null;
   notificationCount?: number;
 
+  // Stats
+  stats?: PantryStats | null;
+
   // Items
   items: PantryItem[];
 
@@ -134,6 +138,7 @@ interface PantryContentProps {
   onAvatarPress?: () => void;
   onHomePress?: () => void;
   onSettingsPress?: () => void;
+  onAnalyticsPress?: () => void;
   onLowStockPress?: () => void;
   lowStockLoading?: boolean;
 
@@ -179,11 +184,12 @@ const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
 
-export const PantryContent = React.forwardRef<PantryContentRef, PantryContentProps>(({
+export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
   userName,
   householdName,
   avatarUrl,
   notificationCount = 0,
+  stats,
   items,
   locationFilter,
   onLocationFilterChange,
@@ -204,6 +210,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   onAvatarPress,
   onHomePress,
   onSettingsPress,
+  onAnalyticsPress,
   onLowStockPress,
   lowStockLoading = false,
   totalCount,
@@ -244,11 +251,11 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   useEffect(() => {
     const duration = 200;
     if (showSkeletons) {
-      skeletonOpacity.value = withTiming(1, { duration });
-      contentOpacity.value = withTiming(0, { duration });
+      skeletonOpacity.set(withTiming(1, { duration }));
+      contentOpacity.set(withTiming(0, { duration }));
     } else {
-      skeletonOpacity.value = withTiming(0, { duration });
-      contentOpacity.value = withTiming(1, { duration });
+      skeletonOpacity.set(withTiming(0, { duration }));
+      contentOpacity.set(withTiming(1, { duration }));
     }
   }, [showSkeletons, skeletonOpacity, contentOpacity]);
 
@@ -534,6 +541,14 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
               </Pressable>
             }
           />
+
+          {/* Alert Bar */}
+          {!!stats && (
+            <PantryAlertBar
+              stats={stats}
+              onAnalyticsPress={onAnalyticsPress}
+            />
+          )}
         </View>
 
         {/* Always visible — not part of crossfade */}
@@ -586,7 +601,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
           </Animated.View>
 
           {/* Skeleton layer (absolute on top, fades out) */}
-          {showSkeletons && (
+          {!!showSkeletons && (
             <Animated.View
               testID="pantry-loading"
               style={[styles.absoluteFill, skeletonAnimatedStyle]}
@@ -612,7 +627,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       </View>
     </PantryActionsProvider>
   );
-});
+}));
 
 const styles = StyleSheet.create(theme => ({
   container: {

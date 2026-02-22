@@ -920,6 +920,7 @@ fragment MealPlanItemFragment on MealPlanItem {
   estimatedCost
   actualCost
   nutritionSource
+  usedPantryItems
   recipe {
     ...BasicRecipeFragment
   }
@@ -946,8 +947,19 @@ fragment MealPlanDisplay on MealPlan {
 
 fragment MealPlanFull on MealPlan {
   ...MealPlanDisplay
+  dietaryProfile {
+    id
+    calorieTarget
+    proteinTarget
+    carbsTarget
+    fatTarget
+  }
   mealPlanItems {
     ...MealPlanItemFragment
+  }
+  generatedShoppingLists {
+    id
+    name
   }
   nutritionSummary {
     totalCalories
@@ -961,6 +973,41 @@ fragment MealPlanFull on MealPlan {
     totalMeals
     mealsWithNutrition
     coveragePercentage
+    mealTypeBreakdown {
+      mealType
+      totalCalories
+      totalProtein
+      totalCarbs
+      totalFat
+      mealCount
+    }
+  }
+  nutritionGoalProgress {
+    overallScore
+    caloriesProgress {
+      target
+      current
+      percentage
+      status
+    }
+    proteinProgress {
+      target
+      current
+      percentage
+      status
+    }
+    carbsProgress {
+      target
+      current
+      percentage
+      status
+    }
+    fatProgress {
+      target
+      current
+      percentage
+      status
+    }
   }
 }
 

@@ -72,7 +72,7 @@ export const SkeletonListItem: React.FC<SkeletonListItemProps> = ({
   return (
     <View style={styles.container}>
       {/* Leading element (avatar or thumbnail) */}
-      {showLeading && (
+      {!!showLeading && (
         <View style={styles.leading}>
           {leadingType === 'circle' ? (
             <SkeletonCircle size={leadingSize} animated={animated} />
@@ -97,13 +97,11 @@ export const SkeletonListItem: React.FC<SkeletonListItemProps> = ({
           animated={animated}
         />
         {/* Subtitle */}
-        {showSubtitle && (
-          <SkeletonLine width="50%" height={14} animated={animated} />
-        )}
+        {!!showSubtitle && <SkeletonLine width="50%" height={14} animated={animated} />}
       </View>
 
       {/* Trailing element */}
-      {showTrailing && (
+      {!!showTrailing && (
         <View style={styles.trailing}>
           <SkeletonCircle size={24} animated={animated} />
         </View>

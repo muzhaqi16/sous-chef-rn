@@ -168,7 +168,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             />
           )}
 
-          {item.type === 'radio' && item.options && (
+          {item.type === 'radio' && !!item.options && (
             <Ionicons
               name={
                 item.selected === item.value
@@ -237,7 +237,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       />
 
       {/* Selection Bottom Sheet */}
-      {item.type === 'modal' && item.options && (
+      {item.type === 'modal' && !!item.options && (
         <BottomSheetModal
           ref={ref}
           {...modalProps}

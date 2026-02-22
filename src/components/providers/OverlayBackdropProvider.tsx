@@ -53,18 +53,18 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
     const targetOpacity = options?.opacity ?? 0.5;
     onPressCallbackRef.current = options?.onPress ?? null;
     setIsVisible(true);
-    opacity.value = withTiming(targetOpacity, { duration: 100 });
+    opacity.set(withTiming(targetOpacity, { duration: 100 }));
   }, [opacity]);
 
   const hideBackdrop = useCallback(() => {
     activeCountRef.current = Math.max(0, activeCountRef.current - 1);
     if (activeCountRef.current === 0) {
       onPressCallbackRef.current = null;
-      opacity.value = withTiming(0, { duration: 100 }, (finished) => {
+      opacity.set(withTiming(0, { duration: 100 }, (finished) => {
         if (finished) {
           scheduleOnRN(setIsVisible, false);
         }
-      });
+      }));
     }
   }, [opacity]);
 

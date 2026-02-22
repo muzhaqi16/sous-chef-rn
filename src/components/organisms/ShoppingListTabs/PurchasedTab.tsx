@@ -197,7 +197,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
 
   return (
     <StaggeredEntryProvider>
-      {onBatchMoveToPantry && items.length > 0 && (
+      {!!onBatchMoveToPantry && items.length > 0 && (
         <BatchMoveToPantryBar
           onPress={onBatchMoveToPantry}
           loading={batchMoveToPantryLoading}

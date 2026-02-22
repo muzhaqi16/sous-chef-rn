@@ -46,14 +46,14 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
 
   useEffect(() => {
     if (animated) {
-      shimmerTranslate.value = withRepeat(
+      shimmerTranslate.set(withRepeat(
         withTiming(1, {
           duration: 1500,
           easing: Easing.ease,
         }),
         -1, // infinite
         false, // don't reverse
-      );
+      ));
     }
   }, [animated, shimmerTranslate]);
 
@@ -82,7 +82,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
       ]}
     >
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
-      {animated && (
+      {!!animated && (
         <View style={styles.shimmer}>
           <Animated.View style={[{ width: '100%', height: '100%' }, animatedStyle]} />
         </View>

@@ -291,7 +291,7 @@ export const HomeManagement: React.FC = () => {
         />
 
         {/* Create/Join Home Form - slides down inline */}
-        {showCreateForm && (
+        {!!showCreateForm && (
           <Animated.View
             entering={FadeInDown.duration(300).springify()}
             exiting={FadeOutUp.duration(200)}
@@ -359,20 +359,20 @@ export const HomeManagement: React.FC = () => {
                 />
 
                 {/* Preview - only shows when code is validated */}
-                {loadingPreview && (
+                {!!loadingPreview && (
                   <ActivityIndicator
                     size="small"
                     color={theme.colors.primary}
                     style={styles.previewLoader}
                   />
                 )}
-                {previewHome && (
+                {!!previewHome && (
                   <View style={styles.previewCard}>
                     <Text style={styles.previewTitle}>{previewHome.name}</Text>
                     <Text style={styles.previewSubtitle}>
                       {previewHome.members?.length || 0} member(s)
                     </Text>
-                    {previewHome.description && (
+                    {!!previewHome.description && (
                       <Text style={styles.previewDescription}>
                         {previewHome.description}
                       </Text>

@@ -44,7 +44,7 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
     <View style={circleStyles.container}>
       <View style={[circleStyles.circle, { borderColor: color }]}>
         <Text style={[circleStyles.value, { color }]}>{value}</Text>
-        {unit && <Text style={[circleStyles.unit, { color }]}>{unit}</Text>}
+        {unit ? <Text style={[circleStyles.unit, { color }]}>{unit}</Text> : null}
       </View>
       <Text style={circleStyles.label}>{label}</Text>
     </View>
@@ -116,9 +116,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   const content = (
     <View style={[styles.container, compact && styles.containerCompact, style]}>
       {/* Serving size label */}
-      {macros.servingSize && (
-        <Text style={styles.servingSize}>Per {macros.servingSize}</Text>
-      )}
+      {!!macros.servingSize && <Text style={styles.servingSize}>Per {macros.servingSize}</Text>}
 
       {/* Macro circles row */}
       <View style={styles.macrosRow}>
@@ -148,7 +146,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       </View>
 
       {/* Highlight badges */}
-      {showHighlights && highlights.length > 0 && (
+      {!!showHighlights && highlights.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -162,7 +160,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       )}
 
       {/* Navigation chevron */}
-      {onPress && (
+      {!!onPress && (
         <View style={styles.actionRow}>
           <Text style={styles.actionText}>View Details</Text>
           <Icon name="chevron-forward" size={20} />

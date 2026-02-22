@@ -232,7 +232,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
             ? 'List Settings'
             : 'List Info'}
         </Text>
-        {isOwner && (
+        {!!isOwner && (
           <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
             <Text style={styles.saveButton}>
               {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
@@ -264,7 +264,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             </View>
 
-            {ownerInfo && (
+            {!!ownerInfo && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Owner</Text>
                 <Text style={styles.infoValue}>
@@ -273,7 +273,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             )}
 
-            {isShared && (
+            {!!isShared && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Shared With</Text>
                 <Text style={styles.infoValue}>
@@ -336,7 +336,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show sharing section if editing existing list and user is owner */}
-        {listId && isOwner && (
+        {!!listId && !!isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sharing</Text>
 
@@ -353,7 +353,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               />
             </Pressable>
 
-            {isShared && (
+            {!!isShared && (
               <Text style={styles.sharedInfo}>
                 This list is shared with {collaborators.length} members
               </Text>
@@ -362,7 +362,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show danger zone if editing existing list and user is owner */}
-        {listId && isOwner && (
+        {!!listId && !!isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 

@@ -8,7 +8,6 @@ import React, {
 import {
   View,
   Text,
-  Alert,
   StatusBar,
   Dimensions,
   Platform,
@@ -18,13 +17,13 @@ import {
   Camera,
   useCameraDevices,
   useCodeScanner,
-  useCameraPermission,
 } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '#hooks/useBarcodeScanner';
+import { usePermission } from '#hooks/permissions/usePermission';
 import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
@@ -47,8 +46,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
 
   const { theme } = useUnistyles();
 
-  // **NEW** permission hook
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const { isGranted: hasPermission, isBlocked, request: requestPermission, openSettings } = usePermission('camera');
 
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
@@ -64,16 +62,8 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
   // 1) On mount, ask for camera permission if we don't have it yet
   useEffect(() => {
     if (!hasPermission) {
-      requestPermission().catch(err => {
-        console.error('requestPermission error', err);
-        Alert.alert('Permission Error', 'Could not request camera permission.');
-      });
+      requestPermission();
     }
-
-    // Cleanup on unmount
-    return () => {
-      // Don't adjust StatusBar here; focus effect handles lifecycle
-    };
   }, [hasPermission, requestPermission]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
@@ -157,16 +147,22 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
 
   // --- RENDER FALLBACKS ---
 
-  // A) No permission yet (or denied) → ask the user
+  // A) No permission yet (or denied/blocked) → ask the user
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.messageText}>
           Camera access is required to scan barcodes.
         </Text>
-        <Button onPress={requestPermission} variant="primary" size="medium">
-          Grant Permission
-        </Button>
+        {isBlocked ? (
+          <Button onPress={openSettings} variant="primary" size="medium">
+            Open Settings
+          </Button>
+        ) : (
+          <Button onPress={requestPermission} variant="primary" size="medium">
+            Grant Permission
+          </Button>
+        )}
         <Button onPress={handleGoBack} variant="ghost" size="medium">
           Cancel
         </Button>
@@ -203,7 +199,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
         height={200}
         edgeColor={theme.colors.primary}
         backgroundColor={theme.colors.overlay}
-        showAnimatedLine={isScanning && !hasScanned}
+        showAnimatedLine={!!isScanning && !hasScanned}
         lineAnimationDuration={2000}
       />
 
@@ -231,7 +227,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
             ? 'Barcode scanned! Navigating…'
             : 'Point your camera at a barcode'}
         </Text>
-        {isScanning && !hasScanned && (
+        {!!isScanning && !hasScanned && (
           <Text style={styles.subInstructionsText}>
             Make sure the barcode is clearly visible
           </Text>

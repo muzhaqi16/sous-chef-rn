@@ -97,19 +97,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
         {title}
       </Text>
-      {description && (
+      {!!description && (
         <Text
           style={[styles.description, { color: theme.colors.textSecondary }]}
         >
           {description}
         </Text>
       )}
-      {hint && (
+      {!!hint && (
         <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
           {hint}
         </Text>
       )}
-      {action && (
+      {!!action && (
         <Button
           onPress={action.onPress}
           variant={action.variant || 'primary'}
@@ -119,7 +119,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {action.label}
         </Button>
       )}
-      {secondaryAction && (
+      {!!secondaryAction && (
         <Button
           onPress={secondaryAction.onPress}
           variant="outline"

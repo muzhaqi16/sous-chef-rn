@@ -68,7 +68,7 @@ function AddNewFooter({
       <Text style={footerStyles.icon}>+</Text>
       <View style={footerStyles.content}>
         <Text style={footerStyles.label}>{label}</Text>
-        {subtext && <Text style={footerStyles.subtext}>{subtext}</Text>}
+        {subtext ? <Text style={footerStyles.subtext}>{subtext}</Text> : null}
       </View>
     </Pressable>
   );
