@@ -10,6 +10,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useTabBarState, useTabBarSetters } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
+import NavigationService from '#/services/NavigationService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
@@ -18,6 +19,14 @@ import { HapticService } from '#services/haptic/HapticService';
 import { SPRING, TIMING } from '#/constants/animations';
 
 export const TAB_BAR_HEIGHT = 65;
+
+// Adjacent tab mapping for preloading neighbors
+const ADJACENT_TABS: Record<string, string[]> = {
+  Pantry: ['ShoppingList'],
+  ShoppingList: ['Pantry', 'Recipe'],
+  Recipe: ['ShoppingList', 'MealPlan'],
+  MealPlan: ['Recipe'],
+};
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descriptors, navigation }) => {
     const {
@@ -149,6 +158,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
               navigation.navigate(route.name, route.params);
             }
           }
+
+          // Preload adjacent tabs after navigation animation completes
+          requestAnimationFrame(() => {
+            const neighbors = ADJACENT_TABS[route.name];
+            neighbors?.forEach(tab => NavigationService.preload(tab));
+          });
         }
       },
       [navigation, activeTabIndex],

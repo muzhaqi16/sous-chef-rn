@@ -162,6 +162,7 @@ const PantryMainScreen: React.FC = () => {
   const {
     items: pantryItems,
     allItems,
+    stats,
     totalCount,
     searchQuery,
     setSearchQuery,
@@ -374,6 +375,7 @@ const PantryMainScreen: React.FC = () => {
         householdName={householdName}
         avatarUrl={profile?.avatar}
         notificationCount={unreadCount}
+        stats={stats}
         items={locationFilteredItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}

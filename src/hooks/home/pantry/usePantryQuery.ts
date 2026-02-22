@@ -103,6 +103,7 @@ export function usePantryQuery(pantryId: string | undefined) {
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
 
+  const stats = normalizedPantry?.stats ?? null;
   const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
 
   // Auto-refetch when edges are depleted but totalCount indicates items remain
@@ -136,6 +137,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     pantryItems,
     filteredItems,
     normalizedPantry,
+    stats,
     totalCount,
     loading,
     isRefreshing,

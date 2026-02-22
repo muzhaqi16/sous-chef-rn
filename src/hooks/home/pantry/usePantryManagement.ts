@@ -22,6 +22,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const {
     pantryItems,
     filteredItems,
+    stats,
     totalCount,
     loading,
     isRefreshing,
@@ -48,6 +49,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: pantryItems,
+    stats,
     totalCount,
     loading,
     isRefreshing,

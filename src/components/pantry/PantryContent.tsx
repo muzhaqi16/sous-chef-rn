@@ -29,7 +29,8 @@ import {
   formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
-import { StorageState } from '#generated';
+import { StorageState, type PantryStats } from '#generated';
+import { AnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
@@ -100,6 +101,9 @@ interface PantryContentProps {
   householdName: string;
   avatarUrl?: string | null;
   notificationCount?: number;
+
+  // Stats
+  stats?: PantryStats | null;
 
   // Items
   items: PantryItem[];
@@ -184,6 +188,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   householdName,
   avatarUrl,
   notificationCount = 0,
+  stats,
   items,
   locationFilter,
   onLocationFilterChange,
@@ -534,6 +539,40 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
               </Pressable>
             }
           />
+
+          {/* Stats Summary Cards */}
+          {stats && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statsRow}>
+                <AnalyticsSummaryCard
+                  title="Total Items"
+                  value={stats.totalItems}
+                  subtitle={`${stats.activeItems} active`}
+                  icon="cube-outline"
+                />
+                <AnalyticsSummaryCard
+                  title="Expiring Soon"
+                  value={stats.expiringCount}
+                  icon="time-outline"
+                  color={stats.expiringCount > 0 ? theme.colors.warning : undefined}
+                />
+              </View>
+              <View style={styles.statsRow}>
+                <AnalyticsSummaryCard
+                  title="Low Stock"
+                  value={stats.lowStockCount}
+                  icon="alert-circle-outline"
+                  color={stats.lowStockCount > 0 ? theme.colors.error : undefined}
+                />
+                <AnalyticsSummaryCard
+                  title="Total Value"
+                  value={`$${stats.totalValue.toFixed(2)}`}
+                  icon="cash-outline"
+                  color={theme.colors.success}
+                />
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Always visible — not part of crossfade */}
@@ -623,6 +662,14 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xs,
+  },
+  statsContainer: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
   },
   listContainer: {
     flex: 1,

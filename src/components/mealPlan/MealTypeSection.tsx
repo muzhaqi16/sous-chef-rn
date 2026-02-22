@@ -9,7 +9,7 @@ interface MealTypeSectionProps {
   mealType: MealType;
   label: string;
   items: MealPlanItemFragment[];
-  onToggleCompleted: (id: string, isCompleted: boolean) => void;
+  onToggleCompleted: (id: string, isCompleted: boolean, hasRecipe: boolean) => void;
   onItemPress?: (item: MealPlanItemFragment) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType: MealType) => void;

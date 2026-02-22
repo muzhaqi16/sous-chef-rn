@@ -13,6 +13,9 @@ import { AddMealSheet, type AddMealSheetRef } from '#components/mealPlan/AddMeal
 import { SaveAsTemplateSheet } from '#components/mealPlan/SaveAsTemplateSheet';
 import { TemplateBrowserSheet } from '#components/mealPlan/TemplateBrowserSheet';
 import { TemplatePreviewSheet } from '#components/mealPlan/TemplatePreviewSheet';
+import { GenerateShoppingListSheet } from '#components/mealPlan/GenerateShoppingListSheet';
+import { MealPlanSettingsSheet } from '#components/mealPlan/MealPlanSettingsSheet';
+import { DuplicatePlanSheet } from '#components/mealPlan/DuplicatePlanSheet';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useAppStore } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -23,7 +26,15 @@ import { useMealPlanItemActions } from '#hooks/mealPlan/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#hooks/mealPlan/useMealPlanCalendar';
 import { useDailyMeals } from '#hooks/mealPlan/useDailyMeals';
 import { useMealTemplateActions } from '#hooks/mealPlan/useMealTemplateActions';
-import { MealType, type MealTemplateDisplayFragment } from '#generated';
+import { useGenerateShoppingList } from '#hooks/mealPlan/useGenerateShoppingList';
+import { useDuplicateMealPlan } from '#hooks/mealPlan/useDuplicateMealPlan';
+import {
+  useDeleteMealPlanMutation,
+  GetMealPlansDocument,
+  MealType,
+  type MealTemplateDisplayFragment,
+} from '#generated';
+import { toastService } from '#/services/toastService';
 
 const VIEW_OPTIONS = ['Week', 'Month'] as const;
 
@@ -40,6 +51,13 @@ export const MealPlanMain: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<MealTemplateDisplayFragment | null>(null);
   const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
+  // Shopping list generation state
+  const [shoppingListSheetVisible, setShoppingListSheetVisible] = useState(false);
+
+  // Settings and duplicate state
+  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [duplicateVisible, setDuplicateVisible] = useState(false);
+
   const {
     createPlanFromTemplate,
     createTemplateFromPlan,
@@ -52,7 +70,7 @@ export const MealPlanMain: React.FC = () => {
   const activePlanId = currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // Fetch the active plan with items
-  const { items } = useMealPlan(activePlanId);
+  const { mealPlan: activeMealPlan, items } = useMealPlan(activePlanId);
 
   // Calendar state
   const calendar = useMealPlanCalendar();
@@ -66,6 +84,21 @@ export const MealPlanMain: React.FC = () => {
   // Meal plan item actions
   const { createItem, toggleCompleted, deleteItem } =
     useMealPlanItemActions(activePlanId);
+
+  // Shopping list generation
+  const { generateShoppingList, loading: generatingShoppingList } =
+    useGenerateShoppingList(activePlanId);
+
+  // Duplicate meal plan
+  const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
+
+  // Delete meal plan
+  const [deletePlanMutation, { loading: deletingPlan }] = useDeleteMealPlanMutation({
+    refetchQueries: [{ query: GetMealPlansDocument }],
+    onError: error => {
+      toastService.error(error.message || 'Failed to delete meal plan');
+    },
+  });
 
   // Compute days with meals for calendar indicators
   const daysWithMeals = useMemo(() => {
@@ -82,8 +115,8 @@ export const MealPlanMain: React.FC = () => {
   });
 
   const handleToggleCompleted = useCallback(
-    (id: string, isCompleted: boolean) => {
-      toggleCompleted(id, isCompleted);
+    (id: string, isCompleted: boolean, hasRecipe: boolean) => {
+      toggleCompleted(id, isCompleted, hasRecipe);
     },
     [toggleCompleted],
   );
@@ -197,6 +230,49 @@ export const MealPlanMain: React.FC = () => {
     [createPlanFromTemplate],
   );
 
+  const handleDuplicatePlan = useCallback(
+    async (input: {
+      mealPlanId: string;
+      newName: string;
+      newStartDate: string;
+      newEndDate: string;
+    }) => {
+      const result = await duplicatePlan(input);
+      if (result?.success) {
+        setDuplicateVisible(false);
+      }
+    },
+    [duplicatePlan],
+  );
+
+  const handleDeletePlan = useCallback(
+    async (id: string) => {
+      try {
+        const result = await deletePlanMutation({ variables: { id } });
+        if (result.data?.deleteMealPlan?.success) {
+          toastService.success('Meal plan deleted');
+        }
+      } catch {
+        // Error handled by onError callback
+      }
+    },
+    [deletePlanMutation],
+  );
+
+  const handleGenerateShoppingList = useCallback(
+    async (options: {
+      checkPantry?: boolean;
+      name?: string;
+      shoppingListId?: string;
+    }) => {
+      const result = await generateShoppingList(options);
+      if (result?.success) {
+        setShoppingListSheetVisible(false);
+      }
+    },
+    [generateShoppingList],
+  );
+
   // Show empty state if no plans exist and not loading
   if (!plansLoading && mealPlans.length === 0) {
     return (
@@ -250,18 +326,44 @@ export const MealPlanMain: React.FC = () => {
           />
         </View>
         {activePlanId && (
-          <Pressable
-            onPress={handleSaveAsTemplate}
-            hitSlop={8}
-            style={styles.saveTemplateButton}
-            accessibilityLabel="Save as template"
-          >
-            <Icon
-              name="bookmark-outline"
-              size={22}
-              color={theme.colors.primary}
-            />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => setShoppingListSheetVisible(true)}
+              hitSlop={8}
+              style={styles.headerActionButton}
+              accessibilityLabel="Generate shopping list"
+            >
+              <Icon
+                name="cart-outline"
+                size={22}
+                color={theme.colors.primary}
+              />
+            </Pressable>
+            <Pressable
+              onPress={handleSaveAsTemplate}
+              hitSlop={8}
+              style={styles.headerActionButton}
+              accessibilityLabel="Save as template"
+            >
+              <Icon
+                name="bookmark-outline"
+                size={22}
+                color={theme.colors.primary}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => setSettingsVisible(true)}
+              hitSlop={8}
+              style={styles.headerActionButton}
+              accessibilityLabel="Plan settings"
+            >
+              <Icon
+                name="ellipsis-vertical"
+                size={22}
+                color={theme.colors.textSecondary}
+              />
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -340,6 +442,34 @@ export const MealPlanMain: React.FC = () => {
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
       />
+
+      {/* Generate Shopping List Sheet */}
+      <GenerateShoppingListSheet
+        visible={shoppingListSheetVisible}
+        onClose={() => setShoppingListSheetVisible(false)}
+        onGenerate={handleGenerateShoppingList}
+        loading={generatingShoppingList}
+      />
+
+      {/* Settings Sheet */}
+      <MealPlanSettingsSheet
+        visible={settingsVisible}
+        mealPlan={activeMealPlan}
+        onClose={() => setSettingsVisible(false)}
+        onDuplicate={() => setDuplicateVisible(true)}
+        onGenerateShoppingList={() => setShoppingListSheetVisible(true)}
+        onDelete={handleDeletePlan}
+        deleting={deletingPlan}
+      />
+
+      {/* Duplicate Plan Sheet */}
+      <DuplicatePlanSheet
+        visible={duplicateVisible}
+        mealPlan={currentPlan ?? null}
+        onClose={() => setDuplicateVisible(false)}
+        onDuplicate={handleDuplicatePlan}
+        loading={duplicatingPlan}
+      />
     </View>
   );
 };
@@ -356,9 +486,15 @@ const styles = StyleSheet.create(theme => ({
   headerContent: {
     flex: 1,
   },
-  saveTemplateButton: {
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingTop: theme.spacing.md,
     paddingRight: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  headerActionButton: {
+    padding: theme.spacing.xs,
   },
   segmentContainer: {
     paddingHorizontal: theme.spacing.md,

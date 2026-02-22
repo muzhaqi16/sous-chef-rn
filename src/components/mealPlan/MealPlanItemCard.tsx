@@ -7,7 +7,7 @@ import type { MealPlanItemFragment } from '#generated';
 
 interface MealPlanItemCardProps {
   item: MealPlanItemFragment;
-  onToggleCompleted: (id: string, isCompleted: boolean) => void;
+  onToggleCompleted: (id: string, isCompleted: boolean, hasRecipe: boolean) => void;
   onPress?: (item: MealPlanItemFragment) => void;
   onDelete?: (id: string) => void;
 }
@@ -21,6 +21,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   const recipeName = item.recipe?.name ?? item.customMealName ?? 'Unnamed meal';
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
+  const usedPantryItems = item.usedPantryItems as unknown[] | null;
+  const hasPantryDeductions = item.isCompleted && Array.isArray(usedPantryItems) && usedPantryItems.length > 0;
 
   return (
     <Pressable
@@ -29,12 +31,11 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     >
       {/* Checkbox */}
       <Pressable
-        onPress={() => onToggleCompleted(item.id, item.isCompleted)}
+        onPress={() => onToggleCompleted(item.id, item.isCompleted, !!item.recipe)}
         style={styles.checkbox}
         hitSlop={8}
       >
         <Icon
-
           name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
           size={24}
           color={item.isCompleted ? styles.checkboxChecked.color : styles.checkboxUnchecked.color}
@@ -66,7 +67,19 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
               {item.servings} servings
             </Text>
           )}
+          {item.calories != null && item.calories > 0 && (
+            <Text style={styles.metaText}>
+              {(totalTime != null || item.servings != null) ? ' \u00B7 ' : ''}
+              {Math.round(item.calories)} cal
+            </Text>
+          )}
         </View>
+        {hasPantryDeductions && (
+          <View style={styles.pantryBadge}>
+            <Icon name="leaf-outline" size={12} color={styles.pantryBadgeText.color} />
+            <Text style={styles.pantryBadgeText}>Pantry updated</Text>
+          </View>
+        )}
       </View>
 
       {/* Delete */}
@@ -128,6 +141,17 @@ const styles = StyleSheet.create(theme => ({
   metaText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  pantryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  pantryBadgeText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.success,
+    fontWeight: theme.fonts.weight.medium,
   },
   deleteButton: {
     padding: theme.spacing.xs,

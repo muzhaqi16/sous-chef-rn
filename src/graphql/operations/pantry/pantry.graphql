@@ -39,6 +39,13 @@ query GetPantry(
     version
     createdAt
     updatedAt
+    stats {
+      totalItems
+      activeItems
+      expiringCount
+      lowStockCount
+      totalValue
+    }
     itemsConnection(first: $itemsFirst, after: $itemsCursor) {
       edges {
         node {

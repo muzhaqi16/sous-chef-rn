@@ -7,6 +7,7 @@ import {
   type UpdateMealPlanItemInput,
   GetMealPlanDocument,
 } from '#generated';
+import { toastService } from '#/services/toastService';
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const [createItemMutation, { loading: creating }] =
@@ -47,19 +48,32 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   );
 
   const toggleCompleted = useCallback(
-    async (id: string, isCompleted: boolean) => {
+    async (id: string, isCompleted: boolean, hasRecipe?: boolean) => {
+      const markingComplete = !isCompleted;
       const result = await updateItemMutation({
         variables: {
           id,
           input: {
-            isCompleted: !isCompleted,
-            completedAt: !isCompleted ? new Date().toISOString() : null,
+            isCompleted: markingComplete,
+            completedAt: markingComplete ? new Date().toISOString() : null,
           },
         },
+        refetchQueries: mealPlanId
+          ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
+          : [],
       });
+
+      if (result.data?.updateMealPlanItem?.success && markingComplete) {
+        if (hasRecipe) {
+          toastService.success('Meal completed! Pantry items deducted.');
+        } else {
+          toastService.success('Meal completed!');
+        }
+      }
+
       return result.data?.updateMealPlanItem ?? null;
     },
-    [updateItemMutation],
+    [updateItemMutation, mealPlanId],
   );
 
   const deleteItem = useCallback(
