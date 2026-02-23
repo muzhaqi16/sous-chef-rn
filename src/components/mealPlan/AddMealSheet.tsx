@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, Pressable, TextInput } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { Icon } from '#utils/iconUtils';
 import { MealType } from '#generated';
@@ -105,7 +105,7 @@ export const AddMealSheet = forwardRef<AddMealSheetRef, AddMealSheetProps>(
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <Icon name="search" size={18} color={styles.searchIcon.color} />
-          <TextInput
+          <BottomSheetTextInput
             style={styles.searchInput}
             placeholder="Search your recipes..."
             placeholderTextColor={styles.searchPlaceholder.color}

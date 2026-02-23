@@ -124,7 +124,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
-    backgroundColor: theme.colors.primaryLight + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   categoryText: {
     fontSize: theme.fonts.size.xs,

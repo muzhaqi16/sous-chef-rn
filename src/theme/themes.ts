@@ -126,7 +126,7 @@ export const darkTheme = {
     ...colors,
     // Primary
     primary: colors.jaffa[400],
-    primaryLight: colors.jaffa[200],
+    primaryLight: colors.jaffa[400] + '20',
     primaryDark: colors.jaffa[600],
     onPrimary: colors.neutral[900],
 

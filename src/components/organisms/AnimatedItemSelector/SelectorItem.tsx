@@ -7,7 +7,6 @@ import type { SelectorItemProps, SelectableItem } from './types';
 
 export const SelectorItem = <T extends SelectableItem>({
   item,
-  index = 0,
   isSelected,
   onPress,
   displayProperty,
@@ -17,20 +16,14 @@ export const SelectorItem = <T extends SelectableItem>({
 
   if (renderCustomItem) {
     return (
-      <Animated.View
-        entering={FadeInUp.delay(index * 15).duration(150)}
-        layout={LinearTransition}
-      >
+      <Animated.View layout={LinearTransition}>
         {renderCustomItem(item, isSelected, onPress)}
       </Animated.View>
     );
   }
 
   return (
-    <Animated.View
-      entering={FadeInUp.delay(index * 15).duration(150)}
-      layout={LinearTransition}
-    >
+    <Animated.View layout={LinearTransition}>
       <Pressable
         style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
         onPress={onPress}

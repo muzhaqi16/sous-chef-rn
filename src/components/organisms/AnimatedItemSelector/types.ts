@@ -22,6 +22,7 @@ export interface SelectorConfig<T extends SelectableItem> {
   onSelect: (id: string, item: T) => void;
   displayProperty: keyof T;
   actions: ActionButtonConfig[];
+  headerRight?: React.ReactNode;
   loading?: boolean;
   emptyMessage?: string;
   keyExtractor?: (item: T) => string;
@@ -36,7 +37,7 @@ export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
   isVisible?: boolean;
   onClose?: () => void;
-  onOpen?: () => void;
+  onOpen?: (afterDone?: () => void) => void;
 }
 
 export interface ItemSelectorRef {

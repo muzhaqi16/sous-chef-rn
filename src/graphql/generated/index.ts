@@ -8808,6 +8808,7 @@ export type ShoppingList = {
   completedAt: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
   completedShopDate: Maybe<Scalars['DateTime']['output']>;
+  completionRate: Scalars['Float']['output'];
   createdAt: Scalars['DateTime']['output'];
   currency: Maybe<Scalars['String']['output']>;
   /** Default pantry for the linked home (if any). */
@@ -8838,6 +8839,7 @@ export type ShoppingList = {
   recentlyDeletedItems: Array<ShoppingListItem>;
   recurringInterval: Maybe<Scalars['Int']['output']>;
   recurringPattern: Maybe<RecurringPattern>;
+  remainingItems: Scalars['Int']['output'];
   reminderDate: Maybe<Scalars['DateTime']['output']>;
   reminderEnabled: Scalars['Boolean']['output'];
   shareCode: Maybe<Scalars['String']['output']>;

@@ -6794,6 +6794,7 @@ type ShoppingList {
   completedAt: DateTime
   completedItems: Int!
   completedShopDate: DateTime
+  completionRate: Float!
   createdAt: DateTime!
   currency: String
   """Default pantry for the linked home (if any)."""
@@ -6824,6 +6825,7 @@ type ShoppingList {
   recentlyDeletedItems(limit: Int = 10): [ShoppingListItem!]!
   recurringInterval: Int
   recurringPattern: RecurringPattern
+  remainingItems: Int!
   reminderDate: DateTime
   reminderEnabled: Boolean!
   shareCode: String
