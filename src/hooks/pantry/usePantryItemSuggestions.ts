@@ -8,7 +8,7 @@ import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 type PantryItemSuggestion =
-  GetPantryItemSuggestionsQuery['pantryItemSuggestions'][number];
+  NonNullable<GetPantryItemSuggestionsQuery['pantry']>['suggestions'][number];
 
 interface UsePantryItemSuggestionsOptions {
   pantryId: string | undefined;
@@ -39,14 +39,13 @@ export function usePantryItemSuggestions({
 
   const suggestions = useMemo(
     () =>
-      (data?.pantryItemSuggestions ?? []).map(s => ({
+      (data?.pantry?.suggestions ?? []).map((s: PantryItemSuggestion) => ({
         ...s,
         imageUrl: resolveImageUrl(s),
       })),
-    [data?.pantryItemSuggestions],
+    [data?.pantry?.suggestions],
   );
 
-  // Group by source for sectioned display
   const grouped = useMemo<GroupedSuggestions>(() => {
     const result: GroupedSuggestions = {
       lowStock: [],

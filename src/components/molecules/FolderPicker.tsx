@@ -3,7 +3,6 @@ import React, {
   useMemo,
   useCallback,
   useRef,
-  useEffect,
 } from 'react';
 import {
   View,
@@ -18,12 +17,10 @@ import {
   BottomSheetView,
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 /** Protected folders that cannot be renamed or deleted */
 const PROTECTED_FOLDERS = ['Favorites'];
@@ -57,10 +54,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   onDeleteFolder,
   folderActionLoading = false,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const animationConfigs = useSharedBottomSheetConfigs();
-  const folderPickerRef = useRef<BottomSheetModal>(null);
+  const { ref: folderPickerRef, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onCancel,
+    snapPoints: ['55%', '70%'],
+    keyboardBehavior: 'interactive',
+  });
   const manageSheetRef = useRef<BottomSheetModal>(null);
 
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -74,15 +73,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
   // Check if folder management is enabled
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
-
-  // Sync visible prop with bottom sheet ref
-  useEffect(() => {
-    if (visible) {
-      folderPickerRef.current?.present();
-    } else {
-      folderPickerRef.current?.dismiss();
-    }
-  }, [visible]);
 
   // Check if a folder is protected
   const isProtectedFolder = useCallback((folder: string) => {
@@ -141,7 +131,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         manageSheetRef.current?.present();
       }, 150);
     },
-    [hasFolderActions, isProtectedFolder],
+    [hasFolderActions, isProtectedFolder, folderPickerRef],
   );
 
   // Handle rename confirmation
@@ -186,6 +176,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     folders,
     selectedFolder,
     onSelect,
+    folderPickerRef,
   ]);
 
   // Handle delete confirmation
@@ -206,7 +197,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       setRenameValue('');
       setShowDeleteConfirm(false);
     }
-  }, [managingFolder, onDeleteFolder, selectedFolder, onSelect]);
+  }, [managingFolder, onDeleteFolder, selectedFolder, onSelect, folderPickerRef]);
 
   // Handle manage folder bottom sheet close
   const handleManageFolderClose = useCallback(() => {
@@ -217,7 +208,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setManagingFolder(null);
     setRenameValue('');
     setShowDeleteConfirm(false);
-  }, []);
+  }, [folderPickerRef]);
 
   const renderFolderItem = ({ item }: { item: string }) => {
     const isSelected = item === selectedFolder;
@@ -232,8 +223,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         disabled={folderActionLoading}
       >
         <Icon
-          library="Feather"
-          name="folder"
+          name="folder-outline"
           size={20}
           color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
         />
@@ -243,10 +233,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         >
           {item}
         </Text>
-        {isSelected && (
+        {!!isSelected && (
           <Icon
-            library="Feather"
-            name="check"
+            name="checkmark"
             size={20}
             color={theme.colors.primary}
           />
@@ -258,40 +247,18 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   return (
     <>
       {/* Folder Picker Bottom Sheet */}
-      <BottomSheetModal
-        ref={folderPickerRef}
-        snapPoints={['55%', '70%']}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        topInset={insets.top}
-        onDismiss={onCancel}
-        animationConfigs={animationConfigs}
-        backgroundStyle={{ backgroundColor: theme.colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        backdropComponent={props => (
-          <GlobalBottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            pressBehavior="close"
-            onClose={() => folderPickerRef.current?.dismiss()}
-          />
-        )}
-      >
+      <BottomSheetModal ref={folderPickerRef} {...modalProps}>
         <BottomSheetView
           style={[
             styles.bottomSheetContent,
-            { paddingBottom: insets.bottom + 16 },
+            contentContainerStyle,
           ]}
         >
           <View style={styles.header}>
             <Text style={styles.title}>Select Folder</Text>
             <Pressable onPress={handleCancel} style={({pressed}) => pressed && styles.pressed}>
               <Icon
-                library="Feather"
-                name="x"
+                name="close"
                 size={24}
                 color={theme.colors.textPrimary}
               />
@@ -302,7 +269,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
               <Icon
-                library="Feather"
                 name="search"
                 size={18}
                 color={theme.colors.textSecondary}
@@ -311,7 +277,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 style={styles.searchInput}
                 placeholder="Search folders..."
                 placeholderTextColor={theme.colors.textSecondary}
-                value={searchQuery}
+                defaultValue={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
               />
@@ -328,8 +294,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             onPress={() => handleSelectFolder(null)}
           >
             <Icon
-              library="Feather"
-              name="inbox"
+              name="mail-outline"
               size={20}
               color={
                 !selectedFolder
@@ -347,8 +312,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             </Text>
             {!selectedFolder && (
               <Icon
-                library="Feather"
-                name="check"
+                name="checkmark"
                 size={20}
                 color={theme.colors.primary}
               />
@@ -359,14 +323,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           <View style={styles.divider} />
 
           {/* Create New Folder - only shown if allowCreate is true */}
-          {allowCreate &&
-            (showNewFolder ? (
+          {!!allowCreate && (showNewFolder ? (
               <View style={styles.newFolderContainer}>
                 <BottomSheetTextInput
                   style={styles.newFolderInput}
                   placeholder="Enter folder name..."
                   placeholderTextColor={theme.colors.textSecondary}
-                  value={newFolderName}
+                  defaultValue={newFolderName}
                   onChangeText={setNewFolderName}
                   autoFocus
                   autoCapitalize="words"
@@ -397,8 +360,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 onPress={() => setShowNewFolder(true)}
               >
                 <Icon
-                  library="Feather"
-                  name="plus"
+                  name="add"
                   size={20}
                   color={theme.colors.primary}
                 />
@@ -431,14 +393,14 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : null}
 
           {/* Hint text for folder management */}
-          {hasFolderActions && filteredFolders.length > 0 && (
+          {!!hasFolderActions && filteredFolders.length > 0 && (
             <Text style={styles.hintText}>
               Long press a folder to edit or delete
             </Text>
           )}
 
           {/* Loading overlay */}
-          {folderActionLoading && (
+          {!!folderActionLoading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
             </View>
@@ -449,10 +411,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       {/* Manage Folder Bottom Sheet */}
       <BottomSheetModal
         ref={manageSheetRef}
+        {...modalProps}
         snapPoints={['45%']}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        topInset={insets.top}
         onDismiss={() => {
           setManagingFolder(null);
           setRenameValue('');
@@ -462,25 +422,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             folderPickerRef.current?.present();
           }, 150);
         }}
-        animationConfigs={animationConfigs}
-        backgroundStyle={{ backgroundColor: theme.colors.surface }}
-        handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        backdropComponent={props => (
-          <GlobalBottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            pressBehavior="close"
-            onClose={() => manageSheetRef.current?.dismiss()}
-          />
-        )}
       >
         <BottomSheetView
           style={[
             styles.bottomSheetContent,
-            { paddingBottom: insets.bottom + 16 },
+            contentContainerStyle,
           ]}
         >
           {/* Header */}
@@ -492,8 +438,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               style={({pressed}) => pressed && styles.pressed}
             >
               <Icon
-                library="Feather"
-                name="x"
+                name="close"
                 size={24}
                 color={theme.colors.textPrimary}
               />
@@ -503,8 +448,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {/* Current folder name */}
           <View style={styles.currentFolderContainer}>
             <Icon
-              library="Feather"
-              name="folder"
+              name="folder-outline"
               size={20}
               color={theme.colors.primary}
             />
@@ -515,8 +459,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {showDeleteConfirm ? (
             <View style={styles.deleteConfirmContainer}>
               <Icon
-                library="Feather"
-                name="alert-triangle"
+                name="warning-outline"
                 size={32}
                 color={theme.colors.error}
               />
@@ -551,13 +494,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : (
             <>
               {/* Rename Section */}
-              {onRenameFolder && (
+              {!!onRenameFolder && (
                 <View style={styles.renameSection}>
                   <Text style={styles.sectionLabel}>Rename</Text>
                   <View style={styles.renameInputRow}>
                     <BottomSheetTextInput
                       style={styles.renameInput}
-                      value={renameValue}
+                      defaultValue={renameValue}
                       onChangeText={setRenameValue}
                       placeholder="Enter new folder name..."
                       placeholderTextColor={theme.colors.textSecondary}
@@ -603,7 +546,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               )}
 
               {/* Delete Section */}
-              {onDeleteFolder && (
+              {!!onDeleteFolder && (
                 <View style={styles.deleteSection}>
                   <Pressable
                     style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
@@ -611,8 +554,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                     disabled={folderActionLoading}
                   >
                     <Icon
-                      library="Feather"
-                      name="trash-2"
+                      name="trash-outline"
                       size={18}
                       color={theme.colors.error}
                     />
@@ -640,7 +582,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   searchContainer: {
@@ -676,7 +618,7 @@ const styles = StyleSheet.create(theme => ({
   },
   folderNameSelected: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   divider: {
     height: 1,
@@ -693,7 +635,7 @@ const styles = StyleSheet.create(theme => ({
   newFolderButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   newFolderContainer: {
     flexDirection: 'row',
@@ -724,7 +666,7 @@ const styles = StyleSheet.create(theme => ({
   createButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   createButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -780,7 +722,7 @@ const styles = StyleSheet.create(theme => ({
   },
   manageFolderTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   currentFolderContainer: {
@@ -795,12 +737,12 @@ const styles = StyleSheet.create(theme => ({
   },
   currentFolderName: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -837,7 +779,7 @@ const styles = StyleSheet.create(theme => ({
   renameButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   renameButtonTextDisabled: {
     color: theme.colors.textSecondary,
@@ -857,7 +799,7 @@ const styles = StyleSheet.create(theme => ({
   deleteButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.error,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   deleteDescription: {
     fontSize: theme.typography.fontSize.sm,
@@ -872,7 +814,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteConfirmTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -899,7 +841,7 @@ const styles = StyleSheet.create(theme => ({
   deleteConfirmCancelText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   deleteConfirmDeleteButton: {
     flex: 1,
@@ -911,9 +853,9 @@ const styles = StyleSheet.create(theme => ({
   deleteConfirmDeleteText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.white,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

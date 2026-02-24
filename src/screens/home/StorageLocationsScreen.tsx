@@ -147,7 +147,7 @@ export const StorageLocationsScreen: React.FC<{
       content: (
         <>
           {/* Error Message */}
-          {error && (
+          {!!error && (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>
                 Error loading storage locations: {error.message}
@@ -184,7 +184,7 @@ export const StorageLocationsScreen: React.FC<{
                 ]}
                 onPress={() => setViewMode('tree')}
               >
-                <Icon name="git-network" size={20} library="Ionicons" />
+                <Icon name="git-network" size={20} />
                 <Text
                   style={[
                     styles.toggleText,
@@ -200,7 +200,7 @@ export const StorageLocationsScreen: React.FC<{
           {locations.length === 0 ? (
             <View style={commonStyles.emptyState}>
               <Icon
-                name="storage"
+                name="server-outline"
                 size={64}
                 color={theme.colors.textSecondary}
               />
@@ -315,6 +315,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

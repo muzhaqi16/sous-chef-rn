@@ -1,5 +1,9 @@
 import React, { useRef, useCallback } from 'react';
-import { ScrollView, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+} from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -10,28 +14,32 @@ import { SettingsSection } from '#components/organisms/SettingsSection';
 import { useProfileData } from '#hooks/profile/useProfileData';
 import { useConfigurableSettings } from '#hooks/profile/useConfigurableSettings';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { ActionTray } from '#/components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#/components/templates/ActionTray/types';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { getTabBarBottomPadding } from '#constants/layout';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
+import { useAppStore, selectIsAdminUser } from '#/store/useAppStore';
 
 export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
+  const isAdminUser = useAppStore(selectIsAdminUser);
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, biometricLoading } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const { setOverlayOpen } = useTabBarSetters();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: event => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
 
   // Track screen view on mount
   useEffect(() => {
@@ -40,14 +48,6 @@ export const ProfileScreen = () => {
       has_avatar: !!profile?.avatar,
     });
   }, [profile]);
-
-  // Register add button - opens quick actions tray on Profile screen
-  useTabBarAddButton(() => {
-    Telemetry.trackEvent('profile_quick_actions_opened', {
-      source: 'tab_bar',
-    });
-    actionTrayRef.current?.open();
-  });
 
   const handleAvatarPress = () => {
     Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
@@ -79,12 +79,12 @@ export const ProfileScreen = () => {
   }, [navigate]);
 
   const handleOverlayOpen = useCallback(() => {
-    setOverlayOpen(true);
-  }, [setOverlayOpen]);
+    // No-op: Profile is no longer in tab bar context
+  }, []);
 
   const handleOverlayClose = useCallback(() => {
-    setOverlayOpen(false);
-  }, [setOverlayOpen]);
+    // No-op: Profile is no longer in tab bar context
+  }, []);
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
@@ -105,20 +105,23 @@ export const ProfileScreen = () => {
         onBack={() => goBack()}
         onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}
+        scrollY={scrollY}
       />
 
-      <ScrollView
+      <Animated.ScrollView
         testID="profile-scroll-view"
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: getTabBarBottomPadding(safeBottom) },
+          { paddingBottom: safeBottom + 16 },
         ]}
       >
         {sections
           .filter(section => {
             // Filter out Developer section if debug features are not enabled
             if (section.title === 'Developer') {
-              return Environment.shouldEnableDebugFeatures();
+              return Environment.shouldEnableDebugFeatures() || isAdminUser;
             }
             return true;
           })
@@ -163,7 +166,7 @@ export const ProfileScreen = () => {
               })}
             />
           ))}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {BiometricModal}
 
@@ -174,8 +177,7 @@ export const ProfileScreen = () => {
       >
         <Pressable style={({pressed}) => [styles.menuItem, pressed && styles.pressed]} onPress={handleDeleteAccount}>
           <Icon
-            library="Feather"
-            name="trash-2"
+            name="trash-outline"
             size={20}
             color={theme.colors.error}
           />
@@ -207,10 +209,10 @@ const styles = StyleSheet.create(theme => ({
   menuItemTextDestructive: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

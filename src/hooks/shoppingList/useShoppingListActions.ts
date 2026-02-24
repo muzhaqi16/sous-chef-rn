@@ -14,7 +14,6 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
-import { useStableRef } from '#hooks/utils/useStableRef';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -54,10 +53,6 @@ export function useShoppingListActions({
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
   });
-
-  // Refs for stable callbacks (avoid recreating callbacks on items change)
-  const updateQuantityRef = useStableRef(updateQuantity);
-  const refetchItemsRef = useStableRef(refetchItems);
 
   // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
@@ -104,7 +99,7 @@ export function useShoppingListActions({
           newQuantity,
         );
 
-        await updateQuantityRef.current({
+        await updateQuantity({
           variables: {
             itemId,
             quantity: newQuantity.toString(),
@@ -132,10 +127,12 @@ export function useShoppingListActions({
             },
           },
         });
+        // Clear persisted optimistic data to prevent stale quantity on app restart
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
 
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItemsRef.current() },
+            { text: 'Refresh', onPress: () => refetchItems() },
             { text: 'Cancel', style: 'cancel' },
           ]);
           return;
@@ -144,7 +141,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client, refetchItemsRef, updateQuantityRef],
+    [client, refetchItems, updateQuantity],
   );
 
   // Quantity decrement handler - uses cache.modify for instant UI without warnings
@@ -192,7 +189,7 @@ export function useShoppingListActions({
           newQuantity,
         );
 
-        await updateQuantityRef.current({
+        await updateQuantity({
           variables: {
             itemId,
             quantity: newQuantity.toString(),
@@ -220,10 +217,12 @@ export function useShoppingListActions({
             },
           },
         });
+        // Clear persisted optimistic data to prevent stale quantity on app restart
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
 
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItemsRef.current() },
+            { text: 'Refresh', onPress: () => refetchItems() },
             { text: 'Cancel', style: 'cancel' },
           ]);
           return;
@@ -232,7 +231,7 @@ export function useShoppingListActions({
         toastService.error('Failed to update quantity');
       }
     },
-    [client, refetchItemsRef, updateQuantityRef],
+    [client, refetchItems, updateQuantity],
   );
 
   // Toggle purchase handler

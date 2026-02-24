@@ -13,7 +13,7 @@
  */
 
 import {
-  useNotificationUpdatedSubscription,
+  useNotificationChangedSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { CacheStrategy } from '#/services/subscriptions/types';
@@ -56,8 +56,8 @@ export function useNotificationSubscriptions(userId?: string) {
   // Notification Updated Subscription
   // Handles status changes (read/unread, dismissed, etc.)
   //
-  const updatedHandlers = subscriptionService.register({
-    subscriptionName: 'NotificationUpdated',
+  const changedHandlers = subscriptionService.register({
+    subscriptionName: 'NotificationChanged',
     entityType: 'Notification',
     enableDeduplication: true,
     userId,
@@ -65,9 +65,9 @@ export function useNotificationSubscriptions(userId?: string) {
     enableLogging: true,
   });
 
-  useNotificationUpdatedSubscription({
+  useNotificationChangedSubscription({
     skip: !userId,
-    ...updatedHandlers,
+    ...changedHandlers,
   });
 
   // Note: The useNotifications hook in NotificationProvider will handle

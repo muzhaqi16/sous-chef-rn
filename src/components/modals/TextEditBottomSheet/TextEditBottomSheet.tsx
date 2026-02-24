@@ -1,16 +1,12 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { commonStyles } from '#/styles/commonStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
@@ -59,11 +55,13 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   maxLength,
   keyboardType = 'default',
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['30%'],
+      keyboardBehavior: 'interactive',
+    });
 
   // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
@@ -77,9 +75,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   useEffect(() => {
     if (visible) {
       form.reset({ [fieldKey]: initialValue });
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, initialValue, fieldKey, form]);
 
@@ -96,45 +91,17 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     onClose();
   }, [form, onClose]);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['25%', '50%']}
-      index={0}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
-        showsVerticalScrollIndicator={false}
-        bottomOffset={16}
-      >
+    <BottomSheetModal ref={ref} {...modalProps} index={0}>
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Save at TOP */}
         <View style={styles.header}>
           <Pressable
             onPress={handleCancel}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
@@ -151,7 +118,10 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
           <Pressable
             onPress={form.handleSubmit(handleSave)}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Save"
           >
@@ -168,7 +138,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
         {/* Input Field */}
         <View style={styles.inputContainer}>
-          {label && (
+          {!!label && (
             <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
               {label}
             </Text>
@@ -202,7 +172,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                   keyboardType={keyboardType}
                   textAlignVertical={multiline ? 'top' : 'center'}
                 />
-                {fieldState.error && (
+                {!!fieldState.error && (
                   <Text
                     style={[styles.errorText, { color: theme.colors.error }]}
                   >
@@ -213,7 +183,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             )}
           />
         </View>
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };
@@ -235,7 +205,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     flex: 1,
   },
@@ -244,7 +214,7 @@ const styles = StyleSheet.create(theme => ({
   },
   saveText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'right',
   },
   divider: {
@@ -256,7 +226,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   input: {
@@ -275,7 +245,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

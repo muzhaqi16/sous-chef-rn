@@ -20,6 +20,7 @@ import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
+import { errorService } from '#/services/errorService';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { theme } = useUnistyles();
@@ -75,7 +76,7 @@ export const DietaryProfileScreen: React.FC = () => {
       // Check if all succeeded
       return results.every(result => result === true);
     } catch (error) {
-      console.error('Error adding restrictions:', error);
+      errorService.reportError(error, { operation: 'DietaryProfile.addRestrictions' });
       return false;
     }
   }, [addDietaryRestriction]);
@@ -293,31 +294,28 @@ export const DietaryProfileScreen: React.FC = () => {
               style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
             >
               <Icon
-                library="Feather"
-                name="edit"
+                name="create-outline"
                 size={20}
                 color={theme.colors.primary}
               />
             </Pressable>
           </View>
-          {profile.cookingSkillLevel && (
-            <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
-          )}
-          {profile.maxPrepTimeMinutes && (
+          {!!profile.cookingSkillLevel && <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />}
+          {!!profile.maxPrepTimeMinutes && (
             <InfoRow
               label="Max Prep Time"
               value={profile.maxPrepTimeMinutes}
               unit="minutes"
             />
           )}
-          {profile.maxCookTimeMinutes && (
+          {!!profile.maxCookTimeMinutes && (
             <InfoRow
               label="Max Cook Time"
               value={profile.maxCookTimeMinutes}
               unit="minutes"
             />
           )}
-          {profile.budgetPerMeal && (
+          {!!profile.budgetPerMeal && (
             <InfoRow
               label="Budget per Meal"
               value={profile.budgetPerMeal}
@@ -329,7 +327,7 @@ export const DietaryProfileScreen: React.FC = () => {
       </Animated.View>
 
       {/* Macro Targets Section (Advanced) */}
-      {(profile.calorieTarget ||
+      {!!(profile.calorieTarget ||
         profile.proteinTarget ||
         profile.carbsTarget ||
         profile.fatTarget) && (
@@ -346,27 +344,22 @@ export const DietaryProfileScreen: React.FC = () => {
                 style={({pressed}) => [styles.editButton, pressed && styles.pressed]}
               >
                 <Icon
-                  library="Feather"
-                  name="edit"
+                  name="create-outline"
                   size={20}
                   color={theme.colors.primary}
                 />
               </Pressable>
             </View>
-            {profile.calorieTarget && (
+            {!!profile.calorieTarget && (
               <InfoRow
                 label="Daily Calories"
                 value={profile.calorieTarget}
                 unit="kcal"
               />
             )}
-            {profile.proteinTarget && (
-              <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />
-            )}
-            {profile.carbsTarget && (
-              <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />
-            )}
-            {profile.fatTarget && (
+            {!!profile.proteinTarget && <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />}
+            {!!profile.carbsTarget && <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />}
+            {!!profile.fatTarget && (
               <InfoRow
                 label="Fat"
                 value={profile.fatTarget}
@@ -454,7 +447,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

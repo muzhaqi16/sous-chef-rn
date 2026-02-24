@@ -68,7 +68,7 @@ function AddNewFooter({
       <Text style={footerStyles.icon}>+</Text>
       <View style={footerStyles.content}>
         <Text style={footerStyles.label}>{label}</Text>
-        {subtext && <Text style={footerStyles.subtext}>{subtext}</Text>}
+        {subtext ? <Text style={footerStyles.subtext}>{subtext}</Text> : null}
       </View>
     </Pressable>
   );
@@ -86,21 +86,21 @@ const footerStyles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
   icon: {
     fontSize: theme.typography.fontSize.xl,
     width: 32,
     textAlign: 'center',
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   content: {
     flex: 1,
   },
   label: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   subtext: {

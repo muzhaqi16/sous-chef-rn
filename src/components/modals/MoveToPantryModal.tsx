@@ -1,14 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, Alert, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
@@ -50,11 +47,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    onDismiss: onClose,
+    snapPoints: ['75%', '95%'],
+  });
 
   // Form state
   const [quantityInput, setQuantityInput] = useState('');
@@ -75,7 +71,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
     if (visible && shoppingListItem) {
-      bottomSheetRef.current?.present();
+      ref.current?.present();
       // Reset form when modal opens with new item
       setQuantityInput(shoppingListItem.quantity?.toString() || '1');
       setUnitValue(
@@ -90,9 +86,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setActualPriceInput('');
       setNotes('');
     } else {
-      bottomSheetRef.current?.dismiss();
+      ref.current?.dismiss();
     }
-  }, [visible, shoppingListItem, selectedPantryId]);
+  }, [visible, shoppingListItem, selectedPantryId, ref]);
 
   const handleConfirm = useCallback(() => {
     if (!shoppingListItem) return;
@@ -158,34 +154,12 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   }, []);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['75%', '95%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -201,14 +175,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           ]}
           rightActions={[
             {
-              icon: 'check',
+              icon: 'checkmark',
               onPress: handleConfirm,
             },
           ]}
         />
 
-        {shoppingListItem && (
-          <>
+        {!!shoppingListItem && <>
             {/* Item Info */}
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{shoppingListItem.itemName}</Text>
@@ -238,14 +211,13 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       onPress={() => setPantryId(pantry.id)}
                     >
                       <Icon
-                        name="cupboard"
+                        name="cube-outline"
                         size={20}
                         color={
                           pantryId === pantry.id
                             ? theme.colors.white
                             : theme.colors.textSecondary
                         }
-                        library="MaterialDesignIcons"
                       />
                       <Text
                         style={[
@@ -257,7 +229,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       >
                         {pantry.name}
                       </Text>
-                      {pantry.isDefault && (
+                      {!!pantry.isDefault && (
                         <View
                           style={[
                             styles.defaultBadge,
@@ -347,7 +319,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   onPress={() => setShowDatePicker(true)}
                 >
                   <Icon
-                    name="event"
+                    name="calendar-outline"
                     size={20}
                     color={theme.colors.textSecondary}
                   />
@@ -357,7 +329,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       : 'Select date'}
                   </Text>
                 </Pressable>
-                {expirationDate && (
+                {!!expirationDate && (
                   <Pressable
                     style={({pressed}) => [styles.clearDateButton, pressed && styles.pressed]}
                     onPress={clearExpirationDate}
@@ -370,7 +342,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   </Pressable>
                 )}
               </View>
-              {showDatePicker && (
+              {!!showDatePicker && (
                 <DateTimePicker
                   value={expirationDate || new Date()}
                   mode="date"
@@ -423,8 +395,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 thumbColor={theme.colors.white}
               />
             </View>
-          </>
-        )}
+          </>}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -595,6 +566,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

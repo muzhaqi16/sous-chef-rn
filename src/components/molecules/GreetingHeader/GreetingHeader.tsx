@@ -70,7 +70,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           </Text>
 
           {/* Household Badge - Optional */}
-          {household && (
+          {!!household && (
             <Pressable
               onPress={household.onPress}
               style={styles.householdBadge}
@@ -78,9 +78,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
             >
               <Text style={styles.homeEmoji}>{household.icon || '🏠'}</Text>
               <Text style={styles.householdName}>{household.name}</Text>
-              {household.onPress && (
-                <Icon name="chevron-right" size={14} color={theme.colors.textTertiary} />
-              )}
+              {!!household.onPress && <Icon name="chevron-forward" size={14} color={theme.colors.textTertiary} />}
             </Pressable>
           )}
         </View>
@@ -109,7 +107,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
       </View>
 
       {/* Search Bar - Optional */}
-      {search && (
+      {!!search && (
         <View style={styles.searchContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput

@@ -3,56 +3,11 @@
 # ============================================
 
 query MyShoppingListInvites {
-  myShoppingListInvites {
+  me {
     id
-    token
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    expiresAt
-    shoppingList {
+    pendingCollaborationInvites {
       id
-      name
-      description
-    }
-    collaborator {
-      id
-      email
-      profile {
-        displayName
-        avatar
-      }
-    }
-    invitedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-  }
-}
-
-
-# ============================================
-# MUTATIONS
-# ============================================
-
-mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
-  inviteToShoppingList(input: $input) {
-    success
-    message
-    code
-    collaborator {
-      id
+      token
       shoppingListId
       collaboratorId
       email
@@ -68,11 +23,22 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
       shoppingList {
         id
         name
+        description
+      }
+      collaborator {
+        id
+        email
+        profile {
+          id
+          displayName
+          avatar
+        }
       }
       invitedBy {
         id
         email
         profile {
+          id
           displayName
         }
       }
@@ -80,36 +46,25 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
   }
 }
 
+
+# ============================================
+# MUTATIONS
+# ============================================
+
 mutation AcceptShoppingListInvite($token: String!) {
   acceptShoppingListInvite(token: $token) {
     success
     message
     code
     collaborator {
-      id
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
       canInviteOthers
       invitedAt
       shoppingList {
         id
         name
         description
-      }
-      collaborator {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
       }
     }
   }
@@ -120,6 +75,9 @@ mutation DeclineShoppingListInvite($token: String!) {
     success
     message
     code
+    collaborator {
+      id
+    }
   }
 }
 
@@ -127,73 +85,17 @@ mutation DeclineShoppingListInvite($token: String!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription CollaborationMemberAdded($shoppingListId: ID!, $email: String!) {
-  collaborationMemberAdded(shoppingListId: $shoppingListId, email: $email) {
-    id
-    shoppingListId
-    collaboratorId
-    email
-    role
-    status
-    canEdit
-    canAddItems
-    canRemoveItems
-    canMarkPurchased
-    canInviteOthers
-    invitedAt
-    shoppingList {
-      id
-      name
-    }
+subscription CollaborationChanges($shoppingListId: ID!) {
+  collaborationChanged(shoppingListId: $shoppingListId) {
+    changeType
     collaborator {
-      id
-      email
-      profile {
-        displayName
-        avatar
-      }
+      ...ShoppingListCollaboratorFragment
+      canEdit
+      invitedAt
+      lastViewedAt
     }
-    invitedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-  }
-}
-
-subscription CollaborationMemberRemoved($shoppingListId: ID!, $email: String!) {
-  collaborationMemberRemoved(shoppingListId: $shoppingListId, email: $email) {
-    id
-    email
-    collaboratorId
-    shoppingList {
-      id
-      name
-    }
-  }
-}
-
-subscription CollaborationInviteSent($shoppingListId: ID!, $email: String!) {
-  collaborationInviteSent(shoppingListId: $shoppingListId, email: $email) {
-    id
     shoppingListId
-    email
-    role
-    status
-    invitedAt
-    expiresAt
-    shoppingList {
-      id
-      name
-    }
-    invitedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
+    timestamp
+    userId
   }
 }

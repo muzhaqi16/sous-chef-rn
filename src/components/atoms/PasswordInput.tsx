@@ -1,12 +1,12 @@
 import React, {useState} from 'react';
 import {Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import Feather from '@react-native-vector-icons/feather';
+import {Ionicons} from '@react-native-vector-icons/ionicons';
 import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {
-  /** set to false to hide the “show password” toggle */
+  /** set to false to hide the "show password" toggle */
   showToggle?: boolean;
 }
 
@@ -36,8 +36,8 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         <Pressable
           onPress={() => setVisible(v => !v)}
           style={({pressed}) => pressed && pressedStyles.pressed}>
-          <Feather
-            name={visible ? 'eye' : 'eye-off'}
+          <Ionicons
+            name={visible ? 'eye-outline' : 'eye-off-outline'}
             size={20}
             color={visible ? '#333' : '#999'}
           />
@@ -48,8 +48,8 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   );
 };
 
-const pressedStyles = StyleSheet.create(() => ({
+const pressedStyles = StyleSheet.create(theme => ({
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

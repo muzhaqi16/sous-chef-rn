@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import {
@@ -29,6 +29,7 @@ import { useImageUpload } from '#hooks/useImageUpload';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#generated';
+import { errorService } from '#/services/errorService';
 
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -65,7 +66,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           storage.remove('temp_cropped_image');
         }
       } catch (error) {
-        console.error('Error reading cropped image from MMKV:', error);
+        errorService.reportError(error, { operation: 'ProfilePhotoUpload.readCroppedImage' });
         // Clean up potentially corrupted data
         storage.remove('temp_cropped_image');
       }
@@ -129,7 +130,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error('Camera permission error:', error);
+      errorService.reportError(error, { operation: 'ProfilePhotoUpload.cameraPermission' });
       // PERFORMANCE: Specific error message - permission request failed
       Alert.alert(
         'Permission Error',
@@ -147,9 +148,9 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleCropImage = useCallback(() => {
     if (!selectedImage) return;
 
-    navigation.navigate('ImageCrop' as any, {
-      imageFile: selectedImage,
-    });
+    navigation.dispatch(
+      CommonActions.navigate('ImageCrop', { imageFile: selectedImage }),
+    );
   }, [selectedImage, navigation]);
 
   const handleUpload = async () => {
@@ -199,9 +200,8 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           >
             <Icon
               color={theme.colors.textPrimary}
-              name="chevron-left"
+              name="chevron-back"
               size={30}
-              library="Feather"
             />
           </Pressable>
           <Text style={styles.title}>Upload Your Photo</Text>
@@ -234,15 +234,14 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
             ) : (
               <Icon
                 color={theme.colors.textSecondary}
-                name="user"
+                name="person"
                 size={100}
-                library="Feather"
               />
             )}
           </View>
 
           {/* Show crop icon below image if not cropped yet */}
-          {selectedImage && !croppedImage && (
+          {!!selectedImage && !croppedImage && (
             <Pressable
               onPress={handleCropImage}
               style={({pressed}) => [
@@ -256,7 +255,6 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 color={theme.colors.background}
                 name="crop"
                 size={20}
-                library="Feather"
               />
             </Pressable>
           )}
@@ -340,7 +338,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize['3xl'],
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     marginBottom: theme.spacing.xs + 2,
     textAlign: 'center',
     flex: 1,
@@ -348,7 +346,7 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitle: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
   },
   header: {
@@ -412,7 +410,7 @@ const styles = StyleSheet.create(theme => ({
   btnText: {
     fontSize: theme.typography.fontSize.lg,
     lineHeight: theme.typography.lineHeight.relaxed,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   btnSecondary: {
     flexDirection: 'row',
@@ -427,11 +425,11 @@ const styles = StyleSheet.create(theme => ({
   btnSecondaryText: {
     fontSize: theme.typography.fontSize.lg,
     lineHeight: theme.typography.lineHeight.relaxed,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.secondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -37,7 +37,7 @@ export interface EmptyStateProps {
   iconColor?: string;
 
   /** Icon library (default: uses Icon component default) */
-  iconLibrary?: 'MaterialIcons' | 'Ionicons' | 'MaterialDesignIcons' | 'Feather';
+  iconLibrary?: string;
 
   /** Container alignment */
   alignment?: 'flex-start' | 'center';
@@ -92,24 +92,24 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   return (
-    <View testID={testID} style={[styles.container, { justifyContent: alignment }, style]}>
+    <View testID={testID} accessibilityRole="summary" style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
         {title}
       </Text>
-      {description && (
+      {!!description && (
         <Text
           style={[styles.description, { color: theme.colors.textSecondary }]}
         >
           {description}
         </Text>
       )}
-      {hint && (
+      {!!hint && (
         <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
           {hint}
         </Text>
       )}
-      {action && (
+      {!!action && (
         <Button
           onPress={action.onPress}
           variant={action.variant || 'primary'}
@@ -119,7 +119,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {action.label}
         </Button>
       )}
-      {secondaryAction && (
+      {!!secondaryAction && (
         <Button
           onPress={secondaryAction.onPress}
           variant="outline"

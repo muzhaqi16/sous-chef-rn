@@ -49,14 +49,14 @@ export const NotificationDetailScreen: React.FC<StaticScreenProps<{
                 'No message available'}
             </Text>
 
-            {payload.details && (
+            {!!payload.details && (
               <View style={styles.detailsContainer}>
                 <Text style={styles.detailsTitle}>Details</Text>
                 <Text style={styles.detailsText}>{payload.details}</Text>
               </View>
             )}
 
-            {notification.requiresAction && notification.actionType && (
+            {!!notification.requiresAction && !!notification.actionType && (
               <Pressable
                 style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                 onPress={() => handleNotificationAction(notification)}
@@ -169,6 +169,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xl,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

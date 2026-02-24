@@ -105,5 +105,4 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export const ShoppingListContent = React.memo(ShoppingListContentComponent);
+export const ShoppingListContent = ShoppingListContentComponent;

@@ -21,6 +21,7 @@ import {
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { createShoppingListSchema } from '#utils/validation/onboarding';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { errorService } from '#/services/errorService';
 
 type FormValues = {
   shoppingListName: string;
@@ -53,9 +54,6 @@ export const CreateShoppingListScreen = () => {
   const existingList =
     lists.find((list: { isDefault: boolean }) => list.isDefault) || lists[0];
 
-  // GraphQL mutation
-  const [createShoppingList] = useCreateShoppingListMutation();
-
   // Form setup
   const form = useForm<FormValues>({
     resolver: yupResolver(createShoppingListSchema),
@@ -63,6 +61,8 @@ export const CreateShoppingListScreen = () => {
       shoppingListName: 'Weekly Groceries',
     },
   });
+
+  const [createShoppingList] = useCreateShoppingListMutation();
 
   // Check existing lists
   useEffect(() => {
@@ -116,18 +116,28 @@ export const CreateShoppingListScreen = () => {
         },
       });
 
-      const newList = response.data?.createShoppingList?.shoppingList;
-      if (newList) {
-        setSelectedShoppingListId(newList.id);
+      console.log('CreateShoppingList response:', response);
+
+      if (response.error) {
+        errorService.reportError(response.error, { operation: 'CreateShoppingList.graphqlError' });
+        throw new Error(response.error.message);
+      }
+
+      const payload = response.data?.createShoppingList;
+
+      if (payload?.success) {
+        if (payload.shoppingList) {
+          setSelectedShoppingListId(payload.shoppingList.id);
+        }
         navigateToNextStep('CreateShoppingList');
       } else {
-        throw new Error('Failed to create shopping list');
+        throw new Error(payload?.message || 'Failed to create shopping list');
       }
     } catch (error: any) {
-      const errorMessage =
-        error.message || 'An error occurred while creating the list.';
-      console.error('Shopping list creation error:', errorMessage);
-      setGraphqlError(errorMessage);
+      errorService.reportError(error, { operation: 'CreateShoppingList.submit' });
+      setGraphqlError(
+        error.message || 'An error occurred while creating the list.',
+      );
     } finally {
       setIsCreating(false);
     }
@@ -171,7 +181,7 @@ export const CreateShoppingListScreen = () => {
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Shopping List</Text>
             <Text style={styles.resourceName}>{existingList.name}</Text>
-            {existingList.isDefault && (
+            {!!existingList.isDefault && (
               <View style={styles.defaultBadge}>
                 <Text style={styles.defaultBadgeText}>Default</Text>
               </View>
@@ -223,7 +233,7 @@ export const CreateShoppingListScreen = () => {
         disabled={isCreating}
       />
 
-      {graphqlError && <Text style={styles.errorText}>{graphqlError}</Text>}
+      {graphqlError ? <Text style={styles.errorText}>{graphqlError}</Text> : null}
     </OnBoardingWrapper>
   );
 };
@@ -267,7 +277,7 @@ const styles = StyleSheet.create(theme => ({
   },
   resourceName: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   defaultBadge: {
@@ -283,7 +293,7 @@ const styles = StyleSheet.create(theme => ({
   defaultBadgeText: {
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
   },
   infoText: {

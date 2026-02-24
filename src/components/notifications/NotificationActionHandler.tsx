@@ -6,7 +6,7 @@ import {
 } from './InvitationAcceptanceModal';
 import { NotificationItem } from '#store/slices/notificationSlice';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -22,7 +22,7 @@ export const NotificationActionHandler: React.FC<
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
   const { navigateTo, navigate } = useAppNavigation();
-  const setSelectedHomeId = useStore(state => state.setSelectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||

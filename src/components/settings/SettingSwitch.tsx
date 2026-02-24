@@ -31,7 +31,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}
         </Text>
-        {description && (
+        {!!description && (
           <Text
             style={[styles.description, disabled && styles.descriptionDisabled]}
           >
@@ -61,7 +61,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   textContainer: {
     flex: 1,

@@ -1,6 +1,7 @@
 import { Observable } from '@apollo/client';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
+import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
@@ -74,31 +75,6 @@ const canAttemptRefresh = (): boolean => {
 
 const calculateRetryDelay = (retryCount: number): number => {
   return REFRESH_CONFIG.RETRY_DELAY_BASE * Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount);
-};
-
-// Helper to detect if error is network-related (vs auth-related)
-const isNetworkError = (error: any): boolean => {
-  // Check error message for common network error patterns
-  const message = (error?.message || error?.networkError?.message || '').toLowerCase();
-  const networkPatterns = [
-    'network request failed',
-    'network error',
-    'connection refused',
-    'timeout',
-    'enotfound',
-    'econnrefused',
-    'econnreset',
-    'ehostunreach',
-    'fetch failed',
-    'socket closed',        // WebSocket connection failures
-    'websocket',            // Generic WebSocket errors
-    'ws connection',        // WebSocket connection issues
-    'connection lost',      // General connection lost
-    'no connection',        // Offline state
-    'unreachable',          // Server unreachable
-  ];
-
-  return networkPatterns.some(pattern => message.includes(pattern));
 };
 
 const performTokenRefresh = async (): Promise<string | null> => {

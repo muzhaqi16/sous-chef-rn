@@ -73,7 +73,7 @@ export function transformRecipeForDisplay(
   return {
     id: `spoonacular-${recipe.id}`,
     title: recipe.title,
-    subtitle: subtitleParts.join(' • ') || 'From Spoonacular',
+    subtitle: subtitleParts.join(' • '),
     badge,
     imageUrl: recipe.image,
     spoonacularId: recipe.id,

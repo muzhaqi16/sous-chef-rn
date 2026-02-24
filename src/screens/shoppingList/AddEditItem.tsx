@@ -9,7 +9,7 @@ import {
   CategoryType,
 } from '#generated';
 import { FormModal } from '#components/organisms/FormModal';
-import { Input } from '#components/base/Input';
+import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
@@ -23,6 +23,7 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { errorService } from '#/services/errorService';
 
 type RouteParams = {
   listId: string;
@@ -75,7 +76,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       addToShoppingListCache(cache, listId, newItem);
     },
     onError: error => {
-      console.error('Add item error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.addItem' });
     },
   });
 
@@ -94,7 +95,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       }
     },
     onError: error => {
-      console.error('Update item error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.updateItem' });
     },
   });
 
@@ -217,7 +218,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
         );
       }
     } catch (error: any) {
-      console.error('Save error:', error);
+      errorService.reportError(error, { operation: 'ShoppingListItem.save' });
 
       // Handle version conflict errors with user-friendly message
       if (handleVersionConflict(error)) {
@@ -278,12 +279,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
     >
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
-        <Input
-          label="Item Name"
+        <BaseInput
+          label="Item Name *"
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
           placeholder="e.g., Milk, Bread"
-          required
           autoFocus
           testID="edit-item-name-input"
         />
@@ -333,7 +333,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       />
 
       {/* Estimated Price Field */}
-      <Input
+      <BaseInput
         label="Estimated Price"
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}
@@ -342,7 +342,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({ route })
       />
 
       {/* Notes Field */}
-      <Input
+      <BaseInput
         label="Notes"
         value={notes}
         onChangeText={text => updateField('notes', text)}

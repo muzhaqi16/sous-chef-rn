@@ -30,7 +30,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
   if (type === 'dragHandle' && onDrag) {
     return (
       <Pressable onLongPress={onDrag} style={styles.dragHandle}>
-        <Icon name="drag-indicator" size={24} color={theme.colors.textTertiary} />
+        <Icon name="reorder-three" size={24} color={theme.colors.textTertiary} />
       </Pressable>
     );
   }
@@ -47,14 +47,14 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
           ]}
         >
           <Icon
-            name="remove"
+            name="remove-outline"
             size={18}
             color={disabled || quantity === 0 ? theme.colors.textTertiary : theme.colors.primary}
           />
         </Pressable>
         <View style={styles.counterValue}>
           <Text style={styles.counterText}>{quantity || 0}</Text>
-          {unit && <Text style={styles.counterUnit}>{unit}</Text>}
+          {unit ? <Text style={styles.counterUnit}>{unit}</Text> : null}
         </View>
         <Pressable
           onPress={onIncrement}
@@ -74,9 +74,9 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
   // Default to meta
   return (
     <View style={styles.metaContainer}>
-      {primary && <Text style={styles.primary}>{primary}</Text>}
-      {secondary && <Text style={styles.secondary}>{secondary}</Text>}
-      {tertiary && <Text style={styles.secondary}>{tertiary}</Text>}
+      {primary ? <Text style={styles.primary}>{primary}</Text> : null}
+      {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
+      {tertiary ? <Text style={styles.secondary}>{tertiary}</Text> : null}
     </View>
   );
 };

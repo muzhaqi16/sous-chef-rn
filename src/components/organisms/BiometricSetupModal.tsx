@@ -197,12 +197,12 @@ export const BiometricSetupModal = ({
   const getBiometricIcon = () => {
     switch (biometricInfo.biometryType) {
       case 'Face ID':
-        return 'face-recognition';
+        return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
-        return 'fingerprint';
+        return 'finger-print';
       default:
-        return 'fingerprint';
+        return 'finger-print';
     }
   };
 
@@ -246,7 +246,7 @@ export const BiometricSetupModal = ({
                 {getBiometricDescription()}
               </Text>
 
-              {needsPassword && (
+              {!!needsPassword && (
                 <View style={styles.passwordSection}>
                   <Text style={styles.passwordLabel}>
                     {mode === 'settings'
@@ -339,7 +339,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.xl,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.md,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   primaryButtonText: {
     color: theme.colors.background,
@@ -417,6 +417,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

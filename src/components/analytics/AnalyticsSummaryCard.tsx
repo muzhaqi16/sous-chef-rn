@@ -20,7 +20,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
   value,
   subtitle,
   icon,
-  iconLibrary = 'MaterialIcons',
+  iconLibrary = 'Ionicons',
   color,
   trend,
   trendValue,
@@ -46,14 +46,14 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
       case 'down':
         return 'trending-down';
       default:
-        return 'trending-flat';
+        return 'remove-outline';
     }
   };
 
   return (
     <View style={[commonStyles.shadow, styles.card]}>
       <View style={styles.header}>
-        {icon && (
+        {!!icon && (
           <View style={[styles.iconContainer, { backgroundColor: cardColor + '20' }]}>
             <Icon name={icon} size={20} color={cardColor} library={iconLibrary} />
           </View>
@@ -64,12 +64,10 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
       </View>
       <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{value}</Text>
       <View style={styles.footer}>
-        {subtitle && (
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>
-        )}
-        {trend && trendValue && (
+        {!!subtitle && <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
+        {!!trend && !!trendValue && (
           <View style={styles.trendContainer}>
-            <Icon name={getTrendIcon()} size={14} color={getTrendColor()} library="MaterialIcons" />
+            <Icon name={getTrendIcon()} size={14} color={getTrendColor()} />
             <Text style={[styles.trendText, { color: getTrendColor() }]}>{trendValue}</Text>
           </View>
         )}

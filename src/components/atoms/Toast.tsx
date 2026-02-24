@@ -2,11 +2,12 @@ import React, {useState, useRef, ReactNode, useEffect} from 'react';
 import {Text, Platform, ToastAndroid} from 'react-native';
 import Animated, {SlideInDown, SlideOutUp} from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {ToastContext} from '../../hooks/useToast';
 import {toastService} from '#/services/toastService';
 
 // Define toast types
-export type ToastType = 'default' | 'success' | 'error' | 'info';
+export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 // Options for showing a toast
 export interface ToastOptions {
   message: string;
@@ -17,6 +18,7 @@ export type ToastFn = (options: ToastOptions) => void;
 
 export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   const {theme} = useUnistyles();
+  const insets = useSafeAreaInsets();
   const [opts, setOpts] = useState<ToastOptions>({
     message: '',
     duration: ToastAndroid.SHORT,
@@ -52,7 +54,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   // Initialize toast service with bridge to existing toast provider
   useEffect(() => {
     toastService.init((message, type) => {
-      showToast({message, type: type === 'warning' ? 'error' : type});
+      showToast({message, type: type ?? 'default'});
     });
   }, []);
 
@@ -61,13 +63,14 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
     default: theme.colors.textPrimary,
     success: theme.colors.success,
     error: theme.colors.error,
+    warning: theme.colors.warning,
     info: theme.colors.info,
   };
 
   return (
     <ToastContext.Provider value={showToast}>
       {children}
-      {visible && Platform.OS === 'ios' && (
+      {!!visible && Platform.OS === 'ios' && (
         <Animated.View
           testID={`toast-${opts.type || 'default'}`}
           entering={SlideInDown.springify().damping(20)}
@@ -75,6 +78,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
           style={[
             styles.toastContainer,
             {
+              top: insets.top + 16,
               backgroundColor: backgroundColors[opts.type || 'default'],
             },
           ]}>
@@ -90,7 +94,6 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
 const styles = StyleSheet.create(theme => ({
   toastContainer: {
     position: 'absolute',
-    top: 60,
     left: theme.spacing.md,
     right: theme.spacing.md,
     backgroundColor: theme.colors.textPrimary,
@@ -104,6 +107,6 @@ const styles = StyleSheet.create(theme => ({
   toastText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

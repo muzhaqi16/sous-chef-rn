@@ -22,7 +22,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
-import { serializeError } from '#/utils/errorSerialization';
+import { errorService } from '#/services/errorService';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -32,12 +32,13 @@ import {
  * Configuration for create operation
  */
 export interface CreateOperationConfig<TInput, TResult> {
-  mutation: (variables: any) => Promise<{ data?: TResult; errors?: readonly any[] }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
+  mutation: (...args: any[]) => Promise<{ data?: TResult; errors?: readonly { message: string }[] }>;
   parentId?: string | null | (() => string | null | undefined);
-  transformInput?: (input: TInput) => any;
+  transformInput?: (input: TInput) => Record<string, unknown>;
   validateInput?: (input: TInput) => boolean | string;
   onSuccess?: (data: TResult) => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
   operationName?: string;
 }
 
@@ -45,16 +46,17 @@ export interface CreateOperationConfig<TInput, TResult> {
  * Configuration for update operation
  */
 export interface UpdateOperationConfig<TInput, TResult> {
-  mutation: (variables: any) => Promise<{ data?: TResult }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
+  mutation: (...args: any[]) => Promise<{ data?: TResult }>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
-  transformInput?: (input: TInput) => any;
+  transformInput?: (input: TInput) => Record<string, unknown>;
   validateInput?: (input: TInput) => boolean | string;
-  getFragmentData?: (client: any, itemId: string) => any;
+  getFragmentData?: (client: ReturnType<typeof useApolloClient>, itemId: string) => { version?: number } | null;
   fragmentDoc?: DocumentNode;
   includeVersion?: boolean;
   onSuccess?: (data: TResult) => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
   onVersionConflict?: () => void;
   operationName?: string;
 }
@@ -63,13 +65,14 @@ export interface UpdateOperationConfig<TInput, TResult> {
  * Configuration for remove operation
  */
 export interface RemoveOperationConfig<TResult> {
-  mutation: (variables: any) => Promise<{ data?: TResult }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- wraps diverse Apollo mutation signatures
+  mutation: (...args: any[]) => Promise<{ data?: TResult }>;
   parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
   itemName?: string;
   onSuccess?: (data: TResult) => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
   operationName?: string;
 }
 
@@ -136,11 +139,6 @@ export function useCrudOperations() {
 
           const result = await mutation({ variables });
 
-          // DEBUG: Log the full result to understand its structure
-          console.log('CRUD createAddOperation result:', JSON.stringify(result, null, 2));
-          console.log('result.data:', result.data);
-          console.log('result.errors:', result.errors);
-
           // Handle GraphQL errors returned with errorPolicy: 'all'
           // Check errors FIRST because result.data may be { mutationName: null } even on error
           if (result.errors && result.errors.length > 0) {
@@ -156,8 +154,8 @@ export function useCrudOperations() {
 
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
-        } catch (error: any) {
-          console.error(`${operationName} error:`, serializeError(error));
+        } catch (error: unknown) {
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;
@@ -224,7 +222,7 @@ export function useCrudOperations() {
 
         try {
           // Get current data from cache if fragment provided
-          let currentData: any = null;
+          let currentData: { version?: number } | null = null;
           if (getFragmentData) {
             currentData = getFragmentData(client, itemId);
           }
@@ -256,7 +254,7 @@ export function useCrudOperations() {
 
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Handle version conflicts
           if (
             handleVersionConflictAlert(error, {
@@ -267,7 +265,7 @@ export function useCrudOperations() {
             return false;
           }
 
-          console.error(`${operationName} error:`, error);
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;
@@ -354,8 +352,8 @@ export function useCrudOperations() {
 
             Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
             return false;
-          } catch (error: any) {
-            console.error(`${operationName} error:`, error);
+          } catch (error: unknown) {
+            errorService.reportError(error, { operation: operationName });
             onError?.(error);
             handleMutationErrorAlert(error, { operation: operationName });
             return false;
@@ -381,11 +379,11 @@ export function useCrudOperations() {
    * ```
    */
   const createSimpleOperation = useCallback(
-    <TArgs extends any[], TResult>(config: {
+    <TArgs extends unknown[], TResult>(config: {
       operation: (...args: TArgs) => Promise<{ data?: TResult }>;
       validate?: (...args: TArgs) => boolean | string;
       onSuccess?: (data: TResult) => void;
-      onError?: (error: any) => void;
+      onError?: (error: unknown) => void;
       operationName?: string;
     }) => {
       return async (...args: TArgs): Promise<TResult | false> => {
@@ -420,8 +418,8 @@ export function useCrudOperations() {
 
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
-        } catch (error: any) {
-          console.error(`${operationName} error:`, serializeError(error));
+        } catch (error: unknown) {
+          errorService.reportError(error, { operation: operationName });
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;

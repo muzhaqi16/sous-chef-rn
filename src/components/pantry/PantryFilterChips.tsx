@@ -124,7 +124,7 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
                 selected={isSelected}
                 onPress={() => handleFilterToggle(config.id)}
               />
-              {isSelected && count > 0 && (
+              {!!isSelected && count > 0 && (
                 <View style={badgeStyles[config.id]}>
                   <Text style={styles.badgeText}>{count}</Text>
                 </View>
@@ -161,6 +161,6 @@ const styles = StyleSheet.create(theme => ({
   badgeText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.xs - 2,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
   },
 }));

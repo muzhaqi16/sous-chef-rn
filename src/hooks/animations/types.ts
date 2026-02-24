@@ -1,4 +1,4 @@
-import type { SharedValue } from 'react-native-reanimated';
+import { type SharedValue, type withTiming, type useAnimatedStyle } from 'react-native-reanimated';
 
 export interface SpringConfig {
   mass?: number;
@@ -44,7 +44,7 @@ export interface SlideAnimationConfig {
   /** Animation duration in ms (default: 200) */
   duration?: number;
   /** Custom easing function (default: standard cubic bezier) */
-  easing?: Parameters<typeof import('react-native-reanimated').withTiming>[1] extends { easing?: infer E } ? E : never;
+  easing?: Parameters<typeof withTiming>[1] extends { easing?: infer E } ? E : never;
   /** Enable opacity fade during slide (default: false) */
   withOpacity?: boolean;
   /** Final opacity value when withOpacity is true (default: 0) */
@@ -64,9 +64,7 @@ export interface UseSlideAnimationOptions extends Omit<SlideAnimationConfig, 'sl
 
 export interface UseSlideAnimationReturn {
   /** Animated style to apply to the container */
-  animatedSlideStyle: ReturnType<
-    typeof import('react-native-reanimated').useAnimatedStyle
-  >;
+  animatedSlideStyle: ReturnType<typeof useAnimatedStyle>;
   /** Trigger the slide animation. direction: 1 = right, -1 = left. onComplete called after animation finishes. */
   triggerSlide: (direction: SlideDirection, onComplete?: () => void) => void;
   /** Reset slide position to origin */

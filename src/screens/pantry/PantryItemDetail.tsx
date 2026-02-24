@@ -5,9 +5,9 @@ import {
   Alert,
   ScrollView,
   Pressable,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
@@ -38,6 +38,7 @@ import { useAdjustPantryItemQuantity } from '#hooks/pantry/mutations/useAdjustPa
 import { useCorrectPantryItemWeight } from '#hooks/pantry/mutations/useCorrectPantryItemWeight';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
+import { errorService } from '#/services/errorService';
 
 // Helper function to calculate expiry info
 const getExpiryInfo = (expiresAt: string | null | undefined) => {
@@ -226,7 +227,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         setCachedSuggestions(itemName, results);
       } catch (error: any) {
         if (error.name === 'AbortError') return;
-        console.error('Failed to fetch suggested recipes:', error);
+        errorService.reportError(error, { operation: 'PantryItemDetail.fetchSuggestedRecipes' });
       } finally {
         setLoadingRecipes(false);
       }
@@ -296,7 +297,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
       setAddToListStatus('success');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
-      console.error('Failed to add to shopping list:', error);
+      errorService.reportError(error, { operation: 'PantryItemDetail.addToShoppingList' });
       setAddToListStatus('error');
       statusTimeoutRef.current = setTimeout(() => setAddToListStatus('idle'), 3000);
     }
@@ -312,13 +313,13 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
     navigateTo.pantryItem({ itemId });
   };
 
-  const handleRecipePress = (recipeId: number) => {
+  const handleRecipePress = useCallback((recipeId: number) => {
     // Navigate within Pantry stack - back navigation works automatically
     navigate('RecipeDetail', {
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
     });
-  };
+  }, [navigate]);
 
   const handleDiscardExpired = useCallback(() => {
     if (!item) return;
@@ -371,6 +372,26 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
   const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
 
+  const renderSuggestedRecipeItem = useCallback(
+    ({ item: recipe }: { item: RecipeInformation }) => (
+      <Pressable
+        style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
+        onPress={() => handleRecipePress(recipe.id)}
+      >
+        <Animated.Image
+          source={{ uri: recipe.image }}
+          style={styles.recipeImage}
+          resizeMode="cover"
+          sharedTransitionTag={`recipe-image-${recipe.id}`}
+        />
+        <Text style={styles.recipeTitle} numberOfLines={2}>
+          {recipe.title}
+        </Text>
+      </Pressable>
+    ),
+    [handleRecipePress],
+  );
+
   if (!item) {
     return (
       <View style={styles.container}>
@@ -395,7 +416,6 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
             onPress: handleAddToShoppingList,
             variant: addToListStatus === 'success' ? 'success' : 'primary',
             loading: addToListStatus === 'loading',
-            library: 'Ionicons',
             testID: 'pantry-item-add-to-list-button',
           },
           ...(item.condition === 'EXPIRED' && item.quantity > 0
@@ -403,27 +423,23 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 icon: 'close-circle-outline' as const,
                 onPress: handleDiscardExpired,
                 variant: 'error' as const,
-                library: 'Ionicons' as const,
                 testID: 'pantry-item-discard-button',
               }]
             : []),
           {
             icon: 'swap-vertical-outline',
             onPress: () => setAdjustModalVisible(true),
-            library: 'Ionicons',
             testID: 'pantry-item-adjust-button',
           },
           {
             icon: 'create-outline',
             onPress: handleEdit,
-            library: 'Ionicons',
             testID: 'pantry-item-edit-button',
           },
           {
             icon: 'trash-outline',
             onPress: handleDelete,
             variant: 'error',
-            library: 'Ionicons',
             testID: 'pantry-item-delete-button',
           },
         ]}
@@ -435,7 +451,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         showsVerticalScrollIndicator={false}
       >
         {/* Image Gallery - show if images or fallback URL exists */}
-        {showImages && (
+        {!!showImages && (
           <View style={styles.imageSection}>
             <ImageGalleryTabs
               images={itemImages}
@@ -453,13 +469,13 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Category Badge with Storage Location */}
-        {(categoryName || storageStateDisplay) && (
+        {!!(categoryName || storageStateDisplay) && (
           <View style={styles.categoryBadge}>
             <Icon
               name="restaurant-outline"
               size={16}
               color={theme.colors.primary}
-              library="Ionicons"
+
             />
             <Text style={styles.categoryText}>
               {categoryName || 'Item'}
@@ -503,7 +519,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Nutrition Summary - navigates to NutritionScreen */}
-        {showNutrition && (
+        {!!showNutrition && (
           <View style={styles.nutritionSection}>
             <Text style={styles.nutritionTitle}>Nutrition</Text>
             <NutritionSummary
@@ -529,7 +545,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="apps-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </View>
             <Text style={styles.infoValue}>
@@ -539,7 +555,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Net Weight Row */}
-        {netWeightText && (
+        {!!netWeightText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Net Weight</Text>
             <View style={styles.infoValueContainer}>
@@ -548,11 +564,11 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="scale-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{netWeightText}</Text>
-              {item.lastUsedAt && (
+              {!!item.lastUsedAt && (
                 <Pressable
                   onPress={() => setCorrectWeightVisible(true)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -562,7 +578,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                     name="create-outline"
                     size={16}
                     color={theme.colors.primary}
-                    library="Ionicons"
+      
                   />
                 </Pressable>
               )}
@@ -571,7 +587,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Remaining Weight Row - only show for dual-tracked items */}
-        {remainingNetWeightText && (
+        {!!remainingNetWeightText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Remaining Weight</Text>
             <View style={styles.infoValueContainer}>
@@ -580,7 +596,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="scale-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{remainingNetWeightText}</Text>
@@ -589,7 +605,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Inventory Breakdown Row - live remaining decomposition */}
-        {quantityBreakdownText && (
+        {!!quantityBreakdownText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Inventory</Text>
             <View style={styles.infoValueContainer}>
@@ -598,7 +614,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="layers-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{quantityBreakdownText}</Text>
@@ -607,7 +623,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Package Details Row - only show if breakdown is available */}
-        {packageBreakdownText && (
+        {!!packageBreakdownText && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Package</Text>
             <View style={styles.infoValueContainer}>
@@ -616,7 +632,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="layers-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{packageBreakdownText}</Text>
@@ -625,7 +641,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Brand Row - only show if brand is set */}
-        {brandName && (
+        {!!brandName && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Brand</Text>
             <View style={styles.infoValueContainer}>
@@ -634,7 +650,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="pricetag-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{brandName}</Text>
@@ -643,7 +659,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Storage Location */}
-        {item.storageLocation && (
+        {!!item.storageLocation && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Storage</Text>
             <View style={styles.infoValueContainer}>
@@ -652,7 +668,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="cube-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -665,7 +681,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Store Row */}
-        {item.store?.name && (
+        {!!item.store?.name && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Store</Text>
             <View style={styles.infoValueContainer}>
@@ -674,7 +690,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="storefront-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>{item.store.name}</Text>
@@ -696,7 +712,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                       ? theme.colors.error
                       : theme.colors.warning
                   }
-                  library="Ionicons"
+    
                 />
               </View>
               <Text
@@ -722,7 +738,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="bag-handle-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -742,7 +758,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="cash-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -762,7 +778,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="wallet-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -782,7 +798,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="alert-circle-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -802,7 +818,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="refresh-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -813,7 +829,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Purchase Date Row */}
-        {item.purchase?.purchaseDate && (
+        {!!item.purchase?.purchaseDate && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Purchased</Text>
             <View style={styles.infoValueContainer}>
@@ -822,7 +838,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="receipt-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -836,7 +852,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Usage Info Row - show last used date if available */}
-        {item.lastUsedAt && (
+        {!!item.lastUsedAt && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Last Used</Text>
             <View style={styles.infoValueContainer}>
@@ -845,7 +861,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                   name="time-outline"
                   size={16}
                   color={theme.colors.textSecondary}
-                  library="Ionicons"
+    
                 />
               </View>
               <Text style={styles.infoValue}>
@@ -856,14 +872,14 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Notes Section */}
-        {item.storageNotes && (
+        {!!item.storageNotes && (
           <View style={styles.notesSection}>
             <View style={styles.notesHeader}>
               <Icon
                 name="document-text-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
               <Text style={styles.notesLabel}>Notes</Text>
             </View>
@@ -872,7 +888,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Tags Section */}
-        {item.tags && item.tags.length > 0 && (
+        {!!item.tags && item.tags.length > 0 && (
           <View style={styles.tagsSection}>
             <Text style={styles.tagsLabel}>Tags</Text>
             <View style={styles.tagsContainer}>
@@ -894,7 +910,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                 name="calendar-outline"
                 size={16}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </View>
             <Text style={styles.infoValue}>{formatDate(item.createdAt)}</Text>
@@ -902,8 +918,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         </View>
 
         {/* Usage Records Section - only show if there are usage records */}
-        {item.usageRecords && item.usageRecords.length > 0 && (
-          <>
+        {!!item.usageRecords && item.usageRecords.edges.length > 0 && <>
             <Pressable
               style={({pressed}) => [styles.sectionHeader, pressed && styles.pressed]}
               onPress={() =>
@@ -911,19 +926,19 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               }
             >
               <Text style={styles.sectionTitle}>
-                Usage History ({item.usageRecords.length})
+                Usage History ({item.usageRecords.edges.length})
               </Text>
               <Icon
                 name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
                 size={20}
                 color={theme.colors.textSecondary}
-                library="Ionicons"
+  
               />
             </Pressable>
 
-            {purchaseHistoryExpanded && (
+            {!!purchaseHistoryExpanded && (
               <View style={styles.purchaseHistoryContent}>
-                {item.usageRecords.slice(0, 5).map(usage => {
+                {item.usageRecords.edges.slice(0, 5).map(({ node: usage }) => {
                   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
                   const purposeLabel = isAdjustment
                     ? 'Inventory adjusted'
@@ -937,7 +952,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                         <Text style={styles.purchaseDate}>
                           {formatDate(usage.usedAt)}
                         </Text>
-                        {purposeLabel && (
+                        {!!purposeLabel && (
                           <Text style={[
                             styles.purchaseStore,
                             isAdjustment && styles.adjustmentPurpose,
@@ -945,7 +960,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                             {purposeLabel}
                           </Text>
                         )}
-                        {isAdjustment && usage.adjustmentReason && (
+                        {!!isAdjustment && !!usage.adjustmentReason && (
                           <Text style={styles.adjustmentReason}>
                             {usage.adjustmentReason}
                           </Text>
@@ -960,15 +975,14 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
                     </View>
                   );
                 })}
-                {item.usageRecords.length > 5 && (
+                {item.usageRecords.edges.length > 5 && (
                   <Text style={styles.noPurchaseData}>
-                    +{item.usageRecords.length - 5} more entries
+                    +{item.usageRecords.edges.length - 5} more entries
                   </Text>
                 )}
               </View>
             )}
-          </>
-        )}
+          </>}
 
         {/* Recipes to try */}
         <View style={styles.recipesSection}>
@@ -980,28 +994,13 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               style={styles.recipesLoading}
             />
           ) : suggestedRecipes.length > 0 ? (
-            <FlatList
+            <FlashList
               horizontal
               data={suggestedRecipes}
               keyExtractor={recipe => String(recipe.id)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recipesList}
-              renderItem={({ item: recipe }) => (
-                <Pressable
-                  style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
-                  onPress={() => handleRecipePress(recipe.id)}
-                >
-                  <Animated.Image
-                    source={{ uri: recipe.image }}
-                    style={styles.recipeImage}
-                    resizeMode="cover"
-                    sharedTransitionTag={`recipe-image-${recipe.id}`}
-                  />
-                  <Text style={styles.recipeTitle} numberOfLines={2}>
-                    {recipe.title}
-                  </Text>
-                </Pressable>
-              )}
+              renderItem={renderSuggestedRecipeItem}
             />
           ) : (
             <Text style={styles.noRecipes}>
@@ -1014,7 +1013,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         <View style={{ height: insets.bottom + 20 }} />
       </ScrollView>
 
-      {adjustModalVisible && (
+      {!!adjustModalVisible && (
         <AdjustQuantityModal
           visible={adjustModalVisible}
           pantryItem={item}
@@ -1023,7 +1022,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         />
       )}
 
-      {correctWeightVisible && (
+      {!!correctWeightVisible && (
         <CorrectWeightModal
           visible={correctWeightVisible}
           pantryItem={item}
@@ -1324,6 +1323,6 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -85,7 +85,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         selectTextOnFocus
         testID={testID}
       />
-      {!hasError && value && isFocused && (
+      {!hasError && !!value && !!isFocused && (
         <Text style={styles.hintText}>
           Formats: 1/4, 1 1/4, 0.75, or 2
         </Text>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create(theme => ({
   },
   inputDisabled: {
     backgroundColor: theme.colors.surfaceVariant,
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   hintText: {
     fontSize: theme.typography.fontSize.xs,

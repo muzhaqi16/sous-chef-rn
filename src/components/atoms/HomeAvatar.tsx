@@ -41,8 +41,7 @@ export const HomeAvatar: React.FC<HomeAvatarProps> = ({home, size = 40}) => {
       uri={ownerInfo?.avatar}
       name={ownerInfo?.displayName || ownerInfo?.email}
       size={size}
-      fallbackIcon="home"
-      fallbackIconLibrary="MaterialIcons"
+      fallbackIcon="home-outline"
     />
   );
 };

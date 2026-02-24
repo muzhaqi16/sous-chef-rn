@@ -88,13 +88,11 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
           testID={`shopping-item-checkbox-${id}`}
         >
           <View style={styles.checkbox}>
-            {isPurchased && <Icon name="check" size={16} color="white" />}
+            {!!isPurchased && <Icon name="checkmark" size={16} color="white" />}
           </View>
         </Pressable>
 
-        {imageUrl && (
-          <CachedImage uri={imageUrl} style={styles.itemImage} />
-        )}
+        {!!imageUrl && <CachedImage uri={imageUrl} style={styles.itemImage} />}
 
         <View style={styles.contentContainer}>
           <Text style={styles.itemName}>
@@ -117,7 +115,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 accessibilityHint={`Save new quantity of ${localQuantity}`}
                 style={({pressed}) => pressed && styles.pressed}
               >
-                <Icon name="check" size={20} color={theme.colors.primary} />
+                <Icon name="checkmark" size={20} color={theme.colors.primary} />
               </Pressable>
             </View>
           ) : isPurchased ? (
@@ -147,7 +145,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
                 displayAsFraction={displayAsFraction}
                 style={styles.quantityText}
               />
-              <Icon name="edit" size={14} color={theme.colors.textSecondary} />
+              <Icon name="create-outline" size={14} color={theme.colors.textSecondary} />
             </Pressable>
           )}
         </View>
@@ -169,7 +167,7 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
           backgroundColor: theme.colors.surfaceVariant,
         },
       },
@@ -206,7 +204,7 @@ const styles = StyleSheet.create(theme => ({
   },
   itemName: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
     variants: {
@@ -240,6 +238,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

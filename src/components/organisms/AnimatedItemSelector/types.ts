@@ -22,6 +22,7 @@ export interface SelectorConfig<T extends SelectableItem> {
   onSelect: (id: string, item: T) => void;
   displayProperty: keyof T;
   actions: ActionButtonConfig[];
+  headerRight?: React.ReactNode;
   loading?: boolean;
   emptyMessage?: string;
   keyExtractor?: (item: T) => string;
@@ -30,13 +31,14 @@ export interface SelectorConfig<T extends SelectableItem> {
     isSelected: boolean,
     onPress: () => void
   ) => React.ReactElement;
+  extraData?: any;
 }
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
   isVisible?: boolean;
   onClose?: () => void;
-  onOpen?: () => void;
+  onOpen?: (afterDone?: () => void) => void;
 }
 
 export interface ItemSelectorRef {
@@ -48,13 +50,13 @@ export interface ItemSelectorRef {
 
 export interface SelectorItemProps<T extends SelectableItem> {
   item: T;
-  index?: number;
   isSelected: boolean;
-  onPress: () => void;
+  onSelect: (id: string, item: T) => void;
   displayProperty: keyof T;
   renderCustomItem?: (
     item: T,
     isSelected: boolean,
     onPress: () => void
   ) => React.ReactElement;
+  extraData?: any;
 }

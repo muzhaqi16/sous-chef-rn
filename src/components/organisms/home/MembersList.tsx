@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { HomeInviteFragment } from '#generated';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { formatInviteStatus, getInviteStatusColor, getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
@@ -33,7 +33,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   members,
   invites = [],
 }) => {
-  const currentUser = useStore(state => state.user);
+  const currentUser = useAppStore(state => state.user);
   const { theme } = useUnistyles();
 
   // API now only returns pending invites, so no client-side filtering needed
@@ -108,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
   },
   membersSectionTitle: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create(theme => ({
   memberChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   memberRole: {
     fontSize: theme.typography.fontSize.xs - 2,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create(theme => ({
   },
   currentUserText: {
     color: theme.colors.white,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
   },
   currentUserRole: {
     color: theme.colors.white,
@@ -160,12 +160,12 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   inviteStatus: {
     fontSize: theme.typography.fontSize.xs - 2,
     marginTop: 2,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

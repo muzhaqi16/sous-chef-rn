@@ -1,9 +1,9 @@
 import {useCallback} from 'react';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {RESET_SCENARIOS, ResetOptions} from '#store/resetManager';
 
 export const useStoreReset = () => {
-  const resetStore = useStore(state => state.resetStore);
+  const resetStore = useAppStore(state => state.resetStore);
 
   const logout = useCallback(() => {
     resetStore('LOGOUT');
@@ -42,8 +42,8 @@ export const useStoreReset = () => {
 // Alternative: Individual hooks for specific use cases
 export const useAuth = () => {
   const {logout} = useStoreReset();
-  const user = useStore(state => state.user);
-  const isAuthenticated = useStore(state => state.getIsAuthenticated());
+  const user = useAppStore(state => state.user);
+  const isAuthenticated = useAppStore(state => state.getIsAuthenticated());
 
   return {
     user,

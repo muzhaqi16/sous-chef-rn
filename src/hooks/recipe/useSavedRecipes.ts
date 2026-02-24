@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useMySavedRecipesQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
+
+const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * Normalized saved recipe with recipe data flattened
@@ -37,9 +39,10 @@ export function useSavedRecipes(folder?: string | null) {
   const { isLoggedOut } = useAuth();
   const shouldSkip = isLoggedOut;
 
-  const { data, loading, error, refetch } = useMySavedRecipesQuery({
+  const { data, loading, error, refetch, fetchMore } = useMySavedRecipesQuery({
     variables: {
       folder: folder ?? undefined,
+      first: DEFAULT_PAGE_SIZE,
     },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
@@ -48,11 +51,13 @@ export function useSavedRecipes(folder?: string | null) {
     errorPolicy: 'all',
   });
 
+  const connection = data?.me?.savedRecipesConnection;
+
   // Normalize saved recipes to flatten the recipe data
   const recipes = useMemo<SavedRecipe[]>(() => {
-    if (!data?.mySavedRecipes?.edges) return [];
+    if (!connection?.edges) return [];
 
-    return data.mySavedRecipes.edges.map(edge => edge.node).map(savedRecipe => ({
+    return connection.edges.map(edge => edge.node).map(savedRecipe => ({
       // Use saved recipe ID as the primary ID for list operations
       id: savedRecipe.id,
       recipeId: savedRecipe.recipe.id,
@@ -66,7 +71,7 @@ export function useSavedRecipes(folder?: string | null) {
       description: savedRecipe.recipe.description,
       category: savedRecipe.recipe.category,
       difficulty: savedRecipe.recipe.difficulty,
-      cuisine: (savedRecipe.recipe as any).cuisine,
+      cuisine: savedRecipe.recipe.cuisine,
       // Saved recipe metadata
       folder: savedRecipe.folder,
       tags: savedRecipe.tags ?? [],
@@ -77,9 +82,19 @@ export function useSavedRecipes(folder?: string | null) {
       createdAt: savedRecipe.createdAt,
       updatedAt: savedRecipe.updatedAt,
     }));
-  }, [data?.mySavedRecipes]);
+  }, [connection]);
 
-  const totalCount = recipes.length;
+  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo?.endCursor;
+  const totalCount = connection?.totalCount ?? recipes.length;
+
+  const loadMore = useCallback(() => {
+    if (!hasNextPage || loading || !endCursor) return;
+
+    fetchMore({
+      variables: { after: endCursor },
+    });
+  }, [hasNextPage, loading, endCursor, fetchMore]);
 
   return {
     // Data
@@ -87,9 +102,11 @@ export function useSavedRecipes(folder?: string | null) {
     loading,
     error,
     totalCount,
+    hasNextPage,
 
     // Actions
     refetch,
+    loadMore,
 
     // Helper functions
     getRecipeById: (recipeId: string) =>

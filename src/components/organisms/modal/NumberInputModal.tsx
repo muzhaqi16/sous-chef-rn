@@ -268,14 +268,14 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           <Text style={commonStyles.h3}>{title}</Text>
 
           {/* Label and helper text */}
-          {(label || helperText) && (
+          {!!(label || helperText) && (
             <View style={localStyles.labelContainer}>
-              {label && (
+              {!!label && (
                 <Text style={commonStyles.body}>
                   {label} {getRangeText()}
                 </Text>
               )}
-              {helperText && (
+              {!!helperText && (
                 <Text style={[commonStyles.bodySecondary, localStyles.helperText]}>
                   {helperText}
                 </Text>
@@ -302,7 +302,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           />
 
           {/* Error message */}
-          {error && <Text style={localStyles.errorText}>{error}</Text>}
+          {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
 
           {/* Buttons */}
           <View style={localStyles.modalButtons}>
@@ -370,7 +370,7 @@ const localStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     textAlign: 'center',
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   inputError: {
     borderColor: theme.colors.danger,
@@ -392,9 +392,9 @@ const localStyles = StyleSheet.create(theme => ({
     flex: 1,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

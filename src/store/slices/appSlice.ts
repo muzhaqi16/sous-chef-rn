@@ -1,6 +1,5 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
-import {zustandStorage, STORAGE_KEY} from '../../storage/mmkv';
 
 interface Unit {
   id: string;
@@ -20,9 +19,7 @@ export type NavigationState =
 
 export interface AppState {
   isHydrated: boolean;
-  isLoading: boolean;
-  isError: boolean;
-  isFetching: boolean;
+  // NOTE: isLoading, isError, isFetching are owned by uiSlice — do NOT duplicate here
   isLoggingOut: boolean; // Global logout state
 
   // Navigation state machine
@@ -38,9 +35,6 @@ export interface AppState {
   cachedUnits: Unit[];
 
   setHydrated: (flag: boolean) => void;
-  setLoading: (flag: boolean) => void;
-  setFetching: (flag: boolean) => void;
-  setError: (flag: boolean) => void;
   setLoggingOut: (flag: boolean) => void;
 
   // Navigation state actions
@@ -53,14 +47,10 @@ export interface AppState {
   clearRegistrationPassword: () => void;
 
   setCachedUnits: (units: Unit[]) => void;
-  reset: () => void;
 }
 
 export const initialAppState = {
   isHydrated: false,
-  isLoading: false,
-  isError: false,
-  isFetching: false,
   isLoggingOut: false,
 
   // Navigation state machine
@@ -81,9 +71,6 @@ export const createAppSlice: StateCreator<
   ...initialAppState,
 
   setHydrated: flag => set({isHydrated: flag}),
-  setLoading: flag => set({isLoading: flag}),
-  setFetching: flag => set({isFetching: flag}),
-  setError: flag => set({isError: flag}),
   setLoggingOut: flag => set({isLoggingOut: flag}),
 
   // Navigation state actions
@@ -106,25 +93,4 @@ export const createAppSlice: StateCreator<
   },
 
   setCachedUnits: units => set({cachedUnits: units}),
-
-  reset: () => {
-    zustandStorage.removeItem(STORAGE_KEY);
-    set(initialAppState);
-    set({
-      itemsById: {},
-      itemIds: [],
-      pantryById: {},
-      pantryIds: [],
-      listById: {},
-      listIds: [],
-      itemsByList: {},
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      navigationState: 'auth', // After reset, user needs to authenticate
-      showBiometricSetup: false,
-      registrationPassword: null,
-    } as unknown as Partial<RootState>);
-    set({isHydrated: true});
-  },
 });

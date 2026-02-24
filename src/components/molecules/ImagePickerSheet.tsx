@@ -1,11 +1,9 @@
 import React, { useCallback, useMemo, forwardRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#/components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon, IconLibrary } from '#utils/iconUtils';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 interface ImagePickerOption {
   key: string;
@@ -22,15 +20,17 @@ interface ImagePickerSheetProps {
 
 export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetProps>(
   ({ onCamera, onLibrary }, ref) => {
-    const { theme } = useUnistyles();
-    const insets = useSafeAreaInsets();
-    const animationConfigs = useSharedBottomSheetConfigs();
-
     const handleDismiss = useCallback(() => {
       if (ref && 'current' in ref) {
         ref.current?.dismiss();
       }
     }, [ref]);
+
+    const { modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+      onDismiss: handleDismiss,
+      snapPoints: [],
+      enableDynamicSizing: true,
+    });
 
     const options: ImagePickerOption[] = useMemo(
       () => [
@@ -38,7 +38,6 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
           key: 'camera',
           label: 'Take Photo',
           icon: 'camera',
-          library: 'Feather' as IconLibrary,
           onPress: () => {
             handleDismiss();
             // Small delay to allow sheet to close before launching camera
@@ -49,7 +48,6 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
           key: 'library',
           label: 'Choose from Library',
           icon: 'image',
-          library: 'Feather' as IconLibrary,
           onPress: () => {
             handleDismiss();
             setTimeout(onLibrary, 100);
@@ -59,29 +57,14 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
       [handleDismiss, onCamera, onLibrary],
     );
 
-    const renderBackdrop = useCallback(
-      (props: any) => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-        />
-      ),
-      [],
-    );
-
     return (
       <BottomSheetModal
         ref={ref}
-        enableDynamicSizing
-        enablePanDownToClose
-        animationConfigs={animationConfigs}
-        backgroundStyle={{ backgroundColor: theme.colors.background }}
+        {...modalProps}
         handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-        backdropComponent={renderBackdrop}
         stackBehavior="push"
       >
-        <BottomSheetView style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
+        <BottomSheetView style={[styles.container, contentContainerStyle]}>
           <Text style={styles.title}>Add Photo</Text>
           <View style={styles.optionsContainer}>
             {options.map(option => (
@@ -164,6 +147,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

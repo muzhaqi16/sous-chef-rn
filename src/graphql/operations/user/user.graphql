@@ -3,61 +3,67 @@
 # ============================================
 
 query GetNotificationPreferences {
-  myNotificationPreferences {
+  me {
     id
-    userId
-    emailEnabled
-    pushEnabled
-    smsEnabled
-    expirationNotifications
-    expirationNotificationFrequency
-    expirationDaysThreshold
-    lowStockAlerts
-    shoppingListUpdates
-    pantryChanges
-    recipeRecommendations
-    mealPlanReminders
-    cookingReminders
-    collaborationInvites
-    homeInvites
-    sharedListUpdates
-    weeklyDigest
-    monthlyReport
-    quietHoursEnabled
-    quietHoursStart
-    quietHoursEnd
-    quietHoursTimezone
+    notificationPreferences {
+      id
+      userId
+      emailEnabled
+      pushEnabled
+      smsEnabled
+      expirationNotifications
+      expirationNotificationFrequency
+      expirationDaysThreshold
+      lowStockAlerts
+      shoppingListUpdates
+      pantryChanges
+      recipeRecommendations
+      mealPlanReminders
+      cookingReminders
+      collaborationInvites
+      homeInvites
+      sharedListUpdates
+      weeklyDigest
+      monthlyReport
+      quietHoursEnabled
+      quietHoursStart
+      quietHoursEnd
+      quietHoursTimezone
+    }
   }
 }
 
 query GetDietaryProfile {
-  myDietaryProfile {
+  me {
     id
-    userId
-    preferredCuisines
-    dislikedIngredients
-    favoriteIngredients
-    calorieTarget
-    proteinTarget
-    carbsTarget
-    fatTarget
-    mealsPerDay
-    snacksPerDay
-    cookingSkillLevel
-    maxPrepTimeMinutes
-    maxCookTimeMinutes
-    budgetPerMeal
-    createdAt
-    updatedAt
-    restrictions {
+    dietaryProfile {
       id
-      diet
-      intolerance
-      healthGoal
-      severity
-      notes
-      appliesToHomeId
+      userId
+      preferredCuisines
+      dislikedIngredients
+      favoriteIngredients
+      calorieTarget
+      proteinTarget
+      carbsTarget
+      fatTarget
+      mealsPerDay
+      snacksPerDay
+      cookingSkillLevel
+      maxPrepTimeMinutes
+      maxCookTimeMinutes
+      budgetPerMeal
       createdAt
+      updatedAt
+      restrictions {
+        id
+        diet
+        intolerance
+        healthGoal
+        severity
+        notes
+        appliesToHomeId
+        createdAt
+      }
     }
   }
 }

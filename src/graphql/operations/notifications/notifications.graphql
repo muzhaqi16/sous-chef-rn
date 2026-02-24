@@ -10,28 +10,42 @@ query GetMyNotifications(
   $before: String
   $orderBy: NotificationOrderBy
 ) {
-  myNotifications(
-    filter: $filter
-    first: $first
-    after: $after
-    last: $last
-    before: $before
-    orderBy: $orderBy
-  ) {
-    edges {
-      node {
-        ...NotificationFragment
+  me {
+    id
+    notificationsConnection(
+      filter: $filter
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      orderBy: $orderBy
+    ) {
+      edges {
+        node {
+          ...NotificationFragment
+        }
+        cursor
       }
-      cursor
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+      unreadCount
     }
-    pageInfo {
-      hasNextPage
-      hasPreviousPage
-      startCursor
-      endCursor
-    }
-    totalCount
-    unreadCount
+  }
+}
+
+query GetNotificationStats($filters: NotificationFilters) {
+  notificationStats(filters: $filters) {
+    total
+    unread
+    read
+    clicked
+    dismissed
+    expired
   }
 }
 
@@ -50,11 +64,41 @@ mutation MarkNotificationAsRead($id: ID!) {
   }
 }
 
+mutation MarkAllNotificationsAsRead {
+  markAllNotificationsAsRead {
+    success
+    message
+    code
+    count
+  }
+}
+
 mutation DeleteNotification($id: ID!) {
   deleteNotification(id: $id) {
     success
     message
     code
+    notification {
+      id
+    }
+  }
+}
+
+mutation DeleteAllReadNotifications {
+  deleteAllReadNotifications {
+    success
+    message
+    code
+    count
+  }
+}
+
+mutation DeleteMultipleNotifications($ids: [ID!]!) {
+  deleteMultipleNotifications(ids: $ids) {
+    success
+    message
+    code
+    count
   }
 }
 
@@ -62,15 +106,13 @@ mutation DeleteNotification($id: ID!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription NotificationReceived {
-  notificationReceived {
-    ...NotificationSubscription
-  }
-}
-
-subscription NotificationUpdated {
-  notificationUpdated {
-    ...NotificationSubscription
+subscription NotificationChanged {
+  notificationChanged {
+    changeType
+    notification {
+      ...NotificationFragment
+    }
+    timestamp
   }
 }
 

@@ -14,6 +14,7 @@ import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
 import { StatusBarBackground } from '#components/atoms/StatusBarBackground';
+import { OfflineBanner } from '#components/atoms/OfflineBanner';
 import { useTheme } from '#hooks/useTheme';
 import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
@@ -32,6 +33,10 @@ import {
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { LaunchArguments } from 'react-native-launch-arguments';
+import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+
+// Install global JS exception and promise rejection handlers before any component renders
+setupGlobalErrorHandler();
 
 // Enable native screens for better performance
 enableScreens();
@@ -113,6 +118,11 @@ const App = () => {
       Telemetry.updateConfig(telemetryConfig);
       Telemetry.initialize();
 
+      // Initialize native performance metrics (startup marks, bundle load, HTTP timing)
+      if (!detoxBackgroundServicesDisabledRef.current) {
+        NativePerformanceService.initialize();
+      }
+
       // Report JS startup duration (time from index.js entry to store hydration)
       if (global.__APP_START_TIMESTAMP) {
         const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
@@ -121,9 +131,6 @@ const App = () => {
         });
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
-
-      // Initialize native performance metrics (startup marks, bundle load times)
-      NativePerformanceService.initialize();
 
       // Track app start as counter metric for dashboard
       Telemetry.increment('app_starts_total');
@@ -148,6 +155,10 @@ const App = () => {
       // Cleanup memory monitor on unmount
       if (__DEV__ && !detoxBackgroundServicesDisabledRef.current) {
         MemoryMonitor.stop();
+      }
+      // Cleanup native performance observers
+      if (!detoxBackgroundServicesDisabledRef.current) {
+        NativePerformanceService.cleanup();
       }
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();
@@ -213,6 +224,7 @@ const App = () => {
                         4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                     <StatusBarBackground />
                     <SafeAreaView style={styles.container}>
+                      <OfflineBanner />
                       <ToastProvider>
                         <NotificationProvider>
                           <Navigation />

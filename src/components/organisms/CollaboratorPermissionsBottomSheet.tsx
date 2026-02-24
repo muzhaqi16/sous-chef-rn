@@ -179,9 +179,11 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     try {
       await updateRole({
         variables: {
-          shoppingListId,
-          collaboratorId: collaborator.collaboratorId,
-          role: selectedRole,
+          input: {
+            shoppingListId,
+            collaboratorId: collaborator.collaboratorId,
+            role: selectedRole,
+          },
         },
       });
 
@@ -282,7 +284,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       },
                     ]}
                   >
-                    {isSelected && (
+                    {!!isSelected && (
                       <View
                         style={[
                           styles.radioInner,
@@ -294,21 +296,20 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                 </View>
 
                 {/* Show permissions preview for selected role */}
-                {isSelected && (
+                {!!isSelected && (
                   <View style={styles.permissionsContainer}>
                     <Text style={styles.permissionsTitle}>Permissions:</Text>
                     <View style={styles.permissionsList}>
                       {roleInfo.permissions.map((permission, index) => (
                         <View key={index} style={styles.permissionItem}>
                           <Icon
-                            name={permission.granted ? 'check' : 'close'}
+                            name={permission.granted ? 'checkmark' : 'close'}
                             size={14}
                             color={
                               permission.granted
                                 ? theme.colors.success
                                 : theme.colors.textSecondary
                             }
-                            library="MaterialIcons"
                           />
                           <Text
                             style={[
@@ -461,7 +462,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

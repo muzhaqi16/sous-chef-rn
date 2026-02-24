@@ -89,7 +89,7 @@ export const BottomSheetSearchBar = forwardRef<
       setHasText(value.length > 0);
       // Use setNativeProps for uncontrolled input
       if (inputRef.current) {
-        (inputRef.current as any).setNativeProps?.({ text: value });
+        inputRef.current.setNativeProps?.({ text: value });
       }
     }, []);
 
@@ -169,7 +169,6 @@ export const BottomSheetSearchBar = forwardRef<
           name="search"
           size={20}
           color={theme.colors.textSecondary}
-          library="MaterialIcons"
         />
         <BottomSheetTextInput
           ref={inputRef}
@@ -182,14 +181,14 @@ export const BottomSheetSearchBar = forwardRef<
           autoCorrect={autoCorrect}
           testID={testID}
         />
-        {isLoading && (
+        {!!isLoading && (
           <ActivityIndicator
             size="small"
             color={theme.colors.primary}
             style={styles.loadingIndicator}
           />
         )}
-        {hasText && (
+        {!!hasText && (
           <Pressable
             style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}
             onPress={handleClear}
@@ -199,7 +198,6 @@ export const BottomSheetSearchBar = forwardRef<
               name="close"
               size={20}
               color={theme.colors.textSecondary}
-              library="MaterialIcons"
             />
           </Pressable>
         )}
@@ -214,7 +212,7 @@ export const BottomSheetSearchBar = forwardRef<
               name={action.icon}
               size={24}
               color={action.color || theme.colors.primary}
-              library={action.library || 'MaterialIcons'}
+              library={action.library || 'Ionicons'}
             />
           </Pressable>
         ))}
@@ -253,6 +251,6 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

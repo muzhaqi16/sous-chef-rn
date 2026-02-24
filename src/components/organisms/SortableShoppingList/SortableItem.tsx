@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Image, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -7,6 +7,7 @@ import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwip
 import { ListItem } from '#/components/molecules/ListItem';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 import { QuantityBadge } from '#/components/atoms/QuantityBadge';
+import { CachedImage } from '#/components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#utils/iconUtils';
 import { createPropsComparator } from '#utils/memoUtils';
@@ -106,17 +107,16 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             isPurchased={item.isPurchased}
             themeColors={themeColors}
           />
-          {item.isPurchased && onMoveToPantry && (
+          {!!item.isPurchased && !!onMoveToPantry && (
             <Pressable
               onPress={() => onMoveToPantry(item.id)}
               style={({pressed}) => [styles.moveToPantryButton, pressed && styles.pressed]}
               hitSlop={HIT_SLOP}
             >
               <Icon
-                name="cupboard"
+                name="cube-outline"
                 size={24}
                 color={themeColors?.primary}
-                library="MaterialDesignIcons"
               />
             </Pressable>
           )}
@@ -134,14 +134,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     themeColors,
   ]);
 
-  // Memoize image source to prevent recreation
-  const imageSource = useMemo(() => {
-    if (item.leftElementConfig?.type === 'image') {
-      return { uri: item.leftElementConfig.url };
-    }
-    return undefined;
-  }, [item.leftElementConfig?.url, item.leftElementConfig?.type]);
-
   // Create leftElement from config or use provided element
   const leftElement = useMemo(() => {
     if (item.leftElementConfig?.type === 'image') {
@@ -153,17 +145,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             config.isPurchased && { opacity: 0.5 },
           ]}
         >
-          <Image
-            source={imageSource}
+          <CachedImage
+            uri={config.url}
             style={commonStyles.listItemImageCompact}
-            resizeMode="cover"
-            fadeDuration={0}
           />
         </View>
       );
     }
     return item.leftElement;
-  }, [item.leftElement, item.leftElementConfig, imageSource]);
+  }, [item.leftElement, item.leftElementConfig]);
 
   // Create checkbox element for marking items as purchased
   // Uses AnimatedCheckbox with pendingChecked state for immediate visual feedback
@@ -258,7 +248,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -19,7 +19,7 @@ import {
   useGetMyPendingInvitesLazyQuery,
   NotificationType,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   NotificationCategory,
   NotificationPriority,
@@ -39,7 +39,7 @@ import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
  * ```
  */
 export function useAllPendingInvites(userId?: string) {
-  const addMultipleNotifications = useStore(
+  const addMultipleNotifications = useAppStore(
     state => state.addMultipleNotifications,
   );
 
@@ -113,10 +113,10 @@ export function useAllPendingInvites(userId?: string) {
 
     // Process Shopping List Invites
     if (
-      shoppingListData?.myShoppingListInvites &&
-      shoppingListData.myShoppingListInvites.length > 0
+      shoppingListData?.me?.pendingCollaborationInvites &&
+      shoppingListData.me.pendingCollaborationInvites.length > 0
     ) {
-      const shoppingListInvites = shoppingListData.myShoppingListInvites
+      const shoppingListInvites = shoppingListData.me.pendingCollaborationInvites
         .filter(invite => invite?.status === 'PENDING')
         .map(invite => ({
           id: `shopping-list-invite-${invite.id}`,
@@ -156,8 +156,8 @@ export function useAllPendingInvites(userId?: string) {
     }
 
     // Process Home Invites
-    if (homeData?.myPendingInvites && homeData.myPendingInvites.length > 0) {
-      const homeInvites = homeData.myPendingInvites
+    if (homeData?.me?.pendingHomeInvites && homeData.me.pendingHomeInvites.length > 0) {
+      const homeInvites = homeData.me.pendingHomeInvites
         .filter(invite => invite?.status === 'PENDING')
         .map(invite => ({
           id: `home-invite-${invite.id}`,

@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
+import { useApolloClient } from '@apollo/client/react';
 import {
   useCreatePantryItemUsageMutation,
   useRestockPantryItemMutation,
@@ -7,10 +8,10 @@ import {
   WasteReason,
   PantryItemFragment,
 } from '#generated';
+import { isNetworkError } from '#/utils/isNetworkError';
 
 interface UsePantryItemActionsOptions {
   pantryItems: PantryItemFragment[];
-  refetch: () => Promise<any>;
   removeItem: (id: string) => Promise<void>;
   navigateTo: {
     pantryItem: (params: { itemId: string }) => void;
@@ -22,6 +23,15 @@ interface ModalState {
   item: PantryItemFragment | null;
   close: () => void;
 }
+
+// Discriminated union: only one modal can be open at a time
+type ActiveModal =
+  | { type: null }
+  | { type: 'consume'; item: PantryItemFragment }
+  | { type: 'waste'; item: PantryItemFragment }
+  | { type: 'restock'; item: PantryItemFragment };
+
+const CLOSED_MODAL: ActiveModal = { type: null };
 
 /**
  * Pantry Item Actions Hook
@@ -36,52 +46,66 @@ interface ModalState {
  */
 export function usePantryItemActions({
   pantryItems,
-  refetch,
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
-  // Stable ref for pantryItems — read from ref in callbacks to keep them stable
-  // across data changes (avoids context cascade when subscription updates the list)
-  const pantryItemsRef = useRef(pantryItems);
-  pantryItemsRef.current = pantryItems;
+  const client = useApolloClient();
+  // Single state for all modals — only one can be open at a time
+  const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
-  // Consume item state
-  const [consumeModalVisible, setConsumeModalVisible] = useState(false);
-  const [selectedItemForConsume, setSelectedItemForConsume] =
-    useState<PantryItemFragment | null>(null);
+  const closeModal = useCallback(() => setActiveModal(CLOSED_MODAL), []);
 
-  // Waste item state
-  const [wasteModalVisible, setWasteModalVisible] = useState(false);
-  const [selectedItemForWaste, setSelectedItemForWaste] =
-    useState<PantryItemFragment | null>(null);
+  /**
+   * Optimistically update a pantry item's quantity in cache for instant UI feedback.
+   */
+  const optimisticUpdateQuantity = useCallback(
+    (itemId: string, newQuantity: number) => {
+      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
+      if (!cacheId) return;
 
-  // Restock item state
-  const [restockModalVisible, setRestockModalVisible] = useState(false);
-  const [selectedItemForRestock, setSelectedItemForRestock] =
-    useState<PantryItemFragment | null>(null);
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return Math.max(0, newQuantity);
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
+    },
+    [client.cache],
+  );
+
+  /**
+   * Revert a pantry item's quantity in cache on mutation error.
+   */
+  const revertQuantity = useCallback(
+    (itemId: string, originalQty: number) => {
+      const cacheId = client.cache.identify({ __typename: 'PantryItem', id: itemId });
+      if (!cacheId) return;
+
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return originalQty;
+          },
+        },
+      });
+    },
+    [client.cache],
+  );
 
   // Consume/Waste item mutation (both use createPantryItemUsage)
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
     errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to create pantry item usage:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to record item usage. Please try again.',
-      );
-    },
   });
 
   // Restock item mutation
   const [restockPantryItem] = useRestockPantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to restock pantry item:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to restock item. Please try again.',
-      );
-    },
   });
 
   // Handler to confirm consumption
@@ -93,13 +117,18 @@ export function usePantryItemActions({
       notes: string,
       usageUnitId?: string,
     ) => {
-      if (!selectedItemForConsume) return;
+      if (activeModal.type !== 'consume') return;
+
+      // Optimistically decrease quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
 
       try {
         await createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: selectedItemForConsume.id,
+              pantryItemId: item.id,
               quantityUsed,
               purpose,
               notes: notes || undefined,
@@ -108,24 +137,17 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state
-        setConsumeModalVisible(false);
-        setSelectedItemForConsume(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error consuming pantry item:', error);
+        closeModal();
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error consuming pantry item:', error);
+          Alert.alert('Error', error.message || 'Failed to record item usage. Please try again.');
+        }
       }
     },
-    [selectedItemForConsume, createPantryItemUsage, refetch],
+    [activeModal, createPantryItemUsage, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
-
-  // Handler to close consume modal
-  const handleCloseConsumeModal = useCallback(() => {
-    setConsumeModalVisible(false);
-    setSelectedItemForConsume(null);
-  }, []);
 
   // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
   const handleConfirmWaste = useCallback(
@@ -137,13 +159,18 @@ export function usePantryItemActions({
       notes: string,
       wasteUnitId?: string,
     ) => {
-      if (!selectedItemForWaste) return;
+      if (activeModal.type !== 'waste') return;
+
+      // Optimistically decrease quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
 
       try {
         await createPantryItemUsage({
           variables: {
             input: {
-              pantryItemId: selectedItemForWaste.id,
+              pantryItemId: item.id,
               quantityUsed: wasteAmount,
               purpose: UsagePurpose.Waste,
               notes: notes || undefined,
@@ -155,24 +182,17 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state
-        setWasteModalVisible(false);
-        setSelectedItemForWaste(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error recording pantry item waste:', error);
+        closeModal();
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error recording pantry item waste:', error);
+          Alert.alert('Error', error.message || 'Failed to record item waste. Please try again.');
+        }
       }
     },
-    [selectedItemForWaste, createPantryItemUsage, refetch],
+    [activeModal, createPantryItemUsage, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
-
-  // Handler to close waste modal
-  const handleCloseWasteModal = useCallback(() => {
-    setWasteModalVisible(false);
-    setSelectedItemForWaste(null);
-  }, []);
 
   // Handler to confirm restock
   const handleConfirmRestock = useCallback(
@@ -185,12 +205,17 @@ export function usePantryItemActions({
       totalCost?: number,
       expiresAt?: Date | null,
     ) => {
-      if (!selectedItemForRestock) return;
+      if (activeModal.type !== 'restock') return;
+
+      // Optimistically increase quantity for instant UI feedback
+      const item = activeModal.item;
+      const originalQty = item.quantity;
+      optimisticUpdateQuantity(item.id, originalQty + quantity);
 
       try {
         await restockPantryItem({
           variables: {
-            id: selectedItemForRestock.id,
+            id: item.id,
             input: {
               quantity,
               unitId,
@@ -202,62 +227,49 @@ export function usePantryItemActions({
           },
         });
 
-        // Reset state
-        setRestockModalVisible(false);
-        setSelectedItemForRestock(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error restocking pantry item:', error);
+        closeModal();
+      } catch (error: any) {
+        revertQuantity(item.id, originalQty);
+        if (!isNetworkError(error)) {
+          console.error('Error restocking pantry item:', error);
+          Alert.alert('Error', error.message || 'Failed to restock item. Please try again.');
+        }
       }
     },
-    [selectedItemForRestock, restockPantryItem, refetch],
+    [activeModal, restockPantryItem, closeModal, optimisticUpdateQuantity, revertQuantity],
   );
 
-  // Handler to close restock modal
-  const handleCloseRestockModal = useCallback(() => {
-    setRestockModalVisible(false);
-    setSelectedItemForRestock(null);
-  }, []);
-
   // Handler to open consume modal (for swipe action)
-  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleConsumeItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
-        setSelectedItemForConsume(item);
-        setConsumeModalVisible(true);
+        setActiveModal({ type: 'consume', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to open waste modal (for swipe action)
-  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleWasteItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
-        setSelectedItemForWaste(item);
-        setWasteModalVisible(true);
+        setActiveModal({ type: 'waste', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to open restock modal (for swipe action)
-  // Reads from ref to avoid re-creating callback when pantryItems changes
   const handleRestockItem = useCallback(
     (itemId: string) => {
-      const item = pantryItemsRef.current.find(p => p.id === itemId);
+      const item = pantryItems.find(p => p.id === itemId);
       if (item) {
-        setSelectedItemForRestock(item);
-        setRestockModalVisible(true);
+        setActiveModal({ type: 'restock', item });
       }
     },
-    [],
+    [pantryItems],
   );
 
   // Handler to edit item (for swipe action)
@@ -280,23 +292,24 @@ export function usePantryItemActions({
     [removeItem],
   );
 
+  // Derive modal states from the single activeModal for backward compatibility
   const consumeModal = useMemo<ModalState>(() => ({
-    visible: consumeModalVisible,
-    item: selectedItemForConsume,
-    close: handleCloseConsumeModal,
-  }), [consumeModalVisible, selectedItemForConsume, handleCloseConsumeModal]);
+    visible: activeModal.type === 'consume',
+    item: activeModal.type === 'consume' ? activeModal.item : null,
+    close: closeModal,
+  }), [activeModal, closeModal]);
 
   const wasteModal = useMemo<ModalState>(() => ({
-    visible: wasteModalVisible,
-    item: selectedItemForWaste,
-    close: handleCloseWasteModal,
-  }), [wasteModalVisible, selectedItemForWaste, handleCloseWasteModal]);
+    visible: activeModal.type === 'waste',
+    item: activeModal.type === 'waste' ? activeModal.item : null,
+    close: closeModal,
+  }), [activeModal, closeModal]);
 
   const restockModal = useMemo<ModalState>(() => ({
-    visible: restockModalVisible,
-    item: selectedItemForRestock,
-    close: handleCloseRestockModal,
-  }), [restockModalVisible, selectedItemForRestock, handleCloseRestockModal]);
+    visible: activeModal.type === 'restock',
+    item: activeModal.type === 'restock' ? activeModal.item : null,
+    close: closeModal,
+  }), [activeModal, closeModal]);
 
   return {
     // Modal states with close handlers

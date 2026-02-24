@@ -145,7 +145,7 @@ export const Header: React.FC<HeaderProps> = ({
     >
       {/* Left side */}
       <View style={styles.actions}>
-        {showCloseButton && (
+        {!!showCloseButton && (
           <Pressable
             style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onClose}
@@ -155,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Icon name="close" size={24} color={theme.colors.textPrimary} />
           </Pressable>
         )}
-        {showBackButton && (
+        {!!showBackButton && (
           <Pressable
             style={({pressed}) => [styles.action, pressed && styles.pressed]}
             onPress={onBack}
@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
 const styles = StyleSheet.create(theme => ({
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     flex: 1,
     marginHorizontal: theme.spacing.sm,
@@ -216,6 +216,10 @@ const styles = StyleSheet.create(theme => ({
   action: {
     padding: theme.spacing.xs,
     position: 'relative',
+    minWidth: theme.sizes.touchTarget.md,
+    minHeight: theme.sizes.touchTarget.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   badge: {
@@ -239,6 +243,6 @@ const styles = StyleSheet.create(theme => ({
   },
 
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

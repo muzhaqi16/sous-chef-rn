@@ -125,10 +125,10 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
               disabled={disabled}
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
             >
-              <Icon name="delete" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} color={theme.colors.error} />
             </Pressable>
           </View>
-          {entry.packageSize && parseFloat(entry.packageSize) > 0 && (
+          {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
             <View style={styles.contentUnitRow}>
               <UnitAutocompleteField
                 variant="modal"
@@ -197,6 +197,6 @@ const styles = StyleSheet.create(theme => ({
     borderLeftColor: theme.colors.borderLight,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

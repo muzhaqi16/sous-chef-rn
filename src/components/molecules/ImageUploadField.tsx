@@ -109,10 +109,10 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
 
   return (
     <View style={commonStyles.inputGroup}>
-      {label && (
+      {!!label && (
         <Text style={[commonStyles.label, required && styles.requiredLabel]}>
           {label}
-          {required && ' *'}
+          {required ? ' *' : null}
         </Text>
       )}
 
@@ -128,7 +128,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
               resizeMode="cover"
             />
 
-            {uploading && (
+            {!!uploading && (
               <View style={styles.uploadOverlay}>
                 <ActivityIndicator size="large" color={theme.colors.white} />
                 <Text style={styles.progressText}>
@@ -147,7 +147,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                   disabled={disabled || uploading}
                   isProfile={isProfile}>
                   <View style={styles.actionButton}>
-                    <Icon name="edit" size={16} color={theme.colors.white} />
+                    <Icon name="create-outline" size={16} color={theme.colors.white} />
                   </View>
                 </ImagePicker>
 
@@ -155,7 +155,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                   style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
                   onPress={handleRemoveImage}
                   disabled={disabled || uploading}>
-                  <Icon name="delete" size={16} color={theme.colors.white} />
+                  <Icon name="trash-outline" size={16} color={theme.colors.white} />
                 </Pressable>
               </View>
             )}
@@ -168,14 +168,14 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             isProfile={isProfile}>
             <View style={styles.placeholderContainer}>
               <Icon
-                name="add-a-photo"
+                name="camera-outline"
                 size={32}
                 color={theme.colors.textSecondary}
               />
               <Text style={styles.placeholderText}>
                 {uploading ? 'Uploading...' : placeholder}
               </Text>
-              {uploading && (
+              {!!uploading && (
                 <View style={styles.progressContainer}>
                   <ActivityIndicator
                     size="small"
@@ -264,6 +264,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -11,6 +11,30 @@ import type { SlideAnimationConfig } from '#hooks/animations/types';
 export const standardEasing = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 /**
+ * Named spring animation presets.
+ * Replaces hardcoded {damping, stiffness, mass} objects across the codebase.
+ */
+export const SPRING = {
+  DEFAULT: { damping: 15, stiffness: 150, mass: 0.4 },
+  SNAPPY: { damping: 10, stiffness: 400 },
+  PRESS: { damping: 15, stiffness: 300 },
+  GENTLE: { damping: 20, stiffness: 180 },
+  HEAVY: { damping: 25, stiffness: 350, mass: 0.8 },
+  EXPAND: { damping: 20, stiffness: 200 },
+} as const;
+
+/**
+ * Named timing duration presets (in ms).
+ */
+export const TIMING = {
+  INSTANT: 100,
+  FAST: 150,
+  STANDARD: 200,
+  MODERATE: 250,
+  SLOW: 300,
+} as const;
+
+/**
  * Reusable slide animation presets for common patterns.
  *
  * @example
@@ -77,11 +101,11 @@ export const SLIDE_PRESETS = {
  * </Animated.View>
  * ```
  */
-export const formAnimationPreset = {
-  entering: FadeIn.duration(300).easing(standardEasing.factory()),
-  exiting: FadeOut.duration(200).easing(standardEasing.factory()),
+export const getFormAnimationPreset = () => ({
+  entering: FadeIn.duration(300).easing(standardEasing),
+  exiting: FadeOut.duration(200).easing(standardEasing),
   layout: LinearTransition.duration(250),
-};
+});
 
 /**
  * Animation preset for list item exit transitions
@@ -167,9 +191,8 @@ export const listItemEntryAnimation = {
  * Used when items shift position (e.g., when another item is removed)
  * Fast duration for snappy feel after exit animation
  */
-export const listItemLayoutAnimation = LinearTransition.duration(150).easing(
-  standardEasing.factory(),
-);
+export const getListItemLayoutAnimation = () =>
+  LinearTransition.duration(150).easing(standardEasing);
 
 /**
  * Staggered list entry animation preset

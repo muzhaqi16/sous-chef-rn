@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {HapticService} from '#services/haptic/HapticService';
+import {SPRING} from '#/constants/animations';
 
 export const Counter = ({
   count,
@@ -28,10 +29,10 @@ export const Counter = ({
 
   // Bounce animation when count changes
   useEffect(() => {
-    countScale.value = withSequence(
-      withSpring(1.15, {damping: 10, stiffness: 400}),
-      withSpring(1, {damping: 10, stiffness: 400}),
-    );
+    countScale.set(withSequence(
+      withSpring(1.15, SPRING.SNAPPY),
+      withSpring(1, SPRING.SNAPPY),
+    ));
   }, [count, countScale]);
 
   const countAnimatedStyle = useAnimatedStyle(() => ({
@@ -99,10 +100,11 @@ export const Counter = ({
         accessibilityLabel={`Decrease ${label}`}
         accessibilityHint={`Current ${label} is ${count}`}
         accessibilityState={{disabled}}>
-        <Icon color={iconColor} name="remove" size={11} />
+        <Icon color={iconColor} name="remove-outline" size={11} />
       </Pressable>
       <Animated.View style={countAnimatedStyle}>
         <Text
+          maxFontSizeMultiplier={1.5}
           style={[styles.counterActionText, disabled && styles.textDisabled]}
           accessibilityLabel={`${label} count: ${count}`}>
           {count}
@@ -152,11 +154,11 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.xl,
     paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
     transform: [{scale: 0.92}],
   },
   containerDisabled: {

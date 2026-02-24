@@ -30,7 +30,7 @@ This document describes the performance monitoring infrastructure added to the S
   - Periodic sampling (default: 10s intervals)
   - Warning thresholds (80% warning, 95% critical)
   - Memory leak detection (>10MB growth)
-  - Platform-specific APIs with fallbacks
+  - Uses `react-native-device-info` (`getUsedMemory()`, `getTotalMemory()`) with null return on failure
 
 ### 3. Screen Transition Tracking
 - **Hook**: `useScreenTransition(screenName, options?)`
@@ -43,8 +43,63 @@ This document describes the performance monitoring infrastructure added to the S
   - Slow transition warnings (>500ms)
   - Automatic telemetry reporting
 
-### 4. Performance Dashboard
-- **Location**: Profile → App Settings → Developer → Performance Dashboard
+### 4. FPS Monitoring
+- **Hook**: `useFPSMonitor(options?)`
+- **Availability**: Development builds only (`__DEV__`)
+- **Features**:
+  - Frame rate tracking via `requestAnimationFrame`
+  - Low FPS detection (configurable threshold, default: 30)
+  - Stats: current, min, max, avg FPS, low FPS count
+  - Periodic logging (default: 5s intervals)
+  - `useSimpleFPS()` convenience export for simple FPS readout
+
+### 5. Screen Telemetry
+- **Hook**: `useScreenTelemetry(screenName, getProperties, isReady?)`
+- **Features**:
+  - One-time screen view tracking via `Telemetry.trackScreen()`
+  - Ref guard prevents re-firing on data changes
+  - Optional `isReady` gate to defer until interactive
+  - Properties function called lazily via `setTimeout` so refs can be read
+
+### 6. Filter Transition
+- **Hook**: `useFilterTransition(options)`
+- **Features**:
+  - Non-blocking filter state transitions via React 18's `useTransition`
+  - `isPending` flag for loading indicators
+  - Auto-applies filter when items or filterFn change
+  - Extended variant `useFilterTransitionWithDeps` for additional dependency tracking
+
+### 7. Deferred Search
+- **Hook**: `useDeferredSearch(options)`
+- **Features**:
+  - Responsive search-as-you-type with `useDeferredValue`
+  - `isStale` flag when query changed but results haven't caught up
+  - Configurable minimum query length
+  - Extended variant `useDeferredSearchWithSort` for combined search + sort
+
+### 8. Deferred Callback
+- **Hook**: `useDeferredCallback(callback, enabled?, timeout?)`
+- **Features**:
+  - Defers background work execution via `setTimeout` (default: 1000ms)
+  - Ensures work runs after startup hot zone
+  - `enabled` gate to conditionally run
+
+### 9. Deferred Render
+- **Hook**: `useDeferredRender(delay?)`
+- **Features**:
+  - Returns `false` initially, transitions to `true` when React's concurrent scheduler is idle
+  - Uses `useDeferredValue` with initial value — replaces `requestIdleCallback` (iOS reliability issues)
+  - Ideal for gating heavy renders behind skeleton placeholders
+
+### 10. After Interaction
+- **Hook**: `useAfterInteraction(callback, options?)`
+- **Features**:
+  - Runs callback after `InteractionManager.runAfterInteractions()` completes
+  - Ensures heavy work doesn't interfere with navigation transitions
+  - `enabled` gate option
+
+### 11. Performance Dashboard
+- **Location**: Profile → Performance Dashboard (from profile settings list)
 - **Availability**: Development builds only (`__DEV__`)
 - **Views**:
   - Slowest Components table
@@ -59,11 +114,11 @@ This document describes the performance monitoring infrastructure added to the S
 ```
 Component/Screen
     ↓
-Performance Hook (useRenderTime, useScreenTransition, useMemoryMonitor)
+Performance Hook (useRenderTime, useScreenTransition, useMemoryMonitor, etc.)
     ↓
 Telemetry Service (metrics reporting)
     ↓
-Performance Slice (Zustand state management)
+Performance Store (isolated Zustand store — separate from main app store)
     ↓
 Performance Dashboard (UI)
 ```
@@ -76,14 +131,21 @@ src/
 │   └── performance/
 │       ├── types.ts              # Type definitions
 │       ├── MemoryMonitor.ts      # Memory monitoring service
-│       └── index.ts
+│       └── NativePerformanceService.ts # Central observer (startup, measures, HTTP)
 ├── hooks/
 │   └── performance/
 │       ├── useRenderTime.ts      # Component render tracking
 │       ├── useMemoryMonitor.ts   # Memory usage tracking
 │       ├── useScreenTransition.ts # Screen navigation tracking
-│       └── index.ts
+│       ├── useFPSMonitor.ts      # Frame rate monitoring (DEV only)
+│       ├── useScreenTelemetry.ts # One-time screen view tracking
+│       ├── useFilterTransition.ts # Non-blocking filter transitions
+│       ├── useDeferredSearch.ts  # Responsive search with deferred value
+│       ├── useDeferredCallback.ts # Deferred background work execution
+│       ├── useDeferredRender.ts  # Deferred render until idle
+│       └── useAfterInteraction.ts # Run callback after InteractionManager
 ├── store/
+│   ├── performanceStore.ts       # Isolated performance Zustand store
 │   └── slices/
 │       └── performanceSlice.ts   # Performance state management
 └── screens/
@@ -144,16 +206,31 @@ interface PerformanceConfig {
 
 ```typescript
 const DEFAULT_PERFORMANCE_CONFIG = {
-  enabled: __DEV__,
-  trackRenders: true,
-  trackMemory: true,
-  trackScreens: true,
-  sampleRate: __DEV__ ? 1.0 : 0.1,
-  slowRenderThreshold: 16, // 60fps
-  memoryWarningThreshold: 80, // percentage
-  maxMemorySnapshots: 100,
+  enabled: true,          // Enabled in all environments — telemetry pipeline handles routing
+  trackRenders: true,     // Track component renders (sampled in production)
+  trackMemory: false,     // Disabled — RN memory APIs are unreliable
+  trackScreens: true,     // Track screen transitions in all environments
+  sampleRate: __DEV__ ? 1.0 : 0.1,  // 100% in dev, 10% in production
+  slowRenderThreshold: __DEV__ ? 500 : 16,  // Android emulator adds 5-10x overhead; 16ms = 60fps for production
+  memoryWarningThreshold: 80, // Warn at 80% memory usage
+  maxMemorySnapshots: 100,    // Keep last 100 snapshots
 };
 ```
+
+### 12. Native Performance Service
+- **Service**: `NativePerformanceService` (singleton)
+- **Library**: `react-native-performance` v6
+- **Metrics Reported**:
+  - `app_native_launch_ms` — Native platform initialization time
+  - `app_js_bundle_load_ms` — Hermes bytecode load/parse time
+  - `app_content_appeared_ms` — Time from process start to first content visible
+  - `http_request_duration_ms` — HTTP request duration by host (auto-captured)
+- **Features**:
+  - Three `PerformanceObserver` instances (native marks, measures, resources)
+  - Buffered observation captures marks emitted before JS runs
+  - Central routing: `useScreenTransition` creates marks/measures, observer routes to telemetry
+  - GraphQL endpoint filtered from HTTP metrics to avoid double-counting
+  - Resource logging enabled via `setResourceLoggingEnabled(true)`
 
 ## Usage Examples
 
@@ -207,12 +284,12 @@ export const ImageHeavyComponent: React.FC = () => {
 ### 4. Access Performance Data
 
 ```typescript
-import { useStore } from '#/store';
+import { usePerformanceStore } from '#/store/performanceStore';
 
 const MyComponent = () => {
-  const getSlowestComponents = useStore(state => state.getSlowestComponents);
-  const getSlowestScreens = useStore(state => state.getSlowestScreens);
-  const getRecentMemorySnapshots = useStore(state => state.getRecentMemorySnapshots);
+  const getSlowestComponents = usePerformanceStore(state => state.getSlowestComponents);
+  const getSlowestScreens = usePerformanceStore(state => state.getSlowestScreens);
+  const getRecentMemorySnapshots = usePerformanceStore(state => state.getRecentMemorySnapshots);
 
   const slowComponents = getSlowestComponents(10);
   const slowScreens = getSlowestScreens(10);
@@ -226,24 +303,22 @@ const MyComponent = () => {
 
 ### Current Integrations
 
-1. **App.tsx** (App.tsx:17,59-75)
-   - MemoryMonitor started on app initialization
-   - Samples every 10 seconds in development
+**Screens using `useScreenTransition`:**
 
-2. **PantryMain** (src/screens/pantry/PantryMain.tsx:7,78)
-   - Screen transition tracking enabled
+- **Pantry:** PantryMain, PantryItemDetail
+- **Shopping List:** ShoppingListMain, ItemDetail
+- **Recipe:** RecipeMain, RecipeSearch, RecipeDetail
+- **Home:** HomeManagement, HomeDetailScreen, StorageLocationsScreen
+- **Onboarding:** BiometricSetupScreen, InviteMemberScreen, OnboardingCompleteScreen, ProfilePictureUploadScreen, CreateShoppingListScreen, CreateHomeScreen, SelectPantryItems
+- **Profile:** ProfileScreen
+- **Notifications:** NotificationListScreen
 
-3. **ShoppingListMain** (src/screens/shoppingList/ShoppingListMain.tsx:51,167)
-   - Screen transition tracking enabled
+**Other integrations:**
 
-4. **RecipeSearch** (src/screens/recipe/RecipeSearch.tsx:30,80)
-   - Screen transition tracking enabled
-
-5. **AppSettingsScreen** (src/screens/profile/AppSettingsScreen.tsx:168-177)
-   - Link to Performance Dashboard (dev only)
-
-6. **RootNavigator** (src/navigation/RootNavigator.tsx:32,64,202)
-   - PerformanceDashboard route registered
+1. **App.tsx** — NativePerformanceService initialized after Telemetry (startup marks, HTTP timing, measure routing)
+2. **App.tsx** — MemoryMonitor started on app initialization (10s sampling)
+2. **ProfileScreen** (src/screens/profile/ProfileScreen.tsx:143) — navigates to `PerformanceDashboard` from the profile settings list
+3. **RootNavigator** (src/navigation/RootNavigator.tsx) — PerformanceDashboard route registered
 
 ### Telemetry Metrics
 
@@ -257,6 +332,10 @@ All performance data is reported to the Telemetry system:
 - `app_memory_critical_total` - Critical memory events
 
 **Histograms:**
+- `app_native_launch_ms` - Native platform launch time
+- `app_js_bundle_load_ms` - JS bundle load time
+- `app_content_appeared_ms` - Time to first content visible
+- `http_request_duration_ms` - HTTP request duration by host
 - `component_render_duration_ms` - Render time distribution
 - `screen_mount_duration_ms` - Screen mount time distribution
 - `screen_interactive_duration_ms` - Time to interactive distribution
@@ -272,7 +351,7 @@ All performance data is reported to the Telemetry system:
 ### Minimal Overhead
 
 1. **Sampling**: Only 10% of renders tracked in production
-2. **Conditional Execution**: Most tracking disabled in production builds
+2. **Selective Tracking**: Render and screen tracking enabled in all environments; memory tracking disabled
 3. **Efficient Storage**: Limited retention (50 components, 30 screens, 100 snapshots)
 4. **No Re-renders**: Uses `useRef` to avoid triggering component re-renders
 
@@ -280,7 +359,7 @@ All performance data is reported to the Telemetry system:
 
 1. **Automatic Trimming**: Old metrics automatically removed
 2. **No Persistence**: Performance data not saved to storage
-3. **Development Only**: Most features disabled in production
+3. **Production Safe**: Tracking enabled with low sample rates; dashboard is DEV-only
 
 ## Best Practices
 
@@ -339,8 +418,7 @@ All performance data is reported to the Telemetry system:
 
 ### Manual Testing Checklist
 
-- [ ] Navigate to Profile → App Settings → Developer section visible
-- [ ] Open Performance Dashboard
+- [ ] Navigate to Profile → Performance Dashboard
 - [ ] Navigate to PantryMain - verify metrics appear
 - [ ] Navigate to ShoppingListMain - verify metrics appear
 - [ ] Navigate to RecipeSearch - verify metrics appear
@@ -364,6 +442,17 @@ All performance data is reported to the Telemetry system:
 
 ## Changelog
 
+### Doc update (2026-02-22)
+
+Updated documentation to reflect current codebase state:
+- Fixed store access pattern (`usePerformanceStore` from isolated store)
+- Added 7 missing hook descriptions (useFPSMonitor, useScreenTelemetry, useFilterTransition, useDeferredSearch, useDeferredCallback, useDeferredRender, useAfterInteraction)
+- Updated file structure to match actual files (removed nonexistent index.ts barrel files)
+- Fixed config defaults (enabled in all envs, trackMemory disabled, slowRenderThreshold varies by env)
+- Fixed MemoryMonitor description (uses react-native-device-info, not platform-specific fallbacks)
+- Updated integration points to list all 19 screens using useScreenTransition
+- Fixed Performance Dashboard navigation path (ProfileScreen, not AppSettingsScreen)
+
 ### Session 8 (2025-10-29)
 
 **Added:**
@@ -374,14 +463,6 @@ All performance data is reported to the Telemetry system:
 - MemoryMonitor singleton service
 - performanceSlice for state management
 - PerformanceDashboard screen
-- Integration in PantryMain, ShoppingListMain, RecipeSearch
-- Memory monitoring in App.tsx
-- Developer section in AppSettingsScreen
 - Navigation routes for PerformanceDashboard
 
-**Configuration:**
-- Default config: enabled in dev, 10% sampling in prod
-- Thresholds: 16ms renders, 500ms transitions, 80% memory
-- Limits: 50 components, 30 screens, 100 memory snapshots
-
-**Status:** ✅ Complete (100%)
+**Status:** ✅ Complete

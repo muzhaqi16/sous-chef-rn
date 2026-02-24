@@ -2,13 +2,13 @@ import { useMemo } from 'react';
 import {
   useGetShoppingListSuggestionsQuery,
   SuggestionSource,
-  GetShoppingListSuggestionsQuery,
+  type GetShoppingListSuggestionsQuery,
 } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
 /** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem =
-  GetShoppingListSuggestionsQuery['shoppingListSuggestions'][number];
+  NonNullable<GetShoppingListSuggestionsQuery['shoppingList']>['suggestions'][number];
 
 export interface GroupedSuggestions {
   recentlyDeleted: ShoppingListSuggestionItem[];
@@ -35,16 +35,15 @@ export function useShoppingListSuggestions({
 
   const { data, loading, error, refetch } = useGetShoppingListSuggestionsQuery({
     variables: {
-      shoppingListId: shoppingListId ?? '',
+      id: shoppingListId ?? '',
       limit,
     },
     skip: !shoppingListId || skip || isOffline,
     fetchPolicy: 'cache-and-network',
   });
 
-  const suggestions = data?.shoppingListSuggestions;
+  const suggestions = data?.shoppingList?.suggestions;
 
-  // Group suggestions by source
   const grouped = useMemo<GroupedSuggestions>(() => {
     const recentlyDeleted: ShoppingListSuggestionItem[] = [];
     const frequentlyAdded: ShoppingListSuggestionItem[] = [];
@@ -69,7 +68,6 @@ export function useShoppingListSuggestions({
     return { recentlyDeleted, frequentlyAdded, popular };
   }, [suggestions]);
 
-  // Check if there are any suggestions to show
   const hasSuggestions =
     grouped.recentlyDeleted.length > 0 ||
     grouped.frequentlyAdded.length > 0 ||

@@ -68,8 +68,7 @@ export const OnBoardingWrapper = ({
             testID={testID ? `${testID}-back-button` : undefined}
           >
             <Icon
-              library="Feather"
-              name="arrow-left"
+              name="arrow-back"
               size={24}
               color={theme.colors.primary}
             />
@@ -77,8 +76,8 @@ export const OnBoardingWrapper = ({
         ) : (
           <View style={styles.iconButton} />
         )}
-        {displayTitle && (
-          <Text style={styles.headerTitle} numberOfLines={1}>
+        {!!displayTitle && (
+          <Text style={styles.headerTitle}>
             {displayTitle}
           </Text>
         )}
@@ -86,7 +85,7 @@ export const OnBoardingWrapper = ({
       </View>
 
       {/* Animated Step Indicator */}
-      {showSteps && !isLegacyMode && onboardingContext && (
+      {!!showSteps && !isLegacyMode && !!onboardingContext && (
         <View style={styles.stepsContainer}>
           <OnboardingSteps
             steps={onboardingContext.steps}
@@ -108,9 +107,7 @@ export const OnBoardingWrapper = ({
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {displaySubtitle && (
-            <Text style={styles.subtitle}>{displaySubtitle}</Text>
-          )}
+          {!!displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -141,7 +138,7 @@ export const OnBoardingWrapper = ({
         />
       ) : (
         <View style={styles.bottomNavigation}>
-          {onSkip && (
+          {!!onSkip && (
             <Pressable
               onPress={onSkip}
               style={({pressed}) => [styles.skipButton, pressed && styles.pressed]}
@@ -178,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
   headerTitle: {
     flex: 1,
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
   },
@@ -200,7 +197,7 @@ const styles = StyleSheet.create(theme => ({
   },
   skipText: {
     color: theme.colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   progressBarBackground: {
     flex: 1,
@@ -232,7 +229,7 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xl,
     textAlign: 'center',
@@ -242,6 +239,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-around',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

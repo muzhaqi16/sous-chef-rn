@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {View, Text, Pressable, FlatList, Modal, ViewStyle} from 'react-native';
+import {View, Text, Pressable, Modal, ViewStyle} from 'react-native';
+import {FlashList} from '@shopify/flash-list';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
@@ -70,7 +71,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <Icon
-          name="keyboard-arrow-down"
+          name="chevron-down"
           size={24}
           color={theme.colors.textSecondary}
         />
@@ -84,16 +85,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         <View style={styles.modal}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{label}</Text>
-            <FlatList
+            <FlashList
               data={options}
               renderItem={renderOption}
               keyExtractor={item => item.value}
               showsVerticalScrollIndicator={false}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              removeClippedSubviews={true}
-              initialNumToRender={10}
-              updateCellsBatchingPeriod={50}
             />
             <Pressable
               style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}
@@ -144,7 +140,7 @@ const styles = StyleSheet.create(theme => ({
   },
   modalTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
@@ -163,7 +159,7 @@ const styles = StyleSheet.create(theme => ({
   },
   selectedOptionText: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   closeButton: {
     marginTop: theme.spacing.md,
@@ -176,9 +172,9 @@ const styles = StyleSheet.create(theme => ({
   closeButtonText: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

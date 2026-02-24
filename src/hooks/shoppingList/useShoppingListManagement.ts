@@ -87,20 +87,6 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     );
   }, [purchasedItems, searchQuery]);
 
-  // Stats calculation
-  const stats = useMemo(() => {
-    const total = items.length;
-    const completed = purchasedItems.length;
-    const pending = unpurchasedItems.length;
-
-    return {
-      total,
-      completed,
-      pending,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-    };
-  }, [items.length, purchasedItems.length, unpurchasedItems.length]);
-
   // Helper functions
   const getItemById = useCallback(
     (itemId: string) => items.find(item => item.id === itemId),
@@ -125,7 +111,6 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     shoppingList, // Full shopping list details for permissions, collaborators
     loading,
     error,
-    stats,
     isTransitioning,
 
     // Total counts for tab headers (from GraphQL totalCount, not array length)

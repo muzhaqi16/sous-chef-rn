@@ -38,7 +38,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </Pressable>
       )}
 
-      {canInvite && (
+      {!!canInvite && (
         <Pressable
           style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onInvite(homeId)}>
@@ -47,11 +47,11 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </Pressable>
       )}
 
-      {canDelete && (
+      {!!canDelete && (
         <Pressable
           style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
           onPress={() => onDelete(homeId)}>
-          <Icon name="delete" size={20} color={theme.colors.error} />
+          <Icon name="trash-outline" size={20} color={theme.colors.error} />
           <Text style={[styles.actionText, {color: theme.colors.error}]}>
             Delete
           </Text>
@@ -83,6 +83,6 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.xs + 2,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

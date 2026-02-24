@@ -164,12 +164,12 @@ export const NotificationSettingsScreen: React.FC = () => {
       )}
 
       {/* Permission Status Banner */}
-      {hasPermission === false && settings.pushEnabled && (
+      {hasPermission === false && !!settings.pushEnabled && (
         <AlertBanner
           title="Notifications Disabled"
           subtitle="Notification permissions are not enabled. Tap to enable in settings."
-          icon="bell-off"
-          iconLibrary="Feather"
+          icon="notifications-off"
+          iconLibrary="Ionicons"
           variant="warning"
           onPress={() => {
             Alert.alert(
@@ -198,7 +198,7 @@ export const NotificationSettingsScreen: React.FC = () => {
         <SettingSwitch
           title="Push Notifications"
           description="Receive push notifications on your device"
-          value={settings.pushEnabled && hasPermission === true}
+          value={!!settings.pushEnabled && hasPermission === true}
           onValueChange={value =>
             handleSettingChange('pushEnabled', value)
           }
@@ -235,8 +235,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'expirationNotifications'}
         />
 
-        {settings.expirationNotifications && (
-          <>
+        {!!settings.expirationNotifications && <>
             <View style={styles.indentedSetting}>
               <Text style={styles.settingLabel}>Notification Frequency</Text>
               <Picker
@@ -273,8 +272,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                 <Picker.Item label="7 days before" value={7} />
               </Picker>
             </View>
-          </>
-        )}
+          </>}
 
         <SettingSwitch
           title="Low Stock Alerts"
@@ -387,7 +385,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           onValueChange={value => handleSettingChange('quietHoursEnabled', value)}
           loading={updating === 'quietHoursEnabled'}
         />
-        {settings.quietHoursEnabled && (
+        {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
             <Text style={styles.quietHoursText}>
               Quiet hours: {settings.quietHoursStart || '22:00'} - {settings.quietHoursEnd || '08:00'}
@@ -453,7 +451,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   picker: {
     height: 50,
@@ -470,7 +468,7 @@ const styles = StyleSheet.create(theme => ({
   quietHoursText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.xs,
   },
   quietHoursSubtext: {

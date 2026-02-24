@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
+import { formatQuantity } from '#/utils/formatQuantity';
 
 interface QuantityBadgeProps {
   quantity: number;
@@ -15,17 +16,6 @@ interface QuantityBadgeProps {
 }
 
 /**
- * Format quantity to max 2 decimal places, removing trailing zeros
- */
-const formatQuantity = (value: number): string => {
-  const rounded = Math.round(value * 100) / 100;
-  if (rounded % 1 === 0) {
-    return rounded.toString();
-  }
-  return rounded.toFixed(2).replace(/\.?0+$/, '');
-};
-
-/**
  * QuantityBadge - Tappable pill displaying quantity + unit
  *
  * Displays quantity and optional unit in a pill-shaped badge.
@@ -36,8 +26,7 @@ const formatQuantity = (value: number): string => {
  * - "1 pc"
  * - "3" (when no unit)
  */
-export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
-  ({ quantity, quantityInput, unit, onPress, disabled = false, isPurchased = false, themeColors }) => {
+export const QuantityBadge: React.FC<QuantityBadgeProps> = ({ quantity, quantityInput, unit, onPress, disabled = false, isPurchased = false, themeColors }) => {
     // PERFORMANCE: Only call useUnistyles if themeColors not provided
     // When used in shopping list, parent provides colors to avoid repeated hook calls
     const { theme } = useUnistyles();
@@ -72,6 +61,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
           ]}
         >
           <Text
+            maxFontSizeMultiplier={1.5}
             style={[
               styles.quantityText,
               { color: colors.textPrimary },
@@ -80,8 +70,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
           >
             {formattedQuantity}
           </Text>
-          {unit && (
+          {!!unit && (
             <Text
+              maxFontSizeMultiplier={1.5}
               style={[
                 isInlineUnit ? styles.unitTextInline : styles.unitText,
                 { color: colors.textSecondary },
@@ -94,8 +85,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = React.memo(
         </View>
       </Pressable>
     );
-  },
-);
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -112,24 +102,24 @@ const styles = StyleSheet.create(theme => ({
   },
   quantityText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     lineHeight: 16,
   },
   unitText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: theme.typography.fontSize['2xs'],
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
     lineHeight: 13,
   },
   unitTextInline: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     textAlign: 'center',
     lineHeight: 16,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   purchasedText: {
     textDecorationLine: 'line-through',

@@ -18,7 +18,7 @@ interface DragHandleProps {
  * Uses RNGH LongPress gesture for better coordination with pan gestures.
  * Memoized to prevent unnecessary re-renders when parent re-renders.
  */
-export const DragHandle = React.memo(function DragHandle({
+export function DragHandle({
   onLongPress,
   disabled = false,
   iconColor,
@@ -55,15 +55,14 @@ export const DragHandle = React.memo(function DragHandle({
     <GestureDetector gesture={longPressGesture}>
       <View style={styles.container}>
         <Icon
-          library="MaterialIcons"
-          name="drag-indicator"
+          name="reorder-three"
           size={24}
           color={color}
         />
       </View>
     </GestureDetector>
   );
-});
+}
 
 const styles = StyleSheet.create(theme => ({
   container: {

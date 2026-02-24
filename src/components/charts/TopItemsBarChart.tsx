@@ -32,7 +32,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
   if (!data || data.length === 0) {
     return (
       <View style={[styles.container, { minHeight: height }]}>
-        {title && (
+        {!!title && (
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
@@ -48,7 +48,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
 
   return (
     <View style={styles.container}>
-      {title && (
+      {!!title && (
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
           {title}
         </Text>
@@ -79,7 +79,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                 </View>
                 <Text style={[styles.barValue, { color: theme.colors.textSecondary }]}>
                   {item.value}
-                  {showSecondaryValue && item.secondaryValue !== undefined && (
+                  {!!showSecondaryValue && item.secondaryValue !== undefined && (
                     <Text style={styles.secondaryValue}>
                       {` (${secondaryValuePrefix}${item.secondaryValue.toFixed(2)})`}
                     </Text>

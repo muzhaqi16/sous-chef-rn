@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetDietaryProfileQuery,
   useUpdateDietaryProfileMutation,
@@ -13,7 +14,7 @@ import {
   RestrictionSeverity,
 } from '#generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
   id: string;
@@ -45,8 +46,8 @@ export interface DietaryProfileData {
 }
 
 export const useDietaryProfile = () => {
-  const user = useStore(state => state.user);
-  const { handleApolloError } = useErrorHandler();
+  const user = useAppStore(state => state.user);
+  const { handleApolloError } = useErrorService();
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
   // - cache-first: Uses cache if available for profile data
@@ -59,7 +60,8 @@ export const useDietaryProfile = () => {
     notifyOnNetworkStatusChange: true,
   });
 
-  const profile = data?.myDietaryProfile;
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const profile = usePreservedQueryData(data?.me?.dietaryProfile, null);
 
   // ===== MUTATION 1: Update Dietary Profile =====
   const [updateProfile] = useUpdateDietaryProfileMutation({
@@ -77,7 +79,7 @@ export const useDietaryProfile = () => {
           message: 'Dietary profile updated',
           code: 'DIETARY_PROFILE_UPDATED',
           dietaryProfile: enhanceWithVersion(
-            profile as any,
+            profile,
             variables.input,
           ),
         },
@@ -148,7 +150,7 @@ export const useDietaryProfile = () => {
           message: 'Dietary restriction updated',
           code: 'DIETARY_RESTRICTION_UPDATED',
           dietaryRestriction: enhanceWithVersion(
-            currentRestriction as any,
+            currentRestriction,
             variables.input,
           ),
         },

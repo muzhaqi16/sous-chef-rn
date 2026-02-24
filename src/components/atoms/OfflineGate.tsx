@@ -66,7 +66,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
   if (compact) {
     return (
       <View style={[styles.compactContainer, style]}>
-        <Icon name="cloud-offline-outline" library="Ionicons" size={16} />
+        <Icon name="cloud-offline-outline" size={16} />
         <Text style={styles.compactText}>{message}</Text>
       </View>
     );
@@ -75,9 +75,9 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
   // Full offline message display
   return (
     <View style={[styles.container, style]}>
-      <Icon name="cloud-offline-outline" library="Ionicons" size={48} />
+      <Icon name="cloud-offline-outline" size={48} />
       <Text style={styles.message}>{message}</Text>
-      {description && <Text style={styles.description}>{description}</Text>}
+      {description ? <Text style={styles.description}>{description}</Text> : null}
     </View>
   );
 };
@@ -92,7 +92,7 @@ const styles = StyleSheet.create(theme => ({
   },
   message: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },

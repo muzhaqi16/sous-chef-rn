@@ -3,6 +3,7 @@ import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import packageJson from '../../package.json';
 
 // Load Apollo dev messages in development for better error reporting
 if (__DEV__) {
@@ -45,7 +46,7 @@ function initializeClient() {
     cache,
     clientAwareness: {
       name: 'sous-chef-app',
-      version: require('../../package.json').version,
+      version: packageJson.version,
     },
     defaultOptions: {
       query: {
@@ -62,8 +63,6 @@ function initializeClient() {
         // After first fetch, use cache-first to reduce network calls
         nextFetchPolicy: 'cache-first',
         errorPolicy: 'all', // Return both cached data and errors for observability
-        // Return partial data from cache even if some fields are missing
-        returnPartialData: true,
       },
     },
     queryDeduplication: true,
@@ -76,19 +75,13 @@ function initializeClient() {
   return client;
 }
 
-// Global reference to persistence timer for cleanup
-let persistTimeout: NodeJS.Timeout | null = null;
-
 /**
  * Cancel any pending cache persistence
  * Important: Call this during logout to prevent writing stale cache data
  */
 export function cancelCachePersistence() {
-  if (persistTimeout) {
-    clearTimeout(persistTimeout);
-    persistTimeout = null;
-    logger.info('🛑 Apollo: Cache persistence timer cancelled');
-  }
+  apolloCachePersistence.cancel();
+  logger.info('🛑 Apollo: Cache persistence timer cancelled');
 }
 
 /**
@@ -99,10 +92,12 @@ export function cancelCachePersistence() {
  */
 function setupCachePersistence(client: ApolloClient) {
   // Helper to schedule cache persistence
-  // No debounce here - ApolloCachePersistence.save() already debounces at 1000ms
+  // Uses lazy extraction so cache.extract() only runs once after debounce,
+  // not on every cache operation (write, evict, modify, gc)
   const schedulePersistence = () => {
-    const extracted = client.cache.extract() as any;
-    apolloCachePersistence.save(extracted);
+    apolloCachePersistence.scheduleExtractAndSave(
+      () => client.cache.extract() as any, // justified: NormalizedCacheObject shape varies by Apollo version
+    );
   };
 
   // Listen for cache resets (e.g., logout, clearStore)
@@ -126,6 +121,7 @@ function setupCachePersistence(client: ApolloClient) {
   const originalModify = cache.modify.bind(cache);
   const originalGc = cache.gc ? cache.gc.bind(cache) : null;
 
+  // justified: wrapping Apollo cache methods requires `any` — internal method signatures are not public API
   cache.write = function (...args: any) {
     const result = (originalWrite as any)(...args);
     schedulePersistence();

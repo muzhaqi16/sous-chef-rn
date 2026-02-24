@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useAppStore } from '#store/useAppStore';
 
 const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
@@ -80,7 +79,6 @@ export const useFeatureHint = ({
 
   // Check global showTutorials setting
   const tutorialsEnabled = useShowTutorials();
-  const tutorialsEnabledRef = useStableRef(tutorialsEnabled);
 
   // Check if hint has been shown before (reactive state so dismiss updates immediately)
   const [hasBeenShown, setHasBeenShown] = useState(
@@ -105,10 +103,10 @@ export const useFeatureHint = ({
 
   const show = useCallback(() => {
     // Only show if tutorials are enabled globally and hint hasn't been dismissed
-    if (tutorialsEnabledRef.current && !(storage.getBoolean(storageKey) ?? false)) {
+    if (tutorialsEnabled && !(storage.getBoolean(storageKey) ?? false)) {
       setIsVisible(true);
     }
-  }, [tutorialsEnabledRef, storageKey]);
+  }, [tutorialsEnabled, storageKey]);
 
   const hide = useCallback(() => {
     setIsVisible(false);

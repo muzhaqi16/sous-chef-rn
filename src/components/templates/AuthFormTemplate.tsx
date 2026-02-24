@@ -52,7 +52,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   return (
     <View style={styles.formContainer}>
       <View>
-        {onBackPress && (
+        {!!onBackPress && (
           <IconButton
             name="chevron-left"
             onPress={onBackPress}
@@ -64,12 +64,12 @@ export function AuthFormTemplate<T extends FieldValues>({
         )}
 
         <Text style={styles.title}>{title}</Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
-      {linkText && onLinkPress && (
+      {!!linkText && !!onLinkPress && (
         <Pressable onPress={onLinkPress} testID={linkTestID} style={({pressed}) => pressed && styles.pressed}>
           <Text style={styles.link}>{linkText}</Text>
         </Pressable>
@@ -84,7 +84,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         />
       </View>
 
-      {footerText && footerLinkText && onFooterLinkPress && (
+      {!!footerText && !!footerLinkText && !!onFooterLinkPress && (
         <Pressable
           onPress={onFooterLinkPress}
           disabled={footerLinkDisabled}
@@ -125,7 +125,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize['2xl'],
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create(theme => ({
   },
   link: {
     textAlign: 'right',
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     textDecorationLine: 'underline',
   },
@@ -163,12 +163,12 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   footerDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   linkDisabled: {
     textDecorationLine: 'none',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

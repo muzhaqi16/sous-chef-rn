@@ -45,7 +45,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
             color={theme.colors.primary}
             style={styles.spinner}
           />
-          {message && (
+          {!!message && (
             <Text style={[
               styles.message,
               { color: theme.colors.textPrimary }
@@ -103,6 +103,6 @@ const styles = StyleSheet.create(theme => ({
   message: {
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

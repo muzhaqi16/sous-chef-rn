@@ -1,5 +1,6 @@
-import React from 'react';
-import { FlatList, Text, ActivityIndicator } from 'react-native';
+import React, { useCallback } from 'react';
+import { Text, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SelectorItem } from './SelectorItem';
@@ -39,7 +40,22 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     actions,
+    extraData,
   } = config;
+
+  const renderItem = useCallback(
+    ({ item }: { item: T }) => (
+      <SelectorItem
+        item={item}
+        isSelected={item.id === selectedId}
+        onSelect={onSelect}
+        displayProperty={displayProperty}
+        renderCustomItem={renderCustomItem}
+        extraData={extraData}
+      />
+    ),
+    [selectedId, onSelect, displayProperty, renderCustomItem, extraData],
+  );
 
   if (loading) {
     return <LoadingState />;
@@ -54,28 +70,6 @@ export const SelectorContent = <T extends SelectableItem>({
     );
   }
 
-  const renderItem = ({ item, index }: { item: T; index: number }) => (
-    <SelectorItem
-      item={item}
-      index={index}
-      isSelected={item.id === selectedId}
-      onPress={() => onSelect(item.id, item)}
-      displayProperty={displayProperty}
-      renderCustomItem={renderCustomItem}
-    />
-  );
-
-  // PERFORMANCE: getItemLayout for better scroll performance
-  // Item height = paddingVertical (16) + text (~24) + border (2) + marginBottom (16) ≈ 58px
-  // Only use when renderCustomItem is not provided (standard items have fixed height)
-  const getItemLayout = !renderCustomItem
-    ? (_data: ArrayLike<T> | null | undefined, index: number) => ({
-        length: 58,
-        offset: 58 * index,
-        index,
-      })
-    : undefined;
-
   return (
     <Animated.View layout={LinearTransition} style={styles.container}>
       <Animated.View
@@ -83,20 +77,14 @@ export const SelectorContent = <T extends SelectableItem>({
         layout={LinearTransition}
         style={styles.listContainer}
       >
-        <FlatList
+        <FlashList
           data={data}
           renderItem={renderItem}
+          extraData={extraData}
           keyExtractor={keyExtractor || ((item: T) => item.id)}
           showsVerticalScrollIndicator={true}
           bounces={true}
           contentContainerStyle={styles.listContent}
-          getItemLayout={getItemLayout}
-          // Performance optimizations
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={true}
-          initialNumToRender={10}
-          updateCellsBatchingPeriod={50}
         />
       </Animated.View>
       <Animated.View style={styles.actionsWrapper}>

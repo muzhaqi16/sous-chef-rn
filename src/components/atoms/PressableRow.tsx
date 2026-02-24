@@ -42,7 +42,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
       disabled={disabled || !onPress}
       testID={testID}
     >
-      {icon && (
+      {!!icon && (
         <View style={styles.iconContainer}>
           <Icon
             name={icon}
@@ -56,7 +56,7 @@ export const PressableRow: React.FC<PressableRowProps> = ({
         <Text style={[styles.title, disabled && styles.titleDisabled]}>
           {title}
         </Text>
-        {subtitle && (
+        {!!subtitle && (
           <Text style={[styles.subtitle, disabled && styles.subtitleDisabled]}>
             {subtitle}
           </Text>
@@ -65,9 +65,9 @@ export const PressableRow: React.FC<PressableRowProps> = ({
 
       {rightElement}
 
-      {showChevron && (
+      {!!showChevron && (
         <Icon
-          name="chevron-right"
+          name="chevron-forward"
           size={24}
           color={theme.colors.textTertiary}
         />
@@ -86,7 +86,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
   },
   containerDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   iconContainer: {
     marginRight: theme.spacing.md,
@@ -110,6 +110,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

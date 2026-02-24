@@ -1,11 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -29,23 +25,20 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && !!pantryItem,
+    onDismiss: onClose,
+    snapPoints: ['65%', '85%'],
+  });
   const [quantityInput, setQuantityInput] = useState('');
   const [reason, setReason] = useState('');
   const [remainingWeightInput, setRemainingWeightInput] = useState('');
 
   useEffect(() => {
     if (visible && pantryItem) {
-      bottomSheetRef.current?.present();
       setQuantityInput(pantryItem.quantity.toString());
       setReason('');
       setRemainingWeightInput('');
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
 
@@ -74,34 +67,12 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   }, [pantryItem, quantityInput, reason, remainingWeightInput, onConfirm, onClose]);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['65%', '85%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
@@ -113,8 +84,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
           confirmLabel="Adjust"
         />
 
-        {pantryItem && (
-          <>
+        {!!pantryItem && <>
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
@@ -174,8 +144,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                     useBottomSheetInput
                   />
               )}
-          </>
-        )}
+          </>}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

@@ -14,7 +14,7 @@ import {
   useGetHomeByJoinCodeLazyQuery,
   MembershipRole,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
 
 interface UseHomeInvitationsOptions {
@@ -39,7 +39,7 @@ export function useHomeInvitations({
   setDefaultHome,
   setSelectedHomeId,
 }: UseHomeInvitationsOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({

@@ -7,6 +7,7 @@ export const typography = {
     mono: 'Courier',
   },
   fontSize: {
+    '2xs': 11,
     xs: 12,
     sm: 14,
     base: 16,
@@ -16,6 +17,7 @@ export const typography = {
     '2xl': 24,
     '3xl': 30,
     '4xl': 36,
+    '5xl': 40,
   },
   lineHeight: {
     tight: 20,    // For sm/base text
@@ -30,7 +32,17 @@ export const typography = {
   },
 } as const;
 
-// Backwards compatibility
+/**
+ * Canonical typography API - preferred access path: `theme.fonts.*`
+ *
+ * Usage:
+ *   theme.fonts.size.md      // fontSize
+ *   theme.fonts.weight.semibold  // fontWeight
+ *
+ * For lineHeight and letterSpacing, use `theme.typography.*`:
+ *   theme.typography.lineHeight.normal
+ *   theme.typography.letterSpacing.tight
+ */
 export const fonts = {
   size: typography.fontSize,
   weight: {
@@ -39,4 +51,6 @@ export const fonts = {
     semibold: '600' as const,
     bold: '700' as const,
   },
+  lineHeight: typography.lineHeight,
+  letterSpacing: typography.letterSpacing,
 };

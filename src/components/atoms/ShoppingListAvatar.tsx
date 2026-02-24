@@ -25,6 +25,8 @@ interface ShoppingListAvatarProps {
       } | null;
     }> | null;
     home?: {
+      id?: string;
+      name?: string;
       membersConnection?: {
         edges?: Array<{
           node?: {
@@ -46,7 +48,7 @@ interface ShoppingListAvatarProps {
   size?: number;
 }
 
-export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = ({
+export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = React.memo(({
   list,
   size = 40,
 }) => {
@@ -57,8 +59,7 @@ export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = ({
       uri={avatarInfo?.avatar}
       name={avatarInfo?.displayName || avatarInfo?.email}
       size={size}
-      fallbackIcon="shopping-cart"
-      fallbackIconLibrary="MaterialIcons"
+      fallbackIcon="cart-outline"
     />
   );
-};
+});

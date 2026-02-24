@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Config from 'react-native-config';
 
-// Type-safe config access with fallbacks
+// justified: react-native-config doesn't provide typed keys — dynamic string access requires `as any`
 const getConfigValue = (key: string, fallback: any = undefined) => {
   return (Config as any)[key] ?? fallback;
 };

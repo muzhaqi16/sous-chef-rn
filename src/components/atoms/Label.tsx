@@ -40,7 +40,7 @@ export const Label: React.FC<LabelProps> = ({
       ]}
     >
       {children}
-      {required && <Text style={styles.required}> *</Text>}
+      {!!required && <Text style={styles.required}> *</Text>}
     </Text>
   );
 };

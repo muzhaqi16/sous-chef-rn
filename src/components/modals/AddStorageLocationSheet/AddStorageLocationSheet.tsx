@@ -3,20 +3,19 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { commonStyles } from '#/styles/commonStyles';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#generated';
 
 interface AddStorageLocationSheetProps {
   visible: boolean;
   onClose: () => void;
-  onCreateLocation: (input: { name: string; type: StorageType }) => Promise<unknown>;
+  onCreateLocation: (input: {
+    name: string;
+    type: StorageType;
+  }) => Promise<unknown>;
   creating?: boolean;
 }
 
@@ -29,18 +28,18 @@ interface AddStorageLocationSheetProps {
  * - Creates location with default type (Other)
  * - Used from PantryMain for quick creation
  */
-export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = ({
-  visible,
-  onClose,
-  onCreateLocation,
-  creating = false,
-}) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const inputRef = useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+export const AddStorageLocationSheet: React.FC<
+  AddStorageLocationSheetProps
+> = ({ visible, onClose, onCreateLocation, creating = false }) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['35%'],
+      keyboardBehavior: 'interactive',
+    });
+  const inputRef =
+    useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
 
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +47,9 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
   // Control visibility
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
       // Focus input after a short delay for animation
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      bottomSheetRef.current?.dismiss();
       // Reset state when closing
       setName('');
       setError(null);
@@ -89,52 +86,27 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
     onClose();
   }, [onClose]);
 
-  const handleNameChange = useCallback((text: string) => {
-    setName(text);
-    if (error) setError(null);
-  }, [error]);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
+  const handleNameChange = useCallback(
+    (text: string) => {
+      setName(text);
+      if (error) setError(null);
+    },
+    [error],
   );
 
   const isCreateDisabled = creating || name.trim().length < 2;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['30%', '50%']}
-      index={0}
-      enablePanDownToClose
-      backdropComponent={renderBackdrop}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-    >
-      <BottomSheetKeyboardAwareScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
-        showsVerticalScrollIndicator={false}
-        bottomOffset={16}
-      >
+    <BottomSheetModal ref={ref} {...modalProps} index={0}>
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Create */}
         <View style={styles.header}>
           <Pressable
             onPress={handleCancel}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
@@ -151,7 +123,10 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
 
           <Pressable
             onPress={handleCreate}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Create"
             disabled={isCreateDisabled}
@@ -196,7 +171,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
                 borderColor: error ? theme.colors.error : theme.colors.border,
               },
             ]}
-            value={name}
+            defaultValue={name}
             onChangeText={handleNameChange}
             placeholder="e.g., Kitchen Cabinet, Garage Shelf"
             placeholderTextColor={theme.colors.textTertiary}
@@ -206,7 +181,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
             returnKeyType="done"
             onSubmitEditing={handleCreate}
           />
-          {error && (
+          {!!error && (
             <Text style={[styles.errorText, { color: theme.colors.error }]}>
               {error}
             </Text>
@@ -216,7 +191,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
             You can edit details later in Settings &gt; Storage Locations
           </Text>
         </View>
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };
@@ -238,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     flex: 1,
   },
@@ -247,7 +222,7 @@ const styles = StyleSheet.create(theme => ({
   },
   saveText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textAlign: 'right',
   },
   divider: {
@@ -259,7 +234,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     marginBottom: theme.spacing.sm,
   },
   input: {
@@ -278,7 +253,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

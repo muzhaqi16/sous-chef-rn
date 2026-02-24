@@ -44,8 +44,8 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
   imageUrl,
   title,
   subtitle,
-  placeholderIcon = 'inventory-2',
-  placeholderIconLibrary = 'MaterialIcons',
+  placeholderIcon = 'cube-outline',
+  placeholderIconLibrary = 'Ionicons',
   onPress,
   onQuickAdd,
   quickAddDisabled = false,
@@ -66,8 +66,8 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
   // Trigger exit animation when isExiting becomes true
   useEffect(() => {
     if (isExiting) {
-      translateX.value = withTiming(100, { duration: EXIT_ANIMATION_DURATION });
-      opacity.value = withTiming(0, { duration: EXIT_ANIMATION_DURATION });
+      translateX.set(withTiming(100, { duration: EXIT_ANIMATION_DURATION }));
+      opacity.set(withTiming(0, { duration: EXIT_ANIMATION_DURATION }));
 
       // Call onExitComplete after animation duration
       const timer = setTimeout(() => {
@@ -117,13 +117,13 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
           <Text style={styles.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle && (
+          {!!subtitle && (
             <Text style={styles.subtitle} numberOfLines={1}>
               {subtitle}
             </Text>
           )}
         </View>
-        {onQuickAdd && (
+        {!!onQuickAdd && (
           <Pressable
             style={({pressed}) => [styles.quickAddButton, pressed && styles.pressed]}
             onPress={onQuickAdd}
@@ -134,7 +134,6 @@ export const SuggestionListItem: React.FC<SuggestionListItemProps> = ({
               name="add"
               size={20}
               color={quickAddDisabled || isExiting ? theme.colors.textTertiary : theme.colors.primary}
-              library="MaterialIcons"
             />
           </Pressable>
         )}
@@ -192,6 +191,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

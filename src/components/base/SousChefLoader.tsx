@@ -67,37 +67,37 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
     };
 
     // Baguette bounce (first)
-    baguetteY.value = withRepeat(
+    baguetteY.set(withRepeat(
       withSequence(
         withTiming(-12, bounceConfig),
         withTiming(0, bounceConfig),
       ),
       -1,
       false,
-    );
+    ));
 
     // Tomato bounce (delayed by 200ms)
     setTimeout(() => {
-      tomatoY.value = withRepeat(
+      tomatoY.set(withRepeat(
         withSequence(
           withTiming(-10, bounceConfig),
           withTiming(0, bounceConfig),
         ),
         -1,
         false,
-      );
+      ));
     }, 200);
 
     // Leaves bounce (delayed by 400ms)
     setTimeout(() => {
-      leavesY.value = withRepeat(
+      leavesY.set(withRepeat(
         withSequence(
           withTiming(-8, bounceConfig),
           withTiming(0, bounceConfig),
         ),
         -1,
         false,
-      );
+      ));
     }, 400);
   }, [baguetteY, tomatoY, leavesY]);
 
@@ -190,7 +190,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
 
   return (
     <View style={componentStyles.container}>
-      {showBrand && (
+      {!!showBrand && (
         <View style={componentStyles.brandContainer}>
           <Text
             style={[
@@ -329,7 +329,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
           style={[
             componentStyles.bannerText,
             {
-              fontSize: 11 * scale,
+              fontSize: theme.typography.fontSize['2xs'] * scale,
               color: COLORS.bannerText,
             },
           ]}>
@@ -380,7 +380,7 @@ const componentStyles = StyleSheet.create(theme => ({
     height: 28,
   },
   bannerText: {
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     letterSpacing: 3,
     textAlign: 'center',
   },

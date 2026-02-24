@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -13,6 +13,7 @@ import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 
 export const AppSettingsScreen: React.FC = () => {
+  const theme = UnistylesRuntime.getTheme();
   const [updating, setUpdating] = useState<string | null>(null);
 
   const {
@@ -99,9 +100,9 @@ export const AppSettingsScreen: React.FC = () => {
             onValueChange={(value) => handleSettingChange('preferredUnitSystem', value)}
             style={styles.picker}
           >
-            <Picker.Item label="Metric (kg, g, L, mL)" value={UnitSystem.Metric} />
-            <Picker.Item label="Imperial (lb, oz, gal, fl oz)" value={UnitSystem.Imperial} />
-            <Picker.Item label="System Default" value={UnitSystem.System} />
+            <Picker.Item label="Metric (kg, g, L, mL)" value={UnitSystem.Metric} color={theme.colors.textPrimary} />
+            <Picker.Item label="Imperial (lb, oz, gal, fl oz)" value={UnitSystem.Imperial} color={theme.colors.textPrimary} />
+            <Picker.Item label="System Default" value={UnitSystem.System} color={theme.colors.textPrimary} />
           </Picker>
         </View>
       </SettingSection>

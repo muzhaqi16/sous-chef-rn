@@ -24,12 +24,13 @@ import {
 import { usePantrySorting } from './hooks/usePantrySorting';
 import {
   getExpirationStatus,
-  formatQuantityDisplay,
   formatPackageBreakdown,
   formatRemainingNetWeight,
   formatQuantityBreakdown,
 } from '#hooks/pantry/usePantryItemTransformation';
-import { StorageState } from '#generated';
+import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import { StorageState, type PantryStats } from '#generated';
+import { PantryAlertBar } from '#components/pantry/PantryAlertBar';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { EmptyState } from '#components/base/EmptyState';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
@@ -101,6 +102,9 @@ interface PantryContentProps {
   avatarUrl?: string | null;
   notificationCount?: number;
 
+  // Stats
+  stats?: PantryStats | null;
+
   // Items
   items: PantryItem[];
 
@@ -133,7 +137,11 @@ interface PantryContentProps {
   // Header actions
   onAvatarPress?: () => void;
   onHomePress?: () => void;
+  onNotificationPress?: () => void;
   onSettingsPress?: () => void;
+  onAnalyticsPress?: () => void;
+  onLowStockPress?: () => void;
+  lowStockLoading?: boolean;
 
   // List actions
   onRefresh?: () => void;
@@ -172,9 +180,9 @@ interface ItemDisplayData {
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: '🧊' },
-  { id: 'freezer', label: 'Freezer', icon: '❄️' },
-  { id: 'pantry', label: 'Pantry', icon: '🗄️' },
+  { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
+  { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+  { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
 
 export const PantryContent = React.memo(React.forwardRef<PantryContentRef, PantryContentProps>(({
@@ -182,6 +190,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   householdName,
   avatarUrl,
   notificationCount = 0,
+  stats,
   items,
   locationFilter,
   onLocationFilterChange,
@@ -201,7 +210,11 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onItemRestock,
   onAvatarPress,
   onHomePress,
+  onNotificationPress,
   onSettingsPress,
+  onAnalyticsPress,
+  onLowStockPress,
+  lowStockLoading = false,
   totalCount,
   onAddItem,
   onRefresh,
@@ -240,11 +253,11 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   useEffect(() => {
     const duration = 200;
     if (showSkeletons) {
-      skeletonOpacity.value = withTiming(1, { duration });
-      contentOpacity.value = withTiming(0, { duration });
+      skeletonOpacity.set(withTiming(1, { duration }));
+      contentOpacity.set(withTiming(0, { duration }));
     } else {
-      skeletonOpacity.value = withTiming(0, { duration });
-      contentOpacity.value = withTiming(1, { duration });
+      skeletonOpacity.set(withTiming(0, { duration }));
+      contentOpacity.set(withTiming(1, { duration }));
     }
   }, [showSkeletons, skeletonOpacity, contentOpacity]);
 
@@ -325,7 +338,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
       const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = (item as any).condition === 'EXPIRED' || isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
+      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
       const hasExpiry = item.expiresAt != null;
 
       const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
@@ -409,7 +422,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         id: '__add__' as LocationFilter,
         label: '',
         icon: 'add',
-        iconLibrary: 'MaterialIcons',
         onPress: onAddLocation,
         isAction: true,
       },
@@ -462,8 +474,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       return (
         <EmptyState
           testID="pantry-empty-state"
-          icon="search-off"
-          iconLibrary="MaterialIcons"
+          icon="search-outline"
           title="No items found"
           description="Try a different search term"
         />
@@ -476,8 +487,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       return (
         <EmptyState
           testID="pantry-empty-state"
-          icon="kitchen"
-          iconLibrary="MaterialIcons"
+          icon="basket-outline"
           title={`No items in ${tabName}`}
           description="Items stored here will appear in this tab"
         />
@@ -487,8 +497,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     return (
       <EmptyState
         testID="pantry-empty-state"
-        icon="kitchen"
-        iconLibrary="MaterialIcons"
+        icon="basket-outline"
         title="Your pantry is empty"
         description="Start tracking your food to reduce waste"
         action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}
@@ -508,6 +517,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             notificationCount={notificationCount}
             onAvatarPress={onAvatarPress}
             onHomePress={onHomePress}
+            onNotificationPress={onNotificationPress}
           />
 
           {/* Search Bar */}
@@ -525,14 +535,23 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                 accessibilityLabel="Pantry settings"
               >
                 <Icon
-                  name="settings"
+                  name="settings-outline"
                   size={18}
                   color={theme.colors.textTertiary}
-                  library="Feather"
                 />
               </Pressable>
             }
           />
+
+          {/* Alert Bar */}
+          {!!stats && (
+            <PantryAlertBar
+              stats={stats}
+              onAnalyticsPress={onAnalyticsPress}
+              onLowStockPress={onLowStockPress}
+              lowStockLoading={lowStockLoading}
+            />
+          )}
         </View>
 
         {/* Always visible — not part of crossfade */}
@@ -585,7 +604,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           </Animated.View>
 
           {/* Skeleton layer (absolute on top, fades out) */}
-          {showSkeletons && (
+          {!!showSkeletons && (
             <Animated.View
               testID="pantry-loading"
               style={[styles.absoluteFill, skeletonAnimatedStyle]}

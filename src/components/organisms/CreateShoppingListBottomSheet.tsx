@@ -1,14 +1,12 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { useCreateShoppingListMutation } from '#generated';
 
@@ -21,25 +19,23 @@ interface CreateShoppingListBottomSheetProps {
 export const CreateShoppingListBottomSheet: React.FC<
   CreateShoppingListBottomSheetProps
 > = ({ visible, onClose, onSuccess }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['35%'],
+    keyboardBehavior: 'interactive',
+  });
 
   const [listName, setListName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const [createShoppingList, { loading }] = useCreateShoppingListMutation();
 
-  // Control bottom sheet visibility based on visible prop
+  // Reset form when modal opens
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
-      // Reset form when modal opens
       setListName('');
       setError(null);
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible]);
 
@@ -74,29 +70,9 @@ export const CreateShoppingListBottomSheet: React.FC<
   }, [onClose]);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['35%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetView
-        style={[styles.content, { paddingBottom: insets.bottom + 16 }]}
+        style={[styles.content, contentContainerStyle]}
       >
         {/* Header */}
         <BottomSheetHeader
@@ -119,7 +95,7 @@ export const CreateShoppingListBottomSheet: React.FC<
                 borderColor: error ? theme.colors.error : theme.colors.border,
               },
             ]}
-            value={listName}
+            defaultValue={listName}
             onChangeText={text => {
               setListName(text);
               if (error) setError(null);
@@ -129,7 +105,7 @@ export const CreateShoppingListBottomSheet: React.FC<
             autoFocus
             maxLength={50}
           />
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </BottomSheetView>
     </BottomSheetModal>
@@ -145,7 +121,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },

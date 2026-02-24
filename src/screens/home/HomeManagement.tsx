@@ -2,12 +2,11 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  FlatList,
   ActivityIndicator,
   RefreshControl,
-  ListRenderItem,
   Pressable,
 } from 'react-native';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -34,6 +33,7 @@ import {
 } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { errorService } from '#/services/errorService';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -197,7 +197,7 @@ export const HomeManagement: React.FC = () => {
     try {
       await refetchHomes();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      errorService.reportError(error, { operation: 'HomeManagement.refreshData' });
     } finally {
       setRefreshing(false);
     }
@@ -291,7 +291,7 @@ export const HomeManagement: React.FC = () => {
         />
 
         {/* Create/Join Home Form - slides down inline */}
-        {showCreateForm && (
+        {!!showCreateForm && (
           <Animated.View
             entering={FadeInDown.duration(300).springify()}
             exiting={FadeOutUp.duration(200)}
@@ -359,20 +359,20 @@ export const HomeManagement: React.FC = () => {
                 />
 
                 {/* Preview - only shows when code is validated */}
-                {loadingPreview && (
+                {!!loadingPreview && (
                   <ActivityIndicator
                     size="small"
                     color={theme.colors.primary}
                     style={styles.previewLoader}
                   />
                 )}
-                {previewHome && (
+                {!!previewHome && (
                   <View style={styles.previewCard}>
                     <Text style={styles.previewTitle}>{previewHome.name}</Text>
                     <Text style={styles.previewSubtitle}>
                       {previewHome.members?.length || 0} member(s)
                     </Text>
-                    {previewHome.description && (
+                    {!!previewHome.description && (
                       <Text style={styles.previewDescription}>
                         {previewHome.description}
                       </Text>
@@ -409,7 +409,7 @@ export const HomeManagement: React.FC = () => {
           layout={LinearTransition.duration(300)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
-          <FlatList
+          <FlashList
             data={sortedHomes}
             keyExtractor={item => item.id}
             renderItem={renderHomeItem}
@@ -424,16 +424,6 @@ export const HomeManagement: React.FC = () => {
               />
             }
             contentContainerStyle={{ flexGrow: 1 }}
-            removeClippedSubviews={true}
-            maxToRenderPerBatch={10}
-            updateCellsBatchingPeriod={50}
-            initialNumToRender={10}
-            windowSize={5}
-            getItemLayout={(data, index) => ({
-              length: 128, // HomeCard height (~120px) + marginVertical (8px)
-              offset: 128 * index,
-              index,
-            })}
           />
         </Animated.View>
       </View>
@@ -510,6 +500,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

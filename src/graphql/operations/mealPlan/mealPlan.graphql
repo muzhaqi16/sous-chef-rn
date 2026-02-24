@@ -1,0 +1,124 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetMealPlans(
+  $first: Int
+  $after: String
+  $filters: MealPlanFilters
+  $orderBy: MealPlanOrderBy
+) {
+  mealPlans(first: $first, after: $after, filters: $filters, orderBy: $orderBy) {
+    edges {
+      node {
+        ...MealPlanDisplay
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query GetMealPlan($id: ID!) {
+  mealPlan(id: $id) {
+    ...MealPlanFull
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateMealPlan($input: CreateMealPlanInput!) {
+  createMealPlan(input: $input) {
+    success
+    message
+    code
+    mealPlan {
+      ...MealPlanDisplay
+    }
+  }
+}
+
+mutation UpdateMealPlan($id: ID!, $input: UpdateMealPlanInput!) {
+  updateMealPlan(id: $id, input: $input) {
+    success
+    message
+    code
+    mealPlan {
+      ...MealPlanDisplay
+    }
+  }
+}
+
+mutation DeleteMealPlan($id: ID!) {
+  deleteMealPlan(id: $id) {
+    success
+    message
+    code
+    mealPlan {
+      id
+    }
+  }
+}
+
+mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
+  createMealPlanItem(input: $input) {
+    success
+    message
+    code
+    mealPlanItem {
+      ...MealPlanItemFragment
+    }
+  }
+}
+
+mutation UpdateMealPlanItem($id: ID!, $input: UpdateMealPlanItemInput!) {
+  updateMealPlanItem(id: $id, input: $input) {
+    success
+    message
+    code
+    mealPlanItem {
+      ...MealPlanItemFragment
+    }
+  }
+}
+
+mutation DeleteMealPlanItem($id: ID!) {
+  deleteMealPlanItem(id: $id) {
+    success
+    message
+    code
+    mealPlanItem {
+      id
+    }
+  }
+}
+
+mutation DuplicateMealPlan($input: DuplicateMealPlanInput!) {
+  duplicateMealPlan(input: $input) {
+    success
+    message
+    code
+    mealPlan {
+      ...MealPlanDisplay
+    }
+  }
+}
+
+mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPlanInput!) {
+  generateShoppingListFromMealPlan(input: $input) {
+    success
+    message
+    code
+    shoppingList {
+      id
+      name
+      totalItems
+    }
+  }
+}

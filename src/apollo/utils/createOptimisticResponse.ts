@@ -10,8 +10,8 @@
  */
 export interface VersionedEntity {
   id: string;
-  version: number;
-  updatedAt: string;
+  version?: number | null;
+  updatedAt?: string | null;
   __typename?: string;
 }
 
@@ -42,7 +42,7 @@ export interface VersionedEntity {
  */
 export function enhanceWithVersion<T extends VersionedEntity>(
   currentItem: T | undefined,
-  updates: Partial<T>,
+  updates: Partial<T> | Record<string, unknown>,
 ): T {
   if (!currentItem) {
     // If no current item, return minimal optimistic response

@@ -1,0 +1,141 @@
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import {
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subWeeks,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+  eachDayOfInterval,
+  format,
+  isSameDay,
+  isBefore,
+  isAfter,
+  startOfDay,
+} from 'date-fns';
+
+export type CalendarView = 'week' | 'month';
+
+interface UseMealPlanCalendarOptions {
+  minDate?: Date;
+  maxDate?: Date;
+}
+
+export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
+  const { minDate, maxDate } = options ?? {};
+
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<CalendarView>('week');
+  const [referenceDate, setReferenceDate] = useState(new Date());
+
+  // Clamp selected/reference dates when boundaries change (plan loads)
+  useEffect(() => {
+    if (!minDate && !maxDate) return;
+
+    const today = new Date();
+    const todayStart = startOfDay(today);
+
+    const withinBounds =
+      (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
+      (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
+
+    const clampedDate = withinBounds ? today : minDate ?? today;
+
+    setSelectedDate(clampedDate);
+    setReferenceDate(clampedDate);
+  }, [minDate, maxDate]);
+
+  // Week days for the current week view
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(referenceDate, { weekStartsOn: 1 }); // Monday
+    const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [referenceDate]);
+
+  // Date range for filtering meal plan items
+  const dateRange = useMemo(() => {
+    if (viewMode === 'week') {
+      return {
+        startDate: startOfWeek(referenceDate, { weekStartsOn: 1 }),
+        endDate: endOfWeek(referenceDate, { weekStartsOn: 1 }),
+      };
+    }
+    return {
+      startDate: startOfMonth(referenceDate),
+      endDate: endOfMonth(referenceDate),
+    };
+  }, [referenceDate, viewMode]);
+
+  // Compute navigation boundary flags
+  const canGoPrevWeek = useMemo(() => {
+    if (!minDate) return true;
+    const prevWeekEnd = endOfWeek(subWeeks(referenceDate, 1), { weekStartsOn: 1 });
+    return !isBefore(startOfDay(prevWeekEnd), startOfDay(minDate));
+  }, [referenceDate, minDate]);
+
+  const canGoNextWeek = useMemo(() => {
+    if (!maxDate) return true;
+    const nextWeekStart = startOfWeek(addWeeks(referenceDate, 1), { weekStartsOn: 1 });
+    return !isAfter(startOfDay(nextWeekStart), startOfDay(maxDate));
+  }, [referenceDate, maxDate]);
+
+  const goToNextWeek = useCallback(() => {
+    if (!canGoNextWeek) return;
+    setReferenceDate(prev => addWeeks(prev, 1));
+  }, [canGoNextWeek]);
+
+  const goToPrevWeek = useCallback(() => {
+    if (!canGoPrevWeek) return;
+    setReferenceDate(prev => subWeeks(prev, 1));
+  }, [canGoPrevWeek]);
+
+  const goToNextMonth = useCallback(() => {
+    setReferenceDate(prev => addMonths(prev, 1));
+  }, []);
+
+  const goToPrevMonth = useCallback(() => {
+    setReferenceDate(prev => subMonths(prev, 1));
+  }, []);
+
+  const goToToday = useCallback(() => {
+    const today = new Date();
+    setSelectedDate(today);
+    setReferenceDate(today);
+  }, []);
+
+  const selectDate = useCallback(
+    (date: Date) => {
+      if (minDate && isBefore(startOfDay(date), startOfDay(minDate))) return;
+      if (maxDate && isAfter(startOfDay(date), startOfDay(maxDate))) return;
+      setSelectedDate(date);
+      setReferenceDate(date);
+    },
+    [minDate, maxDate],
+  );
+
+  const formattedMonth = format(referenceDate, 'MMMM yyyy');
+  const isToday = isSameDay(selectedDate, new Date());
+
+  return {
+    selectedDate,
+    referenceDate,
+    viewMode,
+    setViewMode,
+    weekDays,
+    dateRange,
+    formattedMonth,
+    isToday,
+    goToNextWeek,
+    goToPrevWeek,
+    goToNextMonth,
+    goToPrevMonth,
+    goToToday,
+    selectDate,
+    canGoPrevWeek,
+    canGoNextWeek,
+    minDate,
+    maxDate,
+  };
+}

@@ -34,15 +34,13 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             checked && styles.checkboxChecked,
             disabled && styles.disabledCheckbox,
           ]}>
-          {checked && (
-            <Icon name="check" size={18} color={theme.colors.white} />
-          )}
+          {!!checked && <Icon name="checkmark" size={18} color={theme.colors.white} />}
         </View>
         <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}
         </Text>
       </Pressable>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 };
@@ -71,7 +69,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   disabledCheckbox: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   label: {
     fontSize: theme.typography.fontSize.base,
@@ -79,7 +77,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   disabledLabel: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   errorText: {
     fontSize: theme.typography.fontSize.sm,
@@ -87,6 +85,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

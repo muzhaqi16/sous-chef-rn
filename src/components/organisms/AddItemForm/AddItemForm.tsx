@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
 import { StorageState, ItemType, BaseDimension, type ItemUnitInput } from '#generated';
@@ -261,7 +261,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     handleSubmit,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
-    resolver: yupResolver(createItemSchema) as any,
+    resolver: yupResolver(createItemSchema) as Resolver<CreateItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
@@ -367,7 +367,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         </Text>
       </View>
 
-      {(scannedValue || barcode) && (
+      {!!(scannedValue || barcode) && (
         <View style={styles.barcodeInfo}>
           <Text style={styles.barcodeLabel}>
             {scannedValue && detectScanType(scannedValue) === 'sku'
@@ -375,12 +375,10 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               : 'UPC/Barcode'}
           </Text>
           <Text style={styles.barcodeValue}>{scannedValue || barcode}</Text>
-          {format && (
-            <>
+          {!!format && <>
               <Text style={styles.formatLabel}>Format</Text>
               <Text style={styles.formatValue}>{format.toUpperCase()}</Text>
-            </>
-          )}
+            </>}
         </View>
       )}
 

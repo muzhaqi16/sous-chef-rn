@@ -12,7 +12,7 @@ import {
   useAddItemToShoppingListMutation,
   type AddItemToShoppingListMutation,
 } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -34,8 +34,12 @@ interface UseAddShoppingItemOptions {
  * ```
  */
 export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const { createAddOperation } = useCrudOperations();
+  // Track the most recently generated temp ID for cleanup in update()
+  // A ref is necessary here because optimisticResponse and update are separate
+  // callbacks configured at hook level that need to share per-mutation state
+  let lastTempId: string | null = null;
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
@@ -43,6 +47,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
     // but the spread properties match ShoppingListItemDisplayFragment at runtime
     optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
+      lastTempId = tempId;
       return {
         __typename: 'Mutation',
         addItemToShoppingList: {
@@ -91,18 +96,28 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
     update(cache, { data }) {
       if (!data?.addItemToShoppingList?.shoppingListItem || !listId) return;
 
+      const item = data.addItemToShoppingList.shoppingListItem;
+
+      // Evict temp-ID entity when the real server response arrives
+      // update() runs twice: once for the optimistic response (item.id starts with "temp-"),
+      // once for the server response (real ID). On the server response, evict the stale temp entity.
+      if (lastTempId && !item.id.startsWith('temp-')) {
+        cache.evict({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempId }),
+        });
+        cache.gc();
+        lastTempId = null;
+      }
+
       try {
-        addToShoppingListItemsCache(
-          cache,
-          listId,
-          data.addItemToShoppingList.shoppingListItem,
-        );
+        addToShoppingListItemsCache(cache, listId, item);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         refetch();
       }
     },
     onError: error => {
+      lastTempId = null;
       const { message } = handleApolloError(error, {
         operation: 'Add Shopping List Item',
       });

@@ -14,8 +14,7 @@ const getContainerWidth = (buttonCount: number): number => {
   return 180; // 3 buttons
 };
 
-export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
-  ({
+export const LeftActions: React.FC<SwipeActionsProps> = ({
     onTogglePurchase,
     onConsume,
     onWaste,
@@ -44,10 +43,9 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleEditPress}
-            icon="edit"
+            icon="create-outline"
             backgroundColor={theme.colors.info}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={0}
           />
@@ -78,19 +76,17 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleConsumePress}
-            icon="restaurant"
+            icon="restaurant-outline"
             backgroundColor={theme.colors.consumeAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={0}
           />
           <AnimatedActionButton
             onPress={handleWastePress}
-            icon="warning"
+            icon="warning-outline"
             backgroundColor={theme.colors.wasteAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={1}
           />
@@ -99,7 +95,6 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
             icon="add-circle-outline"
             backgroundColor={theme.colors.restockAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={2}
           />
@@ -126,19 +121,17 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleConsumePress}
-            icon="restaurant"
+            icon="restaurant-outline"
             backgroundColor={theme.colors.consumeAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={0}
           />
           <AnimatedActionButton
             onPress={handleWastePress}
-            icon="warning"
+            icon="warning-outline"
             backgroundColor={theme.colors.wasteAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={1}
           />
@@ -162,10 +155,9 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleConsumePress}
-            icon="restaurant"
+            icon="restaurant-outline"
             backgroundColor={theme.colors.consumeAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={0}
           />
@@ -187,10 +179,9 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleWastePress}
-            icon="warning"
+            icon="warning-outline"
             backgroundColor={theme.colors.wasteAction}
             circular={true}
-            library="MaterialIcons"
             progress={progress}
             index={0}
           />
@@ -227,11 +218,9 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(
           icon={iconName}
           backgroundColor={bgColor}
           circular={true}
-          library="Ionicons"
           progress={progress}
           index={0}
         />
       </Animated.View>
     );
-  },
-);
+  };

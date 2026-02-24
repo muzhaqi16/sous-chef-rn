@@ -15,11 +15,11 @@ import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
 import { useShowNavigationLabels } from '#hooks/settings/useSettings';
 import { HapticService } from '#services/haptic/HapticService';
+import { SPRING, TIMING } from '#/constants/animations';
 
 export const TAB_BAR_HEIGHT = 65;
 
-export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
-  ({ state, descriptors, navigation }) => {
+export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descriptors, navigation }) => {
     const {
       onAddPress,
       showAddButton,
@@ -55,7 +55,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
 
     // Sync shared value with React Navigation state
     useEffect(() => {
-      activeTabIndex.value = state.index;
+      activeTabIndex.set(state.index);
     }, [state.index, activeTabIndex]);
 
     // Animated values for smooth hide/show
@@ -82,14 +82,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
       const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
       // Fast timing for opacity (linear, no spring)
-      opacity.value = withTiming(shouldHide ? 0 : 1, { duration: 150 });
+      opacity.set(withTiming(shouldHide ? 0 : 1, { duration: TIMING.FAST }));
 
       // Snappy spring with subtle bounce (higher damping = less bounce)
-      translateY.value = withSpring(shouldHide ? 150 : 0, {
-        damping: 25,
-        stiffness: 350,
-        mass: 0.8,
-      });
+      translateY.set(withSpring(shouldHide ? 150 : 0, SPRING.HEAVY));
     }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
 
     // Animated style for smooth transitions
@@ -121,7 +117,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
         targetIndex: number,
       ) => {
         // Set shared value immediately for instant UI-thread icon feedback
-        activeTabIndex.value = targetIndex;
+        activeTabIndex.set(targetIndex);
         HapticService.selection();
 
         const event = navigation.emit({
@@ -136,6 +132,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
             Pantry: 'PantryMain',
             ShoppingList: 'ShoppingListMain',
             Recipe: 'RecipeMain',
+            MealPlan: 'MealPlanMain',
           };
 
           const mainScreen = mainScreenMap[route.name];
@@ -152,6 +149,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
               navigation.navigate(route.name, route.params);
             }
           }
+
         }
       },
       [navigation, activeTabIndex],
@@ -216,8 +214,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(
         </View>
       </Animated.View>
     );
-  },
-);
+  };
 
 const styles = StyleSheet.create(theme => ({
   container: {

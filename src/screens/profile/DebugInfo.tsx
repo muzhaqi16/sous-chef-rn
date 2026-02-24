@@ -169,7 +169,7 @@ const styles = StyleSheet.create(theme => ({
   },
   copyAllButtonText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.white,
   },
   section: {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   copySectionButton: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create(theme => ({
   },
   copySectionButtonText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   infoContainer: {
@@ -214,7 +214,7 @@ const styles = StyleSheet.create(theme => ({
   },
   infoLabel: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

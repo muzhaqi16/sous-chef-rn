@@ -1,16 +1,9 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
   getInputLabelForField,
@@ -19,6 +12,7 @@ import {
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 export interface SettingRowProps {
   item: any;
@@ -31,26 +25,26 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isFirst,
   isLast,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
-  useBottomSheetBackHandler(bottomSheetRef, modalVisible);
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      onDismiss: () => setModalVisible(false),
+      snapPoints: [],
+      enableDynamicSizing: true,
+    });
 
-  // Sync bottom sheet visibility with state
+  // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
     if (item.type === 'modal') {
       if (modalVisible) {
-        bottomSheetRef.current?.present();
+        ref.current?.present();
       } else {
-        bottomSheetRef.current?.dismiss();
+        ref.current?.dismiss();
       }
     }
-  }, [modalVisible, item.type]);
+  }, [modalVisible, item.type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);
@@ -96,19 +90,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     setTextEditVisible(false);
   }, []);
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <GlobalBottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        pressBehavior="close"
-      />
-    ),
-    [],
-  );
-
   // Build accessibility label based on setting type
   const getAccessibilityLabel = () => {
     const baseLabel = item.label;
@@ -146,7 +127,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         testID={item.testID || `profile-${item.key}-button`}
         onPress={item.type === 'info' ? undefined : handlePress}
         disabled={item.type === 'info'}
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
@@ -170,8 +151,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <>
               <ValueText>{item.value as string}</ValueText>
               <Icon
-                library="Feather"
-                name="edit-2"
+                name="pencil"
                 size={16}
                 color={theme.colors.textSecondary}
               />
@@ -186,7 +166,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             />
           )}
 
-          {item.type === 'radio' && item.options && (
+          {item.type === 'radio' && !!item.options && (
             <Ionicons
               name={
                 item.selected === item.value
@@ -213,8 +193,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   ?.label || 'Select'}
               </Text>
               <Icon
-                library="Feather"
-                name="chevron-right"
+                name="chevron-forward"
                 size={20}
                 color={theme.colors.textSecondary}
               />
@@ -223,8 +202,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'action' && (
             <Icon
-              library="Feather"
-              name="chevron-right"
+              name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
             />
@@ -232,8 +210,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'navigation' && (
             <Icon
-              library="Feather"
-              name="chevron-right"
+              name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
             />
@@ -247,7 +224,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         title={inputLabel}
         label={inputLabel}
         placeholder={placeholder}
-        initialValue={(item.value as string) || ''}
+        initialValue={item.value || ''}
         fieldKey={item.key}
         // @ts-expect-error - yup schema type compatibility
         validationSchema={getValidationSchemaForField(item.key)}
@@ -258,26 +235,22 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       />
 
       {/* Selection Bottom Sheet */}
-      {item.type === 'modal' && item.options && (
+      {item.type === 'modal' && !!item.options && (
         <BottomSheetModal
-          ref={bottomSheetRef}
-          enableDynamicSizing
-          enablePanDownToClose
-          backdropComponent={renderBackdrop}
-          onDismiss={() => setModalVisible(false)}
-          animationConfigs={animationConfigs}
+          ref={ref}
+          {...modalProps}
           handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-          backgroundStyle={{ backgroundColor: theme.colors.background }}
         >
-          <BottomSheetView
-            style={[styles.sheetContent, { paddingBottom: insets.bottom + 16 }]}
-          >
+          <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
             <Text style={styles.sheetTitle}>{item.label}</Text>
             <View style={styles.sheetDivider} />
             {item.options.map((opt: any) => (
               <Pressable
                 key={opt.value}
-                style={({pressed}) => [styles.sheetOption, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.sheetOption,
+                  pressed && styles.pressed,
+                ]}
                 onPress={handleModalOptionPress(opt.value)}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}
@@ -287,8 +260,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 <Text style={styles.sheetOptionText}>{opt.label}</Text>
                 {item.value === opt.value && (
                   <Icon
-                    library="Feather"
-                    name="check"
+                    name="checkmark"
                     size={20}
                     color={theme.colors.primary}
                   />
@@ -310,8 +282,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {
-    borderTopLeftRadius: theme.radii.md,
-    borderTopRightRadius: theme.radii.md,
+    borderTopLeftRadius: theme.radii.lg,
+    borderTopRightRadius: theme.radii.lg,
   },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
@@ -340,7 +312,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sheetTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     paddingVertical: theme.spacing.sm,
@@ -362,6 +334,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

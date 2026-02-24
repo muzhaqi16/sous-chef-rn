@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import {Icon} from '#utils/iconUtils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 
 interface NotificationBadgeProps {
@@ -18,7 +18,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 }) => {
   const {navigateTo} = useAppNavigation();
   const {theme} = useUnistyles();
-  const unreadCount = useStore(state => state.unreadCount);
+  const unreadCount = useAppStore(state => state.unreadCount);
 
   const handlePress = () => {
     if (onPress) {
@@ -37,7 +37,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
       />
       {unreadCount > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
+          <Text maxFontSizeMultiplier={1} style={styles.badgeText}>
             {unreadCount > 99 ? '99+' : unreadCount.toString()}
           </Text>
         </View>
@@ -69,6 +69,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.bold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

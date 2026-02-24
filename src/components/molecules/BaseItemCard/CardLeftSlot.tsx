@@ -15,7 +15,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
   emoji,
   imageUrl,
   icon,
-  iconLibrary = 'MaterialIcons',
+  iconLibrary,
   backgroundColor,
   variant = 'normal',
   dimmed = false,

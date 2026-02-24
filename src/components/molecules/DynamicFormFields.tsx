@@ -18,12 +18,11 @@ import { CategoryAutocompleteField } from './AutocompleteField/CategoryAutocompl
 import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLocationAutocompleteField';
 import { FormInput } from './FormInput';
 
-// Create memoized versions to prevent re-renders
-const MemoizedItemAutocomplete = React.memo(ItemAutocompleteField);
-const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteField);
-const MemoizedUnitsAutocomplete = React.memo(UnitAutocompleteField);
-const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteField);
-const MemoizedStorageLocationAutocomplete = React.memo(StorageLocationAutocompleteField);
+const MemoizedItemAutocomplete = ItemAutocompleteField;
+const MemoizedBrandAutocomplete = BrandAutocompleteField;
+const MemoizedUnitsAutocomplete = UnitAutocompleteField;
+const MemoizedCategoryAutocomplete = CategoryAutocompleteField;
+const MemoizedStorageLocationAutocomplete = StorageLocationAutocompleteField;
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -319,13 +318,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 return <></>;
               }}
             />
-            {errors[name] &&
-              props?.componentType !== 'checkbox' &&
-              Input !== FormInput &&
-              Input !== 'itemAutocomplete' &&
-              Input !== 'brandAutocomplete' &&
-              Input !== 'unitAutocomplete' &&
-              Input !== 'categoryAutocomplete' && (
+            {!!errors[name] && props?.componentType !== 'checkbox' && Input !== FormInput && Input !== 'itemAutocomplete' && Input !== 'brandAutocomplete' && Input !== 'unitAutocomplete' && Input !== 'categoryAutocomplete' && (
                 <Text
                   style={styles.errorText}
                   testID={

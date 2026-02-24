@@ -25,7 +25,7 @@ import {
   createAddToQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
@@ -47,7 +47,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -232,7 +232,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
             ? 'List Settings'
             : 'List Info'}
         </Text>
-        {isOwner && (
+        {!!isOwner && (
           <Pressable onPress={handleSave} disabled={saving} style={({pressed}) => pressed && styles.pressed}>
             <Text style={styles.saveButton}>
               {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
@@ -264,7 +264,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             </View>
 
-            {ownerInfo && (
+            {!!ownerInfo && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Owner</Text>
                 <Text style={styles.infoValue}>
@@ -273,7 +273,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             )}
 
-            {isShared && (
+            {!!isShared && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Shared With</Text>
                 <Text style={styles.infoValue}>
@@ -311,7 +311,6 @@ export const ListSettings: React.FC<StaticScreenProps<{
                       'Personal (No Home)'}
                   </Text>
                   <Icon
-                    library="Feather"
                     name="chevron-down"
                     size={20}
                     color={theme.colors.textSecondary}
@@ -337,7 +336,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show sharing section if editing existing list and user is owner */}
-        {listId && isOwner && (
+        {!!listId && !!isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sharing</Text>
 
@@ -348,13 +347,13 @@ export const ListSettings: React.FC<StaticScreenProps<{
               <Icon name="person-add" size={20} color={theme.colors.primary} />
               <Text style={styles.actionText}>Manage Members</Text>
               <Icon
-                name="chevron-right"
+                name="chevron-forward"
                 size={20}
                 color={theme.colors.textSecondary}
               />
             </Pressable>
 
-            {isShared && (
+            {!!isShared && (
               <Text style={styles.sharedInfo}>
                 This list is shared with {collaborators.length} members
               </Text>
@@ -363,7 +362,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show danger zone if editing existing list and user is owner */}
-        {listId && isOwner && (
+        {!!listId && !!isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
@@ -371,7 +370,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
-              <Icon name="delete" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete List</Text>
             </Pressable>
           </View>
@@ -415,12 +414,12 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   content: {
@@ -433,7 +432,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -442,7 +441,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -468,7 +467,7 @@ const styles = StyleSheet.create(theme => ({
   },
   settingLabel: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   settingDescription: {
@@ -503,7 +502,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
     marginLeft: theme.spacing.sm,
   },
@@ -515,13 +514,13 @@ const styles = StyleSheet.create(theme => ({
   },
   infoLabel: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs + 2,
   },
   infoValue: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   roleBadgeContainer: {
@@ -536,7 +535,7 @@ const styles = StyleSheet.create(theme => ({
   },
   collaboratorBadgeText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
   },
@@ -556,6 +555,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

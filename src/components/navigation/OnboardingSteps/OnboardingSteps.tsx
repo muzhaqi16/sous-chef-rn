@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { SPRING } from '#/constants/animations';
 import { StepDot } from './StepDot';
 import type { OnboardingStepsProps } from './types';
 
@@ -28,10 +29,7 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = memo(({
       externalSpacing;
 
     return {
-      width: withSpring(activeWidth, {
-        damping: 15,
-        stiffness: 150,
-      }),
+      width: withSpring(activeWidth, SPRING.DEFAULT),
     };
   }, [stepSize, stepSpacing, externalSpacing]);
 

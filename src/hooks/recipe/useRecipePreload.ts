@@ -85,27 +85,30 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
 
           // Check if already exists (prevent duplicates)
-          const exists = existing.mySavedRecipes.edges.some(
+          const exists = existing.me.savedRecipesConnection.edges.some(
             edge => edge.node.id === savedRecipe.id,
           );
           if (exists) return existing;
 
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: [
-                ...existing.mySavedRecipes.edges,
-                {
-                  __typename: 'SavedRecipeEdge' as const,
-                  cursor: savedRecipe.id,
-                  node: savedRecipe,
-                },
-              ],
-              totalCount: existing.mySavedRecipes.totalCount + 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: [
+                  ...existing.me.savedRecipesConnection.edges,
+                  {
+                    __typename: 'SavedRecipeEdge' as const,
+                    cursor: savedRecipe.id,
+                    node: savedRecipe,
+                  },
+                ],
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) + 1,
+              },
             },
           };
         },
@@ -162,6 +165,12 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       instructions: instructions as unknown,
       caloriesPerServing: caloriesPerServing ? Math.round(caloriesPerServing) : undefined,
       cuisine: spoonacularRecipe.cuisines?.join(', '),
+
+      // Attribution - original recipe source
+      attribution: {
+        source: spoonacularRecipe.sourceName,
+        sourceUrl: spoonacularRecipe.sourceUrl,
+      },
 
       // External source fields
       source: ExternalSource.Spoonacular,

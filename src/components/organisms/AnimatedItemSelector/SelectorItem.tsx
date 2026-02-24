@@ -1,55 +1,53 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { SelectorItemProps, SelectableItem } from './types';
 
-const AnimatedPressable =
-  Animated.createAnimatedComponent(Pressable);
-
-export const SelectorItem = <T extends SelectableItem>({
+const SelectorItemComponent = <T extends SelectableItem>({
   item,
-  index = 0,
   isSelected,
-  onPress,
+  onSelect,
   displayProperty,
   renderCustomItem,
+  extraData: _extraData,
 }: SelectorItemProps<T>) => {
   const { theme } = useUnistyles();
 
+  const handlePress = useCallback(() => onSelect(item.id, item), [onSelect, item]);
+
   if (renderCustomItem) {
     return (
-      <Animated.View
-        entering={FadeInUp.delay(index * 15).duration(150)}
-        layout={LinearTransition}
-      >
-        {renderCustomItem(item, isSelected, onPress)}
+      <Animated.View layout={LinearTransition}>
+        {renderCustomItem(item, isSelected, handlePress)}
       </Animated.View>
     );
   }
 
   return (
-    <AnimatedPressable
-      entering={FadeInUp.delay(index * 15).duration(150)}
-      layout={LinearTransition}
-      style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
-      onPress={onPress}
-    >
-      <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
-        {String(item[displayProperty])}
-      </Text>
-      {isSelected && (
-        <Animated.View
-          entering={FadeInUp.duration(200).springify()}
-          style={styles.checkIcon}
-        >
-          <Icon name="check" size={18} color={theme.colors.primary} />
-        </Animated.View>
-      )}
-    </AnimatedPressable>
+    <Animated.View layout={LinearTransition}>
+      <Pressable
+        style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
+        onPress={handlePress}
+      >
+        <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
+          {String(item[displayProperty])}
+        </Text>
+        {!!isSelected && (
+          <Animated.View
+            entering={FadeInUp.duration(200).springify()}
+            style={styles.checkIcon}
+          >
+            <Icon name="checkmark" size={18} color={theme.colors.primary} />
+          </Animated.View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 };
+
+export const SelectorItem = React.memo(SelectorItemComponent) as typeof SelectorItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   item: {
@@ -72,16 +70,16 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   selectedItemText: {
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   checkIcon: {
     marginLeft: theme.spacing.sm,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

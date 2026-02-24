@@ -21,7 +21,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <Text style={styles.errorIcon}>{icon}</Text>
       <Text style={styles.errorText}>{title}</Text>
       <Text style={styles.errorMessage}>{message}</Text>
-      {onRetry && (
+      {!!onRetry && (
         <Button onPress={onRetry} variant="primary" size="medium">
           Try Again
         </Button>

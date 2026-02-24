@@ -8,6 +8,7 @@ import { useUpdateUserProfileMutation, ProfileVisibility } from '#generated';
 import { useApolloClient } from '@apollo/client/react';
 import { GetUserProfileQuery, GetUserProfileDocument } from '#generated';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
+import { errorService } from '#/services/errorService';
 
 export const PersonalInformationScreen: React.FC = () => {
   const { profile } = useProfileData();
@@ -24,14 +25,17 @@ export const PersonalInformationScreen: React.FC = () => {
         });
 
         // Optimistically update the cache immediately
-        if (cache?.userProfile) {
+        if (cache?.me?.profile) {
           client.writeQuery<GetUserProfileQuery>({
             query: GetUserProfileDocument,
             data: {
               __typename: 'Query' as const,
-              userProfile: {
-                ...cache.userProfile,
-                ...input,
+              me: {
+                ...cache.me,
+                profile: {
+                  ...cache.me.profile,
+                  ...input,
+                },
               },
             },
           });
@@ -44,7 +48,7 @@ export const PersonalInformationScreen: React.FC = () => {
           },
         });
       } catch (error) {
-        console.error('Failed to update profile:', error);
+        errorService.reportError(error, { operation: 'PersonalInformation.updateProfile' });
         // On error, refetch to restore correct state
         client.refetchQueries({
           include: [GetUserProfileDocument],

@@ -21,20 +21,19 @@ import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBou
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useProfileData } from '#hooks/profile/useProfileData';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
+import { useBatchMoveToPantry } from '#hooks/shoppingList/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#hooks/shoppingList/useShoppingListSelectorModal';
 import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useStore } from '#store';
 import { useAuth } from '#/hooks/auth/useAuth';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 
 // Utils
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -49,8 +48,11 @@ interface ShoppingListMainContentProps {
   screenData: ReturnType<typeof useShoppingListScreen>;
 }
 
+// NOTE: Not wrapped in React.memo — the screenData prop is a new object each render
+// from useShoppingListScreen(), which defeats shallow comparison. The parent
+// ShoppingListMainScreen is React.memo'd, which is the effective optimization boundary.
 const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
-  React.memo(({ screenData }) => {
+  ({ screenData }) => {
     const {
       lists,
       listDataWithOwnership,
@@ -96,10 +98,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const { setScannerProps } = useTabBarSetters();
     const { theme } = useUnistyles();
 
-    // Get profile data for header
-    const { profile } = useProfileData();
-    const unreadCount = useStore(state => state.unreadCount);
-
     // Get current user for permission calculations
     const { user } = useAuth();
 
@@ -121,6 +119,10 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       refetchItems,
       setSearchQuery,
     });
+
+    // --- Batch Move to Pantry Hook ---
+    const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
+      useBatchMoveToPantry({ currentListId });
 
     // --- Reordering Hook ---
     const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -156,19 +158,13 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Local state
     const [refreshing, setRefreshing] = useState(false);
 
-    // PERFORMANCE: Store items in stable ref to avoid recreating callbacks on every items change
-    const itemsRef = useStableRef(items);
-
-    // Stable ref to store addItemSheet.open to avoid dependency instability in useEffect
-    const addItemSheetOpenRef = useStableRef(addItemSheet.open);
-
     // Coordinate swipeable items so only one is open at a time
     const { handleSwipeableWillOpen, handleSwipeableClose } = useSwipeableCoordinator();
 
     // Show swipe hint after items load
     useEffect(() => {
       if (items.length > 0 && !swipeHint.hasBeenShown) {
-        const unpurchasedForHint = itemsRef.current.filter(
+        const unpurchasedForHint = items.filter(
           (item: any) => !item.purchaseInfo?.isPurchased,
         );
         if (unpurchasedForHint.length > 0) {
@@ -178,7 +174,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           return () => clearTimeout(timer);
         }
       }
-    }, [items.length, swipeHint.hasBeenShown, swipeHint.actions, itemsRef]);
+    }, [items, swipeHint.hasBeenShown, swipeHint.actions]);
 
     // Handle refresh
     const handleRefresh = useCallback(async () => {
@@ -217,24 +213,24 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       );
     }, [currentListDetails, user?.id]);
 
-    // Search bar inner right icon (list selector button)
-    const searchBarInnerRightIcon = useMemo(
-      () =>
-        searchQuery.trim().length === 0 ? (
-          <Pressable
-            onPress={handleOpenSelector}
-            hitSlop={8}
-            testID="shopping-list-selector"
-          >
-            <Icon
-              name="list"
-              size={18}
-              color={theme.colors.textTertiary}
-              library="Ionicons"
-            />
-          </Pressable>
-        ) : undefined,
-      [handleOpenSelector, searchQuery, theme.colors.textTertiary],
+    // Header right action - list selector button
+    const headerRight = useMemo(
+      () => (
+        <Pressable
+          onPress={handleOpenSelector}
+          hitSlop={8}
+          testID="shopping-list-selector"
+          accessibilityRole="button"
+          accessibilityLabel="Switch shopping list"
+        >
+          <Icon
+            name="list"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
+      ),
+      [handleOpenSelector, theme.colors.textSecondary],
     );
 
     // Memoized customListProps
@@ -268,6 +264,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         canMarkPurchased: permissions.canMarkPurchased,
         canReorderItems: permissions.canEditItems,
         isTransitioning,
+        onBatchMoveToPantry: batchMoveToPantry,
+        batchMoveToPantryLoading,
       }),
       [
         isLoadingInitial,
@@ -294,51 +292,40 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         isLoadingMorePurchased,
         permissions,
         isTransitioning,
+        batchMoveToPantry,
+        batchMoveToPantryLoading,
       ],
     );
 
-    // Use stable ref to track currentListId for scanner
-    const currentListIdRef = useStableRef(currentListId);
+    // Track screen view once on mount (avoid re-firing on every item/list change)
+    useScreenTelemetry('ShoppingListMain', () => ({
+      list_id: currentListId,
+      item_count: items.length,
+      purchased_count: items.filter(
+        (item: { purchaseInfo?: { isPurchased?: boolean } }) => item.purchaseInfo?.isPurchased,
+      ).length,
+      has_lists: lists.length > 0,
+    }));
 
-    // Set up scanner and telemetry
+    // Set up scanner button
     useEffect(() => {
-      const telemetryTimer = setTimeout(() => {
-        Telemetry.trackScreen('ShoppingListMain', {
-          list_id: currentListId,
-          item_count: itemsRef.current.length,
-          purchased_count: itemsRef.current.filter(
-            item => item.purchaseInfo?.isPurchased,
-          ).length,
-          has_lists: lists.length > 0,
-        });
-      }, 500);
-
       const handleScanPress = () => {
         Telemetry.trackEvent('barcode_scanner_opened', {
           source: 'shopping_list',
-          list_id: currentListIdRef.current,
+          list_id: currentListId,
         });
         navigateTo.barcode({
           source: 'shoppingList',
-          shoppingListId: currentListIdRef.current,
+          shoppingListId: currentListId,
         });
       };
 
       setScannerProps(handleScanPress, true);
 
       return () => {
-        clearTimeout(telemetryTimer);
         setScannerProps(undefined, false);
       };
-    }, [
-      setScannerProps,
-      navigateTo,
-      currentListId,
-      items.length,
-      lists.length,
-      currentListIdRef,
-      itemsRef,
-    ]);
+    }, [setScannerProps, navigateTo, currentListId]);
 
     // Register add button action
     // Button visibility is automatic on allowed tabs; we just register handler and disabled state
@@ -347,7 +334,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         Telemetry.trackEvent('add_item_from_tab_bar', {
           list_id: currentListId,
         });
-        addItemSheetOpenRef.current();
+        addItemSheet.open();
       },
       !permissions.canAddItems,
       permissions.canAddItems
@@ -374,7 +361,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Empty state when no lists exist
     if (lists.length === 0) {
       const noListsEmptyState = {
-        icon: 'add-shopping-cart' as const,
+        icon: 'cart-outline' as const,
         title: 'No shopping lists',
         description: 'Create a shopping list to get started',
         action: {
@@ -388,9 +375,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           <TabScreenHeader
             label="Shopping list"
             title="Shopping List"
-            avatarUrl={profile?.avatar}
-            notificationCount={unreadCount}
-            onAvatarPress={() => navigateTo.notificationList()}
           />
           <ListTemplate
             items={[]}
@@ -401,7 +385,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     }
 
     const emptyStateConfig = {
-      icon: 'add-shopping-cart' as const,
+      icon: 'cart-outline' as const,
       title: 'No items in this list',
       description: 'Add some items to get started',
       action: {
@@ -415,9 +399,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         <TabScreenHeader
           label="Shopping list"
           title={currentList?.name || 'Shopping List'}
-          avatarUrl={profile?.avatar}
-          notificationCount={unreadCount}
-          onAvatarPress={() => navigateTo.notificationList()}
+          headerRight={headerRight}
         />
         <View style={styles.searchBarContainer}>
           <SearchBar
@@ -425,7 +407,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
             onChangeText={setSearchQuery}
             placeholder="Search shopping list..."
             showSearchIcon
-            innerRightIcon={searchBarInnerRightIcon}
           />
         </View>
         <ListTemplate
@@ -454,14 +435,12 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         />
 
         {/* Swipe gesture hint overlay */}
-        {swipeHint.isVisible && (
-          <SwipeHintOverlay onDismiss={swipeHint.actions.dismiss} />
-        )}
+        {!!swipeHint.isVisible && <SwipeHintOverlay onDismiss={swipeHint.actions.dismiss} />}
 
         {/* Modals are rendered inside ShoppingListModalsProvider */}
       </View>
     );
-  });
+  };
 
 /**
  * Outer screen component that:
@@ -469,7 +448,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
  * 2. Fetches screen data
  * 3. Wraps content with ShoppingListModalsProvider
  */
-const ShoppingListMainScreen: React.FC = React.memo(() => {
+const ShoppingListMainScreen: React.FC = () => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   // Hook handles array stability internally - inline array is fine
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
@@ -490,7 +469,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       <ShoppingListMainContent screenData={screenData} />
     </ShoppingListModalsProvider>
   );
-});
+};
 
 // Screen-level error boundary prevents full app reset on mutation failures
 export const ShoppingListMain: React.FC = () => (

@@ -91,7 +91,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       disabled={!allowNavigation}
     >
       <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
-        <Icon name="check" size={stepSize * 0.5} color={theme.colors.white} />
+        <Icon name="checkmark" size={stepSize * 0.5} color={theme.colors.white} />
       </Animated.View>
     </AnimatedPressable>
   );

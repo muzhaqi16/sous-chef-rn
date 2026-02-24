@@ -144,16 +144,16 @@ export function LoginScreen() {
 
   // Get appropriate biometric icon
   const getBiometricIcon = () => {
-    if (!biometricInfo.isAvailable) return 'fingerprint';
+    if (!biometricInfo.isAvailable) return 'finger-print';
 
     switch (biometricInfo.biometryType) {
       case 'Face ID':
-        return 'face-recognition';
+        return 'scan-outline';
       case 'Touch ID':
       case 'Fingerprint':
-        return 'fingerprint';
+        return 'finger-print';
       default:
-        return 'fingerprint';
+        return 'finger-print';
     }
   };
 
@@ -214,12 +214,10 @@ export function LoginScreen() {
       />
 
       {/* Loading indicator */}
-      {(isLoggingIn || isBiometricLoading) && (
-        <ActivityIndicator testID="login-loading" size="small" />
-      )}
+      {!!(isLoggingIn || isBiometricLoading) && <ActivityIndicator testID="login-loading" size="small" />}
 
       {/* Biometric Authentication Section */}
-      {shouldShowBiometricButton && (
+      {!!shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
           {/* Main Biometric Login Button */}
           <Pressable
@@ -286,12 +284,12 @@ const styles = StyleSheet.create(theme => ({
   biometricText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   biometricTextDisabled: {
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

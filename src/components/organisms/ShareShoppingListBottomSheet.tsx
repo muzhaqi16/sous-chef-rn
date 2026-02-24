@@ -36,7 +36,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
     try {
       await shareShoppingList({
         variables: {
-          data: {
+          input: {
             shoppingListId,
             email: email.trim(),
             role: CollaboratorRole.Viewer, // Assuming you want to set this as collaborator
@@ -58,7 +58,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
         style={{margin: 16}}>
         Share Shopping List
       </Button>
-      {renderBottomSheet && (
+      {!!renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={['40%', '60%']}
@@ -69,7 +69,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
             onChangeText={setEmail}
           />
           <Button onPress={handleShare} disabled={isOffline}>Share</Button>
-          {error && <Text style={styles.errorText}>Error: {error}</Text>}
+          {error ? <Text style={styles.errorText}>Error: {error}</Text> : null}
         </BottomSheet>
       )}
     </>

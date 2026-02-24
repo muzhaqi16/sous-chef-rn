@@ -14,6 +14,11 @@ const commonTheme = {
   shadows,
   sizes,
   zIndex,
+  opacity: {
+    pressed: 0.7,
+    disabled: 0.5,
+    cardPressed: 0.95,
+  },
 };
 
 export const lightTheme = {
@@ -41,7 +46,7 @@ export const lightTheme = {
     // Text
     textPrimary: colors.neutral[900],
     textSecondary: colors.neutral[600],
-    textTertiary: colors.neutral[500],
+    textTertiary: colors.neutral[600], // WCAG AA: ~4.6:1 contrast on white
     textInverse: colors.neutral[0],
     textOnSurfaceVariant: colors.neutral[700],
 
@@ -103,17 +108,15 @@ export const lightTheme = {
     overlay: colors.overlay,
 
     // Action colors for swipe actions
-    consumeAction: '#9C27B0',
-    wasteAction: '#FF9800',
-    restockAction: '#4CAF50',
-    purchaseAction: '#4CAF50',
-    unpurchaseAction: '#FF9800',
+    consumeAction: colors.actions.consume.light,
+    wasteAction: colors.actions.waste.light,
+    restockAction: colors.actions.restock.light,
+    purchaseAction: colors.actions.purchase.light,
+    unpurchaseAction: colors.actions.unpurchase.light,
 
     // Semantic action colors
-    favorite: '#E91E63',
-    rating: '#FFB800',
-
-    gap: (v: number) => v * 8,
+    favorite: colors.actions.favorite.light,
+    rating: colors.actions.rating.light,
   },
 };
 
@@ -123,7 +126,7 @@ export const darkTheme = {
     ...colors,
     // Primary
     primary: colors.jaffa[400],
-    primaryLight: colors.jaffa[200],
+    primaryLight: colors.jaffa[400] + '20',
     primaryDark: colors.jaffa[600],
     onPrimary: colors.neutral[900],
 
@@ -142,7 +145,7 @@ export const darkTheme = {
     // Text
     textPrimary: colors.neutral[50],
     textSecondary: colors.neutral[300],
-    textTertiary: colors.neutral[400],
+    textTertiary: colors.neutral[300], // Better contrast on dark surfaces
     textInverse: colors.neutral[900],
     textOnSurfaceVariant: colors.neutral[200],
 
@@ -184,59 +187,107 @@ export const darkTheme = {
     iconOnPrimary: colors.neutral[900],
     iconOnSurface: colors.neutral[50],
 
-    // Status colors - for invites, tasks, etc.
-    status: colors.status,
+    // Status colors — dark-adapted for visibility on dark surfaces
+    status: {
+      pending: '#FFB74D',
+      accepted: '#81C784',
+      declined: '#EF5350',
+      expired: '#9E9E9E',
+      active: '#64B5F6',
+      inactive: '#757575',
+    },
 
-    // Role colors - for user roles
-    roles: colors.roles,
+    // Role colors — brighter for dark backgrounds
+    roles: {
+      owner: '#FF8A65',
+      admin: '#81C784',
+      member: '#64B5F6',
+      guest: '#BDBDBD',
+    },
 
-    // Validation colors - for forms
-    validation: colors.validation,
+    // Validation colors — solid dark backgrounds (no light-mode pastels)
+    validation: {
+      error: '#EF5350',
+      errorText: '#EF9A9A',
+      errorBg: '#3D2A2A',
+      errorBorder: '#5C3A3A',
+      success: '#81C784',
+      successBg: '#2A3D2A',
+      warning: '#FFB74D',
+      warningBg: '#3D3225',
+      info: '#64B5F6',
+      infoBg: '#2A303D',
+    },
 
     // Pantry redesign colors - dark mode specific expiration colors
-    // Using solid colors to prevent swipeable container background bleed-through
+    // Using solid colors from foundations to prevent swipeable container background bleed-through
     expiration: {
-      expiredBg: '#3D2A2A',                       // Solid dark red (not transparent)
-      expiredBorder: '#5C3A3A',                   // Solid red border
-      expiredText: '#FCA5A5',                     // Lighter red for readability
-      expiredIconBg: '#4A3030',                   // Solid red for icon bg
-      warningText: '#FDBA74',                     // Lighter orange for readability
-      warningBg: '#3D3225',                       // Solid dark orange (not transparent)
-      warningBorder: '#5C4A35',                   // Solid orange border
+      expiredBg: colors.expiration.darkExpiredBg,
+      expiredBorder: colors.expiration.darkExpiredBorder,
+      expiredText: colors.expiration.darkExpiredText,
+      expiredIconBg: colors.expiration.darkExpiredIconBg,
+      warningText: colors.expiration.darkWarningText,
+      warningBg: colors.expiration.darkWarningBg,
+      warningBorder: colors.expiration.darkWarningBorder,
     },
     filterTab: {
-      activeBg: '#F97316',              // Keep orange for active
-      activeText: '#FFFFFF',            // Keep white for active
-      inactiveBg: '#3F4553',            // Dark gray background for inactive
-      inactiveText: '#D1D5DB',          // Light gray text for contrast
-      filteredBg: 'rgba(249, 115, 22, 0.15)', // Subtle orange tint
-      filteredText: '#FB923C',          // Lighter orange for dark mode
-      countBg: '#4B5563',               // Darker badge background
-      countText: '#D1D5DB',             // Light text for badge
-      activeCountBg: 'rgba(255,255,255,0.25)', // Keep semi-transparent white
+      activeBg: colors.filterTab.activeBg,
+      activeText: colors.filterTab.activeText,
+      inactiveBg: colors.filterTab.darkInactiveBg,
+      inactiveText: colors.filterTab.darkInactiveText,
+      filteredBg: colors.filterTab.darkFilteredBg,
+      filteredText: colors.filterTab.darkFilteredText,
+      countBg: colors.filterTab.darkCountBg,
+      countText: colors.filterTab.darkCountText,
+      activeCountBg: colors.filterTab.activeCountBg,
     },
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
-    alertBanner: colors.alertBanner,
+    // Alert banner — solid dark backgrounds instead of light-mode pastels
+    alertBanner: {
+      error: {
+        bg: '#3D2A2A',
+        border: '#5C3A3A',
+        text: '#EF9A9A',
+        iconBg: '#4A3030',
+      },
+      warning: {
+        bg: '#3D3225',
+        border: '#5C4A35',
+        text: '#FDBA74',
+        iconBg: '#4A3D2A',
+      },
+      info: {
+        bg: '#2A303D',
+        border: '#3A4A5C',
+        text: '#90CAF9',
+        iconBg: '#303D4A',
+      },
+      success: {
+        bg: '#2A3D2A',
+        border: '#3A5C3A',
+        text: '#A5D6A7',
+        iconBg: '#304A30',
+      },
+    },
 
     // Overlay
     overlay: colors.overlay,
 
     // Action colors for swipe actions (slightly adjusted for dark mode visibility)
-    consumeAction: '#BA68C8',
-    wasteAction: '#FFB74D',
-    restockAction: '#81C784',
-    purchaseAction: '#81C784',
-    unpurchaseAction: '#FFB74D',
+    consumeAction: colors.actions.consume.dark,
+    wasteAction: colors.actions.waste.dark,
+    restockAction: colors.actions.restock.dark,
+    purchaseAction: colors.actions.purchase.dark,
+    unpurchaseAction: colors.actions.unpurchase.dark,
 
     // Semantic action colors
-    favorite: '#F48FB1',
-    rating: '#FFD54F',
-
-    gap: (v: number) => v * 8,
+    favorite: colors.actions.favorite.dark,
+    rating: colors.actions.rating.dark,
   },
 };
 
 // Type exports
 export type Theme = typeof lightTheme;
+export type AnyTheme = typeof lightTheme | typeof darkTheme;
 export type ThemeColors = Theme['colors'];

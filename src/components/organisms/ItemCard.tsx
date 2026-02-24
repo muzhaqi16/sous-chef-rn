@@ -114,8 +114,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export const ItemCard = React.memo(ItemCardComponent);
+export const ItemCard = ItemCardComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -149,7 +149,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="x-circle" size={64} color={theme.colors.error} />
+            <Icon name="close-circle-outline" size={64} color={theme.colors.error} />
           </View>
           <Text style={styles.title}>Invalid Reset Link</Text>
           <Text style={styles.subtitle}>
@@ -177,7 +177,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="lock" size={64} color={theme.colors.primary} />
+          <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
         </View>
 
         <Text style={styles.title}>Reset Your Password</Text>
@@ -246,7 +246,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing['3'],
@@ -267,7 +267,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -284,9 +284,9 @@ const styles = StyleSheet.create(theme => ({
   primaryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 
 /**
  * Hook to monitor network status and sync with store
@@ -18,7 +18,7 @@ import { useStore } from '#store';
  * ```
  */
 export function useNetworkStatus() {
-  const setNetworkStatus = useStore(state => state.setNetworkStatus);
+  const setNetworkStatus = useAppStore(state => state.setNetworkStatus);
 
   useEffect(
     () => {

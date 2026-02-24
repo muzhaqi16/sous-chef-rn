@@ -5,10 +5,10 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
+import { standardEasing } from '#/constants/animations';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -20,7 +20,7 @@ type AnimatedCheckboxProps = {
   testID?: string;
 };
 
-export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
+export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   checked,
   itemId,
   onPress,
@@ -40,7 +40,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   // https://shopify.github.io/flash-list/docs/guides/reanimated
   useEffect(() => {
     if (itemId) {
-      isPressed.value = false;
+      isPressed.set(false);
       setPendingChecked(null);
     }
   }, [itemId, isPressed]);
@@ -67,14 +67,14 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
         visuallyChecked ? theme.colors.primary : 'transparent',
         {
           duration: 120,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          easing: standardEasing,
         },
       ),
       borderColor: withTiming(
         visuallyChecked ? theme.colors.primary : theme.colors.border,
         {
           duration: 120,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          easing: standardEasing,
         },
       ),
       // PERFORMANCE: Use timing instead of spring for cheaper animation
@@ -82,7 +82,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
         {
           scale: withTiming(finalScale, {
             duration: 100,
-            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+            easing: standardEasing,
           }),
         },
       ],
@@ -91,7 +91,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
 
   const handlePressIn = useCallback(() => {
     if (!disabled) {
-      isPressed.value = true;
+      isPressed.set(true);
       // Short haptic feedback for checkbox toggle
       HapticService.light();
     }
@@ -99,7 +99,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
 
   const handlePressOut = useCallback(() => {
     if (!disabled) {
-      isPressed.value = false;
+      isPressed.set(false);
     }
   }, [disabled, isPressed]);
 
@@ -122,7 +122,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      style={{ opacity: disabled ? 0.5 : 1 }}
+      style={{ opacity: disabled ? theme.opacity.disabled : 1 }}
       testID={testID}
     >
       <Animated.View
@@ -134,13 +134,11 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}
         {/* The container scale/color animation provides sufficient visual feedback */}
-        {visuallyChecked && (
-          <Icon name="check" size={size * 0.66} color="white" />
-        )}
+        {!!visuallyChecked && <Icon name="checkmark" size={size * 0.66} color="white" />}
       </Animated.View>
     </Pressable>
   );
-});
+};
 
 const styles = StyleSheet.create(_theme => ({
   container: {

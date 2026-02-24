@@ -61,13 +61,11 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       >
         {sections.map((section, index) => (
           <View key={index} style={[commonStyles.shadow, styles.section]}>
-            {section.title && (
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-            )}
+            {!!section.title && <Text style={styles.sectionTitle}>{section.title}</Text>}
             {section.content}
           </View>
         ))}
-        {primaryAction && (
+        {!!primaryAction && (
           <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
             {primaryAction.label}
           </Button>
@@ -96,7 +94,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing['3'],
   },

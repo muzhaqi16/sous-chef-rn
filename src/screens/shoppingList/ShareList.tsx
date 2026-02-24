@@ -2,14 +2,15 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   Pressable,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useRemoveCollaboratorMutation,
@@ -57,11 +58,10 @@ const formatStatus = (status: string) => {
   }
 };
 
-export const ShareList: React.FC = () => {
+export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ route }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
-  const route = useRoute();
-  const { listId } = route.params as { listId: string };
+  const { listId } = route.params;
 
   const [email, setEmail] = useState('');
   const [sharing, setSharing] = useState(false);
@@ -89,6 +89,10 @@ export const ShareList: React.FC = () => {
   );
   const isOwner = currentUserCollaborator?.role === CollaboratorRole.Owner;
 
+  const activeCollaborators = collaborators.filter(c =>
+    ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
+  );
+
   const handleShare = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter an email address');
@@ -99,7 +103,7 @@ export const ShareList: React.FC = () => {
     try {
       await shareList({
         variables: {
-          data: {
+          input: {
             shoppingListId: listId,
             email: email.trim(),
             role: CollaboratorRole.Contributor, // Assuming a role is required
@@ -116,7 +120,7 @@ export const ShareList: React.FC = () => {
   };
 
   const handleRemoveMember = useCallback(
-    (memberEmail: string) => {
+    (memberId: string) => {
       Alert.alert(
         'Remove Member',
         'Are you sure you want to remove this member?',
@@ -128,9 +132,7 @@ export const ShareList: React.FC = () => {
             onPress: async () => {
               try {
                 await removeMember({
-                  variables: {
-                    data: { shoppingListId: listId, email: memberEmail },
-                  },
+                  variables: { id: memberId },
                 });
                 refetch();
               } catch {
@@ -141,7 +143,7 @@ export const ShareList: React.FC = () => {
         ],
       );
     },
-    [listId, removeMember, refetch],
+    [removeMember, refetch],
   );
 
   const handleLeaveList = useCallback(() => {
@@ -166,17 +168,15 @@ export const ShareList: React.FC = () => {
           text: 'Leave',
           style: 'destructive',
           onPress: async () => {
-            if (!currentUser?.email) {
-              Alert.alert('Error', 'Could not determine your email');
+            if (!currentUserCollaborator?.id) {
+              Alert.alert('Error', 'Could not determine your membership');
               return;
             }
 
             setLeaving(true);
             try {
               await removeMember({
-                variables: {
-                  data: { shoppingListId: listId, email: currentUser.email },
-                },
+                variables: { id: currentUserCollaborator.id },
               });
               navigation.goBack();
             } catch {
@@ -188,7 +188,7 @@ export const ShareList: React.FC = () => {
         },
       ],
     );
-  }, [isOwner, listName, currentUser?.email, listId, removeMember, navigation]);
+  }, [isOwner, listName, currentUserCollaborator?.id, removeMember, navigation]);
 
   // PERFORMANCE: Memoized renderItem to avoid recreating on every render
   const renderMemberItem = useCallback(
@@ -224,7 +224,7 @@ export const ShareList: React.FC = () => {
                     {statusText}
                   </Text>
                 </View>
-                {member.invitedAt && (
+                {!!member.invitedAt && (
                   <Text style={styles.invitedText}>
                     Invited {new Date(member.invitedAt).toLocaleDateString()}
                   </Text>
@@ -235,8 +235,8 @@ export const ShareList: React.FC = () => {
           <Pressable
             onPress={e => {
               e?.stopPropagation?.();
-              if (member.email) {
-                handleRemoveMember(member.email);
+              if (member.id) {
+                handleRemoveMember(member.id);
               }
             }}
             style={({pressed}) => pressed && styles.pressed}
@@ -296,11 +296,11 @@ export const ShareList: React.FC = () => {
           </View>
         </View>
         {/* Only show if there are any members */}
-        {collaborators.length > 0 && (
+        {activeCollaborators.length > 0 && (
           <View style={styles.membersSection}>
             <Text style={styles.sectionTitle}>Current Members</Text>
-            <FlatList
-              data={collaborators}
+            <FlashList
+              data={activeCollaborators}
               keyExtractor={member => member.id}
               renderItem={renderMemberItem}
               refreshing={isRefetching}
@@ -310,7 +310,7 @@ export const ShareList: React.FC = () => {
         )}
 
         {/* Leave List section - only show for non-owners who are collaborators */}
-        {currentUserCollaborator && !isOwner && (
+        {!!currentUserCollaborator && !isOwner && (
           <View style={styles.leaveSection}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
             <Text style={styles.leaveDescription}>
@@ -356,7 +356,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing['3'],
   },
@@ -430,11 +430,11 @@ const styles = StyleSheet.create(theme => ({
   avatarText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   memberName: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   memberEmail: {
@@ -457,7 +457,7 @@ const styles = StyleSheet.create(theme => ({
   },
   statusText: {
     fontSize: theme.typography.fontSize.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   invitedText: {
     fontSize: theme.typography.fontSize.xs,
@@ -477,6 +477,6 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.fontSize.sm * 1.5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

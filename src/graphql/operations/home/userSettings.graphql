@@ -1,5 +1,8 @@
 mutation SetDefaultHome($homeId: ID!) {
   setDefaultHome(homeId: $homeId) {
+    success
+    message
+    code
     settings {
       id
     }

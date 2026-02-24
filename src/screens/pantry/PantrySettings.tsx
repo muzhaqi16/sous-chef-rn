@@ -20,7 +20,7 @@ import {
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService, errorService } from '#/services/errorService';
 import { normalizePantry } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 
@@ -33,7 +33,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
 
   const selectedHomeId = useAppStore(selectSelectedHomeId);
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -227,7 +227,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
   useEffect(() => {
     // Handle error case
     if (pantryError && pantryId) {
-      console.error('❌ Error loading pantry:', pantryError);
+      errorService.reportError(pantryError, { operation: 'PantrySettings.loadPantry' });
       Alert.alert(
         'Error Loading Pantry',
         'Failed to load pantry data. Please try again.',
@@ -260,12 +260,11 @@ export const PantrySettings: React.FC<StaticScreenProps<{
     try {
       await setDefaultPantry({
         variables: {
-          pantryId,
+          id: pantryId,
         },
       });
     } catch (error) {
-      // Error handler will revert the toggle
-      console.error('Failed to set default pantry:', error);
+      errorService.reportError(error, { operation: 'PantrySettings.setDefaultPantry' });
     }
   };
 
@@ -434,7 +433,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
           </View>
         </View>
 
-        {pantryId && pantry && (
+        {!!pantryId && !!pantry && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Information</Text>
 
@@ -455,7 +454,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
         )}
 
         {/* Only show danger zone if editing existing pantry */}
-        {pantryId && (
+        {!!pantryId && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
@@ -463,7 +462,7 @@ export const PantrySettings: React.FC<StaticScreenProps<{
               style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
               onPress={handleDelete}
             >
-              <Icon name="delete" size={20} color={theme.colors.error} />
+              <Icon name="trash-outline" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete Pantry</Text>
             </Pressable>
 
@@ -493,12 +492,12 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   content: {
@@ -511,7 +510,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionTitle: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
   },
@@ -520,7 +519,7 @@ const styles = StyleSheet.create(theme => ({
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.sm,
   },
@@ -546,7 +545,7 @@ const styles = StyleSheet.create(theme => ({
   },
   settingLabel: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   settingDescription: {
@@ -566,7 +565,7 @@ const styles = StyleSheet.create(theme => ({
   },
   infoValue: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   deleteButton: {
@@ -581,7 +580,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
     marginLeft: theme.spacing.sm,
   },
@@ -592,6 +591,6 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

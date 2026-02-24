@@ -8,14 +8,8 @@ query GetHome($homeId: ID!) {
   }
 }
 
-query GetHomeBasic($homeId: ID!) {
-  home(id: $homeId) {
-    ...HomeWithPantriesFragment
-  }
-}
-
-query GetHomes($pagination: PaginationInput) {
-  homes(pagination: $pagination) {
+query GetHomes($first: Int, $after: String) {
+  homes(first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -31,8 +25,11 @@ query GetHomes($pagination: PaginationInput) {
 }
 
 query GetMyPendingInvites {
-  myPendingInvites {
-    ...HomeInviteFragment
+  me {
+    id
+    pendingHomeInvites {
+      ...HomeInviteFragment
+    }
   }
 }
 
@@ -97,23 +94,7 @@ mutation AcceptHomeInvite($token: String!) {
     message
     code
     membership {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-      lastActiveAt
-      joinedAt
-      leftAt
-      createdAt
-      updatedAt
+      ...MemberShipFragment
     }
   }
 }
@@ -123,6 +104,9 @@ mutation DeclineHomeInvite($token: String!) {
     success
     message
     code
+    homeInvite {
+      id
+    }
   }
 }
 
@@ -132,23 +116,7 @@ mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
     message
     code
     membership {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-      lastActiveAt
-      joinedAt
-      leftAt
-      createdAt
-      updatedAt
+      ...MemberShipFragment
     }
   }
 }
@@ -158,6 +126,9 @@ mutation RemoveMember($id: ID!) {
     success
     message
     code
+    membership {
+      id
+    }
   }
 }
 
@@ -166,6 +137,9 @@ mutation RevokeHomeInvite($id: ID!) {
     success
     message
     code
+    homeInvite {
+      id
+    }
   }
 }
 
@@ -175,23 +149,7 @@ mutation JoinHomeByCode($joinCode: String!) {
     message
     code
     membership {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-      lastActiveAt
-      joinedAt
-      leftAt
-      createdAt
-      updatedAt
+      ...MemberShipFragment
     }
   }
 }
@@ -201,5 +159,24 @@ mutation LeaveHome($homeId: ID!) {
     success
     message
     code
+    membership {
+      id
+    }
+  }
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription HomeInviteChanged($homeId: ID!) {
+  homeInviteChanged(homeId: $homeId) {
+    mutation
+    homeId
+    homeInvite {
+      ...HomeInviteFragment
+    }
+    userId
+    timestamp
   }
 }

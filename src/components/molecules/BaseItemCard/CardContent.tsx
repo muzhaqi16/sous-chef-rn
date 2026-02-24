@@ -26,8 +26,7 @@ export const CardContent: React.FC<CardContentProps> = ({
       >
         {title}
       </Text>
-      {subtitle && (
-        typeof subtitle === 'string' ? (
+      {!!subtitle && (typeof subtitle === 'string' ? (
           <Text
             style={[
               styles.subtitle,
@@ -39,8 +38,7 @@ export const CardContent: React.FC<CardContentProps> = ({
           </Text>
         ) : (
           subtitle
-        )
-      )}
+        ))}
     </View>
   );
 };

@@ -142,7 +142,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 8,
+        version: 9,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: any, version: number) => {
@@ -150,6 +150,20 @@ export const useStore = create<RootState>()(
           // These are now transient and should not be persisted
           if (version < 7) {
             // Do something for v7 if needed
+          }
+
+          // Migration v8 → v9: Extract nested profile fields into top-level user fields.
+          // Existing users have user.profile.firstName etc. from the old schema, but
+          // the greeting reads user.firstName / user.name directly.
+          if (version < 9) {
+            const user = persistedState?.user;
+            const profile = user?.profile;
+            if (user && profile) {
+              user.firstName = profile.firstName ?? user.firstName;
+              user.lastName = profile.lastName ?? user.lastName;
+              user.name = profile.displayName ?? user.name;
+              user.profilePicture = profile.avatar ?? user.profilePicture;
+            }
           }
 
           return persistedState;
@@ -195,6 +209,8 @@ export const useStore = create<RootState>()(
             // UI state (temporary, session-only)
             bottomSheetVisible,
             bottomSheetIndex,
+            scannerSheetVisible,
+            scannerSheetIndex,
             globalLoading,
             isLoading,
             isError,
@@ -218,6 +234,10 @@ export const useStore = create<RootState>()(
 
             // Logout state (session-only flag)
             isLoggingOut,
+
+            // Passwords (must not persist to MMKV — keychain only)
+            registrationPassword,
+            postLoginCredentials,
 
             ...persistedState
           } = state;

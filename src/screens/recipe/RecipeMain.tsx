@@ -29,14 +29,11 @@ import { useFolderActions } from '#/hooks/recipe/useFolderActions';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
-import { useProfileData } from '#hooks/profile/useProfileData';
-import { useStore } from '#store';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
-export const RecipeMain: React.FC = React.memo(() => {
+export const RecipeMain: React.FC = () => {
   useScreenTransition('RecipeMain');
   useRenderTime('RecipeMain');
   const { navigate } = useAppNavigation();
@@ -48,10 +45,6 @@ export const RecipeMain: React.FC = React.memo(() => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
-
-  // Get user profile and notification data for header
-  const { profile } = useProfileData();
-  const unreadCount = useStore(state => state.unreadCount);
 
   // Fetch folders and tags for filtering
   const { folders } = useRecipeFolders();
@@ -124,8 +117,8 @@ export const RecipeMain: React.FC = React.memo(() => {
     }
   }, [recipes.length, randomRecipes.length]);
 
-  // Register add button action - navigate to recipe search
-  useTabBarAddButton(() => navigate('RecipeSearch'));
+  // Register add button action - navigate to recipe creation
+  useTabBarAddButton(() => navigate('RecipeCreate'));
 
   // Manual refresh to get new random recipes
   const handleRefreshRandom = useCallback(async () => {
@@ -196,15 +189,18 @@ export const RecipeMain: React.FC = React.memo(() => {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.filter(
-                edge => edge.node.recipe.id !== variables.recipeId,
-              ),
-              totalCount: existing.mySavedRecipes.totalCount - 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.filter(
+                  edge => edge.node.recipe.id !== variables.recipeId,
+                ),
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+              },
             },
           };
         },
@@ -273,19 +269,23 @@ export const RecipeMain: React.FC = React.memo(() => {
     [unfavoriteRecipeMutation],
   );
 
-  // Search bar inner right icon - navigate to recipe search
-  const searchBarInnerRightIcon = useMemo(
+  // Header right action - navigate to recipe search
+  const headerRight = useMemo(
     () => (
-      <Pressable onPress={handleSearchRecipes} hitSlop={8}>
+      <Pressable
+        onPress={handleSearchRecipes}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Search recipes"
+      >
         <Icon
-          name="search"
-          size={18}
-          color={theme.colors.primary}
-          library="Feather"
+          name="search-outline"
+          size={24}
+          color={theme.colors.textSecondary}
         />
       </Pressable>
     ),
-    [handleSearchRecipes, theme.colors.primary],
+    [handleSearchRecipes, theme.colors.textSecondary],
   );
 
   const emptyStateConfig = {
@@ -339,7 +339,7 @@ export const RecipeMain: React.FC = React.memo(() => {
             color={
               loadingRandom ? theme.colors.textSecondary : theme.colors.primary
             }
-            library="Ionicons"
+
           />
         </Pressable>
       </View>
@@ -369,7 +369,7 @@ export const RecipeMain: React.FC = React.memo(() => {
       tabs.push({
         id: 'folder',
         label: selectedFolder || 'Folders',
-        icon: '📁',
+        icon: 'folder',
         onPress: () => setShowFolderPicker(true),
         showDropdownIndicator: true,
       });
@@ -383,7 +383,7 @@ export const RecipeMain: React.FC = React.memo(() => {
           selectedTags.length > 0
             ? `${selectedTags.length} Tag${selectedTags.length > 1 ? 's' : ''}`
             : 'Tags',
-        icon: '🏷️',
+        icon: 'pricetag-outline',
         onPress: () => setShowTagPicker(true),
         showDropdownIndicator: true,
       });
@@ -437,8 +437,7 @@ export const RecipeMain: React.FC = React.memo(() => {
         }}
         counts={filterCounts}
         actionButton={{
-          icon: 'x',
-          iconLibrary: 'Feather',
+          icon: 'close',
           onPress: handleClearFilters,
           testID: 'recipe-clear-filters',
           disabled: !hasActiveFilters,
@@ -464,9 +463,7 @@ export const RecipeMain: React.FC = React.memo(() => {
       <TabScreenHeader
         label="What to cook?"
         title="Recipes"
-        avatarUrl={profile?.avatar}
-        notificationCount={unreadCount}
-        onAvatarPress={() => navigate('Notifications')}
+        headerRight={headerRight}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar
@@ -474,7 +471,6 @@ export const RecipeMain: React.FC = React.memo(() => {
           onChangeText={setSearchQuery}
           placeholder="Search recipes..."
           showSearchIcon
-          innerRightIcon={searchBarInnerRightIcon}
         />
       </View>
       <ItemList
@@ -524,7 +520,7 @@ export const RecipeMain: React.FC = React.memo(() => {
       />
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -541,8 +537,9 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    borderRadius: theme.radii.md,
   },
   suggestedTextContainer: {
     flex: 1,
@@ -563,6 +560,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -20,6 +20,7 @@ import {
 } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { errorService } from '#/services/errorService';
 
 export const DeleteAccountScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
@@ -72,7 +73,7 @@ export const DeleteAccountScreen: React.FC = () => {
             try {
               await deleteAccountMutation();
             } catch (error) {
-              console.error('Delete account error:', error);
+              errorService.reportError(error, { operation: 'DeleteAccount.deleteAccount' });
               setIsDeleting(false);
             }
           },
@@ -91,8 +92,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
       <Icon
-        library="Feather"
-        name="alert-circle"
+        name="alert-circle-outline"
         size={48}
         color={theme.colors.error}
       />
@@ -116,8 +116,7 @@ export const DeleteAccountScreen: React.FC = () => {
     >
       <View style={styles.blockedWarningContainer}>
         <Icon
-          library="Feather"
-          name="alert-circle"
+          name="alert-circle-outline"
           size={48}
           color={theme.colors.warning}
         />
@@ -132,8 +131,7 @@ export const DeleteAccountScreen: React.FC = () => {
         <View key={blocker.resourceId || index} style={styles.blockerCard}>
           <View style={styles.blockerHeader}>
             <Icon
-              library="Feather"
-              name="home"
+              name="home-outline"
               size={20}
               color={theme.colors.primary}
             />
@@ -172,8 +170,7 @@ export const DeleteAccountScreen: React.FC = () => {
       >
         <View style={styles.warningContainer}>
           <Icon
-            library="Feather"
-            name="alert-triangle"
+            name="warning-outline"
             size={48}
             color={theme.colors.error}
           />
@@ -184,8 +181,7 @@ export const DeleteAccountScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>What will be deleted:</Text>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -195,8 +191,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -206,8 +201,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -215,8 +209,7 @@ export const DeleteAccountScreen: React.FC = () => {
           </View>
           <View style={styles.bulletPoint}>
             <Icon
-              library="Feather"
-              name="x-circle"
+              name="close-circle-outline"
               size={20}
               color={theme.colors.error}
             />
@@ -299,7 +292,7 @@ export const DeleteAccountScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          name="arrow-left"
+          name="arrow-back"
           onPress={goBack}
           color={theme.colors.textPrimary}
           accessibilityLabel="Go back"
@@ -520,7 +513,7 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteButtonDisabled: {
     backgroundColor: theme.colors.border,
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   deleteButtonText: {
     color: theme.colors.white,
@@ -540,7 +533,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -58,10 +58,8 @@ export const Loading: React.FC<LoadingProps> = ({
   const renderContent = () => (
     <View style={[styles.container, variant === 'inline' && styles.containerInline, style]}>
       <ActivityIndicator size={size} color={spinnerColor} style={styles.spinner} />
-      {message && (
-        <Text style={[styles.message, { color: theme.colors.textPrimary }]}>{message}</Text>
-      )}
-      {submessage && (
+      {!!message && <Text style={[styles.message, { color: theme.colors.textPrimary }]}>{message}</Text>}
+      {!!submessage && (
         <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
           {submessage}
         </Text>
@@ -118,12 +116,12 @@ export const Loading: React.FC<LoadingProps> = ({
           ]}
         >
           <ActivityIndicator size={size} color={spinnerColor} style={styles.spinner} />
-          {message && (
+          {!!message && (
             <Text style={[styles.message, { color: theme.colors.textPrimary }]}>
               {message}
             </Text>
           )}
-          {submessage && (
+          {!!submessage && (
             <Text style={[styles.submessage, { color: theme.colors.textSecondary }]}>
               {submessage}
             </Text>

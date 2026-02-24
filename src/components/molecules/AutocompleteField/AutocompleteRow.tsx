@@ -40,15 +40,15 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
     <View style={styles.content}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
-        {badge && (
+        {!!badge && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
           </View>
         )}
       </View>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
-    {trailingText && <Text style={styles.trailingText}>{trailingText}</Text>}
+    {trailingText ? <Text style={styles.trailingText}>{trailingText}</Text> : null}
   </View>
 );
 
@@ -81,7 +81,7 @@ const styles = StyleSheet.create(theme => ({
   },
   symbolText: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     minWidth: 40,
   },
@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   subtitle: {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create(theme => ({
   },
   badgeText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
   },
   trailingText: {

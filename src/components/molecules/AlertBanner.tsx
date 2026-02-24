@@ -12,7 +12,7 @@ export interface AlertBannerProps {
   subtitle?: string;
   /** Icon to display (emoji string or icon name if iconLibrary is specified) */
   icon?: string;
-  /** Icon library to use for vector icons (Feather, MaterialIcons, etc.) */
+  /** Icon library to use for vector icons */
   iconLibrary?: IconLibrary;
   /** Visual variant affecting colors */
   variant?: AlertBannerVariant;
@@ -87,16 +87,14 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         <Text style={[styles.title, { color: variantColors.text }]}>
           {title}
         </Text>
-        {subtitle && (
+        {!!subtitle && (
           <Text style={[styles.subtitle, { color: variantColors.text }]}>
             {subtitle}
           </Text>
         )}
       </View>
 
-      {shouldShowChevron && (
-        <Icon name="chevron-right" size={24} color={variantColors.text} />
-      )}
+      {!!shouldShowChevron && <Icon name="chevron-forward" size={24} color={variantColors.text} />}
     </View>
   );
 

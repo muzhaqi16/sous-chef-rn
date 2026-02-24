@@ -13,7 +13,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
     enabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
     enableMetrics:
       Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-    enableLogs: false,
+    enableLogs: true,
     enableConsoleInDev: false, 
     appName: 'sous-chef-app',
     environment: env.isProduction

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
@@ -37,7 +38,41 @@ interface PurchasedTabProps {
   canMarkPurchased?: boolean;
   // Transition state for showing skeletons during list switches
   isTransitioning?: boolean;
+  // Batch move to pantry
+  onBatchMoveToPantry?: () => void;
+  batchMoveToPantryLoading?: boolean;
 }
+
+// Batch move to pantry action bar
+const BatchMoveToPantryBar: React.FC<{
+  onPress: () => void;
+  loading: boolean;
+}> = ({ onPress, loading }) => {
+  const { theme } = useUnistyles();
+  return (
+    <View style={styles.batchMoveBar}>
+      <Pressable
+        onPress={onPress}
+        disabled={loading}
+        style={({ pressed }) => [
+          styles.batchMoveButton,
+          pressed && styles.batchMoveButtonPressed,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={theme.colors.white} />
+        ) : (
+          <Icon
+            name="enter-outline"
+            size={18}
+            color={theme.colors.white}
+          />
+        )}
+        <Text style={styles.batchMoveText}>Move All to Pantry</Text>
+      </Pressable>
+    </View>
+  );
+};
 
 // Inner component that uses stagger context
 interface StaggeredPurchasedContentProps {
@@ -137,6 +172,8 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
   isTransitioning = false,
+  onBatchMoveToPantry,
+  batchMoveToPantryLoading = false,
 }) => {
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -151,8 +188,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   if (items.length === 0) {
     return (
       <EmptyState
-        icon="shopping-cart"
-        iconLibrary="MaterialIcons"
+        icon="cart-outline"
         title="No purchased items yet"
         description="Check off items as you shop to see them here"
       />
@@ -161,6 +197,12 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
 
   return (
     <StaggeredEntryProvider>
+      {!!onBatchMoveToPantry && items.length > 0 && (
+        <BatchMoveToPantryBar
+          onPress={onBatchMoveToPantry}
+          loading={batchMoveToPantryLoading}
+        />
+      )}
       <StaggeredPurchasedContent
         items={items}
         onItemPress={onItemPress}
@@ -183,17 +225,35 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize with shallow comparison of items array
-// Items array reference changes when filter runs, but React.memo
-// does shallow comparison which triggers re-render with new items
-export const MemoizedPurchasedTab = React.memo(PurchasedTabComponent);
+export const MemoizedPurchasedTab = PurchasedTabComponent;
 MemoizedPurchasedTab.displayName = 'PurchasedTab';
 
 // Also export non-memoized for backwards compatibility
 export const PurchasedTab = PurchasedTabComponent;
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
-});
+  batchMoveBar: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  batchMoveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.primary,
+  },
+  batchMoveButtonPressed: {
+    opacity: theme.opacity.pressed,
+  },
+  batchMoveText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.white,
+  },
+}));

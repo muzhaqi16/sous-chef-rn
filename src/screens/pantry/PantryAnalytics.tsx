@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -29,7 +29,6 @@ function formatPurpose(purpose: string): string {
     GIFT: 'Gift',
     TRANSFER: 'Transfer',
     WASTE: 'Waste',
-    ADJUSTMENT: 'Adjustment',
   };
   return map[purpose] || purpose;
 }
@@ -51,21 +50,11 @@ function formatReason(reason: string): string {
     MOLD: 'Mold',
     PEST: 'Pest',
     COOKING_FAIL: 'Cooking Fail',
-    SPILLED: 'Spilled',
-    BURNT: 'Burnt',
     OVERSTOCK: 'Overstock',
     TASTE: 'Taste',
-    GAVE_AWAY: 'Gave Away',
-    UNKNOWN_LOSS: 'Unknown Loss',
     OTHER: 'Other',
   };
   return map[reason] || reason;
-}
-
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
@@ -83,18 +72,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     usageError,
     wasteError,
     ledgerError,
-    consumptionRateData,
-    consumptionRateLoading,
-    consumptionRateError,
-    restockingFrequencyData,
-    restockingFrequencyLoading,
-    restockingFrequencyError,
-    expirationRiskData,
-    expirationRiskLoading,
-    expirationRiskError,
-    effectiveUsageRateData,
-    effectiveUsageRateLoading,
-    effectiveUsageRateError,
     dateRange,
     setDateRange,
     ledgerGranularity,
@@ -115,9 +92,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       { key: 'usage', title: 'Usage' },
       { key: 'waste', title: 'Waste' },
       { key: 'ledger', title: 'Ledger' },
-      { key: 'insights', title: 'Insights' },
-      { key: 'expiring', title: 'Expiring' },
-      { key: 'restocking', title: 'Restocking' },
     ],
     [],
   );
@@ -222,7 +196,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <AnalyticsSummaryCard
             title="Avg Per Day"
             value={(usageData?.averageUsagePerDay ?? 0).toFixed(1)}
-            icon="schedule"
+            icon="time-outline"
             subtitle="items/day"
           />
         </View>
@@ -309,7 +283,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <AnalyticsSummaryCard
             title="Total Waste"
             value={wasteData?.totalWasteCount ?? 0}
-            icon="delete-outline"
+            icon="trash-outline"
             color={theme.colors.error}
             subtitle="items wasted"
           />
@@ -326,13 +300,13 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <AnalyticsSummaryCard
             title="Est. Value Lost"
             value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
-            icon="attach-money"
+            icon="cash-outline"
             color={theme.colors.error}
           />
           <AnalyticsSummaryCard
             title="Composted"
             value={(wasteData?.composted ?? 0).toFixed(1)}
-            icon="eco"
+            icon="leaf-outline"
             color={theme.colors.success}
             subtitle="units"
           />
@@ -417,10 +391,10 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <Text style={styles.granularityLabel}>Period:</Text>
           <View style={styles.granularityButtons}>
             {granularityOptions.map(option => (
-              <Pressable
+              <TouchableOpacity
                 key={option.value}
                 onPress={() => setLedgerGranularity(option.value)}
-                style={({pressed}) => [
+                style={[
                   styles.granularityButton,
                   {
                     backgroundColor:
@@ -428,7 +402,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                         ? theme.colors.primary
                         : theme.colors.surface,
                   },
-                  pressed && styles.pressed,
                 ]}
               >
                 <Text
@@ -444,7 +417,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
                 >
                   {option.label}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -471,7 +444,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <AnalyticsSummaryCard
             title="Wasted"
             value={ledgerData?.summary?.totalWasted ?? 0}
-            icon="delete-outline"
+            icon="trash-outline"
             color={theme.colors.error}
             subtitle="total quantity"
           />
@@ -493,30 +466,30 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <AnalyticsSummaryCard
             title="Additions"
             value={ledgerData?.summary?.additionCount ?? 0}
-            icon="playlist-add"
+            icon="add-circle-outline"
             subtitle="transactions"
           />
           <AnalyticsSummaryCard
             title="Consumptions"
             value={ledgerData?.summary?.consumptionCount ?? 0}
-            icon="playlist-remove"
+            icon="remove-circle-outline"
             subtitle="transactions"
           />
         </View>
 
         {/* Cost Analytics */}
-        {ledgerData?.costAnalytics && (
+        {!!ledgerData?.costAnalytics && (
           <View style={styles.summaryRow}>
             <AnalyticsSummaryCard
               title="Total Spent"
               value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
-              icon="attach-money"
+              icon="cash-outline"
               color={theme.colors.warning}
             />
             <AnalyticsSummaryCard
               title="Avg Cost/Unit"
               value={`$${(ledgerData.costAnalytics.averageCostPerUnit ?? 0).toFixed(2)}`}
-              icon="calculate"
+              icon="calculator-outline"
               color={theme.colors.warning}
             />
           </View>
@@ -566,7 +539,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         </ChartSection>
 
         {/* Unit Breakdown - Additions */}
-        {ledgerData?.summary?.additionsByUnit && ledgerData.summary.additionsByUnit.length > 0 && (
+        {!!ledgerData?.summary?.additionsByUnit && ledgerData.summary.additionsByUnit.length > 0 && (
           <ChartSection
             title="Additions by Unit"
             loading={ledgerLoading}
@@ -587,7 +560,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         )}
 
         {/* Unit Breakdown - Consumption */}
-        {ledgerData?.summary?.consumptionByUnit && ledgerData.summary.consumptionByUnit.length > 0 && (
+        {!!ledgerData?.summary?.consumptionByUnit && ledgerData.summary.consumptionByUnit.length > 0 && (
           <ChartSection
             title="Consumption by Unit"
             loading={ledgerLoading}
@@ -639,279 +612,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     ],
   );
 
-  // Insights tab - consumption rate + effective usage rate
-  const renderInsightsTab = useCallback(
-    () => (
-      <ScrollView
-        style={styles.tabContent}
-        contentContainerStyle={styles.tabScrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-      >
-        {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <AnalyticsSummaryCard
-            title="Avg Daily Use"
-            value={
-              consumptionRateData && consumptionRateData.length > 0
-                ? (
-                    consumptionRateData.reduce((sum, r) => sum + r.averageDailyConsumption, 0) /
-                    consumptionRateData.length
-                  ).toFixed(1)
-                : '0'
-            }
-            icon="trending-down"
-            subtitle="items/day"
-          />
-          <AnalyticsSummaryCard
-            title="Effective Rate"
-            value={
-              effectiveUsageRateData && effectiveUsageRateData.length > 0
-                ? `${(
-                    (effectiveUsageRateData.reduce((sum, r) => sum + r.effectiveRate, 0) /
-                      effectiveUsageRateData.length) *
-                    100
-                  ).toFixed(0)}%`
-                : '-'
-            }
-            icon="pie-chart"
-            color={theme.colors.success}
-            subtitle="consumed vs wasted"
-          />
-        </View>
-
-        {/* Consumption Rate List */}
-        <ChartSection
-          title="Consumption Rate"
-          loading={consumptionRateLoading}
-          error={consumptionRateError?.message}
-          isEmpty={!consumptionRateData?.length}
-        >
-          <View style={styles.periodDataList}>
-            {consumptionRateData?.slice(0, 10).map((item, index) => (
-              <View key={item.itemId || index} style={styles.periodRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.periodLabel}>{item.itemName || 'Unknown'}</Text>
-                  <Text style={styles.legendText}>
-                    {item.averageDailyConsumption.toFixed(2)}/day
-                    {item.daysUntilEmpty != null ? ` - ${Math.round(item.daysUntilEmpty)}d left` : ''}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </ChartSection>
-
-        {/* Effective Usage Rate List */}
-        <ChartSection
-          title="Effective Usage Rate"
-          loading={effectiveUsageRateLoading}
-          error={effectiveUsageRateError?.message}
-          isEmpty={!effectiveUsageRateData?.length}
-        >
-          <View style={styles.periodDataList}>
-            {effectiveUsageRateData?.slice(0, 10).map((item, index) => (
-              <View key={item.itemId || index} style={styles.periodRow}>
-                <Text style={[styles.periodLabel, { flex: 1 }]}>
-                  {item.itemName || 'Unknown'}
-                </Text>
-                <Text
-                  style={[
-                    styles.periodValue,
-                    { color: item.effectiveRate >= 0.8 ? theme.colors.success : item.effectiveRate >= 0.5 ? theme.colors.warning : theme.colors.error },
-                  ]}
-                >
-                  {(item.effectiveRate * 100).toFixed(0)}%
-                </Text>
-              </View>
-            ))}
-          </View>
-        </ChartSection>
-
-        {/* Top Consumed Items */}
-        <ChartSection
-          title="Top Consumed Items"
-          loading={consumptionRateLoading}
-          error={consumptionRateError?.message}
-          isEmpty={!consumptionRateData?.length}
-        >
-          <TopItemsBarChart
-            data={(consumptionRateData || []).slice(0, 5).map(item => ({
-              label: item.itemName || 'Unknown',
-              value: item.averageDailyConsumption,
-            }))}
-            color={theme.colors.primary}
-          />
-        </ChartSection>
-      </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      theme.colors.success,
-      theme.colors.warning,
-      theme.colors.error,
-      consumptionRateData,
-      consumptionRateLoading,
-      consumptionRateError,
-      effectiveUsageRateData,
-      effectiveUsageRateLoading,
-      effectiveUsageRateError,
-    ],
-  );
-
-  // Expiring tab - expiration risk
-  const renderExpiringTab = useCallback(
-    () => (
-      <ScrollView
-        style={styles.tabContent}
-        contentContainerStyle={styles.tabScrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-      >
-        {/* Summary Card */}
-        <View style={styles.summaryRow}>
-          <AnalyticsSummaryCard
-            title="At Risk"
-            value={expirationRiskData?.totalAtRisk ?? 0}
-            icon="warning"
-            color={theme.colors.warning}
-            subtitle={`within ${expirationRiskData?.daysThreshold ?? 7} days`}
-          />
-        </View>
-
-        {/* Expiring Items List */}
-        <ChartSection
-          title="Items at Risk"
-          loading={expirationRiskLoading}
-          error={expirationRiskError?.message}
-          isEmpty={!expirationRiskData?.items?.length}
-        >
-          <View style={styles.periodDataList}>
-            {expirationRiskData?.items?.map((item, index) => {
-              const urgencyColor =
-                item.daysUntilExpiry <= 2
-                  ? theme.colors.error
-                  : item.daysUntilExpiry <= 5
-                  ? theme.colors.warning
-                  : theme.colors.textSecondary;
-              return (
-                <View key={item.pantryItemId || index} style={styles.periodRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.periodLabel}>{item.itemName}</Text>
-                    <Text style={styles.legendText}>
-                      {item.quantity} {item.unitName || ''}
-                    </Text>
-                  </View>
-                  <Text style={[styles.periodValue, { color: urgencyColor }]}>
-                    {item.daysUntilExpiry <= 0
-                      ? 'Expired'
-                      : `${item.daysUntilExpiry}d`}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </ChartSection>
-      </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      theme.colors.warning,
-      theme.colors.error,
-      theme.colors.textSecondary,
-      expirationRiskData,
-      expirationRiskLoading,
-      expirationRiskError,
-    ],
-  );
-
-  // Restocking tab - restocking frequency
-  const renderRestockingTab = useCallback(
-    () => (
-      <ScrollView
-        style={styles.tabContent}
-        contentContainerStyle={styles.tabScrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-      >
-        {/* Summary Card */}
-        <View style={styles.summaryRow}>
-          <AnalyticsSummaryCard
-            title="Avg Restock Interval"
-            value={
-              restockingFrequencyData && restockingFrequencyData.length > 0
-                ? `${(
-                    restockingFrequencyData.reduce(
-                      (sum, r) => sum + r.averageDaysBetweenRestocks,
-                      0,
-                    ) / restockingFrequencyData.length
-                  ).toFixed(0)}d`
-                : '-'
-            }
-            icon="autorenew"
-            subtitle="days between restocks"
-          />
-        </View>
-
-        {/* Restocking Frequency List */}
-        <ChartSection
-          title="Restocking Frequency"
-          loading={restockingFrequencyLoading}
-          error={restockingFrequencyError?.message}
-          isEmpty={!restockingFrequencyData?.length}
-        >
-          <View style={styles.periodDataList}>
-            {restockingFrequencyData?.slice(0, 10).map((item, index) => (
-              <View key={item.itemId || index} style={styles.periodRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.periodLabel}>{item.itemName || 'Unknown'}</Text>
-                  <Text style={styles.legendText}>
-                    {item.totalRestocks} restocks - avg {item.averageDaysBetweenRestocks.toFixed(0)}d apart
-                  </Text>
-                  {item.lastRestockedAt && (
-                    <Text style={styles.legendText}>
-                      Last: {formatDate(item.lastRestockedAt)}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            ))}
-          </View>
-        </ChartSection>
-      </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      restockingFrequencyData,
-      restockingFrequencyLoading,
-      restockingFrequencyError,
-    ],
-  );
-
   const renderScene = useCallback(
     ({ route: tabRoute }: { route: TabRoute }) => {
       switch (tabRoute.key) {
@@ -921,31 +621,20 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           return renderWasteTab();
         case 'ledger':
           return renderLedgerTab();
-        case 'insights':
-          return renderInsightsTab();
-        case 'expiring':
-          return renderExpiringTab();
-        case 'restocking':
-          return renderRestockingTab();
         default:
           return null;
       }
     },
-    [renderUsageTab, renderWasteTab, renderLedgerTab, renderInsightsTab, renderExpiringTab, renderRestockingTab],
+    [renderUsageTab, renderWasteTab, renderLedgerTab],
   );
 
   return (
     <View style={commonStyles.container}>
       {/* Header */}
       <View style={[commonStyles.rowSpaceBetween, styles.header]}>
-        <Pressable
-          onPress={goBack}
-          style={({pressed}) => [styles.backButton, pressed && styles.pressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
+        <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
+        </TouchableOpacity>
         <Text style={[commonStyles.title, styles.headerTitle]}>Pantry Analytics</Text>
         <View style={styles.placeholder} />
       </View>
@@ -1076,8 +765,5 @@ const styles = StyleSheet.create(theme => ({
   unitBreakdownCount: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 }));

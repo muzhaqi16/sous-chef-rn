@@ -48,17 +48,13 @@ function FilterTabsItemComponent<T extends string>({
         isCompact && styles.tabCompact,
       ]}
     >
-      {tab.icon && (
-        tab.iconLibrary ? (
-          <Icon
-            name={tab.icon}
-            size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
-            color={iconColor}
-            library={tab.iconLibrary}
-          />
-        ) : (
-          <Text style={[styles.tabIcon, isCompact && styles.tabIconCompact]}>{tab.icon}</Text>
-        )
+      {!!tab.icon && (
+        <Icon
+          name={tab.icon}
+          size={tab.isAction ? (isCompact ? 18 : 20) : (isCompact ? 14 : 16)}
+          color={iconColor}
+          library={tab.iconLibrary}
+        />
       )}
       {!(tab.isAction && !tab.label) && (
         <Text
@@ -72,7 +68,7 @@ function FilterTabsItemComponent<T extends string>({
           {tab.label}
         </Text>
       )}
-      {hasCount && (
+      {!!hasCount && (
         <View
           style={[
             styles.countBadge,
@@ -92,19 +88,18 @@ function FilterTabsItemComponent<T extends string>({
           </Text>
         </View>
       )}
-      {tab.showDropdownIndicator && (
+      {!!tab.showDropdownIndicator && (
         <Icon
           name="chevron-down"
           size={isCompact ? 12 : 14}
           color={iconColor}
-          library="Feather"
         />
       )}
     </Pressable>
   );
 }
 
-export const FilterTabsItem = React.memo(FilterTabsItemComponent) as typeof FilterTabsItemComponent;
+export const FilterTabsItem = FilterTabsItemComponent as typeof FilterTabsItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   tab: {

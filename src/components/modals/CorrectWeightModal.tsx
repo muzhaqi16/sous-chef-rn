@@ -1,11 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useBottomSheetBackHandler } from '#hooks/useBottomSheetBackHandler';
-import { useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
@@ -28,11 +24,11 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(bottomSheetRef, visible);
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && !!pantryItem,
+    onDismiss: onClose,
+    snapPoints: ['65%', '85%'],
+  });
   const [weightInput, setWeightInput] = useState('');
   const [unitDisplay, setUnitDisplay] = useState('');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
@@ -40,15 +36,12 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
 
   useEffect(() => {
     if (visible && pantryItem) {
-      bottomSheetRef.current?.present();
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(
         pantryItem.netWeightUnit?.symbol || pantryItem.netWeightUnit?.name || '',
       );
       setSelectedUnitId(pantryItem.netWeightUnit?.id || null);
       setReason('');
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
 
@@ -94,34 +87,12 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   );
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['65%', '85%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
-      android_keyboardInputMode="adjustResize"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetKeyboardAwareScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
@@ -133,20 +104,19 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
           confirmLabel="Correct"
         />
 
-        {pantryItem && (
-          <>
+        {!!pantryItem && <>
             <View style={commonStyles.bottomSheetItemInfo}>
               <Text style={commonStyles.bottomSheetItemName}>
                 {pantryItem.itemName}
               </Text>
-              {currentWeightText && (
+              {!!currentWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     Net Weight: {currentWeightText}
                   </Text>
                 </View>
               )}
-              {remainingWeightText && (
+              {!!remainingWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     Remaining: {remainingWeightText}
@@ -198,8 +168,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
                 useBottomSheetInput
               />
             </View>
-          </>
-        )}
+          </>}
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetModal>
   );

@@ -37,7 +37,7 @@ interface AnimatedSwipeIconProps {
  */
 export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
   icon,
-  library = 'MaterialIcons',
+  library,
   size = 32,
   color,
   direction = 'left',
@@ -55,7 +55,7 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
   useEffect(() => {
     const swipeDistance = direction === 'left' ? -distance : distance;
 
-    translateX.value = withDelay(
+    translateX.set(withDelay(
       delay,
       withRepeat(
         withSequence(
@@ -68,7 +68,7 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
         repeatCount,
         false,
       ),
-    );
+    ));
   }, [translateX, direction, distance, repeatCount, delay]);
 
   const animatedStyle = useAnimatedStyle(() => ({

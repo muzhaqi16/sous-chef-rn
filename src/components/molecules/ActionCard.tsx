@@ -20,7 +20,7 @@ export interface ActionCardProps {
  */
 export const ActionCard: React.FC<ActionCardProps> = ({
   icon,
-  iconLibrary = 'MaterialIcons',
+  iconLibrary,
   label,
   onPress,
   disabled = false,
@@ -62,7 +62,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
   },
   disabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   iconContainer: {
     width: 56,
@@ -83,6 +83,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textTertiary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

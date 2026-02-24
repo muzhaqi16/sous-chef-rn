@@ -132,6 +132,9 @@ mutation DeleteStorageLocation($id: ID!) {
     success
     message
     code
+    storageLocation {
+      id
+    }
   }
 }
 

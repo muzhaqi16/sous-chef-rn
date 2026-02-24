@@ -39,7 +39,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 
@@ -53,7 +53,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Category</Text>
-        {onSeeAll && (
+        {!!onSeeAll && (
           <Pressable onPress={onSeeAll} style={({pressed}) => pressed && styles.pressed}>
             <Text style={styles.seeAll}>See all</Text>
           </Pressable>

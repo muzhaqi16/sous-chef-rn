@@ -52,7 +52,6 @@ export const useItemSelector = ({
     variables: { homeId: selectedHomeId || '' },
     fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 

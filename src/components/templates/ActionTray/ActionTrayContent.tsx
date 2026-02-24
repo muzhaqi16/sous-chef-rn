@@ -12,6 +12,7 @@ import type { ActionTrayContentProps } from './types';
 export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   children,
   title,
+  headerRight,
   showCloseButton = true,
   onClose,
 }) => {
@@ -24,11 +25,12 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
       exiting={FadeOut}
       style={styles.content}
     >
-      {(title || showCloseButton) && (
+      {!!(title || showCloseButton) && (
         <View style={styles.header}>
-          {title && <Text style={styles.title}>{title}</Text>}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
           <View style={styles.fill} />
-          {showCloseButton && onClose && (
+          {!!headerRight && headerRight}
+          {!!showCloseButton && !!onClose && (
             <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>
               <Icon name="close" size={16} color={theme.colors.textSecondary} />
             </Pressable>
@@ -56,7 +58,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   fill: {
@@ -74,6 +76,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

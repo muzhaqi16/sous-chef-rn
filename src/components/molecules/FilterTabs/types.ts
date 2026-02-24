@@ -15,7 +15,7 @@ export interface FilterTabConfig<T extends string = string> {
   /** Optional emoji or icon name */
   icon?: string;
   /** Icon library if using Icon component */
-  iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  iconLibrary?: string;
   /** Custom press handler (overrides onTabChange for modal triggers) */
   onPress?: () => void;
   /** Show dropdown indicator (chevron-down) for modal-triggering pills */
@@ -29,8 +29,8 @@ export interface FilterTabActionButton {
   icon?: string;
   /** Text label to display (optional - can use icon instead) */
   label?: string;
-  /** Icon library (default: MaterialIcons) */
-  iconLibrary?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  /** Icon library */
+  iconLibrary?: string;
   /** Callback when button is pressed */
   onPress: () => void;
   /** Test ID for accessibility */

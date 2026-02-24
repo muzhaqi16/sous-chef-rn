@@ -7,7 +7,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Icon } from '#utils/iconUtils';
 import type { SortOption, SortDirection } from './PantryContent';
 
 interface PantrySortModalProps {
@@ -28,13 +28,12 @@ const SORT_OPTIONS: Array<{
   key: SortOption;
   label: string;
   icon: string;
-  library?: IconLibrary;
+  library?: string;
 }> = [
   {
     key: 'name',
     label: 'Name',
-    icon: 'sort-by-alpha',
-    library: 'MaterialIcons',
+    icon: 'text-outline',
   },
   {
     key: 'expiry',
@@ -50,7 +49,6 @@ const SORT_OPTIONS: Array<{
     key: 'recent',
     label: 'Recently Added',
     icon: 'clock',
-    library: 'Feather',
   },
 ];
 
@@ -62,8 +60,7 @@ const SORT_OPTIONS: Array<{
  * - Visual indicator for current selection
  * - Direction indicator (ascending/descending)
  */
-export const PantrySortModal: React.FC<PantrySortModalProps> = React.memo(
-  ({ visible, sortOption, sortDirection, onSelect, onClose }) => {
+export const PantrySortModal: React.FC<PantrySortModalProps> = ({ visible, sortOption, sortDirection, onSelect, onClose }) => {
     const { theme } = useUnistyles();
 
     return (
@@ -122,8 +119,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = React.memo(
         </TouchableWithoutFeedback>
       </Modal>
     );
-  },
-);
+  };
 
 PantrySortModal.displayName = 'PantrySortModal';
 
@@ -175,6 +171,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

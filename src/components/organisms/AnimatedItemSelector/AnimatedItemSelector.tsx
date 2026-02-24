@@ -28,6 +28,7 @@ export const AnimatedItemSelector = forwardRef<
     <ActionTray
       ref={trayRef}
       title={config.title}
+      headerRight={config.headerRight}
       onClose={onClose}
       onOpen={onOpen}
       showCloseButton={true}

@@ -20,7 +20,7 @@ export const UrgentNotificationsBanner: React.FC<
 
   return (
     <View style={styles.urgentBanner}>
-      <Icon name="warning" size={20} color={theme.colors.white} />
+      <Icon name="warning-outline" size={20} color={theme.colors.white} />
       <Text style={styles.urgentText}>
         {unreadUrgentCount} urgent notification
         {unreadUrgentCount !== 1 ? 's' : ''}

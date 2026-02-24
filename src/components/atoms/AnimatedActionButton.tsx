@@ -6,10 +6,10 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withSequence,
-  Easing,
   interpolate,
 } from 'react-native-reanimated';
 import IconButton from './IconButton';
+import { standardEasing, TIMING } from '#/constants/animations';
 
 type AnimatedActionButtonProps = {
   onPress: () => void;
@@ -42,29 +42,24 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   useEffect(() => {
     if (isHighlighted) {
       // Pulse animation with rotation
-      scale.value = withSequence(
-        withTiming(1.1, { duration: 200 }),
-        withTiming(1, { duration: 200 }),
-      );
-      rotation.value = withSequence(
-        withTiming(1, { duration: 200 }),
-        withTiming(0, { duration: 200 }),
-      );
+      scale.set(withSequence(
+        withTiming(1.1, { duration: TIMING.STANDARD }),
+        withTiming(1, { duration: TIMING.STANDARD }),
+      ));
+      rotation.set(withSequence(
+        withTiming(1, { duration: TIMING.STANDARD }),
+        withTiming(0, { duration: TIMING.STANDARD }),
+      ));
     }
   }, [isHighlighted, scale, rotation]);
 
-  // UNISTYLES FIX: Include layout properties in animatedStyle to avoid
-  // combining Unistyles and Reanimated styles in the same array
   const animatedStyle = useAnimatedStyle(() => {
     const rotate = interpolate(rotation.value, [0, 1], [0, 90]);
 
     return {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: withTiming(backgroundColor || theme.colors.surface, {
-        duration: 150,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        duration: TIMING.FAST,
+        easing: standardEasing,
       }),
       transform: [{ scale: scale.value }, { rotate: `${rotate}deg` }],
     };
@@ -73,13 +68,12 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   // Wrapper pattern: static Unistyles on outer View, animated styles on inner Animated.View
   return (
     <View style={[styles.button, style]} testID={testID}>
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[styles.animatedInner, animatedStyle]}>
         <IconButton
           name={name || 'add'}
           size={size}
           color={color || theme.colors.primary}
           onPress={onPress}
-          library="Ionicons"
           accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
         />
       </Animated.View>
@@ -99,5 +93,10 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
     borderWidth: 2,
     overflow: 'hidden', // Clip animated background to border radius
+  },
+  animatedInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }));

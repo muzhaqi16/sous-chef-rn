@@ -13,8 +13,7 @@ const getContainerWidth = (buttonCount: number): number => {
   return 180; // 3 buttons
 };
 
-export const RightActions: React.FC<SwipeActionsProps> = React.memo(
-  ({ onEdit, onDelete, onActionPress, testIDPrefix, progress, swipeMode }) => {
+export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, onActionPress, testIDPrefix, progress, swipeMode }) => {
     const { theme } = useUnistyles();
 
     // Shopping mode: Only show delete on right (edit is on left swipe)
@@ -33,7 +32,7 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
         >
           <AnimatedActionButton
             onPress={handleDeletePress}
-            icon="delete"
+            icon="trash-outline"
             backgroundColor={theme.colors.danger}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
@@ -66,10 +65,10 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
         style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
         pointerEvents="box-none"
       >
-        {onEdit && (
+        {!!onEdit && (
           <AnimatedActionButton
             onPress={handleEditPress}
-            icon="edit"
+            icon="create-outline"
             backgroundColor={theme.colors.info}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
@@ -77,10 +76,10 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
             index={0}
           />
         )}
-        {onDelete && (
+        {!!onDelete && (
           <AnimatedActionButton
             onPress={handleDeletePress}
-            icon="delete"
+            icon="trash-outline"
             backgroundColor={theme.colors.danger}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
@@ -90,5 +89,4 @@ export const RightActions: React.FC<SwipeActionsProps> = React.memo(
         )}
       </Animated.View>
     );
-  },
-);
+  };

@@ -1,23 +1,24 @@
 import React from 'react';
-import {View, Text, Pressable, Image} from 'react-native';
+import {View, Text, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {useProfileData} from '#hooks/profile/useProfileData';
+import {CachedImage} from '#components/atoms/CachedImage';
+import {useAuth} from '#hooks/auth/useAuth';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 import {Icon} from '#utils/iconUtils';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 
 export const UserHeader: React.FC = () => {
   const {navigateTo} = useAppNavigation();
-  const {profile} = useProfileData();
-  const unreadCount = useStore(state => state.unreadCount);
+  const {user} = useAuth();
+  const unreadCount = useAppStore(state => state.unreadCount);
 
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
         Hello, <Text style={styles.headerTitleBold}>
-          {profile?.displayName
-            ? profile.displayName.split(' ')[0]
-            : profile?.firstName || 'User'}
+          {user?.name
+            ? user.name.split(' ')[0]
+            : user?.firstName || 'User'}
         </Text>
         !
       </Text>
@@ -29,16 +30,14 @@ export const UserHeader: React.FC = () => {
           }}
           style={({pressed}) => pressed && styles.pressed}>
           <View style={styles.avatar}>
-            {profile?.avatar ? (
-              <Image
-                alt=""
-                source={{uri: profile.avatar}}
+            {user?.profilePicture ? (
+              <CachedImage
+                uri={user.profilePicture}
                 style={styles.avatarImg}
               />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Icon
-                  library="Ionicons"
                   name="person"
                   size={24}
                   color={styles.avatarIcon.color}
@@ -65,7 +64,7 @@ const styles = StyleSheet.create(theme => ({
   },
   headerTitle: {
     fontSize: theme.fonts.size['2xl'],
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
     color: theme.colors.textOnSurfaceVariant,
   },
   headerTitleBold: {
@@ -122,6 +121,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.error,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

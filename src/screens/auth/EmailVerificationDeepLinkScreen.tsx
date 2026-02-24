@@ -50,7 +50,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           variables: { code: token }
         });
 
-        if (result.data?.verifyEmail) {
+        if (result.data?.verifyEmail?.success) {
           logger.info('Email verification successful');
 
           // Update user state to mark email as verified
@@ -69,7 +69,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           // when user.emailVerified changes to true
 
         } else {
-          throw new Error('Verification failed');
+          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
         }
       } catch (error: any) {
         logger.error('Email verification failed', { error });
@@ -108,7 +108,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
           variables: { code: token }
         });
 
-        if (result.data?.verifyEmail) {
+        if (result.data?.verifyEmail?.success) {
           if (user) {
             updateUser({ ...user, emailVerified: true });
           }
@@ -118,7 +118,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             type: 'success',
           });
         } else {
-          throw new Error('Verification failed');
+          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
         }
       } catch (error: any) {
         const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
@@ -145,18 +145,16 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
       </View>
 
       <View style={styles.content}>
-        {isVerifying && (
-          <>
+        {!!isVerifying && <>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={styles.title}>Verifying your email...</Text>
             <Text style={styles.subtitle}>Please wait while we verify your email address.</Text>
-          </>
-        )}
+          </>}
 
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="check-circle" size={64} color={theme.colors.success} />
+              <Icon name="checkmark-circle" size={64} color={theme.colors.success} />
             </View>
             <Text style={styles.title}>Email Verified!</Text>
             <Text style={styles.subtitle}>
@@ -172,7 +170,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="x-circle" size={64} color={theme.colors.error} />
+              <Icon name="close-circle-outline" size={64} color={theme.colors.error} />
             </View>
             <Text style={styles.title}>Verification Failed</Text>
             <Text style={styles.subtitle}>{errorMessage}</Text>
@@ -215,7 +213,7 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginTop: theme.spacing.md,
@@ -243,9 +241,9 @@ const styles = StyleSheet.create(theme => ({
   retryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

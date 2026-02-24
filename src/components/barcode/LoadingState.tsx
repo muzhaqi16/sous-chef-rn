@@ -20,7 +20,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         uniProps={theme => ({ color: theme.colors.primary })}
       />
       <Text style={styles.loadingText}>{message}</Text>
-      {barcode && <Text style={styles.barcodeText}>Barcode: {barcode}</Text>}
+      {barcode ? <Text style={styles.barcodeText}>Barcode: {barcode}</Text> : null}
     </View>
   );
 };

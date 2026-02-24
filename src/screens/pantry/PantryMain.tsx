@@ -19,12 +19,13 @@ import { useScannerSetup } from '#hooks/scanner/useScannerSetup';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
-import { useGetHomeBasicQuery, GetStorageLocationsQuery, StorageState } from '#generated';
+import { useGetHomeQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
-import { Telemetry } from '#/services/telemetry';
-import { useProfileData } from '#hooks/profile/useProfileData';
+import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
+import { useAuth } from '#hooks/auth/useAuth';
+import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import type { LocationFilter } from '#/utils/pantryFilters';
 
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
@@ -39,8 +40,7 @@ import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary'
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
-// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
-const PantryMainScreen: React.FC = React.memo(() => {
+const PantryMainScreen: React.FC = () => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
@@ -50,8 +50,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // then schedules a background re-render returning `true` to activate deferred features.
   const isInteractive = useDeferredValue(true, false);
 
-  // Get user profile for greeting
-  const { profile } = useProfileData();
+  // User name/avatar come from the auth store (populated during login)
+  // so the greeting renders immediately without a separate GetUserProfile query
+  const { user: authUser } = useAuth();
 
   // Track screen performance (deferred — telemetry not needed during initial render)
   useScreenTransition('PantryMain', { enabled: isInteractive });
@@ -136,7 +137,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // - before interactions complete (isInteractive) — not needed during initial mount
   const shouldFetchHome =
     isInteractive && isFocused && isReady && !!selectedHomeId && !currentHome;
-  const { refetch: refetchHome } = useGetHomeBasicQuery({
+  const { refetch: refetchHome } = useGetHomeQuery({
     variables: { homeId: selectedHomeId! },
     skip: !shouldFetchHome,
     fetchPolicy: 'cache-and-network',
@@ -152,12 +153,17 @@ const PantryMainScreen: React.FC = React.memo(() => {
     },
   });
 
+  // Low stock to shopping list
+  const { addLowStockToShoppingList, loading: lowStockLoading } =
+    useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
+
   // Register add button action - open add to pantry sheet
   useTabBarAddButton(() => setAddSheetVisible(true));
 
   const {
     items: pantryItems,
     allItems,
+    stats,
     totalCount,
     searchQuery,
     setSearchQuery,
@@ -206,7 +212,6 @@ const PantryMainScreen: React.FC = React.memo(() => {
     handleDeleteItem,
   } = usePantryItemActions({
     pantryItems,
-    refetch,
     removeItem,
     navigateTo: stableNavigateTo,
   });
@@ -267,9 +272,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
     // Default temperature-based tabs
     const defaultTabs: FilterTabConfig<LocationFilter>[] = [
       { id: 'all', label: 'All' },
-      { id: 'fridge', label: 'Fridge', icon: '🧊' },
-      { id: 'freezer', label: 'Freezer', icon: '❄️' },
-      { id: 'pantry', label: 'Pantry', icon: '🗄️' },
+      { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
+      { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
+      { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
     ];
 
     // Add custom storage locations as tabs
@@ -295,22 +300,13 @@ const PantryMainScreen: React.FC = React.memo(() => {
     setAddSheetVisible(true);
   }, []);
 
-  // Track screen view (deferred — telemetry not needed during initial render)
-  useEffect(() => {
-    if (!isInteractive) return;
-    Telemetry.trackScreen('PantryMain', {
-      home_id: selectedHomeId,
-      pantry_id: pantry?.id,
-      item_count: locationFilteredItems.length,
-      has_pantries: pantries.length > 0,
-    });
-  }, [
-    isInteractive,
-    selectedHomeId,
-    pantry?.id,
-    locationFilteredItems.length,
-    pantries.length,
-  ]);
+  // Track screen view once on mount (deferred — telemetry not needed during initial render)
+  useScreenTelemetry('PantryMain', () => ({
+    home_id: selectedHomeId,
+    pantry_id: pantry?.id,
+    item_count: locationFilteredItems.length,
+    has_pantries: pantries.length > 0,
+  }), isInteractive);
 
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
@@ -343,6 +339,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
   );
 
   const handleAvatarPress = useCallback(
+    () => navigate('Profile'),
+    [navigate],
+  );
+
+  const handleNotificationPress = useCallback(
     () => navigate('Notifications'),
     [navigate],
   );
@@ -350,6 +351,15 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const handleHomePress = useCallback(
     () => navigate('HomeManagement', { homeId: selectedHomeId }),
     [navigate, selectedHomeId],
+  );
+
+  const handleAnalyticsPress = useCallback(
+    () => {
+      if (pantry?.id) {
+        navigate('PantryAnalytics', { pantryId: pantry.id });
+      }
+    },
+    [navigate, pantry?.id],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -367,9 +377,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
 
-  // Get user display name and avatar
+  // Get user display name and avatar from auth store (populated at login)
   const userName =
-    profile?.displayName || profile?.firstName || profile?.lastName || 'there';
+    authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
   const householdName = currentHome?.name || 'Your Home';
 
   return (
@@ -378,8 +388,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
         ref={pantryContentRef}
         userName={userName}
         householdName={householdName}
-        avatarUrl={profile?.avatar}
+        avatarUrl={authUser?.profilePicture}
         notificationCount={unreadCount}
+        stats={stats}
         items={locationFilteredItems}
         locationFilter={locationFilter}
         onLocationFilterChange={handleLocationFilterChange}
@@ -398,8 +409,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
         onAvatarPress={handleAvatarPress}
+        onNotificationPress={handleNotificationPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
+        onAnalyticsPress={handleAnalyticsPress}
+        onLowStockPress={addLowStockToShoppingList}
+        lowStockLoading={lowStockLoading}
         totalCount={totalCount}
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}
@@ -415,7 +430,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
-      {consumeModal.visible && (
+      {!!consumeModal.visible && (
         <ConsumePantryItemModal
           visible={consumeModal.visible}
           pantryItem={consumeModal.item}
@@ -423,7 +438,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
           onConfirm={handleConfirmConsume}
         />
       )}
-      {wasteModal.visible && (
+      {!!wasteModal.visible && (
         <RecordWastePantryItemModal
           visible={wasteModal.visible}
           pantryItem={wasteModal.item}
@@ -431,7 +446,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
           onConfirm={handleConfirmWaste}
         />
       )}
-      {restockModal.visible && (
+      {!!restockModal.visible && (
         <RestockPantryItemModal
           visible={restockModal.visible}
           pantryItem={restockModal.item}
@@ -441,7 +456,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       )}
 
       {/* Add to Pantry Sheet */}
-      {addSheetVisible && (
+      {!!addSheetVisible && (
         <AddToPantrySheet
           visible={addSheetVisible}
           pantryId={pantry?.id}
@@ -451,7 +466,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       )}
 
       {/* Add Storage Location Sheet */}
-      {addLocationSheetVisible && (
+      {!!addLocationSheetVisible && (
         <AddStorageLocationSheet
           visible={addLocationSheetVisible}
           onClose={() => setAddLocationSheetVisible(false)}
@@ -461,15 +476,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
       )}
 
       {/* Home switch hint overlay */}
-      {homeSwitchHint.isVisible && (
+      {!!homeSwitchHint.isVisible && (
         <FeatureHintOverlay
           config={{
             title: 'Tap to manage homes',
             subtitle:
               'Click the home icon to switch between homes or manage home settings',
             icon: {
-              name: 'home-switch-outline',
-              library: 'MaterialDesignIcons',
+              name: 'swap-horizontal-outline',
               size: 40,
             },
             onDismiss: homeSwitchHint.actions.dismiss,
@@ -478,7 +492,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       )}
     </View>
   );
-});
+};
 
 // PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
 export const PantryMain: React.FC = () => (

@@ -21,8 +21,8 @@ interface ItemSuggestionsListProps {
   onSelectSuggestion: (item: ItemSuggestion) => void;
   /** Whether quick add is disabled (e.g., during mutation) */
   quickAddDisabled?: boolean;
-  /** Icon to show in suggestion placeholder (default: 'inventory-2') */
-  placeholderIcon?: 'inventory-2' | 'shopping-cart';
+  /** Icon to show in suggestion placeholder (default: 'cube-outline') */
+  placeholderIcon?: 'cube-outline' | 'cart-outline';
   /** Whether to show brand names (default: true) */
   showBrands?: boolean;
 }
@@ -34,7 +34,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
   onAddManually,
   onSelectSuggestion,
   quickAddDisabled = false,
-  placeholderIcon = 'inventory-2',
+  placeholderIcon = 'cube-outline',
   showBrands = true,
 }) => {
   const { theme } = useUnistyles();
@@ -52,7 +52,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
         name="add-circle-outline"
         size={20}
         color={theme.colors.primary}
-        library="MaterialIcons"
       />
       <Text style={styles.addManuallyText}>
         {hasResults
@@ -79,7 +78,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
                 name={placeholderIcon}
                 size={20}
                 color={theme.colors.primary}
-                library="MaterialIcons"
               />
             </View>
           )}
@@ -88,7 +86,7 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
           <Text style={styles.suggestionName} numberOfLines={1}>
             {item.name}
           </Text>
-          {showBrands && item.brands && item.brands.length > 0 && (
+          {!!showBrands && !!item.brands && item.brands.length > 0 && (
             <Text style={styles.suggestionBrands} numberOfLines={1}>
               {item.brands[0].name}
             </Text>
@@ -107,7 +105,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
             name="add"
             size={20}
             color={theme.colors.primary}
-            library="MaterialIcons"
           />
         </Pressable>
       </View>
@@ -187,7 +184,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   quickAddButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   addManuallyOption: {
     flexDirection: 'row',
@@ -201,6 +198,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

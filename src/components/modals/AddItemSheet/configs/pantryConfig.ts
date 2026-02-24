@@ -12,7 +12,7 @@ import type { AddItemSheetConfig } from '../types';
 export const pantrySheetConfig: AddItemSheetConfig = {
   title: 'Add to Pantry',
   testIDPrefix: 'add-pantry-item',
-  placeholderIcon: 'inventory-2',
+  placeholderIcon: 'cube-outline',
   searchPlaceholder: 'Search or scan item...',
   suggestionGroups: [
     {

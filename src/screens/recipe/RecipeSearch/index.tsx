@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, FlatList, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ListTemplate } from '#components/templates/ListTemplate';
@@ -15,10 +16,7 @@ import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CachedImage } from '#components/atoms/CachedImage';
 
-const INGREDIENT_ITEM_HEIGHT = 56;
-
-const IngredientItem = React.memo(
-  ({
+const IngredientItem = ({
     name,
     selected,
     onToggle,
@@ -43,8 +41,7 @@ const IngredientItem = React.memo(
         <Text style={styles.ingredientText}>{name}</Text>
       </Pressable>
     );
-  },
-);
+  };
 IngredientItem.displayName = 'IngredientItem';
 
 const RecipeSearchContent: React.FC<{
@@ -79,7 +76,7 @@ export const RecipeSearch: React.FC = () => {
   useScreenTransition('RecipeSearch');
   const { theme } = useUnistyles();
   const {
-    navigate,
+    goBack,
     searchQuery,
     setSearchQuery,
     loading,
@@ -183,7 +180,7 @@ export const RecipeSearch: React.FC = () => {
       >
         <Header
           title="Search Recipes"
-          onBack={() => navigate('RecipeMain')}
+          onBack={goBack}
         />
         <View style={{ paddingHorizontal: theme.spacing.md }}>
           <SearchBar
@@ -224,20 +221,12 @@ export const RecipeSearch: React.FC = () => {
           </Pressable>
         }
       >
-        <FlatList
+        <FlashList
           data={pantryItems}
           keyExtractor={ingredientKeyExtractor}
           renderItem={renderIngredientItem}
-          getItemLayout={(_data, index) => ({
-            length: INGREDIENT_ITEM_HEIGHT,
-            offset: INGREDIENT_ITEM_HEIGHT * index,
-            index,
-          })}
           style={styles.ingredientList}
           contentContainerStyle={styles.ingredientListContent}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews
           ListEmptyComponent={<Text style={styles.emptyText}>No pantry items available</Text>}
         />
       </BottomSheetAction>
@@ -425,19 +414,19 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
   },
   headerSearchButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   headerSearchButtonText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   filterSection: {
     marginBottom: theme.spacing.xl,
   },
   filterSectionTitle: {
     fontSize: theme.fonts.size.lg,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -465,7 +454,7 @@ const styles = StyleSheet.create(theme => ({
   },
   filterChipText: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   filterChipTextActive: {
@@ -509,15 +498,15 @@ const styles = StyleSheet.create(theme => ({
   clearButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   applyButton: {},
   applyButtonText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

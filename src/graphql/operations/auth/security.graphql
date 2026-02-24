@@ -2,99 +2,34 @@
 # SUBSCRIPTIONS
 # ============================================
 
-subscription LoginAttempts($userId: ID!) {
-  loginAttempts(userId: $userId) {
-    id
+subscription LoginActivityChanges($userId: ID!) {
+  loginActivityChanged(userId: $userId) {
+    activityType
+    loginHistory {
+      id
+      userId
+      success
+      method
+      provider
+      isRisky
+      failureReason
+      loggedInAt
+    }
+    suspiciousActivity {
+      suspiciousActivity
+      failedFromSameIP {
+        ipAddress
+        count
+      }
+      riskyLogins {
+        id
+        userId
+        success
+        isRisky
+        loggedInAt
+      }
+    }
+    timestamp
     userId
-    success
-    method
-    provider
-    isVpn
-    isTor
-    isProxy
-    userAgent
-    browserName
-    browserVersion
-    osName
-    osVersion
-    deviceType
-    isMobileApp
-    riskScore
-    isRisky
-    riskFactors
-    failureReason
-    failureDetails
-    isNewLocation
-    isNewDevice
-    isNewBrowser
-    loggedInAt
-    user {
-      id
-      email
-    }
-  }
-}
-
-subscription SuspiciousActivity($userId: ID!) {
-  suspiciousActivity(userId: $userId) {
-    rapidAttempts {
-      hour
-      count
-    }
-    riskyLogins {
-      id
-      riskScore
-      riskFactors
-      loggedInAt
-    }
-    newLocationLogins {
-      id
-      loggedInAt
-    }
-    newDeviceLogins {
-      id
-      deviceType
-      browserName
-      osName
-      loggedInAt
-    }
-    suspiciousActivity
-    unusualTimeLogins {
-      id
-      loggedInAt
-      timezoneDiff
-    }
-  }
-}
-
-subscription FailedLoginAttempts($userId: ID!) {
-  failedLoginAttempts(userId: $userId) {
-    id
-    userId
-    method
-    userAgent
-    failureReason
-    failureDetails
-    loggedInAt
-  }
-}
-
-subscription RiskyLoginAlerts($userId: ID!) {
-  riskyLoginAlerts(userId: $userId) {
-    id
-    userId
-    riskScore
-    riskFactors
-    isVpn
-    isTor
-    isProxy
-    requiresMfa
-    mfaCompleted
-    loggedInAt
-    flaggedBy {
-      id
-      email
-    }
-    flaggedReason
   }
 }

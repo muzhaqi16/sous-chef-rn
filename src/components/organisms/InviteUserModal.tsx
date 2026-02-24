@@ -218,7 +218,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                   </View>
                   <Text style={styles.roleOptionLabel}>{role.label}</Text>
                   <Text style={styles.roleDescription}>{role.description}</Text>
-                  {role.warning && selectedRole === role.value && (
+                  {!!role.warning && selectedRole === role.value && (
                     <Text
                       style={[
                         styles.warningText,
@@ -292,14 +292,14 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.lg + 2,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
     color: theme.colors.textPrimary,
   },
   label: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -358,7 +358,7 @@ const styles = StyleSheet.create(theme => ({
   },
   roleOptionLabel: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create(theme => ({
   warningText: {
     fontSize: theme.typography.fontSize.xs,
     marginTop: theme.spacing.xs + 2,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   errorText: {
     fontSize: theme.typography.fontSize.xs,
@@ -398,19 +398,19 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.sm,
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   cancelButtonText: {
     color: theme.colors.textPrimary,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   submitButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

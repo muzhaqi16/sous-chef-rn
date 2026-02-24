@@ -10,7 +10,8 @@
 import { Alert } from 'react-native';
 import { useUpdateShoppingListItemMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
+import { buildOptimisticMutationResponse } from '#/apollo/utils/optimisticTypes';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -33,7 +34,7 @@ interface UseUpdateShoppingItemOptions {
  * ```
  */
 export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShoppingItemOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   // Apollo auto-normalizes the server response by __typename + id
   // No onCompleted cleanup needed - cache persistence handles this automatically
@@ -68,10 +69,12 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
         },
         // Simple optimistic response - Apollo merges by __typename + id
         // Only include fields from ShoppingListItemDisplayFragment
-        optimisticResponse: {
-          __typename: 'Mutation',
-          updateShoppingListItem: {
-            __typename: 'ShoppingListItem',
+        optimisticResponse: buildOptimisticMutationResponse(
+          'updateShoppingListItem',
+          'ShoppingListItemPayload',
+          'shoppingListItem',
+          {
+            __typename: 'ShoppingListItem' as const,
             id: item.id,
             itemName: updates.itemName ?? item.itemName,
             quantity: updates.quantity ?? item.quantity,
@@ -84,11 +87,11 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
             unit: item.unit,
             sortOrder: item.sortOrder,
             item: item.item,
-          } as any,
-        },
+          },
+        ),
       });
 
-      return result.data?.updateShoppingListItem ?? false;
+      return result.data?.updateShoppingListItem?.success ?? false;
     } catch (error: any) {
       if (handleVersionConflict(error)) {
         Alert.alert('Item Updated', getVersionConflictMessage(error), [

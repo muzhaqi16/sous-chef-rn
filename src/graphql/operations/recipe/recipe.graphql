@@ -2,8 +2,8 @@
 # QUERIES
 # ============================================
 
-query SearchRecipes($query: String!) {
-  searchRecipes(query: $query) {
+query SearchRecipes($query: String!, $first: Int, $after: String) {
+  searchRecipes(query: $query, first: $first, after: $after) {
     edges {
       node {
         ...BasicRecipeFragment
@@ -18,8 +18,8 @@ query SearchRecipes($query: String!) {
   }
 }
 
-query SuggestedRecipes {
-  recipeSuggestions {
+query SuggestedRecipes($first: Int, $after: String) {
+  recipeSuggestions(first: $first, after: $after) {
     edges {
       node {
         ...BasicRecipeFragment
@@ -49,7 +49,6 @@ query MyRecipes(
     edges {
       node {
         ...BasicRecipeFragment
-        cuisine
       }
       cursor
     }
@@ -69,30 +68,33 @@ query GetRecipe($id: ID!) {
   }
 }
 
-query MySavedRecipes($folder: String) {
-  mySavedRecipes(folder: $folder) {
-    edges {
-      node {
-        id
-        folder
-        tags
-        notes
-        personalRating
-        cookedCount
-        lastCookedAt
-        createdAt
-        updatedAt
-        recipe {
-          ...BasicRecipeFragment
+query MySavedRecipes($folder: String, $first: Int, $after: String) {
+  me {
+    id
+    savedRecipesConnection(folder: $folder, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          folder
+          tags
+          notes
+          personalRating
+          cookedCount
+          lastCookedAt
+          createdAt
+          updatedAt
+          recipe {
+            ...BasicRecipeFragment
+          }
         }
+        cursor
       }
-      cursor
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
   }
 }
 
@@ -110,7 +112,7 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
     message
     code
     recipe {
-      ...RecipeFragment
+      ...BasicRecipeFragment
     }
   }
 }
@@ -138,7 +140,7 @@ mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
     message
     code
     recipe {
-      ...RecipeFragment
+      ...BasicRecipeFragment
     }
   }
 }
@@ -148,6 +150,9 @@ mutation DeleteRecipe($id: ID!) {
     success
     message
     code
+    recipe {
+      id
+    }
   }
 }
 
@@ -180,11 +185,18 @@ mutation UnfavoriteRecipe($recipeId: ID!) {
     success
     message
     code
+    savedRecipe {
+      id
+    }
   }
 }
 
-mutation DeleteRecipeFolder($folder: String!, $moveTo: String) {
-  deleteRecipeFolder(folder: $folder, moveTo: $moveTo)
+mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
+  deleteRecipeFolder(input: $input) {
+    success
+    message
+    code
+  }
 }
 
 mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!) {
@@ -208,15 +220,9 @@ mutation UpdateFavoriteRecipe($recipeId: ID!, $input: UpdateFavoriteRecipeInput!
 }
 
 mutation CreateShoppingListItemsFromRecipe(
-  $recipeId: ID!
-  $shoppingListId: ID!
-  $servings: Int
+  $input: CreateShoppingListItemsFromRecipeInput!
 ) {
-  createShoppingListItemsFromRecipe(
-    recipeId: $recipeId
-    shoppingListId: $shoppingListId
-    servings: $servings
-  ) {
+  createShoppingListItemsFromRecipe(input: $input) {
     addedItems {
       id
       itemName
@@ -285,47 +291,116 @@ mutation CreateShoppingListItemFromRecipeIngredient(
 }
 
 mutation AddRecipeToShoppingList(
-  $recipeId: ID!
-  $shoppingListId: ID!
-  $servings: Float
-  $checkPantry: Boolean
+  $input: AddRecipeToShoppingListInput!
 ) {
-  addRecipeToShoppingList(
-    recipeId: $recipeId
-    shoppingListId: $shoppingListId
-    servings: $servings
-    checkPantry: $checkPantry
-  ) {
+  addRecipeToShoppingList(input: $input) {
     success
     message
     code
     shoppingList {
       id
-      itemsConnection(first: 100) {
-        edges {
-          node {
-            ...ShoppingListItemDisplayFragment
-          }
-        }
+      totalItems
+      completedItems
+    }
+  }
+}
+
+query MatchRecipeIngredientsToPantry(
+  $pantryId: ID!
+  $recipeId: ID!
+  $servings: Int
+) {
+  matchRecipeIngredientsToPantry(
+    pantryId: $pantryId
+    recipeId: $recipeId
+    servings: $servings
+  ) {
+    ingredient {
+      ...RecipeIngredientFragment
+    }
+    isAvailable
+    matchConfidence
+    availableQuantity
+    suggestedQuantity
+    shortfall
+    suggestedUnit {
+      id
+      name
+      symbol
+    }
+    matchedPantryItem {
+      id
+      itemName
+      quantity
+      unit {
+        id
+        name
+        symbol
       }
     }
   }
 }
 
-mutation MarkRecipeAsCooked(
-  $recipeId: ID!
-  $servings: Float
-  $deductFromPantry: Boolean!
-  $ingredientsUsed: [IngredientUsageInput!]
-  $notes: String
+query CompatibleUnitsForItem($itemId: ID!, $currentUnitId: ID) {
+  compatibleUnitsForItem(itemId: $itemId, currentUnitId: $currentUnitId) {
+    unit {
+      id
+      name
+      symbol
+      type
+    }
+    isDefault
+    isConfigured
+    conversionRatio
+    conversionConfidence
+    source
+    usageContexts
+  }
+}
+
+query GetRecipeCookingLogs($recipeId: ID!, $first: Int, $after: String) {
+  recipeCookingLogs(recipeId: $recipeId, first: $first, after: $after) {
+    edges {
+      node {
+        id
+        servingsMade
+        notes
+        cookedAt
+        recipe {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+mutation ConfirmRecipeConsumption(
+  $input: ConfirmRecipeConsumptionInput!
 ) {
-  markRecipeAsCooked(
-    recipeId: $recipeId
-    servings: $servings
-    deductFromPantry: $deductFromPantry
-    ingredientsUsed: $ingredientsUsed
-    notes: $notes
-  ) {
+  confirmRecipeConsumption(input: $input) {
+    success
+    totalConsumed
+    totalFailed
+    cookingLog {
+      id
+      servingsMade
+      notes
+      cookedAt
+    }
+  }
+}
+
+mutation MarkRecipeAsCooked(
+  $input: MarkRecipeAsCookedInput!
+) {
+  markRecipeAsCooked(input: $input) {
     success
     message
     code
@@ -342,34 +417,3 @@ mutation MarkRecipeAsCooked(
   }
 }
 
-mutation RecordPantryUsage(
-  $pantryItemId: ID!
-  $quantity: Float!
-  $unitId: ID!
-  $purpose: String
-  $notes: String
-) {
-  recordPantryUsage(
-    pantryItemId: $pantryItemId
-    quantity: $quantity
-    unitId: $unitId
-    purpose: $purpose
-    notes: $notes
-  ) {
-    success
-    message
-    code
-    pantryItemUsage {
-      id
-      quantityUsed
-      usedAt
-      purpose
-      notes
-      pantryItem {
-        id
-        itemName
-        quantity
-      }
-    }
-  }
-}

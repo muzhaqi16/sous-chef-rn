@@ -23,6 +23,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
+  const [inputKey, setInputKey] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,6 +57,7 @@ export const TagInput: React.FC<TagInputProps> = ({
     ) {
       onTagsChange([...tags, trimmedTag]);
       setInputValue('');
+      setInputKey(k => k + 1);
     }
   };
 
@@ -83,14 +85,13 @@ export const TagInput: React.FC<TagInputProps> = ({
         {tags.map((tag, index) => (
           <View key={`${tag}-${index}`} style={styles.tagChip}>
             <Text style={styles.tagText}>{tag}</Text>
-            {editable && (
+            {!!editable && (
               <Pressable
                 onPress={() => handleRemoveTag(tag)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={({pressed}) => pressed && styles.pressed}>
                 <Icon
-                  library="Feather"
-                  name="x"
+                  name="close"
                   size={14}
                   color={theme.colors.primary}
                 />
@@ -100,10 +101,11 @@ export const TagInput: React.FC<TagInputProps> = ({
         ))}
 
         {/* Input field */}
-        {editable && tags.length < maxTags && (
+        {!!editable && tags.length < maxTags && (
           <BottomSheetTextInput
+            key={inputKey}
             style={styles.input}
-            value={inputValue}
+            defaultValue={inputValue}
             onChangeText={setInputValue}
             placeholder={tags.length === 0 ? placeholder : ''}
             placeholderTextColor={theme.colors.textSecondary}
@@ -131,14 +133,14 @@ export const TagInput: React.FC<TagInputProps> = ({
       </View>
 
       {/* Tag limit indicator */}
-      {editable && tags.length >= maxTags && (
+      {!!editable && tags.length >= maxTags && (
         <Text style={styles.limitText}>
           Maximum {maxTags} tags reached
         </Text>
       )}
 
       {/* Suggestions dropdown */}
-      {isFocused && filteredSuggestions.length > 0 && (
+      {!!isFocused && filteredSuggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           <ScrollView
             horizontal
@@ -191,7 +193,7 @@ const styles = StyleSheet.create(theme => ({
   tagText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   input: {
     flex: 1,
@@ -223,6 +225,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

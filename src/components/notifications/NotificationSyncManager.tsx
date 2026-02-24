@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useGetMyNotificationsQuery } from '#generated';
 import {
   NotificationCategory,
@@ -11,15 +11,15 @@ interface UseNotificationSyncProps {
 }
 
 export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
-  const syncNotificationsFromServer = useStore(
+  const syncNotificationsFromServer = useAppStore(
     state => state.syncNotificationsFromServer,
   );
-  const cleanupOrphanedSubscriptions = useStore(
+  const cleanupOrphanedSubscriptions = useAppStore(
     state => state.cleanupOrphanedSubscriptions,
   );
-  const selectedHomeId = useStore(state => state.selectedHomeId);
-  const selectedPantryId = useStore(state => state.selectedPantryId);
-  const selectedShoppingListId = useStore(
+  const selectedHomeId = useAppStore(state => state.selectedHomeId);
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const selectedShoppingListId = useAppStore(
     state => state.selectedShoppingListId,
   );
 
@@ -30,9 +30,9 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
 
   // Sync server notifications to local store using server-first approach
   useEffect(() => {
-    if (serverNotifications?.myNotifications?.edges) {
-      const serverNotifs = serverNotifications.myNotifications.edges.map(
-        edge => {
+    if (serverNotifications?.me?.notificationsConnection?.edges) {
+      const serverNotifs = serverNotifications.me.notificationsConnection.edges.map(
+        (edge: any) => {
           const node = edge.node;
           return {
             id: node.id,

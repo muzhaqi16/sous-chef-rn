@@ -69,7 +69,7 @@ function FilterTabsComponent<T extends string = string>({
             testID={`${testIDPrefix}-${tab.id}`}
           />
         ))}
-        {actionButton && (
+        {!!actionButton && (
           <Pressable
             onPress={actionButton.disabled ? undefined : actionButton.onPress}
             testID={actionButton.testID || `${testIDPrefix}-action`}
@@ -81,15 +81,15 @@ function FilterTabsComponent<T extends string = string>({
             ]}
             disabled={actionButton.disabled}
           >
-            {actionButton.icon && (
+            {!!actionButton.icon && (
               <Icon
                 name={actionButton.icon}
                 size={isCompact ? 14 : 16}
                 color={theme.colors.primary}
-                library={actionButton.iconLibrary || 'MaterialIcons'}
+                library={actionButton.iconLibrary}
               />
             )}
-            {actionButton.label && (
+            {!!actionButton.label && (
               <Text
                 style={[
                   styles.tabLabel,
@@ -107,9 +107,7 @@ function FilterTabsComponent<T extends string = string>({
   );
 }
 
-export const FilterTabs = React.memo(
-  FilterTabsComponent,
-) as typeof FilterTabsComponent;
+export const FilterTabs = FilterTabsComponent as typeof FilterTabsComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

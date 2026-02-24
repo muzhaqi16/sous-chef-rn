@@ -17,6 +17,8 @@ interface PantryHeaderProps {
   onAvatarPress?: () => void;
   /** Callback when household badge is pressed */
   onHomePress?: () => void;
+  /** Callback when notification bell is pressed */
+  onNotificationPress?: () => void;
 }
 
 /**
@@ -27,14 +29,14 @@ interface PantryHeaderProps {
  * - Household badge with name and navigation
  * - Avatar with optional notification badge
  */
-export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
-  ({
+export const PantryHeader: React.FC<PantryHeaderProps> = ({
     userName,
     householdName,
     avatarUrl,
     notificationCount = 0,
     onAvatarPress,
     onHomePress,
+    onNotificationPress,
   }) => {
     const { theme } = useUnistyles();
 
@@ -47,18 +49,37 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
           <Pressable onPress={onHomePress} style={styles.householdBadge}>
             <Icon
               size={theme.typography.fontSize.lg}
-              name="home-switch-outline"
-              library="MaterialDesignIcons"
+              name="swap-horizontal-outline"
               color={theme.colors.primary}
             />
             <Text style={styles.householdName}>{householdName}</Text>
             <Icon
-              name="chevron-right"
+              name="chevron-forward"
               size={theme.typography.fontSize.lg}
               color={theme.colors.textTertiary}
             />
           </Pressable>
         </View>
+
+        {/* Notification bell */}
+        {!!onNotificationPress && (
+          <Pressable
+            onPress={onNotificationPress}
+            style={styles.notificationButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.textSecondary}
+            />
+            {notificationCount > 0 && (
+              <View style={styles.notificationDot} />
+            )}
+          </Pressable>
+        )}
 
         {/* Avatar */}
         <Pressable onPress={onAvatarPress} style={styles.avatarContainer}>
@@ -67,25 +88,16 @@ export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Icon
-                library="Ionicons"
                 name="person"
                 size={24}
                 color={theme.colors.textSecondary}
               />
             </View>
           )}
-          {notificationCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationCount}>
-                {notificationCount > 9 ? '9+' : notificationCount}
-              </Text>
-            </View>
-          )}
         </Pressable>
       </View>
     );
-  },
-);
+  };
 
 PantryHeader.displayName = 'PantryHeader';
 
@@ -119,6 +131,22 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
   },
+  notificationButton: {
+    position: 'relative',
+    padding: theme.spacing.xs,
+    marginRight: theme.spacing.sm,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: theme.spacing.xs,
+    right: theme.spacing.xs,
+    width: 10,
+    height: 10,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.error,
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
   avatarContainer: {
     position: 'relative',
   },
@@ -138,24 +166,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl - 2,
     borderWidth: 2,
     borderColor: theme.colors.primary,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -theme.spacing.xs,
-    right: -theme.spacing.xs,
-    minWidth: theme.spacing['5'],
-    height: theme.spacing['5'],
-    paddingHorizontal: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-  },
-  notificationCount: {
-    fontSize: theme.typography.fontSize.xs - 1,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.white,
   },
 }));

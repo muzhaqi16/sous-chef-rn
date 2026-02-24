@@ -218,17 +218,17 @@ export function AddItemSheet({
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
               initialValue={initialSearchQuery}
-              isLoading={autocomplete.isLoading && hasSearchQuery}
+              isLoading={!!autocomplete.isLoading && hasSearchQuery}
               rightActions={[
                 {
-                  icon: 'qr-code-scanner',
+                  icon: 'barcode-outline',
                   onPress: onScanPress,
                 },
               ]}
             />
 
             {/* Search Results */}
-            {showSearchResults && (
+            {!!showSearchResults && (
               <ItemSuggestionsList
                 searchQuery={state.searchQuery}
                 suggestions={autocomplete.displayItems}
@@ -246,7 +246,7 @@ export function AddItemSheet({
             {!showSearchResults && (
               <View style={styles.actionButtons}>
                 <ActionCard
-                  icon="qr-code-scanner"
+                  icon="barcode-outline"
                   label="Scan Barcode"
                   onPress={onScanPress}
                 />
@@ -260,8 +260,7 @@ export function AddItemSheet({
             )}
 
             {/* Suggestions Sections - shown when search is empty */}
-            {showSuggestions && (
-              <>
+            {!!showSuggestions && <>
                 {suggestions.loading && !suggestions.hasSuggestions ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator
@@ -286,8 +285,7 @@ export function AddItemSheet({
                       .map(renderSuggestionSection)}
                   </>
                 )}
-              </>
-            )}
+              </>}
           </BottomSheetScrollView>
         </View>
       </BottomSheetModal>

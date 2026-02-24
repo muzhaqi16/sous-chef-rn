@@ -8,6 +8,7 @@ import Animated, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
+import { SPRING } from '#/constants/animations';
 import type { AddButtonProps } from './types';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -15,7 +16,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
   icon = 'add',
-  iconLibrary = 'MaterialIcons',
+  iconLibrary,
   disabled = false,
 }) => {
   const { theme } = useUnistyles();
@@ -26,11 +27,11 @@ export const AddButton: React.FC<AddButtonProps> = ({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(0.9, SPRING.PRESS));
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.set(withSpring(1, SPRING.PRESS));
   }, [scale]);
 
   const handlePress = useCallback(() => {

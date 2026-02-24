@@ -49,7 +49,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   if (chartData.length === 0) {
     return (
       <View style={[styles.container, { minHeight: height }]}>
-        {title && (
+        {!!title && (
           <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
             {title}
           </Text>
@@ -65,7 +65,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
 
   return (
     <View style={styles.container}>
-      {title && (
+      {!!title && (
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
           {title}
         </Text>
@@ -81,7 +81,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
             <Pie.Chart innerRadius="50%" />
           </PolarChart>
         </View>
-        {showLegend && (
+        {!!showLegend && (
           <View style={styles.legend}>
             {data.map((item, index) => (
               <View key={item.label} style={styles.legendItem}>

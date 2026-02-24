@@ -10,7 +10,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useConvertExpiredToWasteMutation } from '#generated';
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
@@ -19,7 +19,7 @@ interface UseConvertExpiredToWasteOptions {
 export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
 
   const [convertMutation, { loading }] = useConvertExpiredToWasteMutation({
     errorPolicy: 'all',

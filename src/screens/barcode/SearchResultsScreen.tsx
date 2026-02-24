@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 import { LoadingState } from '#components/barcode/LoadingState';
 import { ErrorState } from '#components/barcode/ErrorState';
@@ -28,16 +28,19 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
 
   const { goBack, navigation } = useAppNavigation();
 
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-
   // PERFORMANCE: Group bottom sheet state with useShallow (Zustand v5 API)
   const {
-    bottomSheetVisible,
+    scannerSheetVisible,
     searchError,
     isSearching,
     hideBottomSheet,
     showBottomSheet,
   } = useAppStore(useShallow(selectBottomSheetState));
+
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    onDismiss: hideBottomSheet,
+    snapPoints: ['50%', '65%', '85%'],
+  });
 
   const {
     searchResults,
@@ -51,19 +54,19 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
   // Hide bottom sheet when search results are found or barcode changes
   // This prevents the AddItemForm from showing when there's already a match
   useEffect(() => {
-    if (searchResults.length > 0 && bottomSheetVisible) {
+    if (searchResults.length > 0 && scannerSheetVisible) {
       hideBottomSheet();
     }
-  }, [searchResults.length, bottomSheetVisible, hideBottomSheet]);
+  }, [searchResults.length, scannerSheetVisible, hideBottomSheet]);
 
   // Handle bottom sheet changes
   useEffect(() => {
-    if (bottomSheetVisible) {
+    if (scannerSheetVisible) {
       bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [bottomSheetVisible]);
+  }, [scannerSheetVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScanAnother = () => {
     clearSearch();
@@ -84,17 +87,6 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
   const handleShowAddItemForm = () => {
     showBottomSheet(1);
   };
-
-  const renderBackdrop = (props: any) => (
-    <GlobalBottomSheetBackdrop
-      {...props}
-      appearsOnIndex={0}
-      disappearsOnIndex={-1}
-      opacity={0.5}
-      pressBehavior="close"
-      onClose={() => bottomSheetRef.current?.dismiss()}
-    />
-  );
 
   const renderContent = () => {
     if (isSearching || loading) {
@@ -134,7 +126,7 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
         onBack={handleBackPress}
         rightActions={[
           {
-            icon: 'qr-code-scanner',
+            icon: 'qr-code-outline',
             onPress: handleScanAnother,
           },
         ]}
@@ -143,16 +135,9 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
 
       <BottomSheetModal
         ref={bottomSheetRef}
-        snapPoints={['50%', '65%', '85%']}
-        enablePanDownToClose
-        enableDynamicSizing={false}
-        onDismiss={hideBottomSheet}
+        {...modalProps}
         backgroundStyle={styles.bottomSheetBackground}
         handleIndicatorStyle={styles.bottomSheetHandle}
-        backdropComponent={renderBackdrop}
-        keyboardBehavior="extend"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
       >
         <BottomSheetKeyboardAwareScrollView
           style={styles.bottomSheetContent}

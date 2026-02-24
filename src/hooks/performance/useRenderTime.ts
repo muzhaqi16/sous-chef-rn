@@ -8,6 +8,7 @@ import { usePerformanceStore } from '#/store/performanceStore';
  *
  * Measures render duration and reports metrics to telemetry system.
  * Uses sampling to minimize performance overhead.
+ * Gated behind __DEV__ so it's completely inert in production builds.
  *
  * @param componentName - Name of the component being tracked
  * @param options - Configuration options
@@ -28,22 +29,35 @@ export function useRenderTime(
     slowThreshold?: number;
   },
 ) {
+  // In production, this hook is a no-op — all refs and effects are skipped.
+  // The __DEV__ guard is a compile-time constant so the branch is dead-code-eliminated.
   const renderStartTime = useRef<number>(0);
-  renderStartTime.current = performance.now();
   const renderCount = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
+
+  if (__DEV__) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- __DEV__ is a compile-time constant
+    renderStartTime.current = performance.now();
+  }
+
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
   const sampleRate = options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
   const slowThreshold = options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
-  // Increment render count
-  renderCount.current += 1;
+  if (__DEV__) {
+    // Increment render count
+    renderCount.current += 1;
+  }
 
   // Apply sampling - only track a percentage of renders
-  const shouldTrack = Math.random() < sampleRate;
+  const shouldTrack = __DEV__ ? Math.random() < sampleRate : false;
 
   // Measure render time after paint
+  // Intentionally omitting deps — this effect must run after every render to capture timing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (!__DEV__) return;
+
     // Skip if disabled
     if (!enabled) {
       return;
@@ -79,27 +93,22 @@ export function useRenderTime(
         duration: renderDuration.toFixed(2),
       });
 
-      if (__DEV__) {
-        console.warn(
-          `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(2)}ms`,
-        );
-      }
+      console.warn(
+        `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(2)}ms`,
+      );
     }
 
     // Log render metrics in dev
-    if (__DEV__) {
-      if (renderCount.current === 1) {
-        console.log(
-          `[Performance] ${componentName} first render: ${renderDuration.toFixed(2)}ms`,
-        );
-      } else if (renderCount.current <= 10) {
-        // Log first 10 renders to track unnecessary re-renders
-        console.log(
-          `[Performance] ${componentName} render #${renderCount.current}: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
-        );
-      }
+    if (renderCount.current === 1) {
+      console.log(
+        `[Performance] ${componentName} first render: ${renderDuration.toFixed(2)}ms`,
+      );
+    } else if (renderCount.current <= 10) {
+      // Log first 10 renders to track unnecessary re-renders
+      console.log(
+        `[Performance] ${componentName} render #${renderCount.current}: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
+      );
     }
-
   });
 }
 

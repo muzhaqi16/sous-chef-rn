@@ -91,7 +91,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
             name="image-outline"
             size={48}
             color={theme.colors.textTertiary}
-            library="Ionicons"
+
           />
         </View>
       </View>
@@ -105,7 +105,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
     <View style={[styles.container, style]}>
       {/* Image display */}
       <View style={[styles.imageContainer, { height: imageHeight }]}>
-        {imageLoading && (
+        {!!imageLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
@@ -114,10 +114,9 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
         {imageError || !currentImageUrl ? (
           <View style={styles.errorContainer}>
             <Icon
-              name="image-not-supported"
+              name="image-outline"
               size={48}
               color={theme.colors.textTertiary}
-              library="MaterialIcons"
             />
           </View>
         ) : (
@@ -140,7 +139,7 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
       </View>
 
       {/* Dot indicators at bottom */}
-      {showTabs && (
+      {!!showTabs && (
         <View style={styles.dotsContainer}>
           {tabOptions.map(key => (
             <Pressable
@@ -226,6 +225,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: 5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

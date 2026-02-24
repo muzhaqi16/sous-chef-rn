@@ -6,60 +6,28 @@ mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $it
 }
 
 mutation ConfirmProfileImageUpload($key: String!) {
-  confirmProfileImageUpload(key: $key)
+  confirmProfileImageUpload(key: $key) {
+    success
+    message
+    code
+    url
+  }
 }
 
 mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
-  confirmItemImageUpload(itemId: $itemId, key: $key)
-}
-
-mutation UpdateProfileAvatar($avatarUrl: String!) {
-  updateProfileAvatar(avatarUrl: $avatarUrl) {
+  confirmItemImageUpload(itemId: $itemId, key: $key) {
     success
     message
     code
-    userProfile {
-      id
-      avatar
-    }
+    url
   }
 }
 
-mutation UpdateProfileCover($coverImageUrl: String!) {
-  updateProfileCover(coverImageUrl: $coverImageUrl) {
-    success
-    message
-    code
-    userProfile {
-      id
-      coverImage
-    }
-  }
-}
-
-mutation RemoveProfileAvatar {
-  removeProfileAvatar {
-    success
-    message
-    code
-    userProfile {
-      id
-      avatar
-    }
-  }
-}
-
-mutation RemoveProfileCover {
-  removeProfileCover {
-    success
-    message
-    code
-    userProfile {
-      id
-      coverImage
-    }
-  }
-}
+# Profile avatar/cover operations consolidated into updateProfile mutation
+# Use: updateProfile(input: { avatar: $url }) to set avatar
+# Use: updateProfile(input: { avatar: null }) to remove avatar
+# Use: updateProfile(input: { coverImage: $url }) to set cover
+# Use: updateProfile(input: { coverImage: null }) to remove cover
 
 mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
   updateItem(id: $id, input: { media: { imageUrl: $imageUrl } }) {
@@ -74,7 +42,7 @@ mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
 }
 
 mutation RemoveItemImage($id: ID!) {
-  updateItem(id: $id, input: { removeImage: true }) {
+  removeItemImage(id: $id) {
     success
     message
     code

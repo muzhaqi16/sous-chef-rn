@@ -51,14 +51,14 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
   // Start bob animation on mount
   useEffect(() => {
     // Gentle continuous bob animation for empty cart
-    bobY.value = withRepeat(
+    bobY.set(withRepeat(
       withSequence(
         withTiming(-6, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
         withTiming(0, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
-    );
+    ));
   }, [bobY]);
 
   // Derived transforms

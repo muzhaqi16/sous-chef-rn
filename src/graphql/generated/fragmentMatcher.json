@@ -1,62 +1,106 @@
 {
   "possibleTypes": {
-    "AddPantryItemResult": [
-      "NotFoundError",
-      "PantryItem",
-      "UnauthorizedError",
-      "ValidationError"
-    ],
-    "AddShoppingListItemResult": [
-      "DuplicateError",
-      "NotFoundError",
-      "ShoppingListItem",
-      "UnauthorizedError",
-      "ValidationError"
-    ],
     "Connection": [
-      "NotificationConnection"
-    ],
-    "CreateItemResult": [
-      "DuplicateError",
-      "Item",
-      "UnauthorizedError",
-      "ValidationError"
-    ],
-    "DeleteItemResult": [
-      "DeleteSuccess",
-      "NotFoundError",
-      "UnauthorizedError"
+      "BrandConnection",
+      "CategoryConnection",
+      "CookingLogConnection",
+      "DeviceConnection",
+      "ExpirationNotificationConnection",
+      "HomeConnection",
+      "HomeInviteConnection",
+      "InviteLogConnection",
+      "ItemConnection",
+      "ItemPriceHistoryConnection",
+      "ItemStoreSkuConnection",
+      "LoginHistoryConnection",
+      "MealPlanConnection",
+      "MealTemplateConnection",
+      "MembershipConnection",
+      "NotificationConnection",
+      "PantryConnection",
+      "PantryItemChangeConnection",
+      "PantryItemConnection",
+      "PantryItemUsageConnection",
+      "PurchaseConnection",
+      "RecipeConnection",
+      "RecipeReviewConnection",
+      "SavedRecipeConnection",
+      "ShoppingListActivityConnection",
+      "ShoppingListCollaboratorConnection",
+      "ShoppingListConnection",
+      "ShoppingListItemConnection",
+      "StorageLocationConnection",
+      "StoreConnection",
+      "UserConnection",
+      "UserModerationConnection"
     ],
     "Edge": [
-      "NotificationEdge"
-    ],
-    "MutationError": [
-      "ConflictError",
-      "DuplicateError",
-      "NotFoundError",
-      "RateLimitError",
-      "UnauthorizedError",
-      "ValidationError",
-      "VersionMismatchError"
+      "BrandEdge",
+      "CategoryEdge",
+      "CookingLogEdge",
+      "DeviceEdge",
+      "ExpirationNotificationEdge",
+      "HomeEdge",
+      "HomeInviteEdge",
+      "InviteLogEdge",
+      "ItemEdge",
+      "ItemPriceHistoryEdge",
+      "ItemStoreSkuEdge",
+      "LoginHistoryEdge",
+      "MealPlanEdge",
+      "MealTemplateEdge",
+      "MembershipEdge",
+      "NotificationEdge",
+      "PantryEdge",
+      "PantryItemChangeEdge",
+      "PantryItemEdge",
+      "PantryItemUsageEdge",
+      "PurchaseEdge",
+      "RecipeEdge",
+      "RecipeReviewEdge",
+      "SavedRecipeEdge",
+      "ShoppingListActivityEdge",
+      "ShoppingListCollaboratorEdge",
+      "ShoppingListEdge",
+      "ShoppingListItemEdge",
+      "StorageLocationEdge",
+      "StoreEdge",
+      "UserEdge",
+      "UserModerationEdge"
     ],
     "MutationPayload": [
+      "BatchUpsertItemsResponse",
       "BrandPayload",
+      "BulkCreateItemsResponse",
+      "BulkDeviceResult",
+      "BulkLoginHistoryPayload",
+      "BulkNotificationPayload",
+      "BulkNotificationResult",
+      "BulkOperationSummary",
+      "BulkPurchasePayload",
+      "BulkStorePayload",
       "CategoryPayload",
+      "ChangePasswordResponse",
       "CookingLogPayload",
       "CurrencyPayload",
+      "DeviceCleanupResult",
       "DevicePayload",
       "DietaryProfilePayload",
       "DietaryRestrictionPayload",
       "ExpirationNotificationPayload",
       "ExternalSourceMappingPayload",
+      "ForgotPasswordResponse",
       "HomeInvitePayload",
       "HomeOwnershipPayload",
       "HomePayload",
+      "ImageDeletionResult",
+      "ImportItemsResponse",
       "ItemCategoryPayload",
       "ItemPayload",
       "ItemPriceHistoryPayload",
       "ItemUnitConversionPayload",
       "LoginHistoryPayload",
+      "MealPlanItemPayload",
       "MealPlanPayload",
       "MealTemplateItemPayload",
       "MealTemplatePayload",
@@ -68,61 +112,27 @@
       "PantryPayload",
       "PurchasePayload",
       "RecipePayload",
+      "RecipeReviewPayload",
+      "ResetPasswordResponse",
+      "ReviewHelpfulPayload",
       "SavedRecipePayload",
+      "SetDefaultHomePayload",
       "ShoppingListCollaboratorPayload",
       "ShoppingListItemPayload",
       "ShoppingListPayload",
       "StorageLocationPayload",
       "StorePayload",
       "UnitPayload",
+      "UploadPayload",
       "UserAddressPayload",
+      "UserModerationPayload",
       "UserPayload",
       "UserProfilePayload",
-      "UserSettingsPayload"
-    ],
-    "Node": [
-      "Notification"
+      "UserSettingsPayload",
+      "ValidateTokenResponse"
     ],
     "Timestamped": [
       "Notification"
-    ],
-    "TogglePurchasedResult": [
-      "NotFoundError",
-      "ShoppingListItem",
-      "UnauthorizedError"
-    ],
-    "UpdateItemResult": [
-      "Item",
-      "NotFoundError",
-      "UnauthorizedError",
-      "ValidationError",
-      "VersionMismatchError"
-    ],
-    "UpdatePantryItemResult": [
-      "NotFoundError",
-      "PantryItem",
-      "UnauthorizedError",
-      "ValidationError",
-      "VersionMismatchError"
-    ],
-    "UpdateShoppingListItemResult": [
-      "NotFoundError",
-      "ShoppingListItem",
-      "UnauthorizedError",
-      "ValidationError",
-      "VersionMismatchError"
-    ],
-    "UpdateUserResult": [
-      "NotFoundError",
-      "UnauthorizedError",
-      "User",
-      "ValidationError"
-    ],
-    "UpdateUserSettingsResult": [
-      "NotFoundError",
-      "UnauthorizedError",
-      "UserSettings",
-      "ValidationError"
     ]
   }
 }

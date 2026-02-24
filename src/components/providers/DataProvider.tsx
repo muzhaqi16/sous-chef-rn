@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
 import { useAllPendingInvites } from '#/hooks/invitations/useAllPendingInvites';
 import { useAuth } from '#/hooks/auth/useAuth';
+import { useGetUserProfileQuery } from '#/graphql/generated';
+import { useAppStore } from '#store/useAppStore';
 
 interface DataProviderProps {
   children: React.ReactNode;
@@ -29,6 +31,9 @@ interface DataProviderProps {
  */
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const { user } = useAuth();
+  const isLoggingOut = useAppStore(state => state.isLoggingOut);
+  const updateUser = useAppStore(state => state.updateUser);
+  const hasName = !!(user?.name || user?.firstName);
 
   // Preload units and other reference data when authenticated
   // The hook handles authentication checking internally
@@ -37,6 +42,29 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Fetch and display ALL pending invitations (home + shopping list) on startup
   // This ensures users can accept invitations even if they missed the notification
   useAllPendingInvites(user?.id);
+
+  // Fallback: fetch profile only when name is missing from auth store
+  // (e.g., profile was updated externally, or migration didn't cover an edge case).
+  // skip: hasName means this does NOT fire on normal cold starts where the
+  // migration already populated the fields — it only fires as a safety net.
+  const { data: profileData } = useGetUserProfileQuery({
+    fetchPolicy: 'cache-first',
+    nextFetchPolicy: 'cache-and-network',
+    skip: !user || isLoggingOut || hasName,
+    notifyOnNetworkStatusChange: false,
+  });
+
+  useEffect(() => {
+    const profile = profileData?.me?.profile;
+    if (profile) {
+      updateUser({
+        firstName: profile.firstName ?? undefined,
+        lastName: profile.lastName ?? undefined,
+        name: profile.displayName ?? undefined,
+        profilePicture: profile.avatar ?? undefined,
+      });
+    }
+  }, [profileData, updateUser]);
 
   // Return children immediately - preloading happens in background
   return <>{children}</>;

@@ -6,7 +6,8 @@ import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
 
 interface ListItemProps {
-  title: string;
+  children?: React.ReactNode;
+  title?: string;
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
@@ -25,11 +26,12 @@ interface ListItemProps {
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({
+  children,
   title,
   subtitle,
   onPress,
   leftIcon,
-  rightIcon = 'chevron-right',
+  rightIcon = 'chevron-forward',
   badge,
   rightElement,
   leftElement,
@@ -46,15 +48,22 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
 
+  // When children are provided, render them directly as content
+  if (children) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.contentContainer}>{children}</View>
+      </View>
+    );
+  }
+
   const content = (
     <>
       {/* Optional checkbox element (for shopping list items) */}
-      {checkboxElement && (
-        <View style={styles.checkboxContainer}>{checkboxElement}</View>
-      )}
+      {!!checkboxElement && <View style={styles.checkboxContainer}>{checkboxElement}</View>}
       {/* Optional left element for image or icon */}
       {leftElement}
-      {leftIcon && (
+      {!!leftIcon && (
         <View style={styles.leftIcon}>
           <Icon name={leftIcon} size={24} color={iconColor} />
         </View>
@@ -67,8 +76,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         >
           {title}
         </Text>
-        {subtitle && (
-          typeof subtitle === 'string' ? (
+        {!!subtitle && (typeof subtitle === 'string' ? (
             <Text
               style={styles.subtitle}
               numberOfLines={1}
@@ -80,14 +88,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
             <View style={styles.subtitleContainer}>
               {subtitle}
             </View>
-          )
-        )}
+          ))}
       </View>
-      {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
+      {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
-      {rightIcon && !rightElement && (
-        <Icon name={rightIcon} size={24} color={iconColor} />
-      )}
+      {!!rightIcon && !rightElement && <Icon name={rightIcon} size={24} color={iconColor} />}
       {/* Optional drag handle element (for reordering) - on right side */}
       {dragHandleElement}
     </>
@@ -121,8 +126,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
-export const ListItem = React.memo(ListItemComponent);
+export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -150,13 +154,13 @@ const styles = StyleSheet.create(theme => ({
   },
   title: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     variants: {
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
           color: theme.colors.textSecondary,
         },
       },
@@ -170,7 +174,7 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
         },
       },
     },
@@ -180,12 +184,12 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          opacity: 0.6,
+          opacity: theme.opacity.disabled,
         },
       },
     },
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

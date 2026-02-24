@@ -12,7 +12,7 @@ export const Title: React.FC<TitleProps> = ({children, style}) => {
 };
 const styles = StyleSheet.create(theme => ({
   title: {
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
     fontSize: theme.fonts.size['2xl'],
     lineHeight: theme.fonts.size['2xl'] * 1.2,
     letterSpacing: 0,

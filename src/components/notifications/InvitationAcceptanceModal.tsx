@@ -84,7 +84,7 @@ export const InvitationAcceptanceModal: React.FC<
           query: MyShoppingListInvitesDocument,
           fetchPolicy: 'network-only',
         });
-        const invites = result.data?.myShoppingListInvites;
+        const invites = result.data?.me?.pendingCollaborationInvites;
         const invite = invites?.find(
           inv => inv.id === invitation.payload?.inviteId,
         );
@@ -187,7 +187,7 @@ export const InvitationAcceptanceModal: React.FC<
                   query: MyShoppingListInvitesDocument,
                   fetchPolicy: 'network-only',
                 });
-                const invites = result.data?.myShoppingListInvites;
+                const invites = result.data?.me?.pendingCollaborationInvites;
                 const invite = invites?.find(
                   inv => inv.id === invitation.payload?.inviteId,
                 );
@@ -309,7 +309,7 @@ export const InvitationAcceptanceModal: React.FC<
           <View style={styles.content}>
             <Text style={styles.description}>{invitation.description}</Text>
 
-            {invitation.inviterName && (
+            {!!invitation.inviterName && (
               <View style={styles.inviterContainer}>
                 <Icon name="person" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.inviterText}>
@@ -358,7 +358,7 @@ export const InvitationAcceptanceModal: React.FC<
                 <ActivityIndicator color={theme.colors.white} />
               ) : (
                 <>
-                  <Icon name="check" size={20} color={theme.colors.white} />
+                  <Icon name="checkmark" size={20} color={theme.colors.white} />
                   <Text style={[styles.buttonText, styles.acceptText]}>
                     Accept
                   </Text>
@@ -482,6 +482,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

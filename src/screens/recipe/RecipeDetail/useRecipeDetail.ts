@@ -26,6 +26,7 @@ import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
+import { useRecipeIngredientMatching } from '#/hooks/recipe/useRecipeIngredientMatching';
 
 type RecipeDetailParams = {
   recipeId?: string;
@@ -57,7 +58,9 @@ export function useRecipeDetail() {
   const route = useRoute();
   const params = route.params as RecipeDetailParams | undefined;
   const { goBack } = useAppNavigation();
-  const { recipeId, externalSource, externalId } = params ?? {};
+  const recipeId = params?.recipeId;
+  const externalSource = params?.externalSource;
+  const externalId = params?.externalId;
 
   // Get shopping lists - uses lightweight query for list metadata only
   const { data: shoppingListsData, loading: shoppingListsLoading } =
@@ -146,6 +149,9 @@ export function useRecipeDetail() {
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
   const [markingAsCooked, setMarkingAsCooked] = useState(false);
 
+  // Ingredient matching for granular deduction
+  const ingredientMatching = useRecipeIngredientMatching(recipeId);
+
   // State for folder/tag editing
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
@@ -178,7 +184,7 @@ export function useRecipeDetail() {
         if (!data?.createShoppingListItemsFromRecipe || !variables) return;
         try {
           const result = data.createShoppingListItemsFromRecipe;
-          const shoppingListId = variables.shoppingListId;
+          const shoppingListId = variables.input.shoppingListId;
           const addToShoppingListItemsCache =
             createAddToParentConnectionUpdater(
               'ShoppingList',
@@ -309,16 +315,19 @@ export function useRecipeDetail() {
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.map(edge =>
-                edge.node.id === updatedSavedRecipe.id
-                  ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
-                  : edge,
-              ),
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.map(edge =>
+                  edge.node.id === updatedSavedRecipe.id
+                    ? { ...edge, node: { ...edge.node, ...updatedSavedRecipe } }
+                    : edge,
+                ),
+              },
             },
           };
         },
@@ -335,19 +344,22 @@ export function useRecipeDetail() {
     update: (cache, { data }, { variables }) => {
       if (!data?.unfavoriteRecipe?.success || !variables?.recipeId) return;
 
-      // 1. Remove from mySavedRecipes connection
+      // 1. Remove from savedRecipesConnection
       cache.updateQuery<MySavedRecipesQuery>(
         { query: MySavedRecipesDocument },
         existing => {
-          if (!existing) return existing;
+          if (!existing?.me) return existing;
           return {
             ...existing,
-            mySavedRecipes: {
-              ...existing.mySavedRecipes,
-              edges: existing.mySavedRecipes.edges.filter(
-                edge => edge.node.recipe.id !== variables.recipeId,
-              ),
-              totalCount: existing.mySavedRecipes.totalCount - 1,
+            me: {
+              ...existing.me,
+              savedRecipesConnection: {
+                ...existing.me.savedRecipesConnection,
+                edges: existing.me.savedRecipesConnection.edges.filter(
+                  edge => edge.node.recipe.id !== variables.recipeId,
+                ),
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+              },
             },
           };
         },
@@ -577,9 +589,11 @@ export function useRecipeDetail() {
         if (isBackendRecipe && backendRecipe && recipeId) {
           const result = await addRecipeToShoppingListMutation({
             variables: {
-              recipeId,
-              shoppingListId: targetList.id,
-              servings: backendRecipe.servings,
+              input: {
+                recipeId,
+                shoppingListId: targetList.id,
+                servings: backendRecipe.servings,
+              },
             },
           });
 
@@ -607,11 +621,15 @@ export function useRecipeDetail() {
               itemName:
                 ingredient.name || ingredient.original || 'Unknown ingredient',
               quantity: ingredient.amount || 0,
-              unitName:
-                ingredient.measures?.us?.unitShort ||
-                ingredient.measures?.metric?.unitShort ||
-                '',
-              aisle: ingredient.aisle || '',
+              unit: {
+                unitName:
+                  ingredient.measures?.us?.unitShort ||
+                  ingredient.measures?.metric?.unitShort ||
+                  '',
+              },
+              storePrefs: ingredient.aisle
+                ? { aisle: ingredient.aisle }
+                : undefined,
             }));
 
           const result = await addItemsToShoppingListMutation({
@@ -800,6 +818,7 @@ export function useRecipeDetail() {
     async (input: {
       servings: number;
       deductFromPantry: boolean;
+      useGranularDeduction: boolean;
       notes?: string;
     }) => {
       if (!recipeId) {
@@ -809,15 +828,46 @@ export function useRecipeDetail() {
         return;
       }
 
+      // Granular deduction: load ingredient matches and open review sheet
+      if (input.useGranularDeduction) {
+        setMarkingAsCooked(true);
+        try {
+          const loaded = await ingredientMatching.loadMatches(input.servings);
+          if (!loaded) {
+            // Fallback to simple deduction if matching fails
+            await markRecipeAsCookedMutation({
+              variables: {
+                input: {
+                  recipeId,
+                  servings: input.servings,
+                  deductFromPantry: input.deductFromPantry,
+                  notes: input.notes,
+                },
+              },
+            });
+            toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
+          }
+          // If loaded successfully, the sheet is now visible - user will confirm from there
+        } catch {
+          // Error handled by mutation onError
+        } finally {
+          setMarkingAsCooked(false);
+        }
+        return;
+      }
+
+      // Simple deduction path
       setMarkingAsCooked(true);
 
       try {
         await markRecipeAsCookedMutation({
           variables: {
-            recipeId,
-            servings: input.servings,
-            deductFromPantry: input.deductFromPantry,
-            notes: input.notes,
+            input: {
+              recipeId,
+              servings: input.servings,
+              deductFromPantry: input.deductFromPantry,
+              notes: input.notes,
+            },
           },
         });
 
@@ -834,8 +884,31 @@ export function useRecipeDetail() {
         setMarkingAsCooked(false);
       }
     },
-    [recipeId, markRecipeAsCookedMutation],
+    [recipeId, markRecipeAsCookedMutation, ingredientMatching],
   );
+
+  // Skip review handler - falls back to simple markRecipeAsCooked with deductFromPantry: true
+  const handleSkipReview = useCallback(async () => {
+    if (!recipeId) return;
+    ingredientMatching.closeSheet();
+    setMarkingAsCooked(true);
+    try {
+      await markRecipeAsCookedMutation({
+        variables: {
+          input: {
+            recipeId,
+            servings: undefined,
+            deductFromPantry: true,
+          },
+        },
+      });
+      toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
+    } catch {
+      // Error handled by mutation onError
+    } finally {
+      setMarkingAsCooked(false);
+    }
+  }, [recipeId, markRecipeAsCookedMutation, ingredientMatching]);
 
   // Update recipe folder
   const handleUpdateFolder = useCallback(
@@ -982,6 +1055,8 @@ export function useRecipeDetail() {
         summary: backendRecipe.description ?? undefined,
         ingredients: backendRecipe.ingredients || [],
         instructions: backendRecipe.instructions,
+        sourceName: backendRecipe.source ?? undefined,
+        sourceUrl: backendRecipe.sourceUrl ?? undefined,
       };
     } else if (externalRecipe) {
       return {
@@ -1058,6 +1133,8 @@ export function useRecipeDetail() {
     setCookedModalVisible,
     markingAsCooked,
     handleMarkAsCooked,
+    handleSkipReview,
+    ingredientMatching,
 
     // Folder/tag editing
     showFolderPicker,

@@ -33,8 +33,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
         <Text style={commonStyles.subtitle}>{title}</Text>
         <Pressable onPress={onAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
           <Icon
-            library="Feather"
-            name="plus"
+            name="add"
             size={18}
             color={theme.colors.primary}
           />
@@ -54,8 +53,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
                 onPress={() => onRemove(item.id)}
               >
                 <Icon
-                  library="Feather"
-                  name="x-circle"
+                  name="close-circle-outline"
                   size={18}
                   color={theme.colors.error}
                 />
@@ -110,7 +108,7 @@ const styles = StyleSheet.create(theme => ({
   },
   displayChipText: {
     fontSize: theme.typography.fontSize.sm + 1,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.chipSelectedText,
   },
   removeButton: {
@@ -125,6 +123,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

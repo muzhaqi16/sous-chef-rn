@@ -91,6 +91,7 @@ export interface User {
   email: string;
   emailVerified: boolean;
   onBoarded: boolean;
+  role?: string;
   firstName?: string;
   lastName?: string;
   profilePicture?: string;
@@ -104,7 +105,7 @@ export interface AuthState {
   refreshToken: string | null;
 
   // Auth preferences
-  rememberMe: boolean | undefined;
+  // NOTE: rememberMe is owned by preferencesSlice — do NOT duplicate here
   hasStoredCredentials: boolean | null;
 
   // Auto-login state
@@ -120,7 +121,6 @@ export interface AuthState {
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
-  setRememberMe: (remember: boolean) => void;
   setHasStoredCredentials: (has: boolean | null) => void;
   setIsAutoLoggingIn: (loading: boolean) => void;
 }
@@ -129,7 +129,6 @@ const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  rememberMe: true, // Default to true for simplified flow
   hasStoredCredentials: null,
   isAutoLoggingIn: false,
 };
@@ -149,10 +148,30 @@ export const createAuthSlice: StateCreator<
 
   setAuth: (user, accessToken, refreshToken) => {
     set(state => {
+      // Clear stale navigation state if the user changed (or no previous user).
+      // This prevents a new user from inheriting another user's selectedHomeId,
+      // which would cause "Not authorized to access pantries in this home" errors.
+      const previousUserId = state.user?.id;
+      if (!previousUserId || previousUserId !== user.id) {
+        state.selectedHomeId = null;
+        state.selectedPantryId = null;
+        state.selectedShoppingListId = null;
+        state.hasInitializedHomeData = false;
+        state.isHomeSelectionReady = false;
+      }
+
+      // Flatten profile fields from login/register GraphQL response so the
+      // greeting can render the user's name immediately without a separate query.
+      const profile = (user as any).profile;
+
       // Normalize email to prevent validation issues (trim whitespace, lowercase)
       state.user = {
         ...user,
         email: user.email?.trim().toLowerCase() ?? user.email,
+        firstName: profile?.firstName ?? user.firstName,
+        lastName: profile?.lastName ?? user.lastName,
+        name: profile?.displayName ?? user.name,
+        profilePicture: profile?.avatar ?? user.profilePicture,
       };
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
@@ -222,12 +241,6 @@ export const createAuthSlice: StateCreator<
       state.refreshToken = null;
       state.isAutoLoggingIn = false;
       // Keep rememberMe preference
-    });
-  },
-
-  setRememberMe: remember => {
-    set(state => {
-      state.rememberMe = remember;
     });
   },
 

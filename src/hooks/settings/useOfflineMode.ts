@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { storage } from '#/storage/mmkv';
 
 /**
@@ -37,7 +37,7 @@ function useOfflineModePreference(): boolean {
  */
 export const useOfflineMode = () => {
   // Device network state from Zustand
-  const isOnline = useStore(state => state.isOnline);
+  const isOnline = useAppStore(state => state.isOnline);
 
   // User's offline mode preference from MMKV (no GraphQL query)
   const isOfflineModeEnabled = useOfflineModePreference();
@@ -82,7 +82,7 @@ export const useOfflineMode = () => {
  * Use this for simple checks without needing all the details
  */
 export const useIsEffectivelyOffline = (): boolean => {
-  const isOnline = useStore(state => state.isOnline);
+  const isOnline = useAppStore(state => state.isOnline);
   const isOfflineModeEnabled = useOfflineModePreference();
   return isOfflineModeEnabled || !isOnline;
 };
@@ -91,7 +91,7 @@ export const useIsEffectivelyOffline = (): boolean => {
  * Selector hook that returns true if network operations are allowed
  */
 export const useCanUseNetwork = (): boolean => {
-  const isOnline = useStore(state => state.isOnline);
+  const isOnline = useAppStore(state => state.isOnline);
   const isOfflineModeEnabled = useOfflineModePreference();
   return isOnline && !isOfflineModeEnabled;
 };

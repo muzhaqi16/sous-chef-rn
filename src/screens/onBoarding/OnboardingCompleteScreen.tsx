@@ -78,7 +78,7 @@ export const OnboardingCompleteScreen = () => {
           collaborate with family members!
         </Text>
 
-        {error && (
+        {!!error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
@@ -92,7 +92,7 @@ export const OnboardingCompleteScreen = () => {
         disabled={isCompleting}
       />
 
-      {isCompleting && (
+      {!!isCompleting && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="small"
@@ -128,7 +128,7 @@ const styles = StyleSheet.create(theme => ({
   },
   congratsText: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,

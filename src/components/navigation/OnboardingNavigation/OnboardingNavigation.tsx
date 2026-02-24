@@ -59,7 +59,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
   return (
     <View style={styles.container}>
       {/* Skip button (if shown) */}
-      {showSkipButton && skipAction && (
+      {!!showSkipButton && !!skipAction && (
         <View style={styles.skipContainer}>
           <NavigationButton
             action={skipAction}
@@ -72,7 +72,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
       {/* Main navigation buttons */}
       <View style={styles.navigationContainer}>
         {/* Back button */}
-        {showBackButton && backAction && (
+        {!!showBackButton && !!backAction && (
           <Animated.View style={[backButtonStyle]}>
             <NavigationButton
               action={backAction}
@@ -83,7 +83,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
         )}
 
         {/* Continue/Finish button */}
-        {showContinueButton && (
+        {!!showContinueButton && (
           <Animated.View style={[continueButtonStyle]}>
             <NavigationButton
               action={{
@@ -117,7 +117,7 @@ const styles = StyleSheet.create(theme => ({
   skipText: {
     color: theme.colors.textSecondary,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   navigationContainer: {
     flexDirection: 'row',
@@ -136,6 +136,6 @@ const styles = StyleSheet.create(theme => ({
   },
   continueText: {
     color: theme.colors.background,
-    fontWeight: '700',
+    fontWeight: theme.fonts.weight.bold,
   },
 }));

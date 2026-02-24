@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
@@ -7,8 +8,10 @@ import { usePerformanceStore } from '#/store/performanceStore';
 /**
  * Hook to track screen transition performance
  *
- * Measures navigation time and screen mount/interactive time.
- * Integrates with React Navigation's focus events.
+ * Measures navigation time and screen mount/interactive time using
+ * `react-native-performance` marks and measures. The central observer
+ * in `NativePerformanceService` picks up the measures and routes them
+ * to telemetry histograms.
  *
  * @param screenName - Name of the screen being tracked
  * @param options - Configuration options
@@ -29,8 +32,9 @@ export function useScreenTransition(
     trackInteractive?: boolean;
   },
 ) {
-  const navigationStartTime = useRef<number | null>(null);
-  const mountTime = useRef<number | null>(null);
+  const focusMarkRef = useRef<string | null>(null);
+  const mountMarkRef = useRef<string | null>(null);
+  const mountDurationRef = useRef<number>(0);
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
   const trackMount = options?.trackMount ?? true;
   const trackInteractive = options?.trackInteractive ?? true;
@@ -42,53 +46,83 @@ export function useScreenTransition(
         return;
       }
 
-      navigationStartTime.current = performance.now();
+      const focusMarkName = `screen:${screenName}:focus`;
+      performance.mark(focusMarkName);
+      focusMarkRef.current = focusMarkName;
 
       return () => {
-        // Screen is blurring/unfocusing
-        navigationStartTime.current = null;
-        mountTime.current = null;
+        // Clean up marks on blur to prevent memory accumulation
+        performance.clearMarks(`screen:${screenName}:focus`);
+        performance.clearMarks(`screen:${screenName}:mounted`);
+        performance.clearMarks(`screen:${screenName}:interactiveEnd`);
+        focusMarkRef.current = null;
+        mountMarkRef.current = null;
       };
-    }, [enabled]),
+    }, [enabled, screenName]),
   );
 
   // Track mount time
   useEffect(() => {
-    if (!enabled || !trackMount || navigationStartTime.current === null) {
+    if (!enabled || !trackMount || focusMarkRef.current === null) {
       return;
     }
 
-    const mountEndTime = performance.now();
-    const mountDuration = mountEndTime - navigationStartTime.current;
-    mountTime.current = mountEndTime;
+    const mountMarkName = `screen:${screenName}:mounted`;
+    performance.mark(mountMarkName);
+    mountMarkRef.current = mountMarkName;
 
-    // Report mount metrics
-    Telemetry.histogram('screen_mount_duration_ms', mountDuration, {
-      screen: screenName,
-    });
+    // Measure focus → mount (central observer routes to screen_mount_duration_ms)
+    try {
+      const measure = performance.measure(
+        `screen:${screenName}:mount`,
+        focusMarkRef.current,
+        mountMarkName,
+      );
+      mountDurationRef.current = measure?.duration ?? 0;
+    } catch {
+      // Marks may have been cleared if screen blurred quickly
+    }
 
     // Mark screen as interactive after next frame
-    // This gives time for initial render to complete
     if (trackInteractive) {
       requestAnimationFrame(() => {
-        if (navigationStartTime.current === null) {
+        if (focusMarkRef.current === null) {
           return; // Screen already unmounted
         }
 
-        const interactiveTime = performance.now();
-        const interactiveDuration = interactiveTime - navigationStartTime.current;
+        const interactiveMarkName = `screen:${screenName}:interactiveEnd`;
+        performance.mark(interactiveMarkName);
 
-        // Report interactive metrics
-        Telemetry.histogram('screen_interactive_duration_ms', interactiveDuration, {
-          screen: screenName,
-        });
+        // Measure focus → interactive (central observer routes to screen_interactive_duration_ms)
+        let interactiveDuration = 0;
+        try {
+          const interactiveMeasure = performance.measure(
+            `screen:${screenName}:interactive`,
+            focusMarkRef.current,
+            interactiveMarkName,
+          );
+          interactiveDuration = interactiveMeasure?.duration ?? 0;
+        } catch {
+          return;
+        }
 
-        Telemetry.histogram('screen_transition_duration_ms', interactiveDuration, {
-          screen: screenName,
-        });
+        // Measure focus → transition (central observer routes to screen_transition_duration_ms)
+        try {
+          performance.measure(
+            `screen:${screenName}:transition`,
+            focusMarkRef.current,
+            interactiveMarkName,
+          );
+        } catch {
+          // Marks may have been cleared
+        }
 
         // Record metrics in performance store for dashboard (isolated from main store)
-        usePerformanceStore.getState().recordScreenTransition(screenName, mountDuration, interactiveDuration);
+        usePerformanceStore.getState().recordScreenTransition(
+          screenName,
+          mountDurationRef.current,
+          interactiveDuration,
+        );
 
         // Warn if slow transition
         if (interactiveDuration > 500) {

@@ -1,9 +1,21 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
+
+const SCROLL_DISTANCE = 80;
+const AVATAR_LARGE = 80;
+const AVATAR_SMALL = 44;
+const PADDING_LARGE = 0;
+const PADDING_SMALL = 0;
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;
@@ -12,6 +24,7 @@ export interface ProfileHeaderProps {
   onBack: () => void;
   onMore: () => void;
   onAvatarPress: () => void;
+  scrollY?: SharedValue<number>;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -19,52 +32,86 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onBack,
   onMore,
   onAvatarPress,
+  scrollY,
 }) => {
   const { theme } = useUnistyles();
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    const paddingVertical = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE],
+      [PADDING_LARGE, PADDING_SMALL],
+      Extrapolation.CLAMP,
+    );
+    return { paddingVertical };
+  });
+
+  const avatarAnimatedStyle = useAnimatedStyle(() => {
+    if (!scrollY) return { width: AVATAR_LARGE, height: AVATAR_LARGE, borderRadius: AVATAR_LARGE / 2 };
+    const size = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE],
+      [AVATAR_LARGE, AVATAR_SMALL],
+      Extrapolation.CLAMP,
+    );
+    return { width: size, height: size, borderRadius: size / 2 };
+  });
+
+  const editIconAnimatedStyle = useAnimatedStyle(() => {
+    if (!scrollY) return {};
+    const opacity = interpolate(
+      scrollY.value,
+      [0, SCROLL_DISTANCE / 2],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+    return { opacity };
+  });
+
   return (
-    <View style={styles.header}>
+    <Animated.View style={[styles.header, headerAnimatedStyle]}>
       <IconButton
-        name="arrow-left"
+        name="arrow-back"
         onPress={onBack}
         color={theme.colors.textPrimary}
         accessibilityLabel="Go back"
       />
       <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
         {avatarUrl ? (
-          <CachedImage
-            uri={avatarUrl}
-            style={styles.avatar}
-            onFailure={() =>
-              console.log('Avatar image failed to load:', avatarUrl)
-            }
-          />
+          <Animated.View style={[styles.avatarBase, avatarAnimatedStyle]}>
+            <CachedImage
+              uri={avatarUrl}
+              style={styles.avatarImage}
+              onFailure={() =>
+                console.log('Avatar image failed to load:', avatarUrl)
+              }
+            />
+          </Animated.View>
         ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Animated.View style={[styles.avatarBase, styles.avatarPlaceholder, avatarAnimatedStyle]}>
             <Icon
-              library="Feather"
-              name="user"
+              name="person"
               size={32}
               color={theme.colors.textSecondary}
             />
-          </View>
+          </Animated.View>
         )}
-        <View style={styles.profileAction}>
+        <Animated.View style={[styles.profileAction, editIconAnimatedStyle]}>
           <Icon
-            library="Feather"
             color={theme.colors.iconOnPrimary}
-            name="edit-3"
+            name="create"
             size={15}
           />
-        </View>
+        </Animated.View>
       </Pressable>
       <IconButton
-        name="more-vertical"
-        library="Feather"
+        name="ellipsis-vertical"
         onPress={onMore}
         color={theme.colors.textPrimary}
         accessibilityLabel="More options"
       />
-    </View>
+    </Animated.View>
   );
 };
 
@@ -74,16 +121,19 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: 0,
+    marginBottom: theme.spacing.sm,
   },
   avatarContainer: {},
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.sizes.avatar.md,
+  avatarBase: {
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
     borderColor: theme.colors.primary,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarPlaceholder: {
     justifyContent: 'center',
@@ -101,6 +151,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -17,7 +17,7 @@ const TAB_ICON_MAP: Record<string, [string, string]> = {
   Pantry: ['home', 'home-outline'],
   ShoppingList: ['list', 'list-outline'],
   Recipe: ['book', 'book-outline'],
-  Profile: ['person', 'person-outline'],
+  MealPlan: ['calendar', 'calendar-outline'],
 };
 
 interface TabItemProps {
@@ -34,7 +34,7 @@ interface TabItemProps {
   tabIndex: number;
 }
 
-export const TabItem: React.FC<TabItemProps> = React.memo(({
+export const TabItem: React.FC<TabItemProps> = ({
   route,
   isFocused,
   options,
@@ -62,10 +62,10 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
 
   const handlePress = () => {
     // Animate icon scale on press (squeeze then expand to active size)
-    iconScale.value = withSequence(
+    iconScale.set(withSequence(
       withTiming(0.85, { duration: 75, easing: Easing.inOut(Easing.ease) }),
       withTiming(1.2, { duration: 75, easing: Easing.inOut(Easing.ease) })
-    );
+    ));
     onPress();
   };
 
@@ -79,7 +79,6 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
 
   const renderIcon = () => (
     <Icon
-      library="Ionicons"
       name={isFocused ? activeIcon : inactiveIcon}
       size={24}
       color={iconColor}
@@ -98,14 +97,14 @@ export const TabItem: React.FC<TabItemProps> = React.memo(({
       <Animated.View style={animatedIconStyle}>
         {renderIcon()}
       </Animated.View>
-      {showLabel && (
-        <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+      {!!showLabel && (
+        <Text maxFontSizeMultiplier={1.2} style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
           {label}
         </Text>
       )}
     </Pressable>
   );
-});
+};
 
 TabItem.displayName = 'TabItem';
 

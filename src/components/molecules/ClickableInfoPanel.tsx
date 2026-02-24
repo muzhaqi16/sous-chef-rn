@@ -55,7 +55,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
 
             <View style={styles.actionRow}>
               <Text style={styles.actionText}>View Details</Text>
-              <Icon name="chevron-forward" size={20} library="Ionicons" />
+              <Icon name="chevron-forward" size={20} />
             </View>
           </>
         ) : (
@@ -141,6 +141,6 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

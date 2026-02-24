@@ -15,7 +15,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
-        <Icon name="qr-code-scanner" size={48} color={theme.colors.textSecondary} />
+        <Icon name="qr-code-outline" size={48} color={theme.colors.textSecondary} />
       </Text>
       <Text style={styles.notFoundText}>Item Not Found</Text>
       <Text style={styles.notFoundMessage}>
@@ -24,7 +24,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
       <Text style={styles.addItemHint}>
         You can add this item to the database by tapping the button below.
       </Text>
-      {onAddItem && (
+      {!!onAddItem && (
         <Button
           onPress={onAddItem}
           variant="primary"

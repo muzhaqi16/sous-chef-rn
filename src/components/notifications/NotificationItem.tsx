@@ -68,7 +68,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         </Text>
       </View>
 
-      {onDismiss && (
+      {!!onDismiss && (
         <Pressable
           style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
           onPress={handleDismiss}
@@ -135,6 +135,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

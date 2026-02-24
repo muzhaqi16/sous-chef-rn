@@ -1,4 +1,6 @@
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useRef, useMemo } from 'react';
+import type { ErrorLike } from '@apollo/client';
+import { useErrorService } from '#/services/errorService';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 
 export interface StandardSubscriptionOptions {
@@ -28,13 +30,13 @@ export interface StandardSubscriptionOptions {
    * Custom onData handler (optional)
    * Called after deduplication check passes
    */
-  onData?: (data: any) => void;
+  onData?: (data: { data: Record<string, unknown> }) => void;
 
   /**
    * Custom error handler (optional)
    * If not provided, uses default error handling with logging
    */
-  onError?: (error: any) => void;
+  onError?: (error: ErrorLike) => void;
 }
 
 /**
@@ -81,7 +83,7 @@ export interface StandardSubscriptionOptions {
  * ```
  */
 export function useStandardSubscription(options: StandardSubscriptionOptions) {
-  const { handleApolloError } = useErrorHandler();
+  const { handleApolloError } = useErrorService();
   const {
     userId,
     operation,
@@ -91,61 +93,88 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
     onError: customOnError,
   } = options;
 
+  // Store callbacks in refs to always read the latest version inside handlers,
+  // preventing stale closure bugs when callers don't memoize their callbacks
+  const customOnDataRef = useRef(customOnData);
+  customOnDataRef.current = customOnData;
+  const customOnErrorRef = useRef(customOnError);
+  customOnErrorRef.current = customOnError;
+
   // Set up deduplication filter if userId provided
   const shouldProcessUpdate = useSubscriptionDeduplication(userId);
 
-  // Standardized onData handler
-  const onData = customOnData
-    ? ({ data }: any) => {
-        // Check deduplication if userId provided
-        if (userId && data?.data) {
-          const payload = Object.values(data.data)[0]; // Get first value (the subscription payload)
-          if (!shouldProcessUpdate(payload as any)) {
-            if (__DEV__ && enableLogging) {
-              console.log(`🔕 ${operation}: Filtered self-echo event`);
+  // Memoize handlers so Apollo subscription doesn't restart on every render
+  // Always provide onData when userId is set (for deduplication) or when customOnData is provided
+  const needsOnData = !!customOnData || !!userId;
+  const onData = useMemo(
+    () =>
+      needsOnData
+        ? ({ data }: { data: { data?: Record<string, unknown> } }) => {
+            // Check deduplication if userId provided
+            if (userId && data?.data) {
+              const payload = Object.values(data.data)[0]; // Get first value (the subscription payload)
+              if (!shouldProcessUpdate(payload as Record<string, unknown>)) {
+                if (__DEV__ && enableLogging) {
+                  console.log(`🔕 ${operation}: Filtered self-echo event`);
+                }
+                return;
+              }
             }
-            return;
+
+            // Log subscription update in dev mode (optimized string interpolation)
+            if (__DEV__ && enableLogging) {
+              console.log(
+                `🔔 ${operation}: Update received | Entity: ${entityId} | Type: ${data.data?.__typename} | Time: ${new Date().toISOString()}`,
+              );
+            }
+
+            // Read from ref to always get the latest callback
+            customOnDataRef.current?.({ data });
           }
-        }
-
-        // Log subscription update in dev mode (optimized string interpolation)
-        if (__DEV__ && enableLogging) {
-          console.log(
-            `🔔 ${operation}: Update received | Entity: ${entityId} | Type: ${data.data?.__typename} | Time: ${new Date().toISOString()}`,
-          );
-        }
-
-        // Call custom handler
-        customOnData({ data });
-      }
-    : undefined;
+        : undefined,
+    // Only recreate when subscription identity changes, not when callbacks change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, operation, entityId, enableLogging, shouldProcessUpdate, needsOnData],
+  );
 
   // Standardized onError handler
-  const onError = customOnError
-    ? customOnError
-    : (error: any) => {
-        const { message } = handleApolloError(error, { operation });
+  const onError = useMemo(
+    () =>
+      customOnError
+        ? (error: ErrorLike) => {
+            // Read from ref to always get the latest callback
+            customOnErrorRef.current?.(error);
+          }
+        : (error: ErrorLike) => {
+            const { message } = handleApolloError(error, { operation });
 
-        if (__DEV__) {
-          console.warn(`❌ ${operation}: Error`, {
-            entityId,
-            error: message,
-            timestamp: new Date().toISOString(),
-          });
-        }
+            if (__DEV__) {
+              console.warn(`❌ ${operation}: Error`, {
+                entityId,
+                error: message,
+                timestamp: new Date().toISOString(),
+              });
+            }
 
-        // Don't refetch on subscription errors - let the query handle reconnection
-        // Subscriptions will auto-reconnect when network returns
-      };
+            // Don't refetch on subscription errors - let the query handle reconnection
+            // Subscriptions will auto-reconnect when network returns
+          },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [operation, entityId, handleApolloError, !!customOnError],
+  );
 
   // Standardized onComplete handler
-  const onComplete = enableLogging
-    ? () => {
-        if (__DEV__) {
-          console.log(`✅ ${operation}: Connected`, entityId);
-        }
-      }
-    : undefined;
+  const onComplete = useMemo(
+    () =>
+      enableLogging
+        ? () => {
+            if (__DEV__) {
+              console.log(`✅ ${operation}: Connected`, entityId);
+            }
+          }
+        : undefined,
+    [enableLogging, operation, entityId],
+  );
 
   return {
     onData,

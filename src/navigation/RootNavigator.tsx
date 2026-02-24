@@ -24,6 +24,7 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
+import { ProfileScreen } from '#screens/profile/ProfileScreen';
 import { HomeManagement } from '#screens/home/HomeManagement';
 import { HomeDetailScreen } from '#screens/home/HomeDetailScreen';
 import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
@@ -123,6 +124,10 @@ const RootStack = createNativeStackNavigator({
       if: useIsMainApp,
       screens: {
         Home: { screen: HomeTabs },
+        Profile: {
+          screen: ProfileScreen,
+          options: { animation: 'slide_from_right', animationDuration: 200 },
+        },
         HomeManagement: {
           screen: HomeManagement,
           linking: 'home-management/:selectedHomeId?',
@@ -336,7 +341,7 @@ export function Navigation() {
       </Suspense>
 
       {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
-      {showBiometricSetup && user && postLoginCredentials && (
+      {!!showBiometricSetup && !!user && !!postLoginCredentials && (
         <PostLoginBiometricPrompt
           visible={showBiometricSetup}
           onComplete={handlePostLoginBiometricComplete}

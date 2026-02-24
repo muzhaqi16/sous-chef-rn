@@ -17,7 +17,7 @@ import { subscriptionService } from '#/services/subscriptions/SubscriptionServic
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { useSearchableList } from '../../useSearchableList';
 import { pantryItemSearch } from '#/utils/searchUtils';
-import { useAppStore, selectIsHomeSelectionReady } from '#store/useAppStore';
+import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
 
 /**
  * Hook for fetching and managing pantry query with pagination
@@ -103,7 +103,23 @@ export function usePantryQuery(pantryId: string | undefined) {
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
 
+  const stats = normalizedPantry?.stats ?? null;
   const totalCount = normalizedPantry?.itemsTotalCount ?? 0;
+
+  const setIsPantryQueryComplete = useAppStore(selectSetIsPantryQueryComplete);
+
+  // Signal to useDataPreloading that GetPantry has settled.
+  // Fires on first load completion (cache hit or network response).
+  // Resets when the query becomes invalid (logout / home switch) so the gate
+  // re-arms if pantry queries restart.
+  useEffect(() => {
+    if (!loading && hasValidPantryId) {
+      setIsPantryQueryComplete(true);
+    }
+    if (!hasValidPantryId) {
+      setIsPantryQueryComplete(false);
+    }
+  }, [loading, hasValidPantryId, setIsPantryQueryComplete]);
 
   // Auto-refetch when edges are depleted but totalCount indicates items remain
   // (pagination edge depletion scenario — same pattern as usePaginatedShoppingItems)
@@ -136,6 +152,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     pantryItems,
     filteredItems,
     normalizedPantry,
+    stats,
     totalCount,
     loading,
     isRefreshing,

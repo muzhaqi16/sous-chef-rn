@@ -3,7 +3,6 @@ import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
-import type { IconLibrary } from '#utils/iconUtils';
 
 export interface FeatureHintConfig {
   /** Title of the hint */
@@ -13,7 +12,7 @@ export interface FeatureHintConfig {
   /** Icon to display */
   icon?: {
     name: string;
-    library: IconLibrary;
+    library?: string;
     size?: number;
   };
   /** Custom animated element (overrides icon) */
@@ -73,7 +72,7 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
             ) : null}
 
             <Text style={styles.hintTitle}>{title}</Text>
-            {subtitle && <Text style={styles.hintSubtitle}>{subtitle}</Text>}
+            {subtitle ? <Text style={styles.hintSubtitle}>{subtitle}</Text> : null}
           </View>
 
           <Pressable
@@ -151,6 +150,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

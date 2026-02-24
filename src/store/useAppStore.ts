@@ -1,3 +1,4 @@
+import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { useStore, RootState } from './index';
 
 /**
@@ -27,9 +28,7 @@ export function useAppStore<T>(
   selector: (state: RootState) => T,
   equalityFn?: (a: T, b: T) => boolean,
 ): T {
-  // Zustand's useStore supports an optional equality function as second parameter
-  // Cast to any to work around TypeScript middleware type inference limitations
-  return (useStore as any)(selector, equalityFn);
+  return useStoreWithEqualityFn(useStore, selector, equalityFn);
 }
 
 // Common selectors for frequently accessed state
@@ -88,12 +87,12 @@ export const selectNavigationState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
 });
 
-// PERFORMANCE: Bottom sheet state selector for SearchResultsScreen
+// PERFORMANCE: Scanner bottom sheet state selector for SearchResultsScreen
 // Reduces 6 individual subscriptions to 1 grouped subscription
 export const selectBottomSheetState = (state: RootState) => ({
-  bottomSheetVisible: state.bottomSheetVisible,
+  scannerSheetVisible: state.scannerSheetVisible,
   searchError: state.searchError,
-  bottomSheetIndex: state.bottomSheetIndex,
+  scannerSheetIndex: state.scannerSheetIndex,
   isSearching: state.isSearching,
   hideBottomSheet: state.hideBottomSheet,
   showBottomSheet: state.showBottomSheet,
@@ -141,6 +140,10 @@ export const selectSetHasInitializedHomeData = (state: RootState) => state.setHa
 export const selectIsHomeSelectionReady = (state: RootState) => state.isHomeSelectionReady;
 export const selectSetIsHomeSelectionReady = (state: RootState) => state.setIsHomeSelectionReady;
 
+// Pantry query complete flag selectors - gates GetCommonUnits until GetPantry first settles
+export const selectIsPantryQueryComplete = (state: RootState) => state.isPantryQueryComplete;
+export const selectSetIsPantryQueryComplete = (state: RootState) => state.setIsPantryQueryComplete;
+
 // PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
 export const selectPreferences = (state: RootState) => ({
   theme: state.theme,
@@ -175,6 +178,10 @@ export const selectSearchState = (state: RootState) => ({
   clearSearch: state.clearSearch,
   addToRecentlyScanned: state.addToRecentlyScanned,
 });
+
+// Admin role selector
+export const selectIsAdminUser = (state: RootState) =>
+  state.user?.role === 'ADMIN' || state.user?.role === 'SUPER_ADMIN';
 
 // Single property selector for network status
 export const selectIsOnline = (state: RootState) => state.isOnline;

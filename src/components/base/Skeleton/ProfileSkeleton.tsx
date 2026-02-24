@@ -1,36 +1,41 @@
 import React from 'react';
 import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonCircle } from './SkeletonCircle';
 import { SkeletonLine } from './SkeletonLine';
 
 /**
  * Skeleton placeholder for the ProfileScreen.
- * Shows an avatar circle, name line, and 3 settings sections.
+ * Mirrors the actual ProfileHeader + SettingsSection layout to prevent layout shift.
  */
 export const ProfileSkeleton: React.FC = () => {
   return (
-    <View style={styles.container}>
-      {/* Avatar + Name */}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Header row: back button, avatar, more button */}
       <View style={styles.header}>
+        <SkeletonCircle size={44} />
         <SkeletonCircle size={80} />
-        <SkeletonLine width="50%" height={20} style={styles.nameGap} />
-        <SkeletonLine width="35%" height={14} />
+        <SkeletonCircle size={44} />
       </View>
 
       {/* Settings sections */}
       {[1, 2, 3].map(section => (
         <View key={section} style={styles.section}>
-          <SkeletonLine width="30%" height={14} style={styles.sectionTitle} />
-          {[1, 2, 3].map(row => (
-            <View key={row} style={styles.row}>
-              <SkeletonCircle size={24} />
-              <SkeletonLine width="60%" height={16} style={styles.rowText} />
-            </View>
-          ))}
+          <SkeletonLine width="30%" height={12} style={styles.sectionTitle} />
+          <View style={styles.sectionBody}>
+            {[1, 2, 3].map(row => (
+              <SkeletonLine
+                key={row}
+                width="60%"
+                height={16}
+                style={styles.row}
+              />
+            ))}
+          </View>
         </View>
       ))}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -38,29 +43,31 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    padding: theme.spacing.lg,
   },
   header: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-    gap: theme.spacing.sm,
-  },
-  nameGap: {
-    marginTop: theme.spacing.md,
-  },
-  section: {
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    marginBottom: theme.spacing.md,
-  },
-  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: 0,
+    marginBottom: theme.spacing.sm,
   },
-  rowText: {
-    flex: 1,
+  section: {
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+  },
+  sectionTitle: {
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  sectionBody: {
+    borderRadius: theme.radii.lg,
+    overflow: 'hidden',
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  row: {
+    marginVertical: theme.spacing.sm,
   },
 }));

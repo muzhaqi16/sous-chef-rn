@@ -15,7 +15,7 @@ import Animated, {
   withSpring,
   clamp,
 } from 'react-native-reanimated';
-import { useRoute } from '@react-navigation/native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -23,14 +23,14 @@ import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
+import { errorService } from '#/services/errorService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 
-export const ImageCropScreen = () => {
+export const ImageCropScreen: React.FC<StaticScreenProps<{ imageFile: ImageFile }>> = ({ route }) => {
   const { goBack } = useSafeNavigation();
-  const route = useRoute();
-  const { imageFile } = route.params as { imageFile: ImageFile };
+  const { imageFile } = route.params;
   const { theme } = useUnistyles();
 
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -66,10 +66,10 @@ export const ImageCropScreen = () => {
       setImageSize({ width: displayWidth, height: displayHeight });
 
       // Reset transforms
-      scale.value = 1;
-      startScale.value = 1;
-      offset.value = { x: 0, y: 0 };
-      startOffset.value = { x: 0, y: 0 };
+      scale.set(1);
+      startScale.set(1);
+      offset.set({ x: 0, y: 0 });
+      startOffset.set({ x: 0, y: 0 });
     });
   }, [imageFile.uri, scale, startScale, offset, startOffset]);
 
@@ -145,8 +145,9 @@ export const ImageCropScreen = () => {
       const cropCenterY = CROP_SIZE / 2;
 
       // Calculate where the image center is positioned on screen after transforms
-      const imageCenterX = CROP_SIZE / 2 + offset.value.x;
-      const imageCenterY = CROP_SIZE / 2 + offset.value.y;
+      const currentOffset = offset.get();
+      const imageCenterX = CROP_SIZE / 2 + currentOffset.x;
+      const imageCenterY = CROP_SIZE / 2 + currentOffset.y;
 
       // Calculate the offset from image center to crop center
       const offsetFromImageCenter = {
@@ -161,16 +162,16 @@ export const ImageCropScreen = () => {
       const cropX = Math.max(
         0,
         originalImageSize.width / 2 +
-          (offsetFromImageCenter.x * scaleRatio) / scale.value,
+          (offsetFromImageCenter.x * scaleRatio) / scale.get(),
       );
       const cropY = Math.max(
         0,
         originalImageSize.height / 2 +
-          (offsetFromImageCenter.y * scaleRatio) / scale.value,
+          (offsetFromImageCenter.y * scaleRatio) / scale.get(),
       );
 
       // Calculate crop size in original image coordinates
-      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.value;
+      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.get();
 
       // Ensure crop doesn't go outside image boundaries
       const finalCropX = Math.max(
@@ -242,7 +243,7 @@ export const ImageCropScreen = () => {
 
       goBack();
     } catch (error) {
-      console.error('Crop failed:', error);
+      errorService.reportError(error, { operation: 'ImageCrop.cropImage' });
       Alert.alert('Error', 'Failed to crop image. Please try again.');
     } finally {
       setIsCropping(false);
@@ -250,10 +251,10 @@ export const ImageCropScreen = () => {
   };
 
   const resetTransforms = () => {
-    scale.value = withSpring(1);
-    startScale.value = 1;
-    offset.value = withSpring({ x: 0, y: 0 });
-    startOffset.value = { x: 0, y: 0 };
+    scale.set(withSpring(1));
+    startScale.set(1);
+    offset.set(withSpring({ x: 0, y: 0 }));
+    startOffset.set({ x: 0, y: 0 });
   };
 
   return (
@@ -268,9 +269,8 @@ export const ImageCropScreen = () => {
         >
           <Icon
             color={theme.colors.textPrimary}
-            name="chevron-left"
+            name="chevron-back"
             size={24}
-            library="Feather"
           />
         </Pressable>
 
@@ -289,9 +289,8 @@ export const ImageCropScreen = () => {
         >
           <Icon
             color={theme.colors.textPrimary}
-            name="refresh-cw"
+            name="refresh"
             size={20}
-            library="Feather"
           />
         </Pressable>
       </View>
@@ -350,9 +349,8 @@ export const ImageCropScreen = () => {
                 <View style={styles.loadingIconContainer}>
                   <Icon
                     color={theme.colors.textSecondary}
-                    name="image"
+                    name="image-outline"
                     size={40}
-                    library="Feather"
                   />
                 </View>
               </View>
@@ -408,7 +406,7 @@ const styles = StyleSheet.create(theme => ({
   },
   headerTitle: {
     fontSize: theme.typography.fontSize.lg,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   debugText: {
     fontSize: theme.typography.fontSize.xs - 2,
@@ -483,10 +481,10 @@ const styles = StyleSheet.create(theme => ({
   },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

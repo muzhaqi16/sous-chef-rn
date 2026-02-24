@@ -19,12 +19,12 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   return (
     <View style={styles.container}>
       <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onMarkAllRead}>
-        <Icon name="done-all" size={20} color={styles.buttonText.color} />
+        <Icon name="checkmark-done" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Mark all read</Text>
       </Pressable>
 
       <Pressable style={({pressed}) => [styles.button, pressed && styles.pressed]} onPress={onClearAll}>
-        <Icon name="clear-all" size={20} color={styles.buttonText.color} />
+        <Icon name="list-outline" size={20} color={styles.buttonText.color} />
         <Text style={styles.buttonText}>Clear all</Text>
       </Pressable>
     </View>
@@ -52,6 +52,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

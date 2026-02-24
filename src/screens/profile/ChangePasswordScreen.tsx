@@ -82,7 +82,7 @@ export const ChangePasswordScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          name="arrow-left"
+          name="arrow-back"
           onPress={goBack}
           color={theme.colors.textPrimary}
           accessibilityLabel="Go back"
@@ -101,7 +101,7 @@ export const ChangePasswordScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.iconContainer}>
-            <Icon name="lock" size={64} color={theme.colors.primary} />
+            <Icon name="lock-closed-outline" size={64} color={theme.colors.primary} />
           </View>
 
           <Text style={styles.subtitle}>
@@ -232,7 +232,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   submitButtonDisabled: {
-    opacity: 0.5,
+    opacity: theme.opacity.disabled,
   },
   submitButtonText: {
     color: theme.colors.white,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

@@ -29,9 +29,9 @@ export interface BarcodeScannerState {
   isSearching: boolean;
   searchError: string | null;
 
-  // UI state
-  bottomSheetVisible: boolean;
-  bottomSheetIndex: number;
+  // UI state (namespaced to avoid collision with uiSlice)
+  scannerSheetVisible: boolean;
+  scannerSheetIndex: number;
 
   // Recently scanned items cache
   recentlyScanned: ScannedItem[];
@@ -55,8 +55,8 @@ const initialBarcodeScannerState = {
   searchResults: [],
   isSearching: false,
   searchError: null,
-  bottomSheetVisible: false,
-  bottomSheetIndex: 0,
+  scannerSheetVisible: false,
+  scannerSheetIndex: 0,
   recentlyScanned: [],
 };
 
@@ -102,14 +102,14 @@ export const createBarcodeScannerSlice: StateCreator<
 
   showBottomSheet: (index = 1) =>
     set(state => {
-      state.bottomSheetVisible = true;
-      state.bottomSheetIndex = index;
+      state.scannerSheetVisible = true;
+      state.scannerSheetIndex = index;
     }),
 
   hideBottomSheet: () =>
     set(state => {
-      state.bottomSheetVisible = false;
-      state.bottomSheetIndex = 0;
+      state.scannerSheetVisible = false;
+      state.scannerSheetIndex = 0;
     }),
 
   addToRecentlyScanned: item =>
@@ -145,7 +145,7 @@ export const createBarcodeScannerSlice: StateCreator<
       state.searchResults = [];
       state.isSearching = false;
       state.searchError = null;
-      state.bottomSheetVisible = false;
-      state.bottomSheetIndex = 0;
+      state.scannerSheetVisible = false;
+      state.scannerSheetIndex = 0;
     }),
 });

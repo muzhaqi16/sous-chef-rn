@@ -71,11 +71,13 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           value={value}
           {...textInputProps}
         />
-        {showClear && (
+        {!!showClear && (
           <Pressable
             style={({pressed}) => [styles.iconWrapper, pressed && styles.pressed]}
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear input"
           >
             <Icon name="close" size={18} color={theme.colors.textSecondary} />
           </Pressable>
@@ -88,7 +90,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </View>
         )}
       </View>
-      {hasError && (
+      {!!hasError && (
         <Text
           testID={textInputProps.testID ? `${textInputProps.testID}-error` : undefined}
           style={styles.errorText}

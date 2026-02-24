@@ -51,7 +51,7 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
             isProfile={false}>
             <View style={styles.placeholderContainer}>
               <Icon
-                name="add-a-photo"
+                name="camera-outline"
                 size={32}
                 color={theme.colors.textSecondary}
               />
@@ -118,6 +118,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,100 +1,185 @@
 /**
  * Native Performance Service
  *
- * Captures native-level startup metrics using react-native-performance
- * and reports them to the telemetry pipeline.
- *
- * Provides mark/measure helpers for custom user-perceived milestones.
+ * Central observer that captures native startup metrics, routes custom
+ * marks/measures to telemetry, and tracks HTTP resource timing using
+ * `react-native-performance`.
  */
-import performance, { PerformanceObserver } from 'react-native-performance';
+import performance, {
+  PerformanceObserver,
+  setResourceLoggingEnabled,
+} from 'react-native-performance';
 import type { PerformanceEntry } from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
-
-/** Known React Native startup marks emitted by the framework */
-const NATIVE_MARKS = {
-  nativeLaunchStart: 'nativeLaunchStart',
-  nativeLaunchEnd: 'nativeLaunchEnd',
-  downloadStart: 'downloadStart',
-  downloadEnd: 'downloadEnd',
-  runJsBundleStart: 'runJsBundleStart',
-  runJsBundleEnd: 'runJsBundleEnd',
-} as const;
+import { Environment } from '#/utils/environment';
+import Config from 'react-native-config';
 
 let initialized = false;
-let observer: InstanceType<typeof PerformanceObserver> | null = null;
+let nativeMarkObserver: InstanceType<typeof PerformanceObserver> | null = null;
+let measureObserver: InstanceType<typeof PerformanceObserver> | null = null;
+let resourceObserver: InstanceType<typeof PerformanceObserver> | null = null;
 
-function reportNativeMarks() {
-  const entries = performance.getEntriesByType('react-native-mark');
+// Duplicate-prevention flags for one-shot native metrics
+let reportedNativeLaunch = false;
+let reportedBundleLoad = false;
+let reportedContentAppeared = false;
 
-  const findMark = (name: string) => entries.find(e => e.name === name);
-
-  const launchStart = findMark(NATIVE_MARKS.nativeLaunchStart);
-  const launchEnd = findMark(NATIVE_MARKS.nativeLaunchEnd);
-  const bundleStart = findMark(NATIVE_MARKS.runJsBundleStart);
-  const bundleEnd = findMark(NATIVE_MARKS.runJsBundleEnd);
-
-  if (launchStart && launchEnd) {
-    const nativeLaunchMs = launchEnd.startTime - launchStart.startTime;
-    Telemetry.histogram('app_native_launch_ms', nativeLaunchMs, {
-      type: 'native_init',
-    });
-  }
-
-  if (bundleStart && bundleEnd) {
-    const bundleLoadMs = bundleEnd.startTime - bundleStart.startTime;
-    Telemetry.histogram('app_js_bundle_load_ms', bundleLoadMs, {
-      type: 'hermes_bytecode',
-    });
+function getGraphQLHost(): string {
+  const apiConfig = Environment.getApiConfig();
+  try {
+    return new URL(Config.API_URL || apiConfig.baseUrl).host;
+  } catch {
+    return '';
   }
 }
 
+function handleNativeMarks(entries: PerformanceEntry[]) {
+  const find = (name: string) => entries.find(e => e.name === name);
+
+  if (!reportedNativeLaunch) {
+    const launchStart = find('nativeLaunchStart');
+    const launchEnd = find('nativeLaunchEnd');
+    if (launchStart && launchEnd) {
+      reportedNativeLaunch = true;
+      Telemetry.histogram(
+        'app_native_launch_ms',
+        launchEnd.startTime - launchStart.startTime,
+        { type: 'native_init' },
+      );
+    }
+  }
+
+  if (!reportedBundleLoad) {
+    const bundleStart = find('runJsBundleStart');
+    const bundleEnd = find('runJsBundleEnd');
+    if (bundleStart && bundleEnd) {
+      reportedBundleLoad = true;
+      Telemetry.histogram(
+        'app_js_bundle_load_ms',
+        bundleEnd.startTime - bundleStart.startTime,
+        { type: 'hermes_bytecode' },
+      );
+    }
+  }
+
+  if (!reportedContentAppeared) {
+    const contentAppeared = find('contentAppeared');
+    if (contentAppeared) {
+      reportedContentAppeared = true;
+      Telemetry.histogram(
+        'app_content_appeared_ms',
+        contentAppeared.startTime,
+        { type: 'content_appeared' },
+      );
+    }
+  }
+}
+
+function handleMeasure(entry: PerformanceEntry) {
+  const { name, duration } = entry;
+
+  // screen:<name>:<phase> → route to screen histograms
+  if (name.startsWith('screen:')) {
+    const parts = name.split(':');
+    const screen = parts[1];
+    const phase = parts[2];
+
+    switch (phase) {
+      case 'mount':
+        Telemetry.histogram('screen_mount_duration_ms', duration, { screen });
+        break;
+      case 'interactive':
+        Telemetry.histogram('screen_interactive_duration_ms', duration, {
+          screen,
+        });
+        break;
+      case 'transition':
+        Telemetry.histogram('screen_transition_duration_ms', duration, {
+          screen,
+        });
+        break;
+    }
+    return;
+  }
+
+  // gql:* measures are skipped — telemetryLink reports directly with full labels
+}
+
+function handleResource(entry: PerformanceEntry) {
+  const { name: url, duration } = entry;
+
+  // Filter out GraphQL endpoint to avoid double-counting with graphql_request_duration_ms
+  const gqlHost = getGraphQLHost();
+  if (gqlHost) {
+    try {
+      const resourceHost = new URL(url).host;
+      if (resourceHost === gqlHost) {
+        return;
+      }
+    } catch {
+      // Invalid URL — report it
+    }
+  }
+
+  let host = 'unknown';
+  try {
+    host = new URL(url).host;
+  } catch {
+    // Keep 'unknown'
+  }
+
+  Telemetry.histogram('http_request_duration_ms', duration, { host });
+}
+
 export const NativePerformanceService = {
-  /**
-   * Initialize the service. Should be called once after Telemetry.initialize().
-   * Observes native startup marks and reports them to telemetry.
-   */
   initialize() {
-    if (initialized) return;
+    if (initialized) {
+      return;
+    }
     initialized = true;
 
-    // Report any marks that were already emitted before we initialized
-    reportNativeMarks();
+    // 1. Native mark observer (buffered — replays marks emitted before JS ran)
+    nativeMarkObserver = new PerformanceObserver(list => {
+      handleNativeMarks(list.getEntries());
+    });
+    nativeMarkObserver.observe({ type: 'react-native-mark', buffered: true });
 
-    // Observe future entries for any marks that arrive late
-    observer = new PerformanceObserver((list) => {
-      const entries = list.getEntries();
-      const hasRelevantMark = entries.some(
-        (entry: PerformanceEntry) => entry.entryType === 'react-native-mark',
-      );
-      if (hasRelevantMark) {
-        reportNativeMarks();
+    // 2. Measure observer (buffered — picks up any measures created before init)
+    measureObserver = new PerformanceObserver(list => {
+      for (const entry of list.getEntries()) {
+        handleMeasure(entry);
       }
     });
-    observer.observe({ type: 'react-native-mark', buffered: true });
+    measureObserver.observe({ type: 'measure', buffered: true });
+
+    // 3. Resource observer (buffered — captures HTTP/fetch timing)
+    setResourceLoggingEnabled(true);
+    resourceObserver = new PerformanceObserver(list => {
+      for (const entry of list.getEntries()) {
+        handleResource(entry);
+      }
+    });
+    resourceObserver.observe({ type: 'resource', buffered: true });
   },
 
-  /**
-   * Create a performance mark for a custom milestone.
-   */
+  cleanup() {
+    nativeMarkObserver?.disconnect();
+    measureObserver?.disconnect();
+    resourceObserver?.disconnect();
+    nativeMarkObserver = null;
+    measureObserver = null;
+    resourceObserver = null;
+    initialized = false;
+    reportedNativeLaunch = false;
+    reportedBundleLoad = false;
+    reportedContentAppeared = false;
+  },
+
   mark(name: string) {
     return performance.mark(name);
   },
 
-  /**
-   * Measure duration between two marks.
-   */
   measure(name: string, startMark: string, endMark?: string) {
     return performance.measure(name, startMark, endMark);
-  },
-
-  /**
-   * Cleanup observer on shutdown.
-   */
-  cleanup() {
-    if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
-    initialized = false;
   },
 };

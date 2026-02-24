@@ -3,18 +3,32 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '../organisms/ItemList';
 
+/** Shared empty-state configuration */
+interface EmptyStateConfig {
+  icon?: string;
+  title: string;
+  description?: string;
+  loadingDescription?: string;
+  action?: {
+    label: string;
+    onPress: () => void;
+  };
+}
+
 interface ListTemplateProps {
-  // Core list functionality
-  items?: any[];
+  // Core list functionality — items are typed loosely because the template
+  // passes them through to either ItemList or a custom list component,
+  // each with its own item type.
+  items?: { id: string }[];
   onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onRefresh?: () => Promise<void>;
-  emptyState?: any;
+  emptyState?: EmptyStateConfig;
 
   // List composition
-  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
-  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  ListHeaderComponent?: React.ComponentType<unknown> | React.ReactElement | null;
+  ListFooterComponent?: React.ComponentType<unknown> | React.ReactElement | null;
 
   // State management
   loading?: boolean;
@@ -22,9 +36,11 @@ interface ListTemplateProps {
   // Test IDs
   testIDPrefix?: string;
 
-  // Custom list component
+  // Custom list component — intentionally loosely typed because each consumer
+  // passes a different component (ShoppingListTabs, SortablePantryList, etc.)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   customListComponent?: React.ComponentType<any>;
-  customListProps?: any;
+  customListProps?: Record<string, unknown>;
 }
 
 export const ListTemplate: React.FC<ListTemplateProps> = ({
@@ -51,7 +67,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Show loading empty state when loading with no items
   const effectiveEmptyState = isLoading
     ? {
-        icon: emptyState?.icon || 'inventory',
+        icon: emptyState?.icon || 'cube-outline',
         title: 'Loading...',
         description: emptyState?.loadingDescription || 'Loading your items',
       }
@@ -74,7 +90,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         />
       ) : (
         <ItemList
-          items={items || []}
+          items={items as Parameters<typeof ItemList>[0]['items']}
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}
@@ -82,7 +98,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
-          emptyState={effectiveEmptyState}
+          emptyState={effectiveEmptyState as Parameters<typeof ItemList>[0]['emptyState']}
         />
       )}
     </View>

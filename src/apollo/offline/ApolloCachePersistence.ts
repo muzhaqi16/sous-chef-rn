@@ -32,6 +32,7 @@ const CURRENT_CACHE_VERSION = '1.1.3'; // Bumped to clear stale itemsConnection 
  */
 class ApolloCachePersistence {
   private saveTimeout: NodeJS.Timeout | null = null;
+  private idleCallbackId: number | null = null;
   private readonly debounceMs = 1000; // Wait 1s before saving to reduce writes
 
   /**
@@ -82,6 +83,19 @@ class ApolloCachePersistence {
    * @param cache - Normalized cache object from cache.extract()
    */
   save(cache: NormalizedCacheObject): void {
+    this.scheduleExtractAndSave(() => cache);
+  }
+
+  /**
+   * Schedule a lazy cache extraction and save (debounced)
+   *
+   * Unlike save(), this defers cache.extract() until after the debounce period,
+   * so only one extract() call happens per debounce window instead of one per
+   * cache operation (write, evict, modify, gc).
+   *
+   * @param extractor - Lazy function that returns the cache data when called
+   */
+  scheduleExtractAndSave(extractor: () => NormalizedCacheObject): void {
     // Clear existing timeout
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
@@ -94,6 +108,8 @@ class ApolloCachePersistence {
       // Falls back to requestAnimationFrame which defers until after current paint
       const serialize = () => {
         try {
+          // Extract cache data lazily - only runs once after debounce
+          const cache = extractor();
           const cacheString = JSON.stringify(cache);
           const sizeKB = Math.round(cacheString.length / 1024);
 
@@ -115,10 +131,11 @@ class ApolloCachePersistence {
         typeof globalThis !== 'undefined' &&
         'requestIdleCallback' in globalThis
       ) {
-        (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
+        // justified: requestIdleCallback not in React Native's global type definitions
+        this.idleCallbackId = (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
       } else if (typeof requestAnimationFrame === 'function') {
         // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
-        requestAnimationFrame(() => {
+        this.idleCallbackId = requestAnimationFrame(() => {
           setTimeout(serialize, 0);
         });
       } else {
@@ -126,6 +143,25 @@ class ApolloCachePersistence {
         setTimeout(serialize, 0);
       }
     }, this.debounceMs);
+  }
+
+  /**
+   * Cancel any pending debounced save
+   * Call during logout to prevent writing stale cache data
+   */
+  cancel(): void {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    if (this.idleCallbackId != null) {
+      if (typeof globalThis !== 'undefined' && 'cancelIdleCallback' in globalThis) {
+        (globalThis as any).cancelIdleCallback(this.idleCallbackId); // justified: cancelIdleCallback not in RN types
+      } else if (typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(this.idleCallbackId);
+      }
+      this.idleCallbackId = null;
+    }
   }
 
   /**

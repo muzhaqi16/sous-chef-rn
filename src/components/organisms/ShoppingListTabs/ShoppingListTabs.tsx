@@ -60,6 +60,9 @@ interface ShoppingListTabsProps {
   canReorderItems?: boolean;
   // Transition state for showing skeletons during list switches
   isTransitioning?: boolean;
+  // Batch move purchased items to pantry
+  onBatchMoveToPantry?: () => void;
+  batchMoveToPantryLoading?: boolean;
 }
 
 const ROUTES: TabRoute[] = [
@@ -103,6 +106,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   canReorderItems = false,
   // Transition state
   isTransitioning = false,
+  // Batch move to pantry
+  onBatchMoveToPantry,
+  batchMoveToPantryLoading = false,
 }) => {
   const layout = useWindowDimensions();
 
@@ -178,6 +184,28 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       ],
     );
   }, [purchasedItems.length, onClearAllPurchased]);
+
+  // Handle batch move purchased items to pantry with confirmation dialog
+  const handleBatchMoveToPantryWithConfirmation = useCallback(() => {
+    if (purchasedItems.length === 0 || !onBatchMoveToPantry) return;
+
+    Alert.alert(
+      'Move All to Pantry',
+      `Move ${purchasedItems.length === 1 ? '1 purchased item' : `all ${purchasedItems.length} purchased items`} to your pantry?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Move All',
+          onPress: () => {
+            onBatchMoveToPantry();
+          },
+        },
+      ],
+    );
+  }, [purchasedItems.length, onBatchMoveToPantry]);
 
   // Handle clear all shopping (unpurchased) items with confirmation dialog
   const handleClearAllShoppingWithConfirmation = useCallback(() => {
@@ -274,6 +302,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canEditItems={canEditItems}
               canMarkPurchased={canMarkPurchased}
               isTransitioning={isTransitioning}
+              onBatchMoveToPantry={onBatchMoveToPantry ? handleBatchMoveToPantryWithConfirmation : undefined}
+              batchMoveToPantryLoading={batchMoveToPantryLoading}
             />
           );
         default:
@@ -307,6 +337,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       canMarkPurchased,
       canReorderItems,
       isTransitioning,
+      onBatchMoveToPantry,
+      handleBatchMoveToPantryWithConfirmation,
+      batchMoveToPantryLoading,
     ],
   );
 
@@ -367,8 +400,4 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   );
 };
 
-// PERFORMANCE: Memoize with shallow comparison
-const MemoizedShoppingListTabs = React.memo(ShoppingListTabs);
-
-// Export memoized version as default to ensure it's always used with optimization
-export { MemoizedShoppingListTabs as ShoppingListTabs };
+export { ShoppingListTabs };

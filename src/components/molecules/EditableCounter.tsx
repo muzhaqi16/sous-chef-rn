@@ -63,7 +63,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <View
         style={[
           styles.container,
@@ -108,7 +108,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessibilityState={{ disabled }}
         >
           <Icon
-            name="remove"
+            name="remove-outline"
             size={theme.fonts.size.md}
             color={disabled ? theme.colors.iconDisabled : theme.colors.white}
           />
@@ -192,12 +192,12 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
   input: {
     flex: 1,
     fontSize: theme.fonts.size.md,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   inputDisabled: {

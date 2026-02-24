@@ -87,12 +87,12 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
         {message}
       </Text>
-      {details && (
+      {!!details && (
         <Text style={[styles.details, { color: theme.colors.textTertiary }]}>
           {details}
         </Text>
       )}
-      {onRetry && (
+      {!!onRetry && (
         <Button
           onPress={onRetry}
           variant="primary"
@@ -102,7 +102,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           {retryLabel}
         </Button>
       )}
-      {secondaryAction && (
+      {!!secondaryAction && (
         <Button
           onPress={secondaryAction.onPress}
           variant="outline"
@@ -139,7 +139,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
     marginBottom: theme.spacing.md,
-    lineHeight: theme.typography.lineHeight.normal as any,
+    lineHeight: theme.typography.lineHeight.normal,
   },
 
   details: {

@@ -58,16 +58,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
             {displayWeight} {unitSymbol}
           </Text>
-          {additionalInfo && (
-            <>
+          {!!additionalInfo && <>
               <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
                 {' • '}
               </Text>
               <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
                 {additionalInfo}
               </Text>
-            </>
-          )}
+            </>}
         </View>
       );
     }
@@ -89,16 +87,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
           {displayWeight} {unitSymbol}{isPartialSingleItem ? ' remaining' : ''}
         </Text>
-        {additionalInfo && (
-          <>
+        {!!additionalInfo && <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
               {' • '}
             </Text>
             <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
               {additionalInfo}
             </Text>
-          </>
-        )}
+          </>}
       </View>
     );
   }
@@ -115,21 +111,19 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           displayAsFraction={displayAsFraction}
           style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
-        {isPartialSingleItem && (
+        {!!isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
             {' '}({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {additionalInfo && (
-          <>
+        {!!additionalInfo && <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
               {' • '}
             </Text>
             <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
               {additionalInfo}
             </Text>
-          </>
-        )}
+          </>}
       </View>
     );
   }
@@ -141,16 +135,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
           {displayWeight} {unitSymbol}
         </Text>
-        {additionalInfo && (
-          <>
+        {!!additionalInfo && <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
               {' • '}
             </Text>
             <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
               {additionalInfo}
             </Text>
-          </>
-        )}
+          </>}
       </View>
     );
   }
@@ -167,21 +159,19 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           showUnit={false}
           style={[styles.quantity, { color: theme.colors.textPrimary }]}
         />
-        {isPartialSingleItem && (
+        {!!isPartialSingleItem && (
           <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
             {' '}({Math.round(quantity! * 100)}% remaining)
           </Text>
         )}
-        {additionalInfo && (
-          <>
+        {!!additionalInfo && <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
               {' • '}
             </Text>
             <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
               {additionalInfo}
             </Text>
-          </>
-        )}
+          </>}
       </View>
     );
   }
@@ -209,18 +199,18 @@ const styles = StyleSheet.create(theme => ({
   },
   quantity: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   weight: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   separator: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
   additionalInfo: {
     fontSize: theme.fonts.size.sm,
-    fontWeight: '400',
+    fontWeight: theme.fonts.weight.regular,
   },
 }));

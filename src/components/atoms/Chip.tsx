@@ -43,7 +43,7 @@ const styles = StyleSheet.create(theme => ({
   },
   chipText: {
     fontSize: theme.typography.fontSize.sm,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   selected: {
     backgroundColor: theme.colors.chipSelectedBackground,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.chipText,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));
 

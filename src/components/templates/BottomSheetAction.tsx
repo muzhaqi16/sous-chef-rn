@@ -1,14 +1,12 @@
-import React, { useRef, ReactNode, Ref } from 'react';
+import React, { ReactNode, Ref } from 'react';
 import { Keyboard, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Title } from '../atoms/Title';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 interface BottomSheetActionProps {
   children: ReactNode;
@@ -30,18 +28,17 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   scrollable = true,
   headerRight,
 }) => {
-  const { theme } = useUnistyles();
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const insets = useSafeAreaInsets();
-
-  // Configure smooth animation for open/close
-  const animationConfigs = useSharedBottomSheetConfigs();
+  const { ref: bottomSheetModalRef, modalProps, insets } = useStandardBottomSheet({
+    onDismiss: () => Keyboard.dismiss(),
+    snapPoints,
+    keyboardBehavior: 'fillParent',
+  });
 
   const content = (
     <>
-      {(sheetTitle || headerRight) && (
+      {!!(sheetTitle || headerRight) && (
         <View style={styles.headerRow}>
-          {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+          {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
           {headerRight}
         </View>
       )}
@@ -52,28 +49,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   return (
     <BottomSheetModal
       ref={sheetRef || bottomSheetModalRef}
+      {...modalProps}
       index={0}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      keyboardBehavior="fillParent"
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      animationConfigs={animationConfigs}
-      onDismiss={() => {
-        // Optionally handle dismiss actions here
-        Keyboard.dismiss();
-      }}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: 'gray' }}
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetModalRef.current?.dismiss()}
-        />
-      )}
     >
       {scrollable ? (
         <BottomSheetScrollView
@@ -85,9 +63,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         </BottomSheetScrollView>
       ) : (
         <>
-          {(sheetTitle || headerRight) && (
+          {!!(sheetTitle || headerRight) && (
             <View style={styles.nonScrollableHeader}>
-              {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+              {sheetTitle ? <Title style={styles.sheetTitle}>{sheetTitle}</Title> : null}
               {headerRight}
             </View>
           )}

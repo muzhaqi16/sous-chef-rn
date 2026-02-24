@@ -71,7 +71,7 @@ export const SmartSearchAddBar: React.FC<SmartSearchAddBarProps> = ({
         )}
       </View>
 
-      {showAddControls && (
+      {!!showAddControls && (
         <View style={styles.addControls}>
           <Text style={styles.addText}>Add "{value}" to list</Text>
           <View style={styles.quantityRow}>
@@ -177,6 +177,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

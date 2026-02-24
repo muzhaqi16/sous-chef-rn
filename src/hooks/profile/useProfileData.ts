@@ -1,10 +1,10 @@
 import {useGetUserProfileQuery} from '#generated';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {useAuth} from '#hooks/auth/useAuth';
 
 export const useProfileData = () => {
   const {user} = useAuth();
-  const isLoggingOut = useStore(state => state.isLoggingOut);
+  const isLoggingOut = useAppStore(state => state.isLoggingOut);
 
   const {data, loading} = useGetUserProfileQuery({
     // ✅ OPTIMIZED: Use cache-first for instant loading
@@ -17,7 +17,7 @@ export const useProfileData = () => {
     notifyOnNetworkStatusChange: false,
   });
 
-  const profile = data?.userProfile || null;
+  const profile = data?.me?.profile || null;
 
   return {
     user,

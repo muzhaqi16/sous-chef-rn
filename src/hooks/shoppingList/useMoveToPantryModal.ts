@@ -4,7 +4,6 @@ import { ShoppingListItemDisplayFragment } from '#generated';
 import type { BasicPantryFragment } from '#generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
-import { useStableRef } from '#/hooks/utils/useStableRef';
 
 /**
  * Options for useMoveToPantryModal hook
@@ -75,9 +74,6 @@ export function useMoveToPantryModal(
   const [selectedItem, setSelectedItem] =
     useState<ShoppingListItemDisplayFragment | null>(null);
 
-  // Store items in stable ref to avoid recreating callbacks on every items change
-  const itemsRef = useStableRef(items);
-
   // Lazy-loaded home/pantry data
   const {
     pantries,
@@ -115,13 +111,13 @@ export function useMoveToPantryModal(
         return;
       }
 
-      const item = itemsRef.current.find(i => i.id === itemId);
+      const item = items.find(i => i.id === itemId);
       if (item) {
         setSelectedItem(item as ShoppingListItemDisplayFragment);
         setVisible(true);
       }
     },
-    [homeDataLoaded, fetchHomeData, pantries.length, itemsRef],
+    [homeDataLoaded, fetchHomeData, pantries.length, items],
   );
 
   const close = useCallback(() => {

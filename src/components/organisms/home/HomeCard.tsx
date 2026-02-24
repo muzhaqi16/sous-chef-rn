@@ -74,10 +74,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
   // Trigger highlight animation when isHighlighted changes
   useEffect(() => {
-    highlightOpacity.value = withTiming(isHighlighted ? 1 : 0, {
+    highlightOpacity.set(withTiming(isHighlighted ? 1 : 0, {
       duration: 150, // Fast - matches slide animation
       easing: Easing.out(Easing.ease),
-    });
+    }));
   }, [isHighlighted, highlightOpacity]);
 
   // Static card style - backgroundColor doesn't animate
@@ -129,17 +129,17 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               {(home.pantries?.length || 0) === 1 ? 'pantry' : 'pantries'}
             </Text>
           </View>
-          {isDefault && (
+          {!!isDefault && (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultText}>Default</Text>
             </View>
           )}
-          {onPress && (
+          {!!onPress && (
             <Icon
               name="chevron-forward"
               size={20}
               color={theme.colors.textSecondary}
-              library="Ionicons"
+
             />
           )}
         </Pressable>
@@ -222,6 +222,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

@@ -95,7 +95,7 @@ query GetItemConversions(
   $itemId: ID!
   $includeStandard: Boolean
 ) {
-  getItemConversions(
+  itemConversions(
     itemId: $itemId
     includeStandard: $includeStandard
   ) {
@@ -126,7 +126,7 @@ query GetBestDisplayUnit(
   $currentUnitId: ID!
   $itemId: ID
 ) {
-  getBestDisplayUnit(
+  bestDisplayUnit(
     quantity: $quantity
     currentUnitId: $currentUnitId
     itemId: $itemId
@@ -212,19 +212,9 @@ query CalculateRecipePantryDeficit(
 # ============================================
 
 mutation UpsertItemUnitConversion(
-  $itemId: ID!
-  $fromUnitId: ID!
-  $toUnitId: ID!
-  $conversionRatio: Float!
-  $notes: String
+  $input: UpsertItemUnitConversionInput!
 ) {
-  upsertItemUnitConversion(
-    itemId: $itemId
-    fromUnitId: $fromUnitId
-    toUnitId: $toUnitId
-    conversionRatio: $conversionRatio
-    notes: $notes
-  ) {
+  upsertItemUnitConversion(input: $input) {
     success
     message
     code

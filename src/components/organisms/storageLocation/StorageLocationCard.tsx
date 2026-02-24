@@ -36,11 +36,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
         disabled={!onPress}
       >
         <View style={commonStyles.row}>
-          {location.icon && <Text style={styles.icon}>{location.icon}</Text>}
+          {location.icon ? <Text style={styles.icon}>{location.icon}</Text> : null}
           <View style={styles.info}>
             <View style={commonStyles.rowSpaceBetween}>
               <Text style={commonStyles.title}>{location.name}</Text>
-              {isDefault && (
+              {!!isDefault && (
                 <View style={commonStyles.badge}>
                   <Text style={commonStyles.badgeText}>Default</Text>
                 </View>
@@ -49,7 +49,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             <Text style={[commonStyles.caption, styles.subtitle]}>
               {formatType(location.type)} • {location.currentItemCount}{' '}
               {location.currentItemCount === 1 ? 'item' : 'items'}
-              {location.parentLocation && (
+              {!!location.parentLocation && (
                 <Text style={styles.parentInfo}>
                   {' '}
                   • Inside {location.parentLocation.name}
@@ -74,14 +74,14 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
           style={({pressed}) => [commonStyles.row, styles.actionButton, pressed && styles.pressed]}
           onPress={onEdit}
         >
-          <Icon name="edit" size={18} />
+          <Icon name="create-outline" size={18} />
           <Text style={styles.actionText}>Edit</Text>
         </Pressable>
         <Pressable
           style={({pressed}) => [commonStyles.row, styles.actionButton, styles.deleteButton, pressed && styles.pressed]}
           onPress={onDelete}
         >
-          <Icon name="delete" size={18} color="#F44336" />
+          <Icon name="trash-outline" size={18} color="#F44336" />
           <Text style={styles.deleteText}>Delete</Text>
         </Pressable>
       </View>
@@ -140,6 +140,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

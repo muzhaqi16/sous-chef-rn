@@ -142,7 +142,7 @@ export const HomeDetailScreen: React.FC<{
             loading={joinCodeLoading}
             containerStyle={styles.joinCodeSwitch}
           />
-          {home.allowJoinCode && home.joinCode && (
+          {!!home.allowJoinCode && !!home.joinCode && (
             <View style={styles.joinCodeRow}>
               <View style={styles.joinCodeContent}>
                 <Text style={styles.joinCodeLabel}>Join Code</Text>
@@ -158,7 +158,7 @@ export const HomeDetailScreen: React.FC<{
                   color={
                     copied ? theme.colors.success : theme.colors.textPrimary
                   }
-                  library="Ionicons"
+
                 />
               </Pressable>
             </View>
@@ -269,6 +269,6 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.fonts.size.sm * 1.5,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

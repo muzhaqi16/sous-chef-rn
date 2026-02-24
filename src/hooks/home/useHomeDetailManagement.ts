@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, type AlertButton } from 'react-native';
 import { useShallow } from 'zustand/shallow';
+import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   useGetHomeQuery,
   useUpdateHomeMutation,
@@ -65,7 +66,7 @@ export function useHomeDetailManagement(homeId: string) {
     errorPolicy: 'all',
     // Use cache.modify to update the membership role field
     update(cache, { data }, { variables }) {
-      if (!data?.updateMembership || !variables) return;
+      if (!data?.updateMembership?.success || !variables) return;
 
       const membershipId = variables.id;
       const newRole = variables.input.role;
@@ -94,7 +95,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [removeMemberMutation] = useRemoveMemberMutation({
     errorPolicy: 'all',
     update(cache, { data }, { variables }) {
-      if (!data?.removeMember || !variables) return;
+      if (!data?.removeMember?.success || !variables) return;
 
       try {
         const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
@@ -124,7 +125,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [revokeInviteMutation] = useRevokeHomeInviteMutation({
     errorPolicy: 'all',
     update(cache, { data }, { variables }) {
-      if (!data?.revokeHomeInvite || !variables) return;
+      if (!data?.revokeHomeInvite?.success || !variables) return;
 
       try {
         const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
@@ -157,7 +158,7 @@ export function useHomeDetailManagement(homeId: string) {
     useLeaveHomeMutation({
       errorPolicy: 'all',
       update(cache, { data }) {
-        if (!data?.leaveHome) return;
+        if (!data?.leaveHome?.success) return;
 
         try {
           // Evict the home from cache after leaving
@@ -170,7 +171,7 @@ export function useHomeDetailManagement(homeId: string) {
         }
       },
       onCompleted: data => {
-        if (data?.leaveHome && homeId === selectedHomeId) {
+        if (data?.leaveHome?.success && homeId === selectedHomeId) {
           // Read remaining homes from cache
           const cachedData = leaveClient.cache.readQuery({
             query: GetHomesDocument,
@@ -199,7 +200,9 @@ export function useHomeDetailManagement(homeId: string) {
       },
     });
 
-  const home = normalizeHome(data?.home);
+  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  const preservedHomeData = usePreservedQueryData(data?.home, null);
+  const home = normalizeHome(preservedHomeData);
 
   // CRUD operations utilities
   const { createRemoveOperation } = useCrudOperations();
@@ -226,7 +229,7 @@ export function useHomeDetailManagement(homeId: string) {
         { label: 'Guest', value: MembershipRole.Guest },
       ];
 
-      const buttons = roles.map(role => ({
+      const buttons: AlertButton[] = roles.map(role => ({
         text: role.label,
         onPress: () => {
           if (role.value === currentRole) return;
@@ -256,7 +259,7 @@ export function useHomeDetailManagement(homeId: string) {
         text: 'Cancel',
         onPress: () => {},
         style: 'cancel',
-      } as any);
+      });
 
       Alert.alert(
         'Select Role',
@@ -311,7 +314,7 @@ export function useHomeDetailManagement(homeId: string) {
                   const result = await leaveHomeMutation({
                     variables: { homeId },
                   });
-                  resolve(!!result.data?.leaveHome);
+                  resolve(!!result.data?.leaveHome?.success);
                 } catch {
                   resolve(false);
                 }

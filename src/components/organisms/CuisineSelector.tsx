@@ -67,8 +67,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             disabled={isAdding}
           >
             <Icon
-              library="Feather"
-              name="plus-circle"
+              name="add-circle-outline"
               size={18}
               color={theme.colors.primary}
             />
@@ -76,15 +75,14 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
           </Pressable>
         )}
 
-        {showAllCuisines && (
+        {!!showAllCuisines && (
           <Pressable
             style={({pressed}) => [styles.showMoreButton, pressed && styles.pressed]}
             onPress={() => setShowAllCuisines(false)}
             disabled={isAdding}
           >
             <Icon
-              library="Feather"
-              name="minus-circle"
+              name="remove-circle-outline"
               size={18}
               color={theme.colors.textSecondary}
             />
@@ -123,11 +121,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   showMoreText: {
     fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
     marginLeft: theme.spacing.xs,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

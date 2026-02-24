@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text, Image} from 'react-native';
+import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {CachedImage} from '#components/atoms/CachedImage';
 
 interface Item {
   id: string;
@@ -29,10 +30,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
   return (
     <View style={styles.itemCard}>
       {item.imageUrl ? (
-        <Image
-          source={{uri: item.imageUrl}}
+        <CachedImage
+          uri={item.imageUrl}
           style={styles.itemImage}
-          resizeMode="cover"
         />
       ) : (
         <View style={styles.placeholderImage}>
@@ -42,20 +42,16 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
 
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
-        {item.brandName && (
-          <Text style={styles.itemBrand}>{item.brandName}</Text>
-        )}
+        {!!item.brandName && <Text style={styles.itemBrand}>{item.brandName}</Text>}
         {item.netWeight != null && (
           <Text style={styles.itemWeight}>
             {formatWeight(item.netWeight)}
             {item.displayUnit?.name ? ` ${item.displayUnit.name}` : ''}
           </Text>
         )}
-        {item?.price && (
-          <Text style={styles.itemPrice}>${item?.price.toFixed(2)}</Text>
-        )}
+        {!!item?.price && <Text style={styles.itemPrice}>${item?.price.toFixed(2)}</Text>}
         <Text style={styles.itemBarcode}>Barcode: {item.upc}</Text>
-        {format && <Text style={styles.itemFormat}>Format: {format}</Text>}
+        {format ? <Text style={styles.itemFormat}>Format: {format}</Text> : null}
       </View>
     </View>
   );

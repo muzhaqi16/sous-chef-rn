@@ -5,8 +5,7 @@ import {
   useCreateImageUploadUrlMutation,
   useConfirmProfileImageUploadMutation,
   useConfirmItemImageUploadMutation,
-  useUpdateProfileAvatarMutation,
-  useUpdateProfileCoverMutation,
+  useUpdateUserProfileMutation,
   useUpdateItemImageMutation,
   ImageUploadPurpose,
 } from '#generated';
@@ -51,8 +50,7 @@ export const useImageUpload = () => {
   const [createUploadUrl] = useCreateImageUploadUrlMutation();
   const [confirmProfileUpload] = useConfirmProfileImageUploadMutation();
   const [confirmItemUpload] = useConfirmItemImageUploadMutation();
-  const [updateProfileAvatar] = useUpdateProfileAvatarMutation();
-  const [updateProfileCover] = useUpdateProfileCoverMutation();
+  const [updateProfile] = useUpdateUserProfileMutation();
   const [updateItemImage] = useUpdateItemImageMutation();
 
   const uploadToMinIO = useCallback(
@@ -74,9 +72,13 @@ export const useImageUpload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
+            console.error(
+              `MinIO upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
+            );
+            const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
             reject(
               new Error(
-                `Upload failed: ${xhr.status} ${xhr.statusText}`,
+                `Upload failed: ${xhr.status}${statusText}`,
               ),
             );
           }
@@ -222,11 +224,12 @@ export const useImageUpload = () => {
             const { data } = await confirmProfileUpload({
               variables: { key },
             });
-            return data?.confirmProfileImageUpload || null;
+            return data?.confirmProfileImageUpload?.url || null;
           },
           options,
         );
       } catch (error) {
+        console.error('Profile image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
 
@@ -265,7 +268,7 @@ export const useImageUpload = () => {
             const { data } = await confirmItemUpload({
               variables: { itemId, key },
             });
-            return data?.confirmItemImageUpload || null;
+            return data?.confirmItemImageUpload?.url || null;
           },
           options,
         );
@@ -305,35 +308,33 @@ export const useImageUpload = () => {
   const updateProfileAvatarUrl = useCallback(
     async (avatarUrl: string) => {
       try {
-        const { data } = await updateProfileAvatar({
-          variables: { avatarUrl },
+        const { data } = await updateProfile({
+          variables: { input: { avatar: avatarUrl } },
         });
-        const result = data?.updateProfileAvatar;
-        return result || null;
+        return data?.updateProfile?.userProfile || null;
       } catch (error) {
         console.error('Update profile avatar failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile avatar');
         return null;
       }
     },
-    [updateProfileAvatar],
+    [updateProfile],
   );
 
   const updateProfileCoverUrl = useCallback(
     async (coverImageUrl: string) => {
       try {
-        const { data } = await updateProfileCover({
-          variables: { coverImageUrl },
+        const { data } = await updateProfile({
+          variables: { input: { coverImage: coverImageUrl } },
         });
-        const result = data?.updateProfileCover;
-        return result || null;
+        return data?.updateProfile?.userProfile || null;
       } catch (error) {
         console.error('Update profile cover failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile cover');
         return null;
       }
     },
-    [updateProfileCover],
+    [updateProfile],
   );
 
   const updateItemImageUrl = useCallback(

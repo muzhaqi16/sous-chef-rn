@@ -211,11 +211,10 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
       {/* Header with title and add button */}
       <View style={styles.header}>
         <Text style={commonStyles.subtitle}>{title}</Text>
-        {showAddButton && (
+        {!!showAddButton && (
           <Pressable onPress={handleAddPress} style={({pressed}) => [styles.addButton, pressed && styles.pressed]}>
             <Icon
-              library="Feather"
-              name="plus"
+              name="add"
               size={20}
               color={theme.colors.primary}
             />
@@ -235,8 +234,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               onPress={() => handleRemove(item)}
             >
               <Icon
-                library="Feather"
-                name="x-circle"
+                name="close-circle-outline"
                 size={18}
                 color={theme.colors.error}
               />
@@ -273,7 +271,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
               editable={!loading}
             />
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
             <View style={styles.modalButtons}>
               <Pressable
@@ -354,7 +352,7 @@ const styles = StyleSheet.create(theme => ({
   },
   displayChipText: {
     fontSize: theme.typography.fontSize.sm + 1,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.chipSelectedText,
   },
   removeButton: {
@@ -395,9 +393,9 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: theme.opacity.disabled,
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

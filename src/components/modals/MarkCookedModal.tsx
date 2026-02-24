@@ -1,13 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Switch } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -21,8 +19,10 @@ interface MarkCookedModalProps {
   onConfirm: (input: {
     servings: number;
     deductFromPantry: boolean;
+    useGranularDeduction: boolean;
     notes?: string;
   }) => void;
+  hasPantry?: boolean;
 }
 
 export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
@@ -31,27 +31,28 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   defaultServings,
   onClose,
   onConfirm,
+  hasPantry = false,
 }) => {
-  const { theme } = useUnistyles();
-  const insets = useSafeAreaInsets();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const animationConfigs = useSharedBottomSheetConfigs();
+  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
+    visible,
+    onDismiss: onClose,
+    snapPoints: ['55%'],
+    keyboardBehavior: 'interactive',
+  });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
   const [deductFromPantry, setDeductFromPantry] = useState(true);
+  const [useGranularDeduction, setUseGranularDeduction] = useState(true);
   const [notes, setNotes] = useState('');
 
-  // Control bottom sheet visibility based on visible prop
+  // Reset form when modal opens
   useEffect(() => {
     if (visible) {
-      bottomSheetRef.current?.present();
-      // Reset form when modal opens
       setServingsInput(defaultServings?.toString() || '1');
       setDeductFromPantry(true);
+      setUseGranularDeduction(true);
       setNotes('');
-    } else {
-      bottomSheetRef.current?.dismiss();
     }
   }, [visible, defaultServings]);
 
@@ -64,39 +65,19 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     onConfirm({
       servings: finalServings,
       deductFromPantry,
+      useGranularDeduction: deductFromPantry && hasPantry && useGranularDeduction,
       notes: notes || undefined,
     });
     onClose();
-  }, [servingsInput, deductFromPantry, notes, defaultServings, onConfirm, onClose]);
+  }, [servingsInput, deductFromPantry, useGranularDeduction, hasPantry, notes, defaultServings, onConfirm, onClose]);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      snapPoints={['55%']}
-      enablePanDownToClose
-      enableDynamicSizing={false}
-      topInset={insets.top}
-      onDismiss={onClose}
-      animationConfigs={animationConfigs}
-      backgroundStyle={{ backgroundColor: theme.colors.background }}
-      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
-      backdropComponent={props => (
-        <GlobalBottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          pressBehavior="close"
-          onClose={() => bottomSheetRef.current?.dismiss()}
-        />
-      )}
-    >
+    <BottomSheetModal ref={ref} {...modalProps}>
       <BottomSheetScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
+          contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -140,6 +121,24 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             thumbColor={theme.colors.white}
           />
         </View>
+
+        {/* Deduction Mode - only shown when deductFromPantry is ON and user has a pantry */}
+        {!!deductFromPantry && !!hasPantry && (
+          <View style={styles.toggleSection}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Smart Deduction</Text>
+              <Text style={styles.toggleDescription}>
+                Review and adjust ingredient quantities before deducting
+              </Text>
+            </View>
+            <Switch
+              value={useGranularDeduction}
+              onValueChange={setUseGranularDeduction}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor={theme.colors.white}
+            />
+          </View>
+        )}
 
         {/* Notes (Optional) */}
         <View style={styles.section}>

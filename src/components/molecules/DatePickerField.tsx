@@ -68,24 +68,23 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
 
   return (
     <View style={styles.container} testID={testID}>
-      {label && <Label required={required}>{label}</Label>}
+      {label ? <Label required={required}>{label}</Label> : null}
       <Pressable
         style={({pressed}) => [styles.input, error && styles.inputError, pressed && styles.pressed]}
         onPress={handlePress}
       >
         <Icon
-          name="event"
+          name="calendar-outline"
           size={20}
           color={theme.colors.textSecondary}
-          library="MaterialIcons"
         />
         <Text style={[styles.dateText, !value && styles.placeholder]}>
           {value ? formatDate(value) : placeholder}
         </Text>
       </Pressable>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      {showPicker && (
+      {!!showPicker && (
           <DateTimePicker
             style={styles.calendarPicker}
             value={value || new Date()}
@@ -95,7 +94,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
             maximumDate={maximumDate}
             onChange={handleDateChange}
           />
-      )}
+        )}
     </View>
   );
 };
@@ -144,6 +143,6 @@ const styles = StyleSheet.create(theme => ({
     alignSelf: 'center',
   },
   pressed: {
-    opacity: 0.7,
+    opacity: theme.opacity.pressed,
   },
 }));

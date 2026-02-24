@@ -29,7 +29,6 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         size={size}
         color={color || theme.colors.primary}
         onPress={onPress}
-        library={'Ionicons'}
         accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
       />
     </View>
