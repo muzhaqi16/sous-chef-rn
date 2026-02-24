@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, Pressable, Modal, ViewStyle} from 'react-native';
-import {FlashList} from '@shopify/flash-list';
+import {View, Text, Pressable, Modal, FlatList, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
@@ -85,7 +84,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         <View style={styles.modal}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{label}</Text>
-            <FlashList
+            <FlatList
               data={options}
               renderItem={renderOption}
               keyExtractor={item => item.value}

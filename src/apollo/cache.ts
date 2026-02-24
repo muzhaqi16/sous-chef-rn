@@ -260,6 +260,9 @@ export function makeCache(): InMemoryCache {
           membersConnection: mergeConnectionByNodeId('membersCursor'),
           invitesConnection: mergeConnectionByNodeId('invitesCursor'),
           pantriesConnection: mergeConnectionByNodeId('pantriesCursor'),
+          shoppingListsConnection: mergeConnectionByNodeId('after'),
+          mealPlansConnection: mergeConnectionByNodeId('after'),
+          mealTemplatesConnection: mergeConnectionByNodeId('after'),
         },
       },
       Pantry: {

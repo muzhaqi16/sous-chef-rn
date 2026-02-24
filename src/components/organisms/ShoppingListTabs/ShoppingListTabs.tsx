@@ -259,10 +259,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   }, [handleIndexChange]);
 
-  // Combined list header: FilterTabBar + SearchBar (listHeaderComponent)
-  // Rendered inside FlashList so RefreshControl spinner appears above everything
-  const combinedListHeader = useMemo(() => (
-    <>
+  // Render FilterTabBar as the TabView's tab bar so it's always visible,
+  // even when a tab's FlashList is replaced by an empty state
+  const renderTabBar = useCallback(
+    () => (
       <FilterTabBar
         navigationState={{ index, routes: ROUTES }}
         jumpTo={jumpTo}
@@ -277,12 +277,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
             : undefined
         }
       />
-      {listHeaderComponent}
-    </>
-  ), [index, jumpTo, counts, showClear, currentClearHandler, listHeaderComponent]);
-
-  // Hide TabView's built-in tab bar (FilterTabBar is now inside FlashList header)
-  const renderTabBar = useCallback(() => <View />, []);
+    ),
+    [index, jumpTo, counts, showClear, currentClearHandler],
+  );
 
   // Render scene for TabView
   const renderScene = useCallback(
@@ -312,7 +309,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canMarkPurchased={canMarkPurchased}
               canReorderItems={canReorderItems}
               isTransitioning={isTransitioning}
-              ListHeaderComponent={combinedListHeader}
+              ListHeaderComponent={listHeaderComponent}
             />
           );
         case 'purchased':
@@ -340,7 +337,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               isTransitioning={isTransitioning}
               onBatchMoveToPantry={onBatchMoveToPantry ? handleBatchMoveToPantryWithConfirmation : undefined}
               batchMoveToPantryLoading={batchMoveToPantryLoading}
-              ListHeaderComponent={combinedListHeader}
+              ListHeaderComponent={listHeaderComponent}
             />
           );
         default:
@@ -377,7 +374,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onBatchMoveToPantry,
       handleBatchMoveToPantryWithConfirmation,
       batchMoveToPantryLoading,
-      combinedListHeader,
+      listHeaderComponent,
     ],
   );
 

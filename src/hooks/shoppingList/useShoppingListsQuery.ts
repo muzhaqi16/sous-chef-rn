@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useGetShoppingListsLiteQuery, GetShoppingListsLiteQuery } from '#generated';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Extract the shopping list type from the lite query (metadata only)
 // Uses NonNullable to extract the node type from the connection edges
@@ -37,6 +38,8 @@ export function useShoppingListsQuery() {
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
+
+  useApolloErrorLogger('GetShoppingListsLite', error);
 
   // Function to trigger fresh fetch - call when selector opens for latest data
   const fetchLists = useCallback(() => {

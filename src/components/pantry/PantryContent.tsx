@@ -140,8 +140,7 @@ interface PantryContentProps {
   onNotificationPress?: () => void;
   onSettingsPress?: () => void;
   onAnalyticsPress?: () => void;
-  onLowStockPress?: () => void;
-  lowStockLoading?: boolean;
+  onLowStockNavigate?: () => void;
 
   // List actions
   onRefresh?: () => void;
@@ -213,8 +212,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onNotificationPress,
   onSettingsPress,
   onAnalyticsPress,
-  onLowStockPress,
-  lowStockLoading = false,
+  onLowStockNavigate,
   totalCount,
   onAddItem,
   onRefresh,
@@ -505,6 +503,25 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     );
   }, [showSkeletons, searchQuery, totalCount, items.length, tabs, locationFilter, onAddItem]);
 
+  // Memoize the settings icon separately so it doesn't cause listHeaderComponent to re-create
+  const settingsIcon = useMemo(
+    () => (
+      <Pressable
+        onPress={onSettingsPress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Pantry settings"
+      >
+        <Icon
+          name="settings-outline"
+          size={18}
+          color={theme.colors.textTertiary}
+        />
+      </Pressable>
+    ),
+    [onSettingsPress, theme.colors.textTertiary],
+  );
+
   // Memoized list header — SearchBar, AlertBar, FilterTabs, SectionHeader scroll with the list
   const listHeaderComponent = useMemo(
     () => (
@@ -516,27 +533,13 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             placeholder="Search your pantry..."
             showSearchIcon={true}
             testID="pantry-search-input"
-            innerRightIcon={
-              <Pressable
-                onPress={onSettingsPress}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Pantry settings"
-              >
-                <Icon
-                  name="settings-outline"
-                  size={18}
-                  color={theme.colors.textTertiary}
-                />
-              </Pressable>
-            }
+            innerRightIcon={settingsIcon}
           />
           {!!stats && (
             <PantryAlertBar
               stats={stats}
               onAnalyticsPress={onAnalyticsPress}
-              onLowStockPress={onLowStockPress}
-              lowStockLoading={lowStockLoading}
+              onLowStockNavigate={onLowStockNavigate}
             />
           )}
         </View>
@@ -557,8 +560,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       </>
     ),
     [
-      searchQuery, onSearchChange, onSettingsPress, theme.colors.textTertiary,
-      stats, onAnalyticsPress, onLowStockPress, lowStockLoading,
+      searchQuery, onSearchChange, settingsIcon,
+      stats, onAnalyticsPress, onLowStockNavigate,
       tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts,
       sectionTitle, sortDirection, openSortModal,
     ],
@@ -631,13 +634,15 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         </View>
 
         {/* Sort Modal */}
-        <PantrySortModal
-          visible={sortModalVisible}
-          sortOption={sortOption}
-          sortDirection={sortDirection}
-          onSelect={handleSortSelect}
-          onClose={closeSortModal}
-        />
+        {!!sortModalVisible && (
+          <PantrySortModal
+            visible={sortModalVisible}
+            sortOption={sortOption}
+            sortDirection={sortDirection}
+            onSelect={handleSortSelect}
+            onClose={closeSortModal}
+          />
+        )}
       </View>
     </PantryActionsProvider>
   );

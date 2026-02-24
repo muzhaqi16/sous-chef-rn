@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useMySavedRecipesQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -50,6 +51,8 @@ export function useSavedRecipes(folder?: string | null) {
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
+
+  useApolloErrorLogger('MySavedRecipes', error);
 
   const connection = data?.me?.savedRecipesConnection;
 

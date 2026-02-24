@@ -21,6 +21,7 @@ interface GenerateShoppingListSheetProps {
     shoppingListId?: string;
   }) => void;
   loading: boolean;
+  homeName?: string | null;
 }
 
 export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps> = ({
@@ -28,6 +29,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
   onClose,
   onGenerate,
   loading,
+  homeName,
 }) => {
   const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
@@ -83,6 +85,16 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
           confirmDisabled={loading || !canGenerate}
           confirmColor="primary"
         />
+
+        {/* Home sharing info */}
+        {!!homeName && (
+          <View style={styles.infoNote}>
+            <Icon name="information-circle-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoNoteText}>
+              The shopping list will be shared with {homeName}
+            </Text>
+          </View>
+        )}
 
         {/* Check pantry toggle */}
         <View style={styles.toggleRow}>
@@ -192,6 +204,20 @@ const styles = StyleSheet.create(theme => ({
   contentContainer: {
     padding: theme.spacing.md,
     gap: theme.spacing.md,
+  },
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.radii.md,
+  },
+  infoNoteText: {
+    flex: 1,
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
   },
   toggleRow: {
     flexDirection: 'row',

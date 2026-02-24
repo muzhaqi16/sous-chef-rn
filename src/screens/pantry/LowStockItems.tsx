@@ -17,6 +17,7 @@ import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAddItemToShoppingListMutation } from '#generated';
 import { useCurrentPantry } from '#hooks/pantry/useCurrentPantry';
+import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import { commonStyles } from '#/styles/commonStyles';
 
 export const LowStockItems: React.FC = () => {
@@ -28,7 +29,10 @@ export const LowStockItems: React.FC = () => {
 
   // Use cache-only hook for pantry resolution (no network requests)
   // This prevents query cascade when switching between pantry screens
-  const { pantry } = useCurrentPantry();
+  const { pantry, selectedHomeId } = useCurrentPantry();
+
+  const { addLowStockToShoppingList, loading: addAllLoading } =
+    useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
   const { items, loading, refetch } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
@@ -88,7 +92,19 @@ export const LowStockItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <Header title="Low Stock Items" onBack={goBack} centerTitle />
+      <Header
+        title="Low Stock Items"
+        onBack={goBack}
+        centerTitle
+        rightActions={[
+          {
+            icon: 'cart-outline',
+            onPress: addLowStockToShoppingList,
+            loading: addAllLoading,
+            testID: 'add-all-low-stock',
+          },
+        ]}
+      />
 
       <FlashList
         style={styles.scrollView}

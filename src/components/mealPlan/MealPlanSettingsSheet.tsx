@@ -11,10 +11,12 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#utils/iconUtils';
 import type { MealPlanFullFragment } from '#generated';
+import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
   mealPlan: MealPlanFullFragment | null;
+  permissions: MealPlanPermissions;
   onClose: () => void;
   onDuplicate: () => void;
   onGenerateShoppingList: () => void;
@@ -59,6 +61,7 @@ function ActionItem({
 export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   visible,
   mealPlan,
+  permissions,
   onClose,
   onDuplicate,
   onGenerateShoppingList,
@@ -118,6 +121,12 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
             <Text style={styles.planDescription}>{mealPlan.description}</Text>
           ) : null}
           <Text style={styles.planDate}>{dateRange}</Text>
+          {!!mealPlan.home?.name && (
+            <Text style={styles.planDate}>Shared with {mealPlan.home.name}</Text>
+          )}
+          {!!mealPlan.createdBy?.profile?.displayName && (
+            <Text style={styles.planDate}>Created by {mealPlan.createdBy.profile.displayName}</Text>
+          )}
         </View>
 
         {/* Actions */}
@@ -179,19 +188,21 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         )}
 
         {/* Danger zone */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <View style={styles.actionsCard}>
-            <ActionItem
-              icon="trash-outline"
-              label={deleting ? 'Deleting...' : 'Delete Plan'}
-              description="Permanently remove this meal plan"
-              onPress={handleDelete}
-              color={theme.colors.error}
-              disabled={deleting}
-            />
+        {permissions.canDelete ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Danger Zone</Text>
+            <View style={styles.actionsCard}>
+              <ActionItem
+                icon="trash-outline"
+                label={deleting ? 'Deleting...' : 'Delete Plan'}
+                description="Permanently remove this meal plan"
+                onPress={handleDelete}
+                color={theme.colors.error}
+                disabled={deleting}
+              />
+            </View>
           </View>
-        </View>
+        ) : null}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );

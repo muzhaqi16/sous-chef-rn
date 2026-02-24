@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
@@ -7,6 +7,7 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { WeekStrip } from '#components/mealPlan/WeekStrip';
 import { MonthCalendar } from '#components/mealPlan/MonthCalendar';
 import { DayMealList } from '#components/mealPlan/DayMealList';
+import { CalendarToggleBar } from '#components/mealPlan/CalendarToggleBar';
 import { MealPlanEmptyState } from '#components/mealPlan/MealPlanEmptyState';
 import { AddMealSheet } from '#components/mealPlan/AddMealSheet';
 import { SaveAsTemplateSheet } from '#components/mealPlan/SaveAsTemplateSheet';
@@ -18,19 +19,27 @@ import { DuplicatePlanSheet } from '#components/mealPlan/DuplicatePlanSheet';
 import { MarkCookedModal } from '#components/modals/MarkCookedModal';
 import { EditCustomMealSheet } from '#components/mealPlan/EditCustomMealSheet';
 import { NutritionSummaryCard } from '#components/mealPlan/NutritionSummaryCard';
+import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useMealPlans } from '#hooks/mealPlan/useMealPlans';
 import { useMealPlan } from '#hooks/mealPlan/useMealPlan';
 import { useMealPlanItemActions } from '#hooks/mealPlan/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#hooks/mealPlan/useMealPlanCalendar';
 import { useDailyMeals } from '#hooks/mealPlan/useDailyMeals';
 import { useMealTemplateActions } from '#hooks/mealPlan/useMealTemplateActions';
+import { useMealPlanSelectorConfig } from '#hooks/mealPlan/useMealPlanSelectorConfig';
 import { useGenerateShoppingList } from '#hooks/mealPlan/useGenerateShoppingList';
 import { useDuplicateMealPlan } from '#hooks/mealPlan/useDuplicateMealPlan';
+import { useMealPlanPermissions } from '#hooks/mealPlan/useMealPlanPermissions';
+import { useAppStore } from '#store/useAppStore';
 import {
   useDeleteMealPlanMutation,
   GetMealPlansDocument,
+  SortOrder,
   MealType,
   type MealPlanItemFragment,
   type MealTemplateDisplayFragment,
@@ -40,6 +49,16 @@ import { toastService } from '#/services/toastService';
 export const MealPlanMain: React.FC = () => {
   const { theme } = useUnistyles();
   const { navigate } = useAppNavigation();
+  const { setOverlayOpen } = useTabBarSetters();
+
+  // Plan selector state
+  const selectedMealPlanId = useAppStore(s => s.selectedMealPlanId);
+  const setSelectedMealPlanId = useAppStore(s => s.setSelectedMealPlanId);
+  const selectorRef = useRef<ItemSelectorRef>(null);
+
+  const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
+    useSelectorManagement({ selectorRef, setOverlayOpen });
+
   // Add meal sheet state
   const [addMealVisible, setAddMealVisible] = useState(false);
   const [addMealType, setAddMealType] = useState<MealType | undefined>();
@@ -72,12 +91,15 @@ export const MealPlanMain: React.FC = () => {
     creatingTemplate,
   } = useMealTemplateActions();
 
-  // Fetch meal plans and auto-select current one
+  // Fetch meal plans and resolve active plan
   const { currentPlan, mealPlans, loading: plansLoading } = useMealPlans();
-  const activePlanId = currentPlan?.id ?? mealPlans[0]?.id ?? null;
+  const activePlanId = selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // Fetch the active plan with items
   const { mealPlan: activeMealPlan, items, nutritionSummary } = useMealPlan(activePlanId);
+
+  // Permissions for the active plan
+  const permissions = useMealPlanPermissions(activeMealPlan);
 
   // Compute plan date boundaries
   const planStartDate = useMemo(
@@ -114,7 +136,7 @@ export const MealPlanMain: React.FC = () => {
 
   // Delete meal plan
   const [deletePlanMutation, { loading: deletingPlan }] = useDeleteMealPlanMutation({
-    refetchQueries: [{ query: GetMealPlansDocument }],
+    refetchQueries: [{ query: GetMealPlansDocument, variables: { first: 20, orderBy: { startDate: SortOrder.Desc } } }],
     onError: error => {
       toastService.error(error.message || 'Failed to delete meal plan');
     },
@@ -274,6 +296,17 @@ export const MealPlanMain: React.FC = () => {
     setTemplateBrowserVisible(true);
   }, []);
 
+  // Plan selector config
+  const planConfig = useMealPlanSelectorConfig({
+    mealPlans,
+    selectedMealPlanId: activePlanId,
+    loading: plansLoading,
+    setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
+    selectorRef,
+    navigate,
+    onCreateFromTemplate: handleOpenTemplateBrowser,
+  });
+
   const handleSelectTemplate = useCallback(
     (template: MealTemplateDisplayFragment) => {
       setSelectedTemplate(template);
@@ -384,10 +417,10 @@ export const MealPlanMain: React.FC = () => {
           <TabScreenHeader
             label="Plan your meals"
             title={activeMealPlan?.name ?? 'Meal Plan'}
-            onTitlePress={toggleCalendarView}
+            onTitlePress={handleOpenSelector}
             titleAccessory={
               <Icon
-                name={calendar.viewMode === 'week' ? 'chevron-down' : 'chevron-up'}
+                name="chevron-down"
                 size={20}
                 color={theme.colors.textPrimary}
               />
@@ -396,30 +429,34 @@ export const MealPlanMain: React.FC = () => {
         </View>
         {!!activePlanId && (
           <View style={styles.headerActions}>
-            <Pressable
-              onPress={() => setShoppingListSheetVisible(true)}
-              hitSlop={8}
-              style={styles.headerActionButton}
-              accessibilityLabel="Generate shopping list"
-            >
-              <Icon
-                name="cart-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-            </Pressable>
-            <Pressable
-              onPress={handleSaveAsTemplate}
-              hitSlop={8}
-              style={styles.headerActionButton}
-              accessibilityLabel="Save as template"
-            >
-              <Icon
-                name="bookmark-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-            </Pressable>
+            {permissions.canGenerateShoppingList ? (
+              <Pressable
+                onPress={() => setShoppingListSheetVisible(true)}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel="Generate shopping list"
+              >
+                <Icon
+                  name="cart-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              </Pressable>
+            ) : null}
+            {permissions.canSaveAsTemplate ? (
+              <Pressable
+                onPress={handleSaveAsTemplate}
+                hitSlop={8}
+                style={styles.headerActionButton}
+                accessibilityLabel="Save as template"
+              >
+                <Icon
+                  name="bookmark-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => setSettingsVisible(true)}
               hitSlop={8}
@@ -460,6 +497,12 @@ export const MealPlanMain: React.FC = () => {
         />
       )}
 
+      {/* Calendar toggle bar */}
+      <CalendarToggleBar
+        isExpanded={calendar.viewMode === 'month'}
+        onToggle={toggleCalendarView}
+      />
+
       {/* Daily meals */}
       <DayMealList
         selectedDate={calendar.selectedDate}
@@ -497,6 +540,7 @@ export const MealPlanMain: React.FC = () => {
         visible={saveTemplateVisible}
         mealPlanId={activePlanId}
         mealPlanName={currentPlan?.name}
+        homeName={activeMealPlan?.home?.name}
         onClose={() => setSaveTemplateVisible(false)}
         onSave={handleSaveTemplate}
         saving={creatingTemplate}
@@ -527,12 +571,14 @@ export const MealPlanMain: React.FC = () => {
         onClose={() => setShoppingListSheetVisible(false)}
         onGenerate={handleGenerateShoppingList}
         loading={generatingShoppingList}
+        homeName={activeMealPlan?.home?.name}
       />
 
       {/* Settings Sheet */}
       <MealPlanSettingsSheet
         visible={settingsVisible}
         mealPlan={activeMealPlan}
+        permissions={permissions}
         onClose={() => setSettingsVisible(false)}
         onDuplicate={() => setDuplicateVisible(true)}
         onGenerateShoppingList={() => setShoppingListSheetVisible(true)}
@@ -570,6 +616,14 @@ export const MealPlanMain: React.FC = () => {
           setEditingCustomItem(null);
         }}
         onSave={handleSaveCustomMeal}
+      />
+
+      {/* Plan Selector */}
+      <AnimatedItemSelector
+        ref={selectorRef}
+        config={planConfig}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
       />
     </View>
   );

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {
   BottomSheetModal,
@@ -8,11 +8,12 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { TemplateCard } from './TemplateCard';
+import { ChipScrollRow, type ChipOption } from '#components/atoms/ChipScrollRow';
 import { useMealTemplates } from '#hooks/mealPlan/useMealTemplates';
 import { TemplateCategory, type MealTemplateDisplayFragment } from '#generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
-const CATEGORIES: { key: TemplateCategory | undefined; label: string }[] = [
+const CATEGORIES: ChipOption<TemplateCategory | undefined>[] = [
   { key: undefined, label: 'All' },
   { key: TemplateCategory.Weekly, label: 'Weekly' },
   { key: TemplateCategory.Monthly, label: 'Monthly' },
@@ -90,27 +91,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         </View>
 
         {/* Category chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+        <ChipScrollRow
+          options={CATEGORIES}
+          selected={selectedCategory}
+          onSelect={setSelectedCategory}
           style={styles.chipScroll}
-        >
-          {CATEGORIES.map(cat => {
-            const isActive = selectedCategory === cat.key;
-            return (
-              <Pressable
-                key={cat.label}
-                onPress={() => setSelectedCategory(cat.key)}
-                style={[styles.chip, isActive && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                  {cat.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+          contentContainerStyle={styles.chipRowContent}
+        />
 
         {/* Template list */}
         {loading && templates.length === 0 ? (
@@ -181,29 +168,8 @@ const styles = StyleSheet.create(theme => ({
     maxHeight: 44,
     marginBottom: theme.spacing.sm,
   },
-  chipRow: {
+  chipRowContent: {
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  chipTextActive: {
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
   },
   list: {
     flex: 1,

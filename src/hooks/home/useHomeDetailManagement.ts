@@ -38,13 +38,13 @@ export function useHomeDetailManagement(homeId: string) {
   );
 
   // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available for detail views
+  // - cache-and-network: Shows cached data immediately, then fetches full HomeFragment
   // - errorPolicy: 'ignore' returns cached data when network fails
 
   // Query
   const { data, loading, refetch } = useGetHomeQuery({
     variables: { homeId },
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore',
   });
 

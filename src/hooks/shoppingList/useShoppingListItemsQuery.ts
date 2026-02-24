@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useGetShoppingListQuery, GetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 // Export the shopping list detail type
 export type ShoppingListDetail = NonNullable<GetShoppingListQuery['shoppingList']>;
@@ -38,6 +39,8 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
       nextFetchPolicy: 'cache-first',
       errorPolicy: 'all',
     });
+
+  useApolloErrorLogger('GetShoppingList', error);
 
   // Track previous listId to detect list switches
   // When switching lists, we should NOT fall back to previousData (it's from old list)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Text, ActivityIndicator } from 'react-native';
+import { View, Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Badge } from '#components/base/Badge';
@@ -8,15 +8,13 @@ import type { PantryStats } from '#generated';
 interface PantryAlertBarProps {
   stats: PantryStats;
   onAnalyticsPress?: () => void;
-  onLowStockPress?: () => void;
-  lowStockLoading?: boolean;
+  onLowStockNavigate?: () => void;
 }
 
-export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
+export const PantryAlertBar: React.FC<PantryAlertBarProps> = React.memo(({
   stats,
   onAnalyticsPress,
-  onLowStockPress,
-  lowStockLoading = false,
+  onLowStockNavigate,
 }) => {
   const { theme } = useUnistyles();
 
@@ -34,9 +32,11 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
           </Badge>
         )}
         {stats.lowStockCount > 0 && (
-          <Badge variant="danger" size="small">
-            {stats.lowStockCount} low stock
-          </Badge>
+          <Pressable onPress={onLowStockNavigate} disabled={!onLowStockNavigate}>
+            <Badge variant="danger" size="small">
+              {stats.lowStockCount} low stock
+            </Badge>
+          </Pressable>
         )}
       </View>
 
@@ -55,28 +55,11 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         </Pressable>
       )}
 
-      {!!onLowStockPress && stats.lowStockCount > 0 && (
-        <Pressable
-          onPress={onLowStockPress}
-          disabled={lowStockLoading}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Add low stock items to shopping list"
-        >
-          {lowStockLoading ? (
-            <ActivityIndicator size="small" color={theme.colors.textTertiary} />
-          ) : (
-            <Icon
-              name="cart-outline"
-              size={18}
-              color={theme.colors.textTertiary}
-            />
-          )}
-        </Pressable>
-      )}
     </View>
   );
-};
+});
+
+PantryAlertBar.displayName = 'PantryAlertBar';
 
 const styles = StyleSheet.create(theme => ({
   container: {

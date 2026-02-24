@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useGetMealPlanQuery } from '#generated';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export function useMealPlan(id: string | null) {
   const { data, loading, error, refetch } = useGetMealPlanQuery({
@@ -9,6 +10,8 @@ export function useMealPlan(id: string | null) {
     nextFetchPolicy: 'cache-first',
     errorPolicy: 'all',
   });
+
+  useApolloErrorLogger('GetMealPlan', error);
 
   const mealPlan = data?.mealPlan ?? null;
 

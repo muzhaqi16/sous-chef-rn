@@ -5,6 +5,7 @@ import {
 } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { PAGINATION } from '#/constants/shoppingList';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
@@ -80,6 +81,8 @@ export function usePaginatedShoppingItems({
       // With this option enabled, Apollo would trigger component re-renders when network status changes
       // (e.g., loading -> ready) during pagination, causing FlashList flickering/gaps during fast scroll
     });
+
+  useApolloErrorLogger('GetShoppingListItemsPaginated', error);
 
   // Helper to extract and sort items from edges
   // Includes defensive filtering to prevent blank items from appearing when

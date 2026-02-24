@@ -4,6 +4,7 @@ import {
   useUpdateMealPlanMutation,
   useDeleteMealPlanMutation,
   GetMealPlansDocument,
+  SortOrder,
   type CreateMealPlanInput,
   type UpdateMealPlanInput,
 } from '#generated';
@@ -11,7 +12,7 @@ import {
 export function useMealPlanActions() {
   const [createMealPlanMutation, { loading: creating }] =
     useCreateMealPlanMutation({
-      refetchQueries: [{ query: GetMealPlansDocument }],
+      refetchQueries: [{ query: GetMealPlansDocument, variables: { first: 20, orderBy: { startDate: SortOrder.Desc } } }],
     });
 
   const [updateMealPlanMutation, { loading: updating }] =
@@ -19,7 +20,7 @@ export function useMealPlanActions() {
 
   const [deleteMealPlanMutation, { loading: deleting }] =
     useDeleteMealPlanMutation({
-      refetchQueries: [{ query: GetMealPlansDocument }],
+      refetchQueries: [{ query: GetMealPlansDocument, variables: { first: 20, orderBy: { startDate: SortOrder.Desc } } }],
     });
 
   const createMealPlan = useCallback(

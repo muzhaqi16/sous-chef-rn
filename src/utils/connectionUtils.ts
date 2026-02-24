@@ -203,6 +203,21 @@ type HomeLike = {
     edges?: Array<Edge<any>> | null;
     pageInfo?: PageInfo | null;
   } | null;
+  shoppingListsConnection?: {
+    edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
+    pageInfo?: PageInfo | null;
+  } | null;
+  mealPlansConnection?: {
+    edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
+    pageInfo?: PageInfo | null;
+  } | null;
+  mealTemplatesConnection?: {
+    edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
+    pageInfo?: PageInfo | null;
+  } | null;
 };
 
 type PantryLike = {
@@ -236,6 +251,9 @@ export type NormalizedHome<T extends HomeLike> = T & {
   members: any[];
   invites: any[];
   pantries: any[];
+  shoppingLists: any[];
+  mealPlans: any[];
+  mealTemplates: any[];
   membersPageInfo?: PageInfo;
   invitesPageInfo?: PageInfo;
   pantriesPageInfo?: PageInfo;
@@ -281,6 +299,21 @@ export const normalizeHome = createEntityNormalizer<HomeLike>([
     connectionField: 'pantriesConnection',
     arrayName: 'pantries',
     includePageInfo: true,
+  },
+  {
+    connectionField: 'shoppingListsConnection',
+    arrayName: 'shoppingLists',
+    includeTotalCount: true,
+  },
+  {
+    connectionField: 'mealPlansConnection',
+    arrayName: 'mealPlans',
+    includeTotalCount: true,
+  },
+  {
+    connectionField: 'mealTemplatesConnection',
+    arrayName: 'mealTemplates',
+    includeTotalCount: true,
   },
 ]) as <T extends HomeLike>(home?: T | null) => NormalizedHome<T> | null;
 

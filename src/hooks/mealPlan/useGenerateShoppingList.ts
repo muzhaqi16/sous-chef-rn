@@ -38,8 +38,10 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         });
         const data = result.data?.generateShoppingListFromMealPlan;
         if (data?.success) {
+          const homeName = data.shoppingList?.home?.name;
+          const baseMsg = `Shopping list "${data.shoppingList?.name}" created with ${data.shoppingList?.totalItems ?? 0} items`;
           toastService.success(
-            `Shopping list "${data.shoppingList?.name}" created with ${data.shoppingList?.totalItems ?? 0} items`,
+            homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
           );
           Telemetry.trackEvent('shopping_list_generated_from_meal_plan', {
             meal_plan_id: mealPlanId,

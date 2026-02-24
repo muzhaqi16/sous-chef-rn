@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -11,7 +11,7 @@ interface FilterTabsItemProps<T extends string> {
   count?: number;
   showCounts: boolean;
   isCompact: boolean;
-  onPress: () => void;
+  onPress: (tabId: T) => void;
   testID: string;
 }
 
@@ -37,9 +37,11 @@ function FilterTabsItemComponent<T extends string>({
     ? UnistylesRuntime.getTheme().colors.primary
     : getIconColor(isActive, isFiltered);
 
+  const handlePress = useCallback(() => onPress(tab.id), [onPress, tab.id]);
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       testID={testID}
       style={[
         styles.tab,
@@ -99,7 +101,7 @@ function FilterTabsItemComponent<T extends string>({
   );
 }
 
-export const FilterTabsItem = FilterTabsItemComponent as typeof FilterTabsItemComponent;
+export const FilterTabsItem = React.memo(FilterTabsItemComponent) as typeof FilterTabsItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   tab: {

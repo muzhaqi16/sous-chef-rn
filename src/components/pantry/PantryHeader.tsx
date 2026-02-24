@@ -29,7 +29,7 @@ interface PantryHeaderProps {
  * - Household badge with name and navigation
  * - Avatar with optional notification badge
  */
-export const PantryHeader: React.FC<PantryHeaderProps> = ({
+export const PantryHeader: React.FC<PantryHeaderProps> = React.memo(({
     userName,
     householdName,
     avatarUrl,
@@ -97,7 +97,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
         </Pressable>
       </View>
     );
-  };
+  });
 
 PantryHeader.displayName = 'PantryHeader';
 

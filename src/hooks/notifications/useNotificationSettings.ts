@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { useAppStore } from '#store/useAppStore';
 import {
@@ -8,6 +8,7 @@ import {
   type UpdateNotificationPreferencesInput,
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface NotificationSettings {
   // Core toggles
@@ -112,12 +113,7 @@ export const useNotificationSettings = () => {
 
   const preferences = data?.me?.notificationPreferences;
 
-  // Log partial errors in development
-  useEffect(() => {
-    if (__DEV__ && error) {
-      console.warn('⚠️ Partial error loading notification preferences:', error);
-    }
-  }, [error]);
+  useApolloErrorLogger('GetNotificationPreferences', error);
 
   // Update notification preferences mutation
   const [updatePreferences] = useUpdateNotificationPreferencesMutation({

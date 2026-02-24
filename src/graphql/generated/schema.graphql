@@ -1183,6 +1183,11 @@ input CreateMealPlanInput {
   """Optional link to a dietary profile for nutrition goal tracking"""
   dietaryProfileId: ID
   endDate: DateTime!
+  """
+  Optional: Link meal plan to a home for shared access.
+  If not provided, the plan is personal (user-scoped only).
+  """
+  homeId: ID
   name: String!
   planType: MealPlanType!
   servings: Int
@@ -1212,6 +1217,11 @@ input CreateMealTemplateInput {
   defaultServings: Int
   description: String
   durationDays: Int
+  """
+  Optional: Link template to a home for shared access.
+  If not provided, the template is personal (user-scoped only).
+  """
+  homeId: ID
   """Initial items to add to the template"""
   items: [MealTemplateItemInput!]
   name: String!
@@ -2392,6 +2402,8 @@ type Home {
   joinCode: String
   lowStockItems: [LowStockItem!]!
   maxMembers: Int
+  mealPlansConnection(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int): MealPlanConnection!
+  mealTemplatesConnection(after: String, before: String, first: Int, last: Int): MealTemplateConnection!
   membersConnection(after: String, before: String, first: Int, last: Int): MembershipConnection!
   membershipStats: MembershipStats!
   metadata: JSON
@@ -3668,10 +3680,13 @@ type MealPlan {
   actualCost: Float!
   budgetAmount: Float
   createdAt: DateTime!
+  createdBy: User
   description: String
   dietaryProfile: DietaryProfile
   endDate: DateTime!
   generatedShoppingLists: [ShoppingList!]!
+  home: Home
+  homeId: ID
   id: ID!
   mealPlanItems: [MealPlanItem!]!
   name: String!
@@ -3711,6 +3726,8 @@ type MealPlanEdge implements Edge {
 
 input MealPlanFilters {
   endDate: DateTime
+  """Filter by home ID to see only home-scoped meal plans"""
+  homeId: ID
   """Filter to only active meal plans (current date within start/end range)"""
   isActive: Boolean
   """Filter by meal plan type"""
@@ -3718,6 +3735,8 @@ input MealPlanFilters {
   """Search by name or description (case-insensitive)"""
   search: String
   startDate: DateTime
+  """Admin-only: Filter by specific user ID"""
+  userId: ID
 }
 
 """
@@ -3799,6 +3818,8 @@ type MealTemplate {
   defaultServings: Int!
   description: String
   durationDays: Int!
+  home: Home
+  homeId: ID
   id: ID!
   items: [MealTemplateItem!]!
   lastUsedAt: DateTime
@@ -3828,6 +3849,8 @@ input MealTemplateFilters {
   minDuration: Int
   search: String
   tags: [String!]
+  """Admin-only: Filter by specific user ID"""
+  userId: ID
 }
 
 """A single meal within a template"""

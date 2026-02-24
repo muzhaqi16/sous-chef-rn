@@ -10,6 +10,7 @@ import {
   type GetPantryWasteAnalyticsQuery,
   type GetPantryLedgerAnalyticsQuery,
 } from '#generated';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantry']>['usageAnalytics'];
 type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantry']>['wasteAnalytics'];
@@ -95,6 +96,10 @@ export function usePantryAnalytics({
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
   });
+
+  useApolloErrorLogger('GetPantryUsageAnalytics', usageError);
+  useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
+  useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
   const refetch = useCallback(async () => {
     await Promise.all([

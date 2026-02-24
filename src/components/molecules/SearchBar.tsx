@@ -1,4 +1,4 @@
-import { type FC, type ReactNode } from 'react';
+import React, { type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -38,7 +38,7 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   innerRightIcon?: ReactNode;
 };
 
-export const SearchBar: FC<SearchBarProps> = ({
+export const SearchBar: FC<SearchBarProps> = React.memo(({
   value,
   onChangeText,
   placeholder = 'Search…',
@@ -140,7 +140,9 @@ export const SearchBar: FC<SearchBarProps> = ({
       {renderActionButtons(rightActions, 'right')}
     </View>
   );
-};
+});
+
+SearchBar.displayName = 'SearchBar';
 
 const styles = StyleSheet.create(theme => ({
   container: {

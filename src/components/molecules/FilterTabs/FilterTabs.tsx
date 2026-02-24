@@ -34,14 +34,15 @@ function FilterTabsComponent<T extends string = string>({
   const { theme } = useUnistyles();
 
   const handleTabPress = useCallback(
-    (tab: FilterTabConfig<T>) => {
-      if (tab.onPress) {
+    (tabId: T) => {
+      const tab = tabs.find(t => t.id === tabId);
+      if (tab?.onPress) {
         tab.onPress();
       } else {
-        onTabChange(tab.id);
+        onTabChange(tabId);
       }
     },
-    [onTabChange],
+    [onTabChange, tabs],
   );
 
   const isCompact = variant === 'compact';
@@ -65,7 +66,7 @@ function FilterTabsComponent<T extends string = string>({
             count={counts?.[tab.id]}
             showCounts={showCounts}
             isCompact={isCompact}
-            onPress={() => handleTabPress(tab)}
+            onPress={handleTabPress}
             testID={`${testIDPrefix}-${tab.id}`}
           />
         ))}
@@ -107,7 +108,7 @@ function FilterTabsComponent<T extends string = string>({
   );
 }
 
-export const FilterTabs = FilterTabsComponent as typeof FilterTabsComponent;
+export const FilterTabs = React.memo(FilterTabsComponent) as typeof FilterTabsComponent;
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -25,7 +25,6 @@ import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { useAuth } from '#hooks/auth/useAuth';
-import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import type { LocationFilter } from '#/utils/pantryFilters';
 
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
@@ -152,10 +151,6 @@ const PantryMainScreen: React.FC = () => {
       pantryId: pantry?.id,
     },
   });
-
-  // Low stock to shopping list
-  const { addLowStockToShoppingList, loading: lowStockLoading } =
-    useAddLowStockToShoppingList({ homeId: selectedHomeId ?? undefined });
 
   // Register add button action - open add to pantry sheet
   useTabBarAddButton(() => setAddSheetVisible(true));
@@ -362,6 +357,11 @@ const PantryMainScreen: React.FC = () => {
     [navigate, pantry?.id],
   );
 
+  const handleLowStockNavigate = useCallback(
+    () => navigate('LowStockItems'),
+    [navigate],
+  );
+
   const handleRefresh = useCallback(async () => {
     await Promise.all([refetch(), refetchHome()]);
   }, [refetch, refetchHome]);
@@ -413,8 +413,7 @@ const PantryMainScreen: React.FC = () => {
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
         onAnalyticsPress={handleAnalyticsPress}
-        onLowStockPress={addLowStockToShoppingList}
-        lowStockLoading={lowStockLoading}
+        onLowStockNavigate={handleLowStockNavigate}
         totalCount={totalCount}
         onAddItem={handleAddItem}
         onRefresh={handleRefresh}

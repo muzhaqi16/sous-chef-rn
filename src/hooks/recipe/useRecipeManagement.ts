@@ -3,6 +3,7 @@ import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
 import { usePagination } from '#/hooks/utils/usePagination';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface RecipeFilters {
   category?: RecipeCategory;
@@ -35,6 +36,8 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
+
+  useApolloErrorLogger('MyRecipes', error);
 
   // Normalize recipes data to flatten Connection pattern and preserve pagination metadata
   const normalizedRecipes = useMemo(

@@ -38,6 +38,7 @@ export const selectRefreshToken = (state: RootState) => state.refreshToken;
 export const selectSelectedHomeId = (state: RootState) => state.selectedHomeId;
 export const selectSelectedPantryId = (state: RootState) => state.selectedPantryId;
 export const selectSelectedShoppingListId = (state: RootState) => state.selectedShoppingListId;
+export const selectSelectedMealPlanId = (state: RootState) => state.selectedMealPlanId;
 export const selectIsLoggedOut = (state: RootState) => !state.accessToken;
 export const selectIsLoggingOut = (state: RootState) => state.isLoggingOut;
 export const selectHydrated = (state: RootState) => state.isHydrated;
@@ -124,6 +125,12 @@ export const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPant
 export const selectShoppingListState = (state: RootState) => ({
   selectedShoppingListId: state.selectedShoppingListId,
   setSelectedShoppingListId: state.setSelectedShoppingListId,
+});
+
+// PERFORMANCE: Meal plan state selector - reduces multiple subscriptions to 1
+export const selectMealPlanState = (state: RootState) => ({
+  selectedMealPlanId: state.selectedMealPlanId,
+  setSelectedMealPlanId: state.setSelectedMealPlanId,
 });
 
 // PERFORMANCE: Home state selector - reduces multiple subscriptions to 1

@@ -25,6 +25,7 @@ import {
   NotificationPriority,
 } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 /**
  * Hook to fetch and display all pending invitations (home + shopping list)
@@ -88,20 +89,8 @@ export function useAllPendingInvites(userId?: string) {
     }
   }, [userId]);
 
-  // Log partial errors in development
-  useEffect(() => {
-    if (__DEV__) {
-      if (shoppingListError) {
-        console.warn(
-          '⚠️ Partial error loading shopping list invites:',
-          shoppingListError,
-        );
-      }
-      if (homeError) {
-        console.warn('⚠️ Partial error loading home invites:', homeError);
-      }
-    }
-  }, [shoppingListError, homeError]);
+  useApolloErrorLogger('MyShoppingListInvites', shoppingListError);
+  useApolloErrorLogger('GetMyPendingInvites', homeError);
 
   // Process and add all pending invites to notification store
   useEffect(() => {

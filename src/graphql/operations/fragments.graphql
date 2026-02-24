@@ -874,6 +874,7 @@ fragment HomeFragment on Home {
     }
     totalCount
   }
+
 }
 
 fragment NotificationFragment on Notification {
@@ -940,6 +941,22 @@ fragment MealPlanDisplay on MealPlan {
   totalFat
   actualCost
   budgetAmount
+  homeId
+  home {
+    id
+    name
+    myMembership {
+      id
+      role
+    }
+  }
+  createdBy {
+    id
+    profile {
+      id
+      displayName
+    }
+  }
   version
   createdAt
   updatedAt
@@ -1026,6 +1043,11 @@ fragment MealTemplateDisplay on MealTemplate {
   tags
   usageCount
   lastUsedAt
+  homeId
+  home {
+    id
+    name
+  }
   createdAt
   updatedAt
 }

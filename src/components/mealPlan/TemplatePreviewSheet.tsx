@@ -106,6 +106,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>
               {template.durationDays} days · {template.defaultServings} servings
+              {template.home?.name ? ` · ${template.home.name}` : ''}
             </Text>
             <Text style={styles.categoryText}>
               {template.category.charAt(0) + template.category.slice(1).toLowerCase()}

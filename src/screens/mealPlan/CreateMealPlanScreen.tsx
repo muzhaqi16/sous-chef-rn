@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Alert, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
+import { FormSelect } from '#components/molecules/FormSelect';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
@@ -13,6 +14,8 @@ import { TemplatePreviewSheet } from '#components/mealPlan/TemplatePreviewSheet'
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealPlanActions } from '#hooks/mealPlan/useMealPlanActions';
 import { useMealTemplateActions } from '#hooks/mealPlan/useMealTemplateActions';
+import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
+import { useAppStore } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType, type MealTemplateDisplayFragment } from '#generated';
 
@@ -33,16 +36,33 @@ function computeEndDate(startDate: Date, planType: MealPlanType): Date {
   }
 }
 
+const PERSONAL_VALUE = '__personal__';
+
 export const CreateMealPlanScreen: React.FC = () => {
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
   const { createPlanFromTemplate, creatingFromTemplate } = useMealTemplateActions();
+  const { homes } = useHomeQuery();
+  const selectedHomeId = useAppStore(s => s.selectedHomeId);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [planType, setPlanType] = useState<MealPlanType>(MealPlanType.Weekly);
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('2');
+  const [homeSelection, setHomeSelection] = useState<string>(selectedHomeId ?? PERSONAL_VALUE);
+
+  const homeOptions = useMemo(() => {
+    const opts = [{ label: 'Personal', value: PERSONAL_VALUE }];
+    if (homes) {
+      for (const home of homes) {
+        if (home?.id && home?.name) {
+          opts.push({ label: home.name, value: home.id });
+        }
+      }
+    }
+    return opts;
+  }, [homes]);
 
   // Template state
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
@@ -84,6 +104,7 @@ export const CreateMealPlanScreen: React.FC = () => {
 
     try {
       const endDate = computeEndDate(startDate, planType);
+      const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
       const result = await createMealPlan({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -91,6 +112,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         servings: parseInt(servings) || 2,
+        homeId,
       });
 
       if (result?.success) {
@@ -101,7 +123,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     } catch (error: any) {
       Alert.alert('Error', error.message ?? 'Failed to create meal plan.');
     }
-  }, [name, description, planType, startDate, servings, createMealPlan, goBack]);
+  }, [name, description, planType, startDate, servings, homeSelection, createMealPlan, goBack]);
 
   return (
     <FormModal
@@ -152,6 +174,16 @@ export const CreateMealPlanScreen: React.FC = () => {
         min={1}
         step={1}
       />
+
+      {homeOptions.length > 1 && (
+        <FormSelect
+          label="Share With"
+          value={homeSelection}
+          onValueChange={setHomeSelection}
+          options={homeOptions}
+          placeholder="Personal"
+        />
+      )}
 
       {/* Create from template link */}
       <Pressable
