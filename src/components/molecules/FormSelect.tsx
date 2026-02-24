@@ -76,28 +76,30 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         />
       </Pressable>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modal}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{label}</Text>
-            <FlatList
-              data={options}
-              renderItem={renderOption}
-              keyExtractor={item => item.value}
-              showsVerticalScrollIndicator={false}
-            />
-            <Pressable
-              style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}
-              onPress={() => setModalVisible(false)}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
+      {modalVisible ? (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}>
+          <View style={styles.modal}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{label}</Text>
+              <FlatList
+                data={options}
+                renderItem={renderOption}
+                keyExtractor={item => item.value}
+                showsVerticalScrollIndicator={false}
+              />
+              <Pressable
+                style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}
+                onPress={() => setModalVisible(false)}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : null}
     </FormFieldWrapper>
   );
 };

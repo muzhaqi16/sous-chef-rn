@@ -49,6 +49,7 @@ export const FormModal: React.FC<FormModalProps> = ({
         style={styles.form}
         bottomOffset={16}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {children}
       </KeyboardAwareScrollView>
