@@ -9,15 +9,14 @@
 
 import { Alert } from 'react-native';
 import { useRemoveItemFromShoppingListMutation } from '#generated';
-import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { buildOptimisticRemoveItemResponse } from '#/apollo/utils/optimisticTypes';
+import { buildOptimisticDeleteResponse } from '#/apollo/utils/optimisticTypes';
 import { removeFromShoppingListItemsCache } from './utils';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
-  items: ShoppingListItemDisplayFragment[];
+  items?: unknown;
   refetch: () => Promise<any>;
 }
 
@@ -30,17 +29,19 @@ interface UseRemoveShoppingItemOptions {
  * await removeItem('item-123');
  * ```
  */
-export function useRemoveShoppingItem({ listId, items, refetch }: UseRemoveShoppingItemOptions) {
+export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItemOptions) {
   const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
     optimisticResponse: variables => {
-      const item = items.find(i => i.id === variables.id);
-      return buildOptimisticRemoveItemResponse(
+      return buildOptimisticDeleteResponse(
         'removeItemFromShoppingList',
-        item ?? { __typename: 'ShoppingListItem' as const, id: variables.id },
+        'ShoppingListItemPayload',
+        'shoppingListItem',
+        'ShoppingListItem',
+        variables.id,
       );
     },
     update(cache, { data }, { variables }) {

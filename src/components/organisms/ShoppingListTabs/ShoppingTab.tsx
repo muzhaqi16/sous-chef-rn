@@ -43,6 +43,8 @@ interface ShoppingTabProps {
   canReorderItems?: boolean;
   // Transition state for showing skeletons during list switches
   isTransitioning?: boolean;
+  // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
+  ListHeaderComponent?: React.ReactElement | null;
 }
 
 // Inner component that uses stagger context
@@ -68,6 +70,7 @@ interface StaggeredListContentProps {
   canEditItems: boolean;
   canMarkPurchased: boolean;
   canReorderItems: boolean;
+  ListHeaderComponent?: React.ReactElement | null;
 }
 
 const StaggeredListContent: React.FC<StaggeredListContentProps> = ({
@@ -88,6 +91,7 @@ const StaggeredListContent: React.FC<StaggeredListContentProps> = ({
   canEditItems,
   canMarkPurchased,
   canReorderItems,
+  ListHeaderComponent,
 }) => {
   const staggerCtx = useStaggeredEntry();
 
@@ -126,6 +130,7 @@ const StaggeredListContent: React.FC<StaggeredListContentProps> = ({
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
         canReorderItems={canReorderItems}
+        ListHeaderComponent={ListHeaderComponent}
       />
     </View>
   );
@@ -153,6 +158,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   canMarkPurchased = true,
   canReorderItems = false,
   isTransitioning = false,
+  ListHeaderComponent,
 }) => {
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -194,6 +200,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
         canReorderItems={canReorderItems}
+        ListHeaderComponent={ListHeaderComponent}
       />
     </StaggeredEntryProvider>
   );

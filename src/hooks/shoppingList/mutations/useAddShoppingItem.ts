@@ -16,7 +16,7 @@ import { useErrorService } from '#/services/errorService';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { addToShoppingListItemsCache } from './utils';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import type { ShoppingListItemInput } from './types';
 
 interface UseAddShoppingItemOptions {
@@ -43,8 +43,8 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    // Type assertion needed: createOptimisticEntity returns VersionedEntity base type
-    // but the spread properties match ShoppingListItemDisplayFragment at runtime
+    // Type assertion justified: createOptimisticEntity returns a VersionedEntity shape,
+    // but the spread properties include all fields required by ShoppingListItemDisplayFragment
     optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
       lastTempId = tempId;
@@ -110,7 +110,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       }
 
       try {
-        addToShoppingListItemsCache(cache, listId, item);
+        addNewItemToShoppingListCache(cache, listId, item);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         refetch();

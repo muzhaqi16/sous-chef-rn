@@ -5,34 +5,18 @@
  * Used by both mutations and subscriptions to ensure consistent cache updates
  * when items move between purchased/unpurchased states.
  *
- * These utilities handle the dual cache structure:
- * - `itemsConnection` field (used by GetShoppingListQuery)
- * - `unpurchasedItems`/`purchasedItems` aliased fields (used by GetShoppingListItemsPaginatedQuery)
- *
- * Apollo caches aliased fields under the alias name, NOT the underlying field name.
- * So we need separate utilities for each aliased field.
+ * Apollo stores aliased fields under the actual field name with serialized
+ * keyArgs (e.g. `itemsConnection:{"isPurchased":true}`), NOT under the alias
+ * name. All cache updates therefore target `itemsConnection` and use
+ * `storeFieldName` to distinguish filtered variants.
  */
 
-import {
-  createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from './cacheUpdaters';
-
-// =============================================================================
-// itemsConnection field (used by GetShoppingListQuery)
-// =============================================================================
+import type { ApolloCache } from '@apollo/client';
+import { createRemoveFromParentConnectionUpdater } from './cacheUpdaters';
 
 /**
- * Add item to ShoppingList.itemsConnection
- */
-export const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
-  'ShoppingList',
-  'itemsConnection',
-  'ShoppingListItem',
-);
-
-/**
- * Remove item from ShoppingList.itemsConnection
+ * Remove item from ShoppingList.itemsConnection (all variants).
+ * Correct for deletion — runs on every storeFieldName variant.
  */
 export const removeFromShoppingListItemsConnection = createRemoveFromParentConnectionUpdater(
   'ShoppingList',
@@ -40,66 +24,8 @@ export const removeFromShoppingListItemsConnection = createRemoveFromParentConne
   'ShoppingListItem',
 );
 
-// =============================================================================
-// Aliased fields (used by GetShoppingListItemsPaginatedQuery)
-// =============================================================================
-
-/**
- * Add item to ShoppingList.unpurchasedItems (alias for itemsConnection with isPurchased: false)
- */
-export const addToUnpurchasedItems = createAddToParentConnectionUpdater<any>(
-  'ShoppingList',
-  'unpurchasedItems',
-  'ShoppingListItem',
-);
-
-/**
- * Remove item from ShoppingList.unpurchasedItems
- */
-export const removeFromUnpurchasedItems = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'unpurchasedItems',
-  'ShoppingListItem',
-);
-
-/**
- * Add item to ShoppingList.purchasedItems (alias for itemsConnection with isPurchased: true)
- */
-export const addToPurchasedItems = createAddToParentConnectionUpdater<any>(
-  'ShoppingList',
-  'purchasedItems',
-  'ShoppingListItem',
-);
-
-/**
- * Remove item from ShoppingList.purchasedItems
- */
-export const removeFromPurchasedItems = createRemoveFromParentConnectionUpdater(
-  'ShoppingList',
-  'purchasedItems',
-  'ShoppingListItem',
-);
-
-// =============================================================================
-// High-level Move Utilities
-// =============================================================================
-// These utilities handle moving items between purchased/unpurchased states.
-// They update BOTH:
-// - itemsConnection with filter args (for GetShoppingListQuery)
-// - aliased fields (for GetShoppingListItemsPaginatedQuery)
-//
-// Apollo caches these separately, so we must update both.
-// =============================================================================
-
-import type { ApolloCache } from '@apollo/client';
-
-// =============================================================================
-// Batch Clear Utilities
-// =============================================================================
-
 /**
  * Clear ALL purchased items from cache in a single atomic operation.
- * Updates both itemsConnection and purchasedItems alias.
  * Used by "Clear All Purchased" button for instant UI feedback.
  *
  * @param cache - Apollo cache instance
@@ -118,22 +44,7 @@ export function clearAllPurchasedItemsFromCache(
 
   if (!parentCacheId) return;
 
-  // 1. Clear purchasedItems alias (used by GetShoppingListItemsPaginatedQuery)
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      purchasedItems(existing: any) {
-        if (!existing) return existing;
-        return {
-          ...existing,
-          edges: [],
-          totalCount: 0,
-        };
-      },
-    },
-  });
-
-  // 2. Clear itemsConnection with isPurchased:true filter variant
+  // Clear itemsConnection with isPurchased:true filter variant
   cache.modify({
     id: parentCacheId,
     fields: {
@@ -149,20 +60,18 @@ export function clearAllPurchasedItemsFromCache(
     },
   });
 
-  // 3. Evict all deleted items from cache
+  // Evict all deleted items from cache
   itemIds.forEach(itemId => {
     cache.evict({
       id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
     });
   });
 
-  // 4. Garbage collect orphaned references
   cache.gc();
 }
 
 /**
  * Clear ALL unpurchased items from cache in a single atomic operation.
- * Updates both itemsConnection and unpurchasedItems alias.
  * Used by "Clear All Shopping" button for instant UI feedback.
  *
  * @param cache - Apollo cache instance
@@ -181,22 +90,7 @@ export function clearAllUnpurchasedItemsFromCache(
 
   if (!parentCacheId) return;
 
-  // 1. Clear unpurchasedItems alias (used by GetShoppingListItemsPaginatedQuery)
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      unpurchasedItems(existing: any) {
-        if (!existing) return existing;
-        return {
-          ...existing,
-          edges: [],
-          totalCount: 0,
-        };
-      },
-    },
-  });
-
-  // 2. Clear itemsConnection with isPurchased:false filter variant
+  // Clear itemsConnection with isPurchased:false filter variant
   cache.modify({
     id: parentCacheId,
     fields: {
@@ -212,20 +106,15 @@ export function clearAllUnpurchasedItemsFromCache(
     },
   });
 
-  // 3. Evict all deleted items from cache
+  // Evict all deleted items from cache
   itemIds.forEach(itemId => {
     cache.evict({
       id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
     });
   });
 
-  // 4. Garbage collect orphaned references
   cache.gc();
 }
-
-// =============================================================================
-// Purchase Status Move Utilities
-// =============================================================================
 
 /**
  * Helper to update itemsConnection filtered variants when purchase status changes
@@ -324,49 +213,93 @@ function updateItemsConnectionForPurchaseStatusChange(
 }
 
 /**
- * Move a shopping list item to purchased state
- *
- * Updates both:
- * - itemsConnection filtered variants (for GetShoppingListQuery)
- * - aliased fields: unpurchasedItems → purchasedItems (for GetShoppingListItemsPaginatedQuery)
- *
- * @param cache - Apollo cache instance
- * @param listId - Shopping list ID
- * @param item - Item to move (must have id)
+ * Move a shopping list item to purchased state.
+ * Updates itemsConnection filtered variants via storeFieldName detection.
  */
 export function moveShoppingListItemToPurchased(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
 ): void {
-  // 1. Update itemsConnection filtered variants
   updateItemsConnectionForPurchaseStatusChange(cache, listId, item.id, true);
-
-  // 2. Update aliased fields
-  removeFromUnpurchasedItems(cache, listId, item.id);
-  addToPurchasedItems(cache, listId, item);
 }
 
 /**
- * Move a shopping list item to unpurchased state
- *
- * Updates both:
- * - itemsConnection filtered variants (for GetShoppingListQuery)
- * - aliased fields: purchasedItems → unpurchasedItems (for GetShoppingListItemsPaginatedQuery)
- *
- * @param cache - Apollo cache instance
- * @param listId - Shopping list ID
- * @param item - Item to move (must have id)
+ * Move a shopping list item to unpurchased state.
+ * Updates itemsConnection filtered variants via storeFieldName detection.
  */
 export function moveShoppingListItemToUnpurchased(
   cache: ApolloCache,
   listId: string,
   item: { id: string },
 ): void {
-  // 1. Update itemsConnection filtered variants
   updateItemsConnectionForPurchaseStatusChange(cache, listId, item.id, false);
+}
 
-  // 2. Update aliased fields
-  removeFromPurchasedItems(cache, listId, item.id);
-  addToUnpurchasedItems(cache, listId, item);
+/**
+ * Add a new item to shopping list cache.
+ *
+ * Uses storeFieldName detection to correctly update filtered itemsConnection variants:
+ * - isPurchased:true variant → REMOVE the item (handles re-add of previously purchased item)
+ * - All other variants (unfiltered, isPurchased:false) → ADD the item
+ */
+export function addNewItemToShoppingListCache(
+  cache: ApolloCache,
+  listId: string,
+  item: { id: string },
+): void {
+  try {
+    const parentCacheId = cache.identify({
+      __typename: 'ShoppingList',
+      id: listId,
+    });
+    if (!parentCacheId) return;
+
+    cache.modify({
+      id: parentCacheId,
+      fields: {
+        itemsConnection(existing: any, { readField, storeFieldName, toReference }: any) {
+          if (!existing?.edges) return existing;
+
+          const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
+
+          if (isPurchasedConnection) {
+            // REMOVE from purchased variant (handles re-add of previously purchased item)
+            const hadItem = existing.edges.some(
+              (edge: any) => readField('id', edge.node) === item.id,
+            );
+            if (!hadItem) return existing;
+            return {
+              ...existing,
+              edges: existing.edges.filter(
+                (edge: any) => readField('id', edge.node) !== item.id,
+              ),
+              totalCount: Math.max(0, (existing.totalCount || 0) - 1),
+            };
+          }
+
+          // ADD to unfiltered and unpurchased variants
+          const alreadyExists = existing.edges.some(
+            (edge: any) => readField('id', edge.node) === item.id,
+          );
+          if (alreadyExists) return existing;
+
+          return {
+            ...existing,
+            edges: [
+              {
+                __typename: 'ShoppingListItemEdge',
+                cursor: item.id,
+                node: toReference({ __typename: 'ShoppingListItem', id: item.id }, true),
+              },
+              ...existing.edges,
+            ],
+            totalCount: (existing.totalCount || 0) + 1,
+          };
+        },
+      },
+    });
+  } catch (error) {
+    console.warn('Failed to update cache for new shopping list item:', error);
+  }
 }

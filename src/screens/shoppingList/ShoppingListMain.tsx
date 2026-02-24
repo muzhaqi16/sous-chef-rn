@@ -233,6 +233,21 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       [handleOpenSelector, theme.colors.textSecondary],
     );
 
+    // SearchBar rendered inside FlashList for correct RefreshControl position
+    const searchBarHeader = useMemo(
+      () => (
+        <View style={styles.searchBarContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search shopping list..."
+            showSearchIcon
+          />
+        </View>
+      ),
+      [searchQuery, setSearchQuery],
+    );
+
     // Memoized customListProps
     const customListProps = useMemo(
       () => ({
@@ -266,6 +281,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         isTransitioning,
         onBatchMoveToPantry: batchMoveToPantry,
         batchMoveToPantryLoading,
+        listHeaderComponent: searchBarHeader,
       }),
       [
         isLoadingInitial,
@@ -294,6 +310,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         isTransitioning,
         batchMoveToPantry,
         batchMoveToPantryLoading,
+        searchBarHeader,
       ],
     );
 
@@ -401,14 +418,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           title={currentList?.name || 'Shopping List'}
           headerRight={headerRight}
         />
-        <View style={styles.searchBarContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search shopping list..."
-            showSearchIcon
-          />
-        </View>
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}

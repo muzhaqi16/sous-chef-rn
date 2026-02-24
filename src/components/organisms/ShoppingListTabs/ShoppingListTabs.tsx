@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback, useRef, useState } from 'react';
 import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { TabView, type NavigationState, type Route } from 'react-native-tab-view';
+import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
 import { MemoizedShoppingTab } from './ShoppingTab';
 import { MemoizedPurchasedTab } from './PurchasedTab';
@@ -63,6 +63,8 @@ interface ShoppingListTabsProps {
   // Batch move purchased items to pantry
   onBatchMoveToPantry?: () => void;
   batchMoveToPantryLoading?: boolean;
+  // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
+  listHeaderComponent?: React.ReactElement | null;
 }
 
 const ROUTES: TabRoute[] = [
@@ -109,6 +111,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Batch move to pantry
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
+  // List header
+  listHeaderComponent,
 }) => {
   const layout = useWindowDimensions();
 
@@ -249,6 +253,37 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     [unpurchasedCount, purchasedCount],
   );
 
+  // Standalone jumpTo for FilterTabBar inside ListHeaderComponent
+  const jumpTo = useCallback((key: string) => {
+    const routeIndex = ROUTES.findIndex(r => r.key === key);
+    if (routeIndex >= 0) handleIndexChange(routeIndex);
+  }, [handleIndexChange]);
+
+  // Combined list header: FilterTabBar + SearchBar (listHeaderComponent)
+  // Rendered inside FlashList so RefreshControl spinner appears above everything
+  const combinedListHeader = useMemo(() => (
+    <>
+      <FilterTabBar
+        navigationState={{ index, routes: ROUTES }}
+        jumpTo={jumpTo}
+        counts={counts}
+        actionButton={
+          showClear
+            ? {
+                label: 'Clear',
+                onPress: currentClearHandler,
+                testID: 'shopping-list-clear-all',
+              }
+            : undefined
+        }
+      />
+      {listHeaderComponent}
+    </>
+  ), [index, jumpTo, counts, showClear, currentClearHandler, listHeaderComponent]);
+
+  // Hide TabView's built-in tab bar (FilterTabBar is now inside FlashList header)
+  const renderTabBar = useCallback(() => <View />, []);
+
   // Render scene for TabView
   const renderScene = useCallback(
     ({ route }: { route: TabRoute }) => {
@@ -277,6 +312,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canMarkPurchased={canMarkPurchased}
               canReorderItems={canReorderItems}
               isTransitioning={isTransitioning}
+              ListHeaderComponent={combinedListHeader}
             />
           );
         case 'purchased':
@@ -304,6 +340,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               isTransitioning={isTransitioning}
               onBatchMoveToPantry={onBatchMoveToPantry ? handleBatchMoveToPantryWithConfirmation : undefined}
               batchMoveToPantryLoading={batchMoveToPantryLoading}
+              ListHeaderComponent={combinedListHeader}
             />
           );
         default:
@@ -340,28 +377,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onBatchMoveToPantry,
       handleBatchMoveToPantryWithConfirmation,
       batchMoveToPantryLoading,
+      combinedListHeader,
     ],
-  );
-
-  // Custom tab bar renderer
-  const renderTabBar = useCallback(
-    (props: { navigationState: NavigationState<TabRoute>; jumpTo: (key: string) => void }) => (
-      <FilterTabBar
-        navigationState={props.navigationState}
-        jumpTo={props.jumpTo}
-        counts={counts}
-        actionButton={
-          showClear
-            ? {
-                label: 'Clear',
-                onPress: currentClearHandler,
-                testID: 'shopping-list-clear-all',
-              }
-            : undefined
-        }
-      />
-    ),
-    [counts, showClear, currentClearHandler],
   );
 
   // If no items at all AND not loading, show empty state

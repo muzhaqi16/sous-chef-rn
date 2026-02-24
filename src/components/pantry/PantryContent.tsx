@@ -505,22 +505,11 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     );
   }, [showSkeletons, searchQuery, totalCount, items.length, tabs, locationFilter, onAddItem]);
 
-  return (
-    <PantryActionsProvider actions={itemActions}>
-      <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <PantryHeader
-            userName={userName}
-            householdName={householdName}
-            avatarUrl={avatarUrl}
-            notificationCount={notificationCount}
-            onAvatarPress={onAvatarPress}
-            onHomePress={onHomePress}
-            onNotificationPress={onNotificationPress}
-          />
-
-          {/* Search Bar */}
+  // Memoized list header — SearchBar, AlertBar, FilterTabs, SectionHeader scroll with the list
+  const listHeaderComponent = useMemo(
+    () => (
+      <>
+        <View style={styles.searchContainer}>
           <SearchBar
             value={searchQuery}
             onChangeText={onSearchChange}
@@ -542,8 +531,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               </Pressable>
             }
           />
-
-          {/* Alert Bar */}
           {!!stats && (
             <PantryAlertBar
               stats={stats}
@@ -553,8 +540,6 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             />
           )}
         </View>
-
-        {/* Always visible — not part of crossfade */}
         <FilterTabs<LocationFilter>
           tabs={tabsWithAddButton}
           activeTabId={locationFilter}
@@ -569,6 +554,31 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           onActionPress={openSortModal}
           testID="pantry-sort-button"
         />
+      </>
+    ),
+    [
+      searchQuery, onSearchChange, onSettingsPress, theme.colors.textTertiary,
+      stats, onAnalyticsPress, onLowStockPress, lowStockLoading,
+      tabsWithAddButton, locationFilter, onLocationFilterChange, locationCounts,
+      sectionTitle, sortDirection, openSortModal,
+    ],
+  );
+
+  return (
+    <PantryActionsProvider actions={itemActions}>
+      <View style={styles.container}>
+        {/* Header Section - only PantryHeader stays fixed */}
+        <View style={styles.header}>
+          <PantryHeader
+            userName={userName}
+            householdName={householdName}
+            avatarUrl={avatarUrl}
+            notificationCount={notificationCount}
+            onAvatarPress={onAvatarPress}
+            onHomePress={onHomePress}
+            onNotificationPress={onNotificationPress}
+          />
+        </View>
 
         {/* Content List - Crossfade between skeleton and content */}
         <View style={styles.listContainer}>
@@ -595,6 +605,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
                   />
                 ) : undefined
               }
+              ListHeaderComponent={listHeaderComponent}
               ListEmptyComponent={emptyStateContent}
               getItemType={getItemType}
               onEndReached={onEndReached}
@@ -641,6 +652,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.xs,
+  },
+  searchContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
   listContainer: {
     flex: 1,

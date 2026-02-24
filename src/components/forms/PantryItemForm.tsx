@@ -541,6 +541,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 onSelectItem={handleItemSelect}
                 suggestedBrands={suggestedBrands}
                 testID="add-pantry-item-name-input"
+                onCategorySelected={handleCategorySelect}
               />
             ) : (
               <ItemInformationSection
@@ -549,6 +550,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 mode="edit"
                 suggestedBrands={suggestedBrands}
                 onBrandSelected={setSelectedBrandId}
+                onCategorySelected={handleCategorySelect}
               />
             )}
 
@@ -627,7 +629,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                   shouldDirty: true,
                 });
               }}
-              onCategorySelected={handleCategorySelect}
               storageLocations={storageLocations}
               onStorageLocationSelected={handleStorageLocationSelect}
               onAddNewLocation={handleAddNewLocation}

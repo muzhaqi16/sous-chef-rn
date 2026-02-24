@@ -19,6 +19,7 @@ import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
+  useRemoveCollaboratorMutation,
 } from '#generated';
 import {
   createRemoveFromQueryConnectionUpdater,
@@ -52,6 +53,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
 
@@ -76,6 +78,13 @@ export const ListSettings: React.FC<StaticScreenProps<{
     ? getShoppingListOwnerInfo(shoppingList)
     : null;
 
+  // Find current user's collaborator entry for leave functionality
+  const currentUserCollaborator = collaborators.find(
+    c => c.email === user?.email || c.collaboratorId === user?.id,
+  );
+  const isHomeLinked = !!shoppingList?.homeId;
+
+  const [removeMember] = useRemoveCollaboratorMutation();
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation({
     errorPolicy: 'all',
@@ -219,6 +228,39 @@ export const ListSettings: React.FC<StaticScreenProps<{
     setShowHomePicker(true);
   }, [homesLoaded, fetchHomeData]);
 
+  const handleLeaveList = useCallback(() => {
+    Alert.alert(
+      'Leave Shopping List',
+      `Are you sure you want to leave "${name || 'this list'}"? You will lose access to all shared items.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            if (!currentUserCollaborator?.id) {
+              toastService.error('Could not determine your membership');
+              return;
+            }
+
+            setLeaving(true);
+            try {
+              await removeMember({
+                variables: { id: currentUserCollaborator.id },
+              });
+              setSelectedShoppingListId(null);
+              goBack();
+            } catch {
+              toastService.error('Failed to leave list');
+            } finally {
+              setLeaving(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [name, currentUserCollaborator?.id, removeMember, setSelectedShoppingListId, goBack]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -244,7 +286,8 @@ export const ListSettings: React.FC<StaticScreenProps<{
 
       <ScrollView style={styles.content}>
         {!isOwner && listId ? (
-          // Read-only view for collaborators
+          <>
+          {/* Read-only view for collaborators */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>List Information</Text>
 
@@ -282,6 +325,40 @@ export const ListSettings: React.FC<StaticScreenProps<{
               </View>
             )}
           </View>
+
+          {/* Leave List section for non-owner collaborators */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Leave List</Text>
+
+            {isHomeLinked ? (
+              <>
+                <View style={[styles.deleteButton, styles.disabledButton]}>
+                  <Icon name="log-out-outline" size={20} color={theme.colors.textSecondary} />
+                  <Text style={styles.disabledButtonText}>Leave List</Text>
+                </View>
+                <Text style={styles.leaveDescription}>
+                  This list is linked to the home "{shoppingList?.home?.name}". To leave this list, you must leave the home first.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  style={({pressed}) => [styles.deleteButton, pressed && styles.pressed]}
+                  onPress={handleLeaveList}
+                  disabled={leaving}
+                >
+                  <Icon name="log-out-outline" size={20} color={theme.colors.error} />
+                  <Text style={styles.deleteButtonText}>
+                    {leaving ? 'Leaving...' : 'Leave List'}
+                  </Text>
+                </Pressable>
+                <Text style={styles.leaveDescription}>
+                  Leaving this list will remove your access to all shared items.
+                </Text>
+              </>
+            )}
+          </View>
+          </>
         ) : (
           // Editable view for owners
           <View style={styles.section}>
@@ -553,6 +630,21 @@ const styles = StyleSheet.create(theme => ({
   pickerText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
+  },
+  leaveDescription: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+  },
+  disabledButton: {
+    borderColor: theme.colors.border,
+    opacity: 0.6,
+  },
+  disabledButtonText: {
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.sm,
   },
   pressed: {
     opacity: theme.opacity.pressed,

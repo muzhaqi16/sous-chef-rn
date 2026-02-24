@@ -5,7 +5,7 @@ import React, {
   useEffect,
   memo,
 } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
@@ -13,7 +13,7 @@ import {
   BottomSheetFlatList,
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
+import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { useAppStore } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -241,13 +241,17 @@ export function BottomSheetAutocompleteInput<T>({
   );
 
   return (
-    <View>
-      <BaseInput
-        label={required ? `${label} *` : label}
+    <FormFieldWrapper
+      label={label || ''}
+      error={error}
+      required={required}
+    >
+      <TextInput
+        style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
         onChangeText={handleTextChange}
         placeholder={placeholder}
-        errorMessage={error}
+        placeholderTextColor={theme.colors.textSecondary}
         testID={testID}
         autoCapitalize={autoCapitalize}
       />
@@ -299,11 +303,24 @@ export function BottomSheetAutocompleteInput<T>({
           />
         </BottomSheetView>
       </BottomSheetModal>
-    </View>
+    </FormFieldWrapper>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.textPrimary,
+  },
+  fieldInputError: {
+    borderColor: theme.colors.error,
+  },
   headerSection: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.sm,

@@ -23,16 +23,14 @@ export const PerformanceDashboard: React.FC = () => {
   const setTrackMemory = usePerformanceStore(state => state.setTrackMemory);
   const setTrackScreens = usePerformanceStore(state => state.setTrackScreens);
 
-  const componentMetrics = usePerformanceStore(
-    state => state.componentMetrics,
-  );
+  const componentMetrics = usePerformanceStore(state => state.componentMetrics);
   const screenMetrics = usePerformanceStore(state => state.screenMetrics);
   const memorySnapshots = usePerformanceStore(state => state.memorySnapshots);
   const clearPerformanceData = usePerformanceStore(
     state => state.clearPerformanceData,
   );
 
-  const [clearCounter, setClearCounter] = useState(0);
+  const [_clearCounter, setClearCounter] = useState(0);
 
   // Derive sorted metrics from raw data
   const slowestComponents = useMemo(
@@ -105,27 +103,36 @@ export const PerformanceDashboard: React.FC = () => {
     const contentAppeared = find('contentAppeared');
 
     return {
-      nativeLaunch: launchStart && launchEnd ? launchEnd.startTime - launchStart.startTime : null,
-      bundleLoad: bundleStart && bundleEnd ? bundleEnd.startTime - bundleStart.startTime : null,
+      nativeLaunch:
+        launchStart && launchEnd
+          ? launchEnd.startTime - launchStart.startTime
+          : null,
+      bundleLoad:
+        bundleStart && bundleEnd
+          ? bundleEnd.startTime - bundleStart.startTime
+          : null,
       contentAppeared:
         contentAppeared && launchStart
           ? contentAppeared.startTime - launchStart.startTime
           : null,
     };
-  }, [clearCounter, performance]);
+  }, []);
 
   const recentHttpRequests = useMemo(() => {
     const entries = performance.getEntriesByType('resource');
-    return entries.slice(-10).reverse().map(entry => {
-      let host = 'unknown';
-      try {
-        host = new URL(entry.name).host;
-      } catch {
-        // Keep 'unknown'
-      }
-      return { host, duration: entry.duration, url: entry.name };
-    });
-  }, [clearCounter, performance]);
+    return entries
+      .slice(-10)
+      .reverse()
+      .map(entry => {
+        let host = 'unknown';
+        try {
+          host = new URL(entry.name).host;
+        } catch {
+          // Keep 'unknown'
+        }
+        return { host, duration: entry.duration, url: entry.name };
+      });
+  }, []);
 
   if (!Environment.shouldEnableDebugFeatures() && !isAdminUser) {
     return (
@@ -377,7 +384,8 @@ export const PerformanceDashboard: React.FC = () => {
                   </View>
                   <Text style={styles.memoryDetails}>
                     {formatMemory(snapshot.usedBytes)}
-                    {!!snapshot.limitBytes && ` / ${formatMemory(snapshot.limitBytes)}`}
+                    {!!snapshot.limitBytes &&
+                      ` / ${formatMemory(snapshot.limitBytes)}`}
                     {!!snapshot.context && ` • ${snapshot.context}`}
                   </Text>
                 </View>
@@ -387,7 +395,10 @@ export const PerformanceDashboard: React.FC = () => {
         )}
 
         {/* Empty State */}
-        {!!isEnabled && slowestComponents.length === 0 && slowestScreens.length === 0 && recentMemorySnapshots.length === 0 && (
+        {!!isEnabled &&
+          slowestComponents.length === 0 &&
+          slowestScreens.length === 0 &&
+          recentMemorySnapshots.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 No performance data collected yet.
@@ -403,7 +414,10 @@ export const PerformanceDashboard: React.FC = () => {
           slowestScreens.length > 0 ||
           recentMemorySnapshots.length > 0) && (
           <Pressable
-            style={({pressed}) => [styles.clearButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.clearButton,
+              pressed && styles.pressed,
+            ]}
             onPress={handleClearData}
           >
             <Text style={styles.clearButtonText}>Clear Performance Data</Text>

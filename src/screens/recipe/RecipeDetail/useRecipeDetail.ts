@@ -23,7 +23,7 @@ import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { normalizeRecipes, extractNodes } from '#/utils/connectionUtils';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { useRecipePreload } from '#/hooks/recipe/useRecipePreload';
 import { useRecipeIngredientMatching } from '#/hooks/recipe/useRecipeIngredientMatching';
@@ -185,14 +185,8 @@ export function useRecipeDetail() {
         try {
           const result = data.createShoppingListItemsFromRecipe;
           const shoppingListId = variables.input.shoppingListId;
-          const addToShoppingListItemsCache =
-            createAddToParentConnectionUpdater(
-              'ShoppingList',
-              'itemsConnection',
-              'ShoppingListItem',
-            );
           result.addedItems.forEach((item: any) => {
-            addToShoppingListItemsCache(cache, shoppingListId, item);
+            addNewItemToShoppingListCache(cache, shoppingListId, item);
           });
         } catch (err) {
           console.warn('Cache update failed for addRecipeToShoppingList:', err);
@@ -215,17 +209,7 @@ export function useRecipeDetail() {
           const result = data.createShoppingListItemFromRecipeIngredient;
           const shoppingListId = variables.shoppingListId;
           if (!result.wasUpdated) {
-            const addToShoppingListItemsCache =
-              createAddToParentConnectionUpdater(
-                'ShoppingList',
-                'itemsConnection',
-                'ShoppingListItem',
-              );
-            addToShoppingListItemsCache(
-              cache,
-              shoppingListId,
-              result.shoppingListItem,
-            );
+            addNewItemToShoppingListCache(cache, shoppingListId, result.shoppingListItem);
           }
         } catch (err) {
           console.warn('Cache update failed for addRecipeIngredient:', err);
@@ -239,12 +223,7 @@ export function useRecipeDetail() {
       try {
         const item = data.addItemToShoppingList.shoppingListItem;
         const shoppingListId = variables.input.shoppingListId;
-        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
-        addToShoppingListItemsCache(cache, shoppingListId, item);
+        addNewItemToShoppingListCache(cache, shoppingListId, item);
       } catch (err) {
         console.warn('Cache update failed for addItemToShoppingList:', err);
       }
@@ -257,15 +236,10 @@ export function useRecipeDetail() {
       try {
         const { results } = data.addItemsToShoppingList;
         const shoppingListId = variables.shoppingListId;
-        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
         // Add each successfully created item to the cache
         results.forEach(result => {
           if (result.success && result.item) {
-            addToShoppingListItemsCache(cache, shoppingListId, result.item);
+            addNewItemToShoppingListCache(cache, shoppingListId, result.item);
           }
         });
       } catch (err) {

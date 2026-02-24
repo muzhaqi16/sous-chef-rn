@@ -250,8 +250,8 @@ export function useShoppingListSelectorModal({
     return result;
   }, [listDataWithOwnership]);
 
-  // PERFORMANCE: Stabilized render function — reads volatile state from refs
-  // so the callback identity stays stable. FlashList's extraData triggers re-renders.
+  // Render function depends on isDeleteMode/selectedForDeletion so its identity
+  // changes when delete state toggles, forcing SelectorItem to re-render.
   const renderListItem = useCallback(
     (item: ListItemOrHeader, isSelected: boolean, onPress: () => void) => {
       // Render section header (non-selectable)
@@ -271,9 +271,9 @@ export function useShoppingListSelectorModal({
       // After the header guard above, item is always a ShoppingListSelectorItem
       const list = item as ShoppingListSelectorItem;
 
-      // Delete mode rendering — read from refs for stable callback
-      if (isDeleteModeRef.current) {
-        const isSelectedForDelete = selectedForDeletionRef.current.has(list.id);
+      // Delete mode rendering — read from state for re-render on toggle
+      if (isDeleteMode) {
+        const isSelectedForDelete = selectedForDeletion.has(list.id);
         const canDelete = !!list._isOwner;
 
         return (
@@ -344,7 +344,7 @@ export function useShoppingListSelectorModal({
         </Pressable>
       );
     },
-    [colors, toggleDeleteSelection, handleLongPress],
+    [colors, toggleDeleteSelection, handleLongPress, isDeleteMode, selectedForDeletion],
   );
 
   // PERFORMANCE: Memoize actions array separately

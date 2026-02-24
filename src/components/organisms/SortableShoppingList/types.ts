@@ -70,6 +70,7 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
+  ListHeaderComponent?: ReactElement | null;
   ListFooterComponent?: ReactElement<unknown, string | JSXElementConstructor<any>> | ComponentType<any> | null;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;

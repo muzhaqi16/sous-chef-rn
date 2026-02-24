@@ -22,6 +22,7 @@ interface ItemInformationSectionProps {
   suggestedBrands?: SuggestedBrand[];
   testID?: string;
   onBrandSelected?: (brandId: string | null) => void;
+  onCategorySelected?: (categoryId: string | null) => void;
 }
 
 export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
@@ -32,6 +33,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   suggestedBrands,
   testID,
   onBrandSelected,
+  onCategorySelected,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
@@ -44,6 +46,13 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
           props: { required: true },
           onSelectItem,
           testID,
+        },
+        {
+          name: 'category',
+          label: 'Category',
+          placeholder: 'e.g., Grains, Dairy',
+          component: 'categoryAutocomplete',
+          onCategorySelected,
         },
         {
           name: 'brand',
@@ -61,6 +70,13 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
           label: 'Item Name',
           placeholder: 'e.g., Rice, Pasta',
           component: FormInput,
+        },
+        {
+          name: 'category',
+          label: 'Category',
+          placeholder: 'e.g., Grains, Dairy',
+          component: 'categoryAutocomplete',
+          onCategorySelected,
         },
         {
           name: 'brand',

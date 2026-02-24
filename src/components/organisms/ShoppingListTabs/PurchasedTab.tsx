@@ -41,6 +41,8 @@ interface PurchasedTabProps {
   // Batch move to pantry
   onBatchMoveToPantry?: () => void;
   batchMoveToPantryLoading?: boolean;
+  // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
+  ListHeaderComponent?: React.ReactElement | null;
 }
 
 // Batch move to pantry action bar
@@ -92,6 +94,7 @@ interface StaggeredPurchasedContentProps {
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
+  ListHeaderComponent?: React.ReactElement | null;
 }
 
 const StaggeredPurchasedContent: React.FC<StaggeredPurchasedContentProps> = ({
@@ -111,6 +114,7 @@ const StaggeredPurchasedContent: React.FC<StaggeredPurchasedContentProps> = ({
   canRemoveItems,
   canEditItems,
   canMarkPurchased,
+  ListHeaderComponent,
 }) => {
   const staggerCtx = useStaggeredEntry();
 
@@ -148,6 +152,7 @@ const StaggeredPurchasedContent: React.FC<StaggeredPurchasedContentProps> = ({
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
+        ListHeaderComponent={ListHeaderComponent}
       />
     </View>
   );
@@ -174,6 +179,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   isTransitioning = false,
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
+  ListHeaderComponent,
 }) => {
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -220,6 +226,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
+        ListHeaderComponent={ListHeaderComponent}
       />
     </StaggeredEntryProvider>
   );

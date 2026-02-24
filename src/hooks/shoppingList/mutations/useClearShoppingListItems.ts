@@ -18,10 +18,7 @@ import type { ShoppingListItemDisplayFragment } from '#generated';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
-  addToPurchasedItems,
-  addToUnpurchasedItems,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { isNetworkError } from '#/utils/isNetworkError';
 
 interface UseClearShoppingListItemsOptions {
   listId: string | null | undefined;
@@ -69,8 +66,6 @@ export function useClearShoppingListItems({
 
       isClearingRef.current = true;
       const itemIds = targetItems.map(i => i.id);
-      // Snapshot items before clearing for offline rollback
-      const snapshot = targetItems.map(item => ({ ...item }));
 
       try {
         // 1. IMMEDIATE: Optimistic cache clear (instant UI feedback)
@@ -86,23 +81,12 @@ export function useClearShoppingListItems({
           update: () => {}, // Cache already cleared optimistically
         });
       } catch (error: any) {
-        // Restore items from snapshot for immediate rollback (works even offline)
-        snapshot.forEach(item => {
-          if (purchased) {
-            addToPurchasedItems(client.cache, listId, item);
-          } else {
-            addToUnpurchasedItems(client.cache, listId, item);
-          }
-        });
-
-        // Still refetch for authoritative state when online
-        if (!isNetworkError(error)) {
-          console.warn(
-            `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
-            error,
-          );
-          await refetch();
-        }
+        console.warn(
+          `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
+          error,
+        );
+        // Items were evicted from cache — refetch to restore authoritative state
+        await refetch();
         throw error;
       } finally {
         isClearingRef.current = false;

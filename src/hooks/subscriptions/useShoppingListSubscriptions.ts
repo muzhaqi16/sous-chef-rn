@@ -20,14 +20,11 @@ import { subscriptionService } from '#/services/subscriptions/SubscriptionServic
 import { CacheStrategy } from '#/services/subscriptions/types';
 import { MutationType } from '#generated';
 import {
-  addToShoppingListItemsConnection,
   removeFromShoppingListItemsConnection,
-  addToUnpurchasedItems,
-  removeFromUnpurchasedItems,
-  removeFromPurchasedItems,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   clearAllPurchasedItemsFromCache,
+  addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 /**
@@ -115,23 +112,18 @@ export function useShoppingListSubscriptions(
           }
 
           if (mutation === MutationType.Created || mutation === MutationType.ItemAdded) {
-            addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
-            addToUnpurchasedItems(client.cache, selectedShoppingListId, item);
+            addNewItemToShoppingListCache(client.cache, selectedShoppingListId, item);
           } else if (mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved) {
             if (scheduleAnimation) {
               scheduleAnimation(item.id, -1, () => {
                 removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
                   evictItem: true,
                 });
-                removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-                removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
               });
             } else {
               removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
                 evictItem: true,
               });
-              removeFromUnpurchasedItems(client.cache, selectedShoppingListId, item.id);
-              removeFromPurchasedItems(client.cache, selectedShoppingListId, item.id);
             }
           } else if (mutation === MutationType.ItemUpdated || mutation === MutationType.ItemCompleted || mutation === MutationType.ItemUncompleted) {
             const sortOrderChanged = item.sortOrder != null;
@@ -204,33 +196,6 @@ export function useShoppingListSubscriptions(
                   });
                 }
 
-                client.cache.modify({
-                  id: client.cache.identify({ __typename: 'ShoppingList', id: selectedShoppingListId }),
-                  fields: {
-                    unpurchasedItems(existing: any, { readField }: any) {
-                      if (!existing?.edges) return existing;
-                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                        const nodeA = readField('node', a);
-                        const nodeB = readField('node', b);
-                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                        return sortA.localeCompare(sortB);
-                      });
-                      return { ...existing, edges: sortedAliasedEdges };
-                    },
-                    purchasedItems(existing: any, { readField }: any) {
-                      if (!existing?.edges) return existing;
-                      const sortedAliasedEdges = [...existing.edges].sort((a: any, b: any) => {
-                        const nodeA = readField('node', a);
-                        const nodeB = readField('node', b);
-                        const sortA = (nodeA ? readField('sortOrder', nodeA) : '') as string || '';
-                        const sortB = (nodeB ? readField('sortOrder', nodeB) : '') as string || '';
-                        return sortA.localeCompare(sortB);
-                      });
-                      return { ...existing, edges: sortedAliasedEdges };
-                    },
-                  },
-                });
               } catch (error) {
                 console.warn('Failed to re-sort edges after subscription update:', error);
               }

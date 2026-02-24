@@ -26,7 +26,7 @@ import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreak
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '#components/molecules/Header';
 import { Icon } from '#/utils/iconUtils';
@@ -161,16 +161,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         return;
 
       try {
-        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
-        addToShoppingListItemsCache(
-          cache,
-          selectedShoppingListId,
-          shoppingListItem,
-        );
+        addNewItemToShoppingListCache(cache, selectedShoppingListId, shoppingListItem);
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }

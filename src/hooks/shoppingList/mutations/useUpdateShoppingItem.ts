@@ -37,7 +37,7 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
   const { handleApolloError } = useErrorService();
 
   // Apollo auto-normalizes the server response by __typename + id
-  // No onCompleted cleanup needed - cache persistence handles this automatically
+  // No manual cache update needed - Apollo merge functions handle this automatically
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
     onError: error => {
@@ -48,8 +48,8 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
     },
   });
 
-  // Simplified updateItem - uses items array instead of cache read
-  // Apollo auto-normalizes the server response, so we just need basic optimistic response
+  // Uses items array from props instead of reading from cache
+  // Apollo auto-normalizes the server response by __typename + id, so we only need a basic optimistic response
   const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
     if (!listId) return false;
 

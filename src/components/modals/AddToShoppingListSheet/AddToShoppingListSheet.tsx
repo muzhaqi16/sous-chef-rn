@@ -12,7 +12,7 @@ import {
   type GetShoppingListSuggestionsQuery,
   ItemSuggestion,
 } from '#generated';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { BaseSuggestionItem, SuggestionsHookResult } from '../AddItemSheet/types';
@@ -38,14 +38,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const { navigate, navigateTo } = useAppNavigation();
   const client = useApolloClient();
 
-  // Shared state management (NOW OPTIMIZED: includes shouldFetch and exit animations)
+  // Shared state management for sheet visibility and deferred data fetching
   const state = useAddItemSheetState({
     visible,
     contextId: shoppingListId,
     deferFetch: shoppingListSheetConfig.deferFetch,
   });
 
-  // Fetch shopping list suggestions (NOW OPTIMIZED: respects shouldFetch)
+  // Fetch shopping list suggestions (deferred until sheet animation completes)
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
     limit: 15,
@@ -84,23 +84,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     [client.cache, shoppingListId],
   );
 
-  // Add shopping list item mutation (NOW OPTIMIZED: fire-and-forget pattern)
+  // Add shopping list item mutation (fire-and-forget pattern)
   const [addItemMutation, { loading: adding }] = useAddItemToShoppingListMutation({
     update: (cache, { data }) => {
       const newItem = data?.addItemToShoppingList?.shoppingListItem;
       if (!newItem || !shoppingListId) return;
 
       try {
-        const addToShoppingListCache = createAddToParentConnectionUpdater(
-          'ShoppingList',
-          'itemsConnection',
-          'ShoppingListItem',
-        );
-        addToShoppingListCache(
-          cache,
-          shoppingListId,
-          newItem,
-        );
+        addNewItemToShoppingListCache(cache, shoppingListId, newItem);
       } catch (error) {
         console.error('Cache update failed:', error);
       }
@@ -127,7 +118,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     }
   }, [onClose, navigate, shoppingListId]);
 
-  // Handle quick add from search autocomplete (NOW OPTIMIZED: fire-and-forget)
+  // Handle quick add from search autocomplete (fire-and-forget)
   const handleQuickAddSearchSuggestion = useCallback(
     (item: ItemSuggestion) => {
       if (!shoppingListId || adding) return;
@@ -159,7 +150,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     [shoppingListId, adding, addItemMutation, onItemAdded],
   );
 
-  // Handle quick add from suggestion (NOW OPTIMIZED: fire-and-forget with exit animations)
+  // Handle quick add from suggestion (fire-and-forget with exit animations)
   const handleQuickAddSuggestion = useCallback(
     (item: BaseSuggestionItem) => {
       // Cast to ShoppingListSuggestionItem for full type info
@@ -169,7 +160,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
       const unitId = shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
 
-      // 1. Start exit animation immediately (NOW OPTIMIZED: added animations)
+      // 1. Start exit animation immediately
       state.startExitAnimation(shoppingItem.itemId);
 
       // 2. Show toast immediately (don't wait for mutation)

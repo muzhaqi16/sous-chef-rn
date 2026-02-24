@@ -53,6 +53,7 @@ const SortableShoppingListComponent = forwardRef<
       onQuantityPress,
       onSortOrderUpdate,
       disabled = false,
+      ListHeaderComponent,
       ListFooterComponent,
       onSwipeableWillOpen: externalOnSwipeableWillOpen,
       onRefresh,
@@ -217,6 +218,7 @@ const SortableShoppingListComponent = forwardRef<
                 flatListProps.showsVerticalScrollIndicator ?? true
               }
               contentContainerStyle={contentContainerStyle}
+              ListHeaderComponent={ListHeaderComponent ?? undefined}
               ListFooterComponent={ListFooterComponent ?? undefined}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}
