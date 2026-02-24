@@ -168,8 +168,8 @@ export const NotificationSettingsScreen: React.FC = () => {
         <AlertBanner
           title="Notifications Disabled"
           subtitle="Notification permissions are not enabled. Tap to enable in settings."
-          icon="bell-off"
-          iconLibrary="Feather"
+          icon="notifications-off"
+          iconLibrary="Ionicons"
           variant="warning"
           onPress={() => {
             Alert.alert(

@@ -3,9 +3,8 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { commonStyles } from '#/styles/commonStyles';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#generated';
@@ -13,7 +12,10 @@ import { StorageType } from '#generated';
 interface AddStorageLocationSheetProps {
   visible: boolean;
   onClose: () => void;
-  onCreateLocation: (input: { name: string; type: StorageType }) => Promise<unknown>;
+  onCreateLocation: (input: {
+    name: string;
+    type: StorageType;
+  }) => Promise<unknown>;
   creating?: boolean;
 }
 
@@ -26,18 +28,18 @@ interface AddStorageLocationSheetProps {
  * - Creates location with default type (Other)
  * - Used from PantryMain for quick creation
  */
-export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = ({
-  visible,
-  onClose,
-  onCreateLocation,
-  creating = false,
-}) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['30%', '50%'],
-  });
-  const inputRef = useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
+export const AddStorageLocationSheet: React.FC<
+  AddStorageLocationSheetProps
+> = ({ visible, onClose, onCreateLocation, creating = false }) => {
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['35%'],
+      keyboardBehavior: 'interactive',
+    });
+  const inputRef =
+    useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
 
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -84,26 +86,27 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
     onClose();
   }, [onClose]);
 
-  const handleNameChange = useCallback((text: string) => {
-    setName(text);
-    if (error) setError(null);
-  }, [error]);
+  const handleNameChange = useCallback(
+    (text: string) => {
+      setName(text);
+      if (error) setError(null);
+    },
+    [error],
+  );
 
   const isCreateDisabled = creating || name.trim().length < 2;
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetKeyboardAwareScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-        bottomOffset={16}
-      >
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Create */}
         <View style={styles.header}>
           <Pressable
             onPress={handleCancel}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
@@ -120,7 +123,10 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
 
           <Pressable
             onPress={handleCreate}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Create"
             disabled={isCreateDisabled}
@@ -165,7 +171,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
                 borderColor: error ? theme.colors.error : theme.colors.border,
               },
             ]}
-            value={name}
+            defaultValue={name}
             onChangeText={handleNameChange}
             placeholder="e.g., Kitchen Cabinet, Garage Shelf"
             placeholderTextColor={theme.colors.textTertiary}
@@ -185,7 +191,7 @@ export const AddStorageLocationSheet: React.FC<AddStorageLocationSheetProps> = (
             You can edit details later in Settings &gt; Storage Locations
           </Text>
         </View>
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };

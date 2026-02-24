@@ -114,7 +114,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               style={styles.searchInput}
               placeholder="Search tags..."
               placeholderTextColor={theme.colors.textSecondary}
-              value={searchQuery}
+              defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
             />

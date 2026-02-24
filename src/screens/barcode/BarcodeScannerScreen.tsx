@@ -213,7 +213,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
         />
         <Text style={styles.headerTitle}>Scan Barcode</Text>
         <IconButton
-          name={flashEnabled ? 'flash-on' : 'flash-off'}
+          name={flashEnabled ? 'flash' : 'flash-off'}
           onPress={toggleFlash}
           size="md"
           style={styles.headerButton}

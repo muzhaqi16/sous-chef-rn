@@ -58,4 +58,5 @@ export interface SelectorItemProps<T extends SelectableItem> {
     isSelected: boolean,
     onPress: () => void
   ) => React.ReactElement;
+  extraData?: any;
 }

@@ -245,7 +245,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
           style={styles.notesInput}
           placeholder="Add any notes about this recipe..."
           placeholderTextColor={theme.colors.textSecondary}
-          value={notes}
+          defaultValue={notes}
           onChangeText={setNotes}
           multiline
           numberOfLines={3}

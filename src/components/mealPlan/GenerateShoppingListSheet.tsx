@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useGetShoppingListsLiteQuery } from '#generated';
@@ -91,10 +92,9 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
               Deduct items you already have in your pantry
             </Text>
           </View>
-          <Switch
+          <BaseSwitch
             value={checkPantry}
             onValueChange={setCheckPantry}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
           />
         </View>
 

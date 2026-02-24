@@ -160,10 +160,18 @@ export const createAuthSlice: StateCreator<
         state.isHomeSelectionReady = false;
       }
 
+      // Flatten profile fields from login/register GraphQL response so the
+      // greeting can render the user's name immediately without a separate query.
+      const profile = (user as any).profile;
+
       // Normalize email to prevent validation issues (trim whitespace, lowercase)
       state.user = {
         ...user,
         email: user.email?.trim().toLowerCase() ?? user.email,
+        firstName: profile?.firstName ?? user.firstName,
+        lastName: profile?.lastName ?? user.lastName,
+        name: profile?.displayName ?? user.name,
+        profilePicture: profile?.avatar ?? user.profilePicture,
       };
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;

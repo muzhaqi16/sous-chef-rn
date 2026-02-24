@@ -51,9 +51,10 @@ export const SelectorContent = <T extends SelectableItem>({
         onSelect={onSelect}
         displayProperty={displayProperty}
         renderCustomItem={renderCustomItem}
+        extraData={extraData}
       />
     ),
-    [selectedId, onSelect, displayProperty, renderCustomItem],
+    [selectedId, onSelect, displayProperty, renderCustomItem, extraData],
   );
 
   if (loading) {

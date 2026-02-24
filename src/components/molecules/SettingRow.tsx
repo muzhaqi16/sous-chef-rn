@@ -1,10 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import {
-  BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
@@ -31,11 +28,12 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    onDismiss: () => setModalVisible(false),
-    snapPoints: [],
-    enableDynamicSizing: true,
-  });
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      onDismiss: () => setModalVisible(false),
+      snapPoints: [],
+      enableDynamicSizing: true,
+    });
 
   // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
@@ -129,7 +127,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         testID={item.testID || `profile-${item.key}-button`}
         onPress={item.type === 'info' ? undefined : handlePress}
         disabled={item.type === 'info'}
-        style={({pressed}) => [
+        style={({ pressed }) => [
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
@@ -226,7 +224,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         title={inputLabel}
         label={inputLabel}
         placeholder={placeholder}
-        initialValue={(item.value as string) || ''}
+        initialValue={item.value || ''}
         fieldKey={item.key}
         // @ts-expect-error - yup schema type compatibility
         validationSchema={getValidationSchemaForField(item.key)}
@@ -243,15 +241,16 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {...modalProps}
           handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         >
-          <BottomSheetView
-            style={[styles.sheetContent, contentContainerStyle]}
-          >
+          <BottomSheetView style={[styles.sheetContent, contentContainerStyle]}>
             <Text style={styles.sheetTitle}>{item.label}</Text>
             <View style={styles.sheetDivider} />
             {item.options.map((opt: any) => (
               <Pressable
                 key={opt.value}
-                style={({pressed}) => [styles.sheetOption, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.sheetOption,
+                  pressed && styles.pressed,
+                ]}
                 onPress={handleModalOptionPress(opt.value)}
                 accessibilityRole="button"
                 accessibilityLabel={opt.label}

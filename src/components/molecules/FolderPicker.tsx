@@ -277,7 +277,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 style={styles.searchInput}
                 placeholder="Search folders..."
                 placeholderTextColor={theme.colors.textSecondary}
-                value={searchQuery}
+                defaultValue={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
               />
@@ -329,7 +329,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   style={styles.newFolderInput}
                   placeholder="Enter folder name..."
                   placeholderTextColor={theme.colors.textSecondary}
-                  value={newFolderName}
+                  defaultValue={newFolderName}
                   onChangeText={setNewFolderName}
                   autoFocus
                   autoCapitalize="words"
@@ -500,7 +500,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                   <View style={styles.renameInputRow}>
                     <BottomSheetTextInput
                       style={styles.renameInput}
-                      value={renameValue}
+                      defaultValue={renameValue}
                       onChangeText={setRenameValue}
                       placeholder="Enter new folder name..."
                       placeholderTextColor={theme.colors.textSecondary}

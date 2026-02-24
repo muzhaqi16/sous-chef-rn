@@ -77,7 +77,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
         <View style={styles.commentSection}>
           <Text style={styles.label}>Comment (optional)</Text>
           <BottomSheetTextInput
-            value={comment}
+            defaultValue={comment}
             onChangeText={setComment}
             placeholder="Share your thoughts about this recipe..."
             placeholderTextColor={theme.colors.textSecondary}

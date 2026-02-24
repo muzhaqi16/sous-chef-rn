@@ -89,6 +89,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   );
   const isOwner = currentUserCollaborator?.role === CollaboratorRole.Owner;
 
+  const activeCollaborators = collaborators.filter(c =>
+    ['ACCEPTED', 'ACTIVE', 'PENDING'].includes(c.status?.toUpperCase()),
+  );
+
   const handleShare = async () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter an email address');
@@ -292,11 +296,11 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
           </View>
         </View>
         {/* Only show if there are any members */}
-        {collaborators.length > 0 && (
+        {activeCollaborators.length > 0 && (
           <View style={styles.membersSection}>
             <Text style={styles.sectionTitle}>Current Members</Text>
             <FlashList
-              data={collaborators}
+              data={activeCollaborators}
               keyExtractor={member => member.id}
               renderItem={renderMemberItem}
               refreshing={isRefetching}

@@ -11,6 +11,7 @@ const SelectorItemComponent = <T extends SelectableItem>({
   onSelect,
   displayProperty,
   renderCustomItem,
+  extraData: _extraData,
 }: SelectorItemProps<T>) => {
   const { theme } = useUnistyles();
 

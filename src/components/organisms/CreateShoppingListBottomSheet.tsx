@@ -95,7 +95,7 @@ export const CreateShoppingListBottomSheet: React.FC<
                 borderColor: error ? theme.colors.error : theme.colors.border,
               },
             ]}
-            value={listName}
+            defaultValue={listName}
             onChangeText={text => {
               setListName(text);
               if (error) setError(null);

@@ -2,23 +2,23 @@ import React from 'react';
 import {View, Text, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {CachedImage} from '#components/atoms/CachedImage';
-import {useProfileData} from '#hooks/profile/useProfileData';
+import {useAuth} from '#hooks/auth/useAuth';
 import {useAppNavigation} from '#hooks/navigation/useAppNavigation';
 import {Icon} from '#utils/iconUtils';
 import {useAppStore} from '#store/useAppStore';
 
 export const UserHeader: React.FC = () => {
   const {navigateTo} = useAppNavigation();
-  const {profile} = useProfileData();
+  const {user} = useAuth();
   const unreadCount = useAppStore(state => state.unreadCount);
 
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
         Hello, <Text style={styles.headerTitleBold}>
-          {profile?.displayName
-            ? profile.displayName.split(' ')[0]
-            : profile?.firstName || 'User'}
+          {user?.name
+            ? user.name.split(' ')[0]
+            : user?.firstName || 'User'}
         </Text>
         !
       </Text>
@@ -30,9 +30,9 @@ export const UserHeader: React.FC = () => {
           }}
           style={({pressed}) => pressed && styles.pressed}>
           <View style={styles.avatar}>
-            {profile?.avatar ? (
+            {user?.profilePicture ? (
               <CachedImage
-                uri={profile.avatar}
+                uri={user.profilePicture}
                 style={styles.avatarImg}
               />
             ) : (

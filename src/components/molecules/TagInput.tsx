@@ -23,6 +23,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const [inputValue, setInputValue] = useState('');
+  const [inputKey, setInputKey] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,6 +57,7 @@ export const TagInput: React.FC<TagInputProps> = ({
     ) {
       onTagsChange([...tags, trimmedTag]);
       setInputValue('');
+      setInputKey(k => k + 1);
     }
   };
 
@@ -101,8 +103,9 @@ export const TagInput: React.FC<TagInputProps> = ({
         {/* Input field */}
         {!!editable && tags.length < maxTags && (
           <BottomSheetTextInput
+            key={inputKey}
             style={styles.input}
-            value={inputValue}
+            defaultValue={inputValue}
             onChangeText={setInputValue}
             placeholder={tags.length === 0 ? placeholder : ''}
             placeholderTextColor={theme.colors.textSecondary}

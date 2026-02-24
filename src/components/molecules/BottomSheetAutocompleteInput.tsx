@@ -266,7 +266,7 @@ export function BottomSheetAutocompleteInput<T>({
 
             <BottomSheetTextInput
               style={styles.bottomSheetInput}
-              value={searchTerm}
+              defaultValue={searchTerm}
               onChangeText={handleBottomSheetTextChange}
               placeholder={searchPlaceholder}
               autoFocus={showAutocomplete}

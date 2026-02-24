@@ -103,7 +103,7 @@ export function MultiSelectChipSheet<T extends string = string>({
               style={styles.searchInput}
               placeholder="Search..."
               placeholderTextColor={theme.colors.textSecondary}
-              value={searchQuery}
+              defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
             />

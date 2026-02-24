@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, Pressable, ActivityIndicator, ScrollView, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -23,10 +24,10 @@ interface AddMealSheetProps {
 
 const MEAL_TYPES: { type: MealType; label: string }[] = [
   { type: MealType.Breakfast, label: 'Breakfast' },
-  { type: MealType.Brunch, label: 'Brunch' },
   { type: MealType.Lunch, label: 'Lunch' },
-  { type: MealType.Snack, label: 'Snack' },
   { type: MealType.Dinner, label: 'Dinner' },
+  { type: MealType.Snack, label: 'Snack' },
+  { type: MealType.Brunch, label: 'Brunch' },
   { type: MealType.Dessert, label: 'Dessert' },
 ];
 
@@ -226,7 +227,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
             style={styles.searchInput}
             placeholder="Search recipes or add a custom meal..."
             placeholderTextColor={styles.searchPlaceholder.color}
-            value={searchQuery}
+            defaultValue={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>

@@ -3,9 +3,8 @@ import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
-import { commonStyles } from '#/styles/commonStyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
@@ -56,11 +55,13 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   maxLength,
   keyboardType = 'default',
 }) => {
-  const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['25%', '50%'],
-  });
+  const { ref, modalProps, contentContainerStyle, theme } =
+    useStandardBottomSheet({
+      visible,
+      onDismiss: onClose,
+      snapPoints: ['30%'],
+      keyboardBehavior: 'interactive',
+    });
 
   // Default schema if none provided
   const schema = validationSchema || object({ [fieldKey]: string() });
@@ -92,17 +93,15 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
-      <BottomSheetKeyboardAwareScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-        bottomOffset={16}
-      >
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
         {/* Header with Cancel/Save at TOP */}
         <View style={styles.header}>
           <Pressable
             onPress={handleCancel}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel"
           >
@@ -119,7 +118,10 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
           <Pressable
             onPress={form.handleSubmit(handleSave)}
-            style={({pressed}) => [styles.headerButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Save"
           >
@@ -181,7 +183,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             )}
           />
         </View>
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };

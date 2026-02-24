@@ -50,7 +50,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
       <View style={styles.inputs}>
         <BottomSheetTextInput
           placeholder="Enter item name"
-          value={name}
+          defaultValue={name}
           onChangeText={setName}
           style={styles.input}
           autoCapitalize="none"

@@ -180,7 +180,7 @@ interface ItemDisplayData {
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: 'water-outline' },
+  { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
   { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
   { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
 ];
@@ -487,7 +487,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       return (
         <EmptyState
           testID="pantry-empty-state"
-          icon="water-outline"
+          icon="basket-outline"
           title={`No items in ${tabName}`}
           description="Items stored here will appear in this tab"
         />
@@ -497,7 +497,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     return (
       <EmptyState
         testID="pantry-empty-state"
-        icon="water-outline"
+        icon="basket-outline"
         title="Your pantry is empty"
         description="Start tracking your food to reduce waste"
         action={onAddItem ? { label: 'Add Items', onPress: onAddItem } : undefined}

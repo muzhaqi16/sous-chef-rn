@@ -87,7 +87,7 @@ export function useStandardBottomSheet({
       handleIndicatorStyle: { backgroundColor: theme.colors.textSecondary },
       keyboardBehavior,
       keyboardBlurBehavior: 'restore' as const,
-      android_keyboardInputMode: 'adjustResize' as const,
+      android_keyboardInputMode: 'adjustPan' as const,
       backdropComponent,
     }),
     [

@@ -24,7 +24,7 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
-import { useProfileData } from '#hooks/profile/useProfileData';
+import { useAuth } from '#hooks/auth/useAuth';
 import { useAddLowStockToShoppingList } from '#hooks/pantry/useAddLowStockToShoppingList';
 import type { LocationFilter } from '#/utils/pantryFilters';
 
@@ -50,8 +50,9 @@ const PantryMainScreen: React.FC = () => {
   // then schedules a background re-render returning `true` to activate deferred features.
   const isInteractive = useDeferredValue(true, false);
 
-  // Get user profile for greeting
-  const { profile } = useProfileData();
+  // User name/avatar come from the auth store (populated during login)
+  // so the greeting renders immediately without a separate GetUserProfile query
+  const { user: authUser } = useAuth();
 
   // Track screen performance (deferred — telemetry not needed during initial render)
   useScreenTransition('PantryMain', { enabled: isInteractive });
@@ -271,7 +272,7 @@ const PantryMainScreen: React.FC = () => {
     // Default temperature-based tabs
     const defaultTabs: FilterTabConfig<LocationFilter>[] = [
       { id: 'all', label: 'All' },
-      { id: 'fridge', label: 'Fridge', icon: 'water-outline' },
+      { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
       { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
       { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
     ];
@@ -376,9 +377,9 @@ const PantryMainScreen: React.FC = () => {
 
   // isRefreshing comes from usePantryManagement (manual tracking in usePantryQuery)
 
-  // Get user display name and avatar
+  // Get user display name and avatar from auth store (populated at login)
   const userName =
-    profile?.displayName || profile?.firstName || profile?.lastName || 'there';
+    authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
   const householdName = currentHome?.name || 'Your Home';
 
   return (
@@ -387,7 +388,7 @@ const PantryMainScreen: React.FC = () => {
         ref={pantryContentRef}
         userName={userName}
         householdName={householdName}
-        avatarUrl={profile?.avatar}
+        avatarUrl={authUser?.profilePicture}
         notificationCount={unreadCount}
         stats={stats}
         items={locationFilteredItems}

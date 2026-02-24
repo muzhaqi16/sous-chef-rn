@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -23,23 +23,36 @@ export const PerformanceDashboard: React.FC = () => {
   const setTrackMemory = usePerformanceStore(state => state.setTrackMemory);
   const setTrackScreens = usePerformanceStore(state => state.setTrackScreens);
 
-  const getSlowestComponents = usePerformanceStore(
-    state => state.getSlowestComponents,
+  const componentMetrics = usePerformanceStore(
+    state => state.componentMetrics,
   );
-  const getSlowestScreens = usePerformanceStore(
-    state => state.getSlowestScreens,
-  );
-  const getRecentMemorySnapshots = usePerformanceStore(
-    state => state.getRecentMemorySnapshots,
-  );
+  const screenMetrics = usePerformanceStore(state => state.screenMetrics);
+  const memorySnapshots = usePerformanceStore(state => state.memorySnapshots);
   const clearPerformanceData = usePerformanceStore(
     state => state.clearPerformanceData,
   );
 
-  // Get metrics
-  const slowestComponents = getSlowestComponents(10);
-  const slowestScreens = getSlowestScreens(10);
-  const recentMemorySnapshots = getRecentMemorySnapshots(5);
+  const [clearCounter, setClearCounter] = useState(0);
+
+  // Derive sorted metrics from raw data
+  const slowestComponents = useMemo(
+    () =>
+      [...componentMetrics.values()]
+        .sort((a, b) => b.avgRenderTime - a.avgRenderTime)
+        .slice(0, 10),
+    [componentMetrics],
+  );
+  const slowestScreens = useMemo(
+    () =>
+      [...screenMetrics.values()]
+        .sort((a, b) => b.avgInteractiveTime - a.avgInteractiveTime)
+        .slice(0, 10),
+    [screenMetrics],
+  );
+  const recentMemorySnapshots = useMemo(
+    () => memorySnapshots.slice(-5),
+    [memorySnapshots],
+  );
 
   const handleClearData = useCallback(() => {
     Alert.alert(
@@ -52,6 +65,10 @@ export const PerformanceDashboard: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             clearPerformanceData();
+            performance.clearMarks();
+            performance.clearMeasures();
+            performance.clearResourceTimings();
+            setClearCounter(c => c + 1);
           },
         },
       ],
@@ -90,9 +107,12 @@ export const PerformanceDashboard: React.FC = () => {
     return {
       nativeLaunch: launchStart && launchEnd ? launchEnd.startTime - launchStart.startTime : null,
       bundleLoad: bundleStart && bundleEnd ? bundleEnd.startTime - bundleStart.startTime : null,
-      contentAppeared: contentAppeared?.startTime ?? null,
+      contentAppeared:
+        contentAppeared && launchStart
+          ? contentAppeared.startTime - launchStart.startTime
+          : null,
     };
-  }, []);
+  }, [clearCounter, performance]);
 
   const recentHttpRequests = useMemo(() => {
     const entries = performance.getEntriesByType('resource');
@@ -105,7 +125,7 @@ export const PerformanceDashboard: React.FC = () => {
       }
       return { host, duration: entry.duration, url: entry.name };
     });
-  }, []);
+  }, [clearCounter, performance]);
 
   if (!Environment.shouldEnableDebugFeatures() && !isAdminUser) {
     return (
