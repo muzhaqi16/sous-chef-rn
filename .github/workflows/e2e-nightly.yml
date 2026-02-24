@@ -62,25 +62,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: Upload test artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-ios-${{ matrix.suite }}-artifacts
-          path: |
-            artifacts/
-            **/*.log
-            **/*.mp4
-          retention-days: 14
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-ios-${{ matrix.suite }}-results
-          path: e2e/test-results/
-          retention-days: 14
-
   # Run all test suites on Android
   full-suite-android:
     name: Full E2E Suite (Android)
@@ -157,24 +138,6 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: detox test e2e/tests/${{ matrix.suite }} --configuration android.emu.debug --record-logs all
-
-      - name: Upload test artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-android-${{ matrix.suite }}-artifacts
-          path: |
-            artifacts/
-            **/*.log
-          retention-days: 14
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-android-${{ matrix.suite }}-results
-          path: e2e/test-results/
-          retention-days: 14
 
   # Report results
   report-results:

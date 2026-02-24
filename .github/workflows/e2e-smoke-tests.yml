@@ -51,16 +51,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: Upload artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-ios-artifacts
-          path: |
-            artifacts/
-            **/*.log
-          retention-days: 3
-
   smoke-tests-android:
     name: Smoke Tests (Android)
     runs-on: [self-hosted, Linux]
@@ -127,12 +117,3 @@ jobs:
           disable-animations: true
           script: detox test e2e/tests/smoke.e2e.ts --configuration android.emu.debug --record-logs all
 
-      - name: Upload artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: smoke-android-artifacts
-          path: |
-            artifacts/
-            **/*.log
-          retention-days: 3

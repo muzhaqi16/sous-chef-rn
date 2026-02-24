@@ -52,24 +52,6 @@ jobs:
         env:
           NODE_ENV: test
 
-      - name: Upload test artifacts (screenshots, logs)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-ios-artifacts
-          path: |
-            artifacts/
-            **/*.log
-          retention-days: 7
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-ios-results
-          path: e2e/test-results/
-          retention-days: 7
-
   # Android E2E Tests
   e2e-android:
     name: E2E Tests (Android)
@@ -136,24 +118,6 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: npm run test:e2e:android -- --record-logs all
-
-      - name: Upload test artifacts (screenshots, logs)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-android-artifacts
-          path: |
-            artifacts/
-            **/*.log
-          retention-days: 7
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-android-results
-          path: e2e/test-results/
-          retention-days: 7
 
   # Summary job that requires all tests to pass
   e2e-summary:

@@ -241,14 +241,6 @@ jobs:
             fi
           done
 
-      - name: Upload Play Store AAB artifact
-        if: env.IS_PLAYSTORE == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: playstore-bundle-${{ github.ref_name }}
-          path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 90
-
       - name: Upload Play Store AAB to S3
         if: env.IS_PLAYSTORE == 'true' && startsWith(github.ref, 'refs/tags/')
         run: |
