@@ -437,8 +437,7 @@ export const RecipeMain: React.FC = () => {
         }}
         counts={filterCounts}
         actionButton={{
-          icon: 'x',
-          iconLibrary: 'Feather',
+          icon: 'close',
           onPress: handleClearFilters,
           testID: 'recipe-clear-filters',
           disabled: !hasActiveFilters,

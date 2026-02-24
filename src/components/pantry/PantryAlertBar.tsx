@@ -55,7 +55,7 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
         </Pressable>
       )}
 
-      {!!onLowStockPress && (
+      {!!onLowStockPress && stats.lowStockCount > 0 && (
         <Pressable
           onPress={onLowStockPress}
           disabled={lowStockLoading}

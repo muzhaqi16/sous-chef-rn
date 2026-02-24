@@ -194,7 +194,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
               style={styles.newFolderInput}
               placeholder="Enter folder name..."
               placeholderTextColor={theme.colors.textSecondary}
-              value={newFolderName}
+              defaultValue={newFolderName}
               onChangeText={setNewFolderName}
               autoFocus
               autoCapitalize="words"
