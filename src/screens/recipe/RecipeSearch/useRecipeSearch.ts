@@ -21,7 +21,7 @@ export interface RecipeFilters {
 }
 
 export function useRecipeSearch() {
-  const { navigate } = useAppNavigation();
+  const { navigate, goBack } = useAppNavigation();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
   const route = useRoute();
   const initialQuery = (route.params as { initialQuery?: string } | undefined)?.initialQuery || '';
@@ -333,6 +333,7 @@ export function useRecipeSearch() {
 
   return {
     navigate,
+    goBack,
     searchQuery,
     setSearchQuery,
     loading,

@@ -6,7 +6,8 @@ import { Badge } from '../base/Badge';
 import type { SortableListThemeColors } from '#/components/organisms/SortableShoppingList/SortableListThemeContext';
 
 interface ListItemProps {
-  title: string;
+  children?: React.ReactNode;
+  title?: string;
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
@@ -25,6 +26,7 @@ interface ListItemProps {
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({
+  children,
   title,
   subtitle,
   onPress,
@@ -45,6 +47,15 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
+
+  // When children are provided, render them directly as content
+  if (children) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.contentContainer}>{children}</View>
+      </View>
+    );
+  }
 
   const content = (
     <>

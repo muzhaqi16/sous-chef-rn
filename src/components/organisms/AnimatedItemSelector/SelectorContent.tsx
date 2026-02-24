@@ -40,15 +40,15 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     actions,
+    extraData,
   } = config;
 
   const renderItem = useCallback(
-    ({ item, index }: { item: T; index: number }) => (
+    ({ item }: { item: T }) => (
       <SelectorItem
         item={item}
-        index={index}
         isSelected={item.id === selectedId}
-        onPress={() => onSelect(item.id, item)}
+        onSelect={onSelect}
         displayProperty={displayProperty}
         renderCustomItem={renderCustomItem}
       />
@@ -79,6 +79,7 @@ export const SelectorContent = <T extends SelectableItem>({
         <FlashList
           data={data}
           renderItem={renderItem}
+          extraData={extraData}
           keyExtractor={keyExtractor || ((item: T) => item.id)}
           showsVerticalScrollIndicator={true}
           bounces={true}

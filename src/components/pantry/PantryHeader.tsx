@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -17,10 +17,8 @@ interface PantryHeaderProps {
   onAvatarPress?: () => void;
   /** Callback when household badge is pressed */
   onHomePress?: () => void;
-  /** Callback when low stock button is pressed */
-  onLowStockPress?: () => void;
-  /** Whether the low stock action is loading */
-  lowStockLoading?: boolean;
+  /** Callback when notification bell is pressed */
+  onNotificationPress?: () => void;
 }
 
 /**
@@ -38,8 +36,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
     notificationCount = 0,
     onAvatarPress,
     onHomePress,
-    onLowStockPress,
-    lowStockLoading = false,
+    onNotificationPress,
   }) => {
     const { theme } = useUnistyles();
 
@@ -64,24 +61,22 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           </Pressable>
         </View>
 
-        {/* Low Stock to Shopping List */}
-        {!!onLowStockPress && (
+        {/* Notification bell */}
+        {!!onNotificationPress && (
           <Pressable
-            onPress={onLowStockPress}
-            disabled={lowStockLoading}
-            style={styles.lowStockButton}
+            onPress={onNotificationPress}
+            style={styles.notificationButton}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Add low stock items to shopping list"
+            accessibilityLabel="Notifications"
           >
-            {lowStockLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            ) : (
-              <Icon
-                name="cart-outline"
-                size={24}
-                color={theme.colors.primary}
-              />
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.textSecondary}
+            />
+            {notificationCount > 0 && (
+              <View style={styles.notificationDot} />
             )}
           </Pressable>
         )}
@@ -97,13 +92,6 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
                 size={24}
                 color={theme.colors.textSecondary}
               />
-            </View>
-          )}
-          {notificationCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationCount}>
-                {notificationCount > 9 ? '9+' : notificationCount}
-              </Text>
             </View>
           )}
         </Pressable>
@@ -143,9 +131,21 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
   },
-  lowStockButton: {
+  notificationButton: {
+    position: 'relative',
     padding: theme.spacing.xs,
     marginRight: theme.spacing.sm,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: theme.spacing.xs,
+    right: theme.spacing.xs,
+    width: 10,
+    height: 10,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.error,
+    borderWidth: 2,
+    borderColor: theme.colors.background,
   },
   avatarContainer: {
     position: 'relative',
@@ -166,24 +166,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xl - 2,
     borderWidth: 2,
     borderColor: theme.colors.primary,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -theme.spacing.xs,
-    right: -theme.spacing.xs,
-    minWidth: theme.spacing['5'],
-    height: theme.spacing['5'],
-    paddingHorizontal: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    backgroundColor: theme.colors.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.white,
-  },
-  notificationCount: {
-    fontSize: theme.typography.fontSize.xs - 1,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.white,
   },
 }));

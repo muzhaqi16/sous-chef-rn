@@ -1,23 +1,25 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { LinearTransition, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import type { SelectorItemProps, SelectableItem } from './types';
 
-export const SelectorItem = <T extends SelectableItem>({
+const SelectorItemComponent = <T extends SelectableItem>({
   item,
   isSelected,
-  onPress,
+  onSelect,
   displayProperty,
   renderCustomItem,
 }: SelectorItemProps<T>) => {
   const { theme } = useUnistyles();
 
+  const handlePress = useCallback(() => onSelect(item.id, item), [onSelect, item]);
+
   if (renderCustomItem) {
     return (
       <Animated.View layout={LinearTransition}>
-        {renderCustomItem(item, isSelected, onPress)}
+        {renderCustomItem(item, isSelected, handlePress)}
       </Animated.View>
     );
   }
@@ -26,7 +28,7 @@ export const SelectorItem = <T extends SelectableItem>({
     <Animated.View layout={LinearTransition}>
       <Pressable
         style={({pressed}) => [styles.item, isSelected && styles.selectedItem, pressed && styles.pressed]}
-        onPress={onPress}
+        onPress={handlePress}
       >
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
           {String(item[displayProperty])}
@@ -43,6 +45,8 @@ export const SelectorItem = <T extends SelectableItem>({
     </Animated.View>
   );
 };
+
+export const SelectorItem = React.memo(SelectorItemComponent) as typeof SelectorItemComponent;
 
 const styles = StyleSheet.create(theme => ({
   item: {

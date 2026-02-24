@@ -5,26 +5,46 @@ import {
   useDeleteMealPlanItemMutation,
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
+  type MealPlanItemFragment,
   GetMealPlanDocument,
 } from '#generated';
 import { toastService } from '#/services/toastService';
+import {
+  createAddToParentArrayUpdater,
+  createRemoveFromParentArrayUpdater,
+} from '#/apollo/utils/cacheUpdaters';
+
+const addToMealPlanItems = createAddToParentArrayUpdater<any>('MealPlan', 'mealPlanItems');
+const removeFromMealPlanItems = createRemoveFromParentArrayUpdater('MealPlan', 'mealPlanItems', 'MealPlanItem');
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
+  const refetchConfig = mealPlanId
+    ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
+    : [];
+
   const [createItemMutation, { loading: creating }] =
     useCreateMealPlanItemMutation({
-      refetchQueries: mealPlanId
-        ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-        : [],
+      refetchQueries: refetchConfig,
+      awaitRefetchQueries: true,
+      update(cache, { data }) {
+        if (!data?.createMealPlanItem?.mealPlanItem || !mealPlanId) return;
+        addToMealPlanItems(cache, mealPlanId, data.createMealPlanItem.mealPlanItem, { position: 'end' });
+      },
     });
 
   const [updateItemMutation, { loading: updating }] =
-    useUpdateMealPlanItemMutation();
+    useUpdateMealPlanItemMutation({
+      refetchQueries: refetchConfig,
+    });
 
   const [deleteItemMutation, { loading: deleting }] =
     useDeleteMealPlanItemMutation({
-      refetchQueries: mealPlanId
-        ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-        : [],
+      refetchQueries: refetchConfig,
+      awaitRefetchQueries: true,
+      update(cache, { data }) {
+        if (!data?.deleteMealPlanItem?.mealPlanItem?.id || !mealPlanId) return;
+        removeFromMealPlanItems(cache, mealPlanId, data.deleteMealPlanItem.mealPlanItem.id, { evictItem: true });
+      },
     });
 
   const createItem = useCallback(
@@ -32,7 +52,12 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       const result = await createItemMutation({
         variables: { input },
       });
-      return result.data?.createMealPlanItem ?? null;
+      const payload = result.data?.createMealPlanItem;
+      if (!payload?.success) {
+        toastService.error(payload?.message ?? 'Failed to add meal');
+        return null;
+      }
+      return payload;
     },
     [createItemMutation],
   );
@@ -42,38 +67,71 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       const result = await updateItemMutation({
         variables: { id, input },
       });
-      return result.data?.updateMealPlanItem ?? null;
+      const payload = result.data?.updateMealPlanItem;
+      if (!payload?.success) {
+        toastService.error(payload?.message ?? 'Failed to update meal');
+        return null;
+      }
+      return payload;
     },
     [updateItemMutation],
   );
 
   const toggleCompleted = useCallback(
-    async (id: string, isCompleted: boolean, hasRecipe?: boolean) => {
-      const markingComplete = !isCompleted;
+    async (
+      item: MealPlanItemFragment,
+      options?: { deductFromPantry?: boolean; servings?: number; notes?: string },
+    ) => {
+      const markingComplete = !item.isCompleted;
+      const hasRecipe = !!item.recipe;
+      const deductFromPantry = options?.deductFromPantry;
+
       const result = await updateItemMutation({
         variables: {
-          id,
+          id: item.id,
           input: {
             isCompleted: markingComplete,
             completedAt: markingComplete ? new Date().toISOString() : null,
+            ...(markingComplete && deductFromPantry != null && { deductFromPantry }),
+            ...(markingComplete && options?.servings != null && { servings: options.servings }),
+            ...(markingComplete && options?.notes != null && { notes: options.notes }),
           },
         },
-        refetchQueries: mealPlanId
-          ? [{ query: GetMealPlanDocument, variables: { id: mealPlanId } }]
-          : [],
+        optimisticResponse: {
+          __typename: 'Mutation',
+          updateMealPlanItem: {
+            __typename: 'MealPlanItemPayload',
+            success: true,
+            message: 'Updated',
+            code: 'SUCCESS',
+            mealPlanItem: {
+              ...item,
+              isCompleted: markingComplete,
+              completedAt: markingComplete ? new Date().toISOString() : null,
+              ...(options?.servings != null && { servings: options.servings }),
+              ...(options?.notes != null && { notes: options.notes }),
+            },
+          },
+        },
       });
 
-      if (result.data?.updateMealPlanItem?.success && markingComplete) {
-        if (hasRecipe) {
+      const payload = result.data?.updateMealPlanItem;
+      if (!payload?.success) {
+        toastService.error(payload?.message ?? 'Failed to update meal');
+        return null;
+      }
+
+      if (markingComplete) {
+        if (hasRecipe && deductFromPantry) {
           toastService.success('Meal completed! Pantry items deducted.');
         } else {
           toastService.success('Meal completed!');
         }
       }
 
-      return result.data?.updateMealPlanItem ?? null;
+      return payload;
     },
-    [updateItemMutation, mealPlanId],
+    [updateItemMutation],
   );
 
   const deleteItem = useCallback(

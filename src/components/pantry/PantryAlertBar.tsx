@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Text } from 'react-native';
+import { View, Pressable, Text, ActivityIndicator } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Badge } from '#components/base/Badge';
@@ -8,11 +8,15 @@ import type { PantryStats } from '#generated';
 interface PantryAlertBarProps {
   stats: PantryStats;
   onAnalyticsPress?: () => void;
+  onLowStockPress?: () => void;
+  lowStockLoading?: boolean;
 }
 
 export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
   stats,
   onAnalyticsPress,
+  onLowStockPress,
+  lowStockLoading = false,
 }) => {
   const { theme } = useUnistyles();
 
@@ -48,6 +52,26 @@ export const PantryAlertBar: React.FC<PantryAlertBarProps> = ({
             size={18}
             color={theme.colors.textTertiary}
           />
+        </Pressable>
+      )}
+
+      {!!onLowStockPress && (
+        <Pressable
+          onPress={onLowStockPress}
+          disabled={lowStockLoading}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Add low stock items to shopping list"
+        >
+          {lowStockLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.textTertiary} />
+          ) : (
+            <Icon
+              name="cart-outline"
+              size={18}
+              color={theme.colors.textTertiary}
+            />
+          )}
         </Pressable>
       )}
     </View>

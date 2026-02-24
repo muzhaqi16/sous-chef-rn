@@ -21,7 +21,6 @@ import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBou
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
-import { useProfileData } from '#hooks/profile/useProfileData';
 import { useFeatureHint } from '#hooks/useFeatureHint';
 import { useShoppingListScreen } from '#hooks/shoppingList/useShoppingListScreen';
 import { useShoppingListActions } from '#hooks/shoppingList/useShoppingListActions';
@@ -31,7 +30,6 @@ import { useItemReordering } from '#hooks/shoppingList/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { ShoppingListModalsProvider, useShoppingListModals } from '#/context/ShoppingListModalsContext';
-import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -99,10 +97,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     const { navigate, navigateTo } = useAppNavigation();
     const { setScannerProps } = useTabBarSetters();
     const { theme } = useUnistyles();
-
-    // Get profile data for header
-    const { profile } = useProfileData();
-    const unreadCount = useAppStore(state => state.unreadCount);
 
     // Get current user for permission calculations
     const { user } = useAuth();
@@ -219,24 +213,24 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       );
     }, [currentListDetails, user?.id]);
 
-    // Search bar inner right icon (list selector button)
-    const searchBarInnerRightIcon = useMemo(
-      () =>
-        searchQuery.trim().length === 0 ? (
-          <Pressable
-            onPress={handleOpenSelector}
-            hitSlop={8}
-            testID="shopping-list-selector"
-          >
-            <Icon
-              name="list"
-              size={18}
-              color={theme.colors.textTertiary}
-
-            />
-          </Pressable>
-        ) : undefined,
-      [handleOpenSelector, searchQuery, theme.colors.textTertiary],
+    // Header right action - list selector button
+    const headerRight = useMemo(
+      () => (
+        <Pressable
+          onPress={handleOpenSelector}
+          hitSlop={8}
+          testID="shopping-list-selector"
+          accessibilityRole="button"
+          accessibilityLabel="Switch shopping list"
+        >
+          <Icon
+            name="list"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
+      ),
+      [handleOpenSelector, theme.colors.textSecondary],
     );
 
     // Memoized customListProps
@@ -381,10 +375,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
           <TabScreenHeader
             label="Shopping list"
             title="Shopping List"
-            avatarUrl={profile?.avatar}
-            notificationCount={unreadCount}
-            onAvatarPress={() => navigate('Profile')}
-          onNotificationPress={() => navigateTo.notificationList()}
           />
           <ListTemplate
             items={[]}
@@ -409,10 +399,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
         <TabScreenHeader
           label="Shopping list"
           title={currentList?.name || 'Shopping List'}
-          avatarUrl={profile?.avatar}
-          notificationCount={unreadCount}
-          onAvatarPress={() => navigate('Profile')}
-          onNotificationPress={() => navigateTo.notificationList()}
+          headerRight={headerRight}
         />
         <View style={styles.searchBarContainer}>
           <SearchBar
@@ -420,7 +407,6 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
             onChangeText={setSearchQuery}
             placeholder="Search shopping list..."
             showSearchIcon
-            innerRightIcon={searchBarInnerRightIcon}
           />
         </View>
         <ListTemplate

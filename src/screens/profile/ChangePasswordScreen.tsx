@@ -82,7 +82,7 @@ export const ChangePasswordScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <IconButton
-          name="arrow-left"
+          name="arrow-back"
           onPress={goBack}
           color={theme.colors.textPrimary}
           accessibilityLabel="Go back"

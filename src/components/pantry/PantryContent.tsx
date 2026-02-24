@@ -137,6 +137,7 @@ interface PantryContentProps {
   // Header actions
   onAvatarPress?: () => void;
   onHomePress?: () => void;
+  onNotificationPress?: () => void;
   onSettingsPress?: () => void;
   onAnalyticsPress?: () => void;
   onLowStockPress?: () => void;
@@ -209,6 +210,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onItemRestock,
   onAvatarPress,
   onHomePress,
+  onNotificationPress,
   onSettingsPress,
   onAnalyticsPress,
   onLowStockPress,
@@ -515,8 +517,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             notificationCount={notificationCount}
             onAvatarPress={onAvatarPress}
             onHomePress={onHomePress}
-            onLowStockPress={onLowStockPress}
-            lowStockLoading={lowStockLoading}
+            onNotificationPress={onNotificationPress}
           />
 
           {/* Search Bar */}
@@ -547,6 +548,8 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
             <PantryAlertBar
               stats={stats}
               onAnalyticsPress={onAnalyticsPress}
+              onLowStockPress={onLowStockPress}
+              lowStockLoading={lowStockLoading}
             />
           )}
         </View>

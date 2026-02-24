@@ -7,6 +7,7 @@ export interface ActionTrayProps {
   onClose?: () => void;
   onOpen?: () => void;
   title?: string;
+  headerRight?: ReactNode;
   showCloseButton?: boolean;
   enableBackdrop?: boolean;
 }
@@ -21,6 +22,7 @@ export interface ActionTrayRef {
 export interface ActionTrayContentProps {
   children: ReactNode;
   title?: string;
+  headerRight?: ReactNode;
   showCloseButton?: boolean;
   onClose?: () => void;
 }

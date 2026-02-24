@@ -8206,6 +8206,10 @@ input UpdateMealPlanItemInput {
   completedAt: DateTime
   customMealName: String
   date: DateTime
+  """
+  Whether to auto-deduct recipe ingredients from pantry on completion (default: true)
+  """
+  deductFromPantry: Boolean
   estimatedCost: Float
   fat: Float
   isCompleted: Boolean

@@ -11,6 +11,7 @@ interface SegmentedControlProps<T extends string> {
   formatLabel?: (value: T) => string;
   required?: boolean;
   testID?: string;
+  size?: 'default' | 'compact';
 }
 
 /**
@@ -25,15 +26,17 @@ export const SegmentedControl = <T extends string>({
   formatLabel = v => v,
   required,
   testID,
+  size = 'default',
 }: SegmentedControlProps<T>) => {
+  const isCompact = size === 'compact';
   return (
-    <View style={styles.container} testID={testID}>
+    <View style={[styles.container, isCompact && styles.containerCompact]} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.segmentedControl}>
         {options.map(option => (
           <Pressable
             key={option}
-            style={({pressed}) => [styles.segment, value === option && styles.segmentActive, pressed && styles.pressed]}
+            style={({pressed}) => [styles.segment, isCompact && styles.segmentCompact, value === option && styles.segmentActive, pressed && styles.pressed]}
             onPress={() => onChange(option)}
           >
             <Text
@@ -56,6 +59,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
   },
+  containerCompact: {
+    marginBottom: theme.spacing.sm,
+  },
   segmentedControl: {
     flexDirection: 'row',
     borderWidth: 1,
@@ -70,6 +76,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.surface,
+  },
+  segmentCompact: {
+    paddingVertical: theme.spacing.xs,
   },
   segmentActive: {
     backgroundColor: theme.colors.primary,

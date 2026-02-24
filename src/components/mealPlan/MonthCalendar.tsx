@@ -7,16 +7,22 @@ interface MonthCalendarProps {
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
   daysWithMeals?: Set<string>;
+  minDate?: Date;
+  maxDate?: Date;
 }
 
 export const MonthCalendar: React.FC<MonthCalendarProps> = ({
   selectedDate,
   onSelectDate,
   daysWithMeals,
+  minDate,
+  maxDate,
 }) => {
   const { theme } = useUnistyles();
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  const minDateStr = minDate ? format(minDate, 'yyyy-MM-dd') : undefined;
+  const maxDateStr = maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined;
 
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
@@ -53,7 +59,9 @@ export const MonthCalendar: React.FC<MonthCalendarProps> = ({
       markedDates={markedDates}
       markingType="dot"
       firstDay={1}
-      enableSwipeMonths
+      enableSwipeMonths={false}
+      minDate={minDateStr}
+      maxDate={maxDateStr}
       theme={{
         backgroundColor: theme.colors.background,
         calendarBackground: theme.colors.background,

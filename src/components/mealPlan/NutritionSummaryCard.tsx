@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils/iconUtils';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
 import type { MealPlanFullFragment } from '#generated';
 
@@ -23,53 +24,75 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
   nutritionSummary,
   nutritionGoalProgress,
 }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = useCallback(() => setExpanded(prev => !prev), []);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Nutrition Summary</Text>
-
-      {/* Daily averages */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Daily Averages</Text>
-        <View style={styles.macroRow}>
-          <MacroStat label="Calories" value={nutritionSummary.avgDailyCalories} unit="kcal" />
-          <MacroStat label="Protein" value={nutritionSummary.avgDailyProtein} unit="g" />
-          <MacroStat label="Carbs" value={nutritionSummary.avgDailyCarbs} unit="g" />
-          <MacroStat label="Fat" value={nutritionSummary.avgDailyFat} unit="g" />
-        </View>
-      </View>
-
-      {/* Plan totals */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Plan Totals</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Total Meals</Text>
-          <Text style={styles.infoValue}>{nutritionSummary.totalMeals}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Meals with Nutrition Data</Text>
-          <Text style={styles.infoValue}>
-            {nutritionSummary.mealsWithNutrition} ({Math.round(nutritionSummary.coveragePercentage)}%)
-          </Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Total Calories</Text>
-          <Text style={styles.infoValue}>{Math.round(nutritionSummary.totalCalories)} kcal</Text>
-        </View>
-      </View>
-
-      {/* Goal progress */}
-      {!!nutritionGoalProgress && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Goal Progress</Text>
-          <NutritionGoalProgress
-            overallScore={nutritionGoalProgress.overallScore}
-            caloriesProgress={nutritionGoalProgress.caloriesProgress}
-            proteinProgress={nutritionGoalProgress.proteinProgress}
-            carbsProgress={nutritionGoalProgress.carbsProgress}
-            fatProgress={nutritionGoalProgress.fatProgress}
+      <Pressable onPress={toggle} style={styles.header}>
+        <Text style={styles.title}>Nutrition Summary</Text>
+        <View style={styles.headerRight}>
+          {!expanded ? (
+            <Text style={styles.collapsedCalories}>
+              {Math.round(nutritionSummary.avgDailyCalories)} kcal/day
+            </Text>
+          ) : null}
+          <Icon
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={styles.chevron.color}
           />
         </View>
-      )}
+      </Pressable>
+
+      {expanded ? (
+        <View style={styles.body}>
+          {/* Daily averages */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Daily Averages</Text>
+            <View style={styles.macroRow}>
+              <MacroStat label="Calories" value={nutritionSummary.avgDailyCalories} unit="kcal" />
+              <MacroStat label="Protein" value={nutritionSummary.avgDailyProtein} unit="g" />
+              <MacroStat label="Carbs" value={nutritionSummary.avgDailyCarbs} unit="g" />
+              <MacroStat label="Fat" value={nutritionSummary.avgDailyFat} unit="g" />
+            </View>
+          </View>
+
+          {/* Plan totals */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Plan Totals</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Total Meals</Text>
+              <Text style={styles.infoValue}>{nutritionSummary.totalMeals}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Meals with Nutrition Data</Text>
+              <Text style={styles.infoValue}>
+                {nutritionSummary.mealsWithNutrition} ({Math.round(nutritionSummary.coveragePercentage)}%)
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Total Calories</Text>
+              <Text style={styles.infoValue}>{Math.round(nutritionSummary.totalCalories)} kcal</Text>
+            </View>
+          </View>
+
+          {/* Goal progress */}
+          {!!nutritionGoalProgress && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Goal Progress</Text>
+              <NutritionGoalProgress
+                overallScore={nutritionGoalProgress.overallScore}
+                caloriesProgress={nutritionGoalProgress.caloriesProgress}
+                proteinProgress={nutritionGoalProgress.proteinProgress}
+                carbsProgress={nutritionGoalProgress.carbsProgress}
+                fatProgress={nutritionGoalProgress.fatProgress}
+              />
+            </View>
+          )}
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -77,13 +100,33 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
 NutritionSummaryCard.displayName = 'NutritionSummaryCard';
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    gap: theme.spacing.lg,
+  container: {},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   title: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.bold,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
+  },
+  collapsedCalories: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  chevron: {
+    color: theme.colors.textTertiary,
+  },
+  body: {
+    gap: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
   },
   section: {
     gap: theme.spacing.sm,

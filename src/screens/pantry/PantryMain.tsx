@@ -342,6 +342,11 @@ const PantryMainScreen: React.FC = () => {
     [navigate],
   );
 
+  const handleNotificationPress = useCallback(
+    () => navigate('Notifications'),
+    [navigate],
+  );
+
   const handleHomePress = useCallback(
     () => navigate('HomeManagement', { homeId: selectedHomeId }),
     [navigate, selectedHomeId],
@@ -403,6 +408,7 @@ const PantryMainScreen: React.FC = () => {
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
         onAvatarPress={handleAvatarPress}
+        onNotificationPress={handleNotificationPress}
         onHomePress={handleHomePress}
         onSettingsPress={handleOpenSelector}
         onAnalyticsPress={handleAnalyticsPress}

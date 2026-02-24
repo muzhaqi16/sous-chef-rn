@@ -29,8 +29,6 @@ import { useFolderActions } from '#/hooks/recipe/useFolderActions';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils/iconUtils';
-import { useProfileData } from '#hooks/profile/useProfileData';
-import { useAppStore } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -47,10 +45,6 @@ export const RecipeMain: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
-
-  // Get user profile and notification data for header
-  const { profile } = useProfileData();
-  const unreadCount = useAppStore(state => state.unreadCount);
 
   // Fetch folders and tags for filtering
   const { folders } = useRecipeFolders();
@@ -275,18 +269,23 @@ export const RecipeMain: React.FC = () => {
     [unfavoriteRecipeMutation],
   );
 
-  // Search bar inner right icon - navigate to recipe search
-  const searchBarInnerRightIcon = useMemo(
+  // Header right action - navigate to recipe search
+  const headerRight = useMemo(
     () => (
-      <Pressable onPress={handleSearchRecipes} hitSlop={8}>
+      <Pressable
+        onPress={handleSearchRecipes}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="Search recipes"
+      >
         <Icon
-          name="search"
-          size={18}
-          color={theme.colors.primary}
+          name="search-outline"
+          size={24}
+          color={theme.colors.textSecondary}
         />
       </Pressable>
     ),
-    [handleSearchRecipes, theme.colors.primary],
+    [handleSearchRecipes, theme.colors.textSecondary],
   );
 
   const emptyStateConfig = {
@@ -465,10 +464,7 @@ export const RecipeMain: React.FC = () => {
       <TabScreenHeader
         label="What to cook?"
         title="Recipes"
-        avatarUrl={profile?.avatar}
-        notificationCount={unreadCount}
-        onAvatarPress={() => navigate('Profile')}
-        onNotificationPress={() => navigate('Notifications')}
+        headerRight={headerRight}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar
@@ -476,7 +472,6 @@ export const RecipeMain: React.FC = () => {
           onChangeText={setSearchQuery}
           placeholder="Search recipes..."
           showSearchIcon
-          innerRightIcon={searchBarInnerRightIcon}
         />
       </View>
       <ItemList

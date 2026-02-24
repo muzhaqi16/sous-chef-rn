@@ -76,7 +76,7 @@ export const RecipeSearch: React.FC = () => {
   useScreenTransition('RecipeSearch');
   const { theme } = useUnistyles();
   const {
-    navigate,
+    goBack,
     searchQuery,
     setSearchQuery,
     loading,
@@ -180,7 +180,7 @@ export const RecipeSearch: React.FC = () => {
       >
         <Header
           title="Search Recipes"
-          onBack={() => navigate('RecipeMain')}
+          onBack={goBack}
         />
         <View style={{ paddingHorizontal: theme.spacing.md }}>
           <SearchBar

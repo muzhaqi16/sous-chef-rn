@@ -87,5 +87,14 @@ module.exports = {
 
     // Prevent falsy values (0, "", NaN) from leaking into JSX rendering
     'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary', 'coerce'] }],
+
+    // Prevent inline import() types — use top-level imports instead
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'TSImportType',
+        message: 'Avoid inline import() types. Import the type at the top of the file instead.',
+      },
+    ],
   },
 };

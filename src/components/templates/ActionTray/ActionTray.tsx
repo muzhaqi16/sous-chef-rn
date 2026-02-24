@@ -17,6 +17,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onClose,
       onOpen,
       title,
+      headerRight,
       showCloseButton = true,
       enableBackdrop = true,
     },
@@ -100,6 +101,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         <BottomSheetView style={styles.content}>
           <ActionTrayContent
             title={title}
+            headerRight={headerRight}
             showCloseButton={showCloseButton}
             onClose={handleClose}
           >

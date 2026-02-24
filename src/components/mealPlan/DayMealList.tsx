@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import Animated, { type useAnimatedScrollHandler } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
@@ -17,6 +18,8 @@ interface DayMealListProps {
   onItemPress?: (item: MealPlanItemFragment) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
+  onScroll?: ReturnType<typeof useAnimatedScrollHandler>;
+  listHeader?: React.ReactNode;
 }
 
 export const DayMealList: React.FC<DayMealListProps> = ({
@@ -28,50 +31,61 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   onItemPress,
   onDeleteItem,
   onAddMeal,
+  onScroll,
+  listHeader,
 }) => {
-  if (isEmpty) {
-    return <EmptyDayState selectedDate={selectedDate} onAddMeal={onAddMeal} />;
-  }
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Day summary */}
-      <View style={styles.daySummary}>
-        <Text style={styles.dateLabel}>
-          {format(selectedDate, 'EEEE, MMMM d')}
-        </Text>
-        {totalCalories > 0 && (
-          <Text style={styles.calorieLabel}>
-            {Math.round(totalCalories)} cal
-          </Text>
-        )}
-      </View>
+    <Animated.ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, isEmpty && styles.contentEmpty]}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+    >
+      {!!listHeader && listHeader}
 
-      {/* Meal sections grouped by type */}
-      {dailyMeals.map(group => (
-        <MealTypeSection
-          key={group.mealType}
-          mealType={group.mealType}
-          label={group.label}
-          items={group.items}
-          onToggleCompleted={onToggleCompleted}
-          onItemPress={onItemPress}
-          onDeleteItem={onDeleteItem}
-          onAddMeal={onAddMeal ? () => onAddMeal(group.mealType) : undefined}
-        />
-      ))}
+      {isEmpty ? (
+        <EmptyDayState selectedDate={selectedDate} onAddMeal={onAddMeal} />
+      ) : (
+        <>
+          {/* Day summary */}
+          <View style={styles.daySummary}>
+            <Text style={styles.dateLabel}>
+              {format(selectedDate, 'EEEE, MMMM d')}
+            </Text>
+            {totalCalories > 0 && (
+              <Text style={styles.calorieLabel}>
+                {Math.round(totalCalories)} cal
+              </Text>
+            )}
+          </View>
 
-      {/* Add a meal button */}
-      {!!onAddMeal && (
-        <Pressable
-          onPress={() => onAddMeal()}
-          style={({ pressed }) => [styles.addMealButton, pressed && styles.pressed]}
-        >
-          <Icon name="add-circle-outline" size={20} color={styles.addMealIcon.color} />
-          <Text style={styles.addMealText}>Add a meal</Text>
-        </Pressable>
+          {/* Meal sections grouped by type */}
+          {dailyMeals.map(group => (
+            <MealTypeSection
+              key={group.mealType}
+              mealType={group.mealType}
+              label={group.label}
+              items={group.items}
+              onToggleCompleted={onToggleCompleted}
+              onItemPress={onItemPress}
+              onDeleteItem={onDeleteItem}
+              onAddMeal={onAddMeal ? () => onAddMeal(group.mealType) : undefined}
+            />
+          ))}
+
+          {/* Add a meal button */}
+          {!!onAddMeal && (
+            <Pressable
+              onPress={() => onAddMeal()}
+              style={({ pressed }) => [styles.addMealButton, pressed && styles.pressed]}
+            >
+              <Icon name="add-circle-outline" size={20} color={styles.addMealIcon.color} />
+              <Text style={styles.addMealText}>Add a meal</Text>
+            </Pressable>
+          )}
+        </>
       )}
-    </ScrollView>
+    </Animated.ScrollView>
   );
 };
 
@@ -84,6 +98,9 @@ const styles = StyleSheet.create(theme => ({
   content: {
     paddingHorizontal: theme.spacing.md,
     paddingBottom: 120, // Account for tab bar
+  },
+  contentEmpty: {
+    flexGrow: 1,
   },
   daySummary: {
     flexDirection: 'row',

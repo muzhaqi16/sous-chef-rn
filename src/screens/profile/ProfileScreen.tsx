@@ -1,5 +1,9 @@
 import React, { useRef, useCallback } from 'react';
-import { ScrollView, Pressable, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+} from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -30,6 +34,12 @@ export const ProfileScreen = () => {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: event => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
 
   // Track screen view on mount
   useEffect(() => {
@@ -95,10 +105,13 @@ export const ProfileScreen = () => {
         onBack={() => goBack()}
         onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}
+        scrollY={scrollY}
       />
 
-      <ScrollView
+      <Animated.ScrollView
         testID="profile-scroll-view"
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: safeBottom + 16 },
@@ -153,7 +166,7 @@ export const ProfileScreen = () => {
               })}
             />
           ))}
-      </ScrollView>
+      </Animated.ScrollView>
 
       {BiometricModal}
 

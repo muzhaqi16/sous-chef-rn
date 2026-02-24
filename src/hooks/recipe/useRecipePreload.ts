@@ -166,6 +166,12 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       caloriesPerServing: caloriesPerServing ? Math.round(caloriesPerServing) : undefined,
       cuisine: spoonacularRecipe.cuisines?.join(', '),
 
+      // Attribution - original recipe source
+      attribution: {
+        source: spoonacularRecipe.sourceName,
+        sourceUrl: spoonacularRecipe.sourceUrl,
+      },
+
       // External source fields
       source: ExternalSource.Spoonacular,
       externalSourceId: String(spoonacularRecipe.id),

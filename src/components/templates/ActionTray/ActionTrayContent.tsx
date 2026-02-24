@@ -12,6 +12,7 @@ import type { ActionTrayContentProps } from './types';
 export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
   children,
   title,
+  headerRight,
   showCloseButton = true,
   onClose,
 }) => {
@@ -28,6 +29,7 @@ export const ActionTrayContent: React.FC<ActionTrayContentProps> = ({
         <View style={styles.header}>
           {title ? <Text style={styles.title}>{title}</Text> : null}
           <View style={styles.fill} />
+          {!!headerRight && headerRight}
           {!!showCloseButton && !!onClose && (
             <Pressable onPress={onClose} style={({pressed}) => [styles.closeButton, pressed && styles.pressed]}>
               <Icon name="close" size={16} color={theme.colors.textSecondary} />

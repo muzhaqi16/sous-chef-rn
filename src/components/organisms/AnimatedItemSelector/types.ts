@@ -31,6 +31,7 @@ export interface SelectorConfig<T extends SelectableItem> {
     isSelected: boolean,
     onPress: () => void
   ) => React.ReactElement;
+  extraData?: any;
 }
 
 export interface AnimatedItemSelectorProps<T extends SelectableItem> {
@@ -49,9 +50,8 @@ export interface ItemSelectorRef {
 
 export interface SelectorItemProps<T extends SelectableItem> {
   item: T;
-  index?: number;
   isSelected: boolean;
-  onPress: () => void;
+  onSelect: (id: string, item: T) => void;
   displayProperty: keyof T;
   renderCustomItem?: (
     item: T,

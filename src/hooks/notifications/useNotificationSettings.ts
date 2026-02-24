@@ -5,6 +5,7 @@ import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
+  type UpdateNotificationPreferencesInput,
 } from '#generated';
 import { useErrorService } from '#/services/errorService';
 
@@ -41,6 +42,58 @@ export interface NotificationSettings {
   quietHoursStart: string | null;
   quietHoursEnd: string | null;
   quietHoursTimezone: string | null;
+}
+
+const CHANNELS_KEYS = new Set([
+  'emailEnabled',
+  'pushEnabled',
+  'smsEnabled',
+]);
+
+const EXPIRATION_KEYS = new Set([
+  'expirationNotifications',
+  'expirationNotificationFrequency',
+  'expirationDaysThreshold',
+]);
+
+const QUIET_HOURS_KEYS = new Set([
+  'quietHoursEnabled',
+  'quietHoursStart',
+  'quietHoursEnd',
+  'quietHoursTimezone',
+]);
+
+/**
+ * Maps flat notification setting keys to the nested UpdateNotificationPreferencesInput structure.
+ * Keys not matching channels, expiration, or quietHours are placed under features.
+ */
+function toNestedInput(
+  flat: Record<string, unknown>,
+): UpdateNotificationPreferencesInput {
+  const input: UpdateNotificationPreferencesInput = {};
+  const channels: Record<string, unknown> = {};
+  const expiration: Record<string, unknown> = {};
+  const features: Record<string, unknown> = {};
+  const quietHours: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(flat)) {
+    if (CHANNELS_KEYS.has(key)) {
+      channels[key] = value;
+    } else if (EXPIRATION_KEYS.has(key)) {
+      expiration[key] = value;
+    } else if (QUIET_HOURS_KEYS.has(key)) {
+      quietHours[key] = value;
+    } else {
+      features[key] = value;
+    }
+  }
+
+  if (Object.keys(channels).length > 0) input.channels = channels;
+  if (Object.keys(expiration).length > 0) input.expiration = expiration;
+  if (Object.keys(features).length > 0) input.features = features;
+  if (Object.keys(quietHours).length > 0) input.quietHours = quietHours;
+
+  return input;
 }
 
 export const useNotificationSettings = () => {
@@ -151,7 +204,7 @@ export const useNotificationSettings = () => {
       try {
         const result = await updatePreferences({
           variables: {
-            input: { [key]: value },
+            input: toNestedInput({ [key]: value }),
           },
         });
 
@@ -178,7 +231,7 @@ export const useNotificationSettings = () => {
 
         const result = await updatePreferences({
           variables: {
-            input: cleanedUpdates,
+            input: toNestedInput(cleanedUpdates),
           },
         });
 

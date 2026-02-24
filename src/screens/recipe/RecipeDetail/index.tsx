@@ -25,6 +25,7 @@ import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
 import { IngredientMatchingSheet } from '#/components/modals/IngredientMatchingSheet';
 import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet/ManageRecipeSheet';
+import { AddToMealPlanSheet } from '#components/mealPlan/AddToMealPlanSheet';
 import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
 import { useRecipeReviews } from '#/hooks/recipe/useRecipeReviews';
@@ -120,6 +121,7 @@ const RecipeDetailScreen: React.FC = () => {
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
+  const [showAddToMealPlanSheet, setShowAddToMealPlanSheet] = useState(false);
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = useCallback(() => {
@@ -320,6 +322,16 @@ const RecipeDetailScreen: React.FC = () => {
             </Pressable>
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
+              {/* Meal plan button - shown when recipe exists in backend */}
+              {!!recipeId && (
+                <Pressable
+                  onPress={() => setShowAddToMealPlanSheet(true)}
+                  style={({pressed}) => [styles.actionButton, pressed && styles.pressed]}
+                  accessibilityLabel="Add to meal plan"
+                >
+                  <Ionicons name="calendar-outline" size={22} color={theme.colors.primary} />
+                </Pressable>
+              )}
               {/* Edit button - shown when user is recipe creator */}
               {!!isOwner && (
                 <Pressable
@@ -797,6 +809,13 @@ const RecipeDetailScreen: React.FC = () => {
         onSave={handleConfirmSave}
         saving={saving}
         recipeName={displayData?.title}
+      />
+
+      {/* Add to Meal Plan Sheet */}
+      <AddToMealPlanSheet
+        visible={showAddToMealPlanSheet}
+        onClose={() => setShowAddToMealPlanSheet(false)}
+        recipeId={recipeId ?? ''}
       />
 
       {/* Manage Recipe Sheet - Bottom sheet for managing saved recipes */}

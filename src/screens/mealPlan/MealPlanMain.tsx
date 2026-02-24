@@ -1,23 +1,23 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
-import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { WeekStrip } from '#components/mealPlan/WeekStrip';
 import { MonthCalendar } from '#components/mealPlan/MonthCalendar';
 import { DayMealList } from '#components/mealPlan/DayMealList';
 import { MealPlanEmptyState } from '#components/mealPlan/MealPlanEmptyState';
-import { AddMealSheet, type AddMealSheetRef } from '#components/mealPlan/AddMealSheet';
+import { AddMealSheet } from '#components/mealPlan/AddMealSheet';
 import { SaveAsTemplateSheet } from '#components/mealPlan/SaveAsTemplateSheet';
 import { TemplateBrowserSheet } from '#components/mealPlan/TemplateBrowserSheet';
 import { TemplatePreviewSheet } from '#components/mealPlan/TemplatePreviewSheet';
 import { GenerateShoppingListSheet } from '#components/mealPlan/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#components/mealPlan/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#components/mealPlan/DuplicatePlanSheet';
-import { useProfileData } from '#hooks/profile/useProfileData';
-import { useAppStore } from '#store/useAppStore';
+import { MarkCookedModal } from '#components/modals/MarkCookedModal';
+import { EditCustomMealSheet } from '#components/mealPlan/EditCustomMealSheet';
+import { NutritionSummaryCard } from '#components/mealPlan/NutritionSummaryCard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useMealPlans } from '#hooks/mealPlan/useMealPlans';
@@ -32,18 +32,17 @@ import {
   useDeleteMealPlanMutation,
   GetMealPlansDocument,
   MealType,
+  type MealPlanItemFragment,
   type MealTemplateDisplayFragment,
 } from '#generated';
 import { toastService } from '#/services/toastService';
 
-const VIEW_OPTIONS = ['Week', 'Month'] as const;
-
 export const MealPlanMain: React.FC = () => {
-  const { profile } = useProfileData();
   const { theme } = useUnistyles();
-  const unreadCount = useAppStore(state => state.unreadCount);
   const { navigate } = useAppNavigation();
-  const addMealSheetRef = useRef<AddMealSheetRef>(null);
+  // Add meal sheet state
+  const [addMealVisible, setAddMealVisible] = useState(false);
+  const [addMealType, setAddMealType] = useState<MealType | undefined>();
 
   // Template state
   const [saveTemplateVisible, setSaveTemplateVisible] = useState(false);
@@ -53,6 +52,14 @@ export const MealPlanMain: React.FC = () => {
 
   // Shopping list generation state
   const [shoppingListSheetVisible, setShoppingListSheetVisible] = useState(false);
+
+  // Mark cooked modal state
+  const [markCookedVisible, setMarkCookedVisible] = useState(false);
+  const [pendingCookItem, setPendingCookItem] = useState<MealPlanItemFragment | null>(null);
+
+  // Edit custom meal state
+  const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
+  const [editingCustomItem, setEditingCustomItem] = useState<MealPlanItemFragment | null>(null);
 
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -70,10 +77,23 @@ export const MealPlanMain: React.FC = () => {
   const activePlanId = currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // Fetch the active plan with items
-  const { mealPlan: activeMealPlan, items } = useMealPlan(activePlanId);
+  const { mealPlan: activeMealPlan, items, nutritionSummary } = useMealPlan(activePlanId);
+
+  // Compute plan date boundaries
+  const planStartDate = useMemo(
+    () => (activeMealPlan?.startDate ? parseISO(activeMealPlan.startDate) : undefined),
+    [activeMealPlan?.startDate],
+  );
+  const planEndDate = useMemo(
+    () => (activeMealPlan?.endDate ? parseISO(activeMealPlan.endDate) : undefined),
+    [activeMealPlan?.endDate],
+  );
 
   // Calendar state
-  const calendar = useMealPlanCalendar();
+  const calendar = useMealPlanCalendar({
+    minDate: planStartDate,
+    maxDate: planEndDate,
+  });
 
   // Daily meals for selected date
   const { dailyMeals, totalCalories, isEmpty } = useDailyMeals(
@@ -82,7 +102,7 @@ export const MealPlanMain: React.FC = () => {
   );
 
   // Meal plan item actions
-  const { createItem, toggleCompleted, deleteItem } =
+  const { createItem, updateItem, toggleCompleted, deleteItem } =
     useMealPlanItemActions(activePlanId);
 
   // Shopping list generation
@@ -109,16 +129,55 @@ export const MealPlanMain: React.FC = () => {
     return days;
   }, [items]);
 
+  // Tap-to-toggle calendar between week and month view
+  const toggleCalendarView = useCallback(() => {
+    if (calendar.viewMode === 'week') {
+      calendar.setViewMode('month');
+    } else {
+      calendar.setViewMode('week');
+    }
+  }, [calendar]);
+
   // Register add button - opens add meal sheet
   useTabBarAddButton(() => {
-    addMealSheetRef.current?.open();
+    setAddMealType(undefined);
+    setAddMealVisible(true);
   });
 
   const handleToggleCompleted = useCallback(
     (id: string, isCompleted: boolean, hasRecipe: boolean) => {
-      toggleCompleted(id, isCompleted, hasRecipe);
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+
+      // Show MarkCookedModal when marking a recipe meal as complete
+      if (!isCompleted && hasRecipe) {
+        setPendingCookItem(item);
+        setMarkCookedVisible(true);
+        return;
+      }
+
+      // For unchecking or custom meals, toggle directly
+      toggleCompleted(item);
     },
-    [toggleCompleted],
+    [items, toggleCompleted],
+  );
+
+  const handleMarkCooked = useCallback(
+    (input: {
+      servings: number;
+      deductFromPantry: boolean;
+      useGranularDeduction: boolean;
+      notes?: string;
+    }) => {
+      if (!pendingCookItem) return;
+      toggleCompleted(pendingCookItem, {
+        deductFromPantry: input.deductFromPantry,
+        servings: input.servings,
+        notes: input.notes,
+      });
+      setPendingCookItem(null);
+    },
+    [pendingCookItem, toggleCompleted],
   );
 
   const handleDeleteItem = useCallback(
@@ -129,52 +188,62 @@ export const MealPlanMain: React.FC = () => {
   );
 
   const handleAddRecipe = useCallback(
-    (recipeId: string, mealType: MealType) => {
+    async (recipeId: string, mealType: MealType) => {
       if (!activePlanId) return;
-      createItem({
+      const result = await createItem({
         mealPlanId: activePlanId,
         recipeId,
         mealType,
         date: calendar.selectedDate.toISOString(),
       });
+      if (result) {
+        setAddMealVisible(false);
+      }
     },
     [activePlanId, createItem, calendar.selectedDate],
   );
 
   const handleAddCustomMeal = useCallback(
-    (name: string, mealType: MealType) => {
+    async (name: string, mealType: MealType) => {
       if (!activePlanId) return;
-      createItem({
+      const result = await createItem({
         mealPlanId: activePlanId,
         customMealName: name,
         mealType,
         date: calendar.selectedDate.toISOString(),
       });
+      if (result) {
+        setAddMealVisible(false);
+      }
     },
     [activePlanId, createItem, calendar.selectedDate],
   );
 
   const handleOpenAddMeal = useCallback(
     (mealType?: MealType) => {
-      addMealSheetRef.current?.open(mealType);
+      setAddMealType(mealType);
+      setAddMealVisible(true);
     },
     [],
   );
 
   const handleItemPress = useCallback(
-    (item: any) => {
+    (item: MealPlanItemFragment) => {
       if (item.recipe?.id) {
         navigate('RecipeDetail', { recipeId: item.recipe.id });
+      } else if (item.customMealName) {
+        setEditingCustomItem(item);
+        setEditCustomMealVisible(true);
       }
     },
     [navigate],
   );
 
-  const handleViewModeChange = useCallback(
-    (value: string) => {
-      calendar.setViewMode(value === 'Week' ? 'week' : 'month');
+  const handleSaveCustomMeal = useCallback(
+    (id: string, input: { customMealName?: string; notes?: string }) => {
+      updateItem(id, input);
     },
-    [calendar],
+    [updateItem],
   );
 
   const handleCreatePlan = useCallback(() => {
@@ -280,10 +349,6 @@ export const MealPlanMain: React.FC = () => {
         <TabScreenHeader
           label="Plan your meals"
           title="Meal Plan"
-          avatarUrl={profile?.avatar}
-          notificationCount={unreadCount}
-          onAvatarPress={() => navigate('Profile')}
-          onNotificationPress={() => navigate('Notifications')}
         />
         <MealPlanEmptyState
           onCreatePlan={handleCreatePlan}
@@ -318,11 +383,15 @@ export const MealPlanMain: React.FC = () => {
         <View style={styles.headerContent}>
           <TabScreenHeader
             label="Plan your meals"
-            title={currentPlan?.name ?? 'Meal Plan'}
-            avatarUrl={profile?.avatar}
-            notificationCount={unreadCount}
-            onAvatarPress={() => navigate('Profile')}
-            onNotificationPress={() => navigate('Notifications')}
+            title={activeMealPlan?.name ?? 'Meal Plan'}
+            onTitlePress={toggleCalendarView}
+            titleAccessory={
+              <Icon
+                name={calendar.viewMode === 'week' ? 'chevron-down' : 'chevron-up'}
+                size={20}
+                color={theme.colors.textPrimary}
+              />
+            }
           />
         </View>
         {!!activePlanId && (
@@ -367,15 +436,6 @@ export const MealPlanMain: React.FC = () => {
         )}
       </View>
 
-      {/* Week/Month toggle */}
-      <View style={styles.segmentContainer}>
-        <SegmentedControl
-          options={VIEW_OPTIONS}
-          value={calendar.viewMode === 'week' ? 'Week' : 'Month'}
-          onChange={handleViewModeChange}
-        />
-      </View>
-
       {/* Calendar view */}
       {calendar.viewMode === 'week' ? (
         <WeekStrip
@@ -385,12 +445,18 @@ export const MealPlanMain: React.FC = () => {
           onPrevWeek={calendar.goToPrevWeek}
           onNextWeek={calendar.goToNextWeek}
           daysWithMeals={daysWithMeals}
+          canGoPrev={calendar.canGoPrevWeek}
+          canGoNext={calendar.canGoNextWeek}
+          minDate={calendar.minDate}
+          maxDate={calendar.maxDate}
         />
       ) : (
         <MonthCalendar
           selectedDate={calendar.selectedDate}
           onSelectDate={calendar.selectDate}
           daysWithMeals={daysWithMeals}
+          minDate={calendar.minDate}
+          maxDate={calendar.maxDate}
         />
       )}
 
@@ -404,11 +470,23 @@ export const MealPlanMain: React.FC = () => {
         onItemPress={handleItemPress}
         onDeleteItem={handleDeleteItem}
         onAddMeal={handleOpenAddMeal}
+        listHeader={
+          nutritionSummary ? (
+            <View style={styles.nutritionContainer}>
+              <NutritionSummaryCard
+                nutritionSummary={nutritionSummary}
+                nutritionGoalProgress={activeMealPlan?.nutritionGoalProgress}
+              />
+            </View>
+          ) : undefined
+        }
       />
 
       {/* Add meal bottom sheet */}
       <AddMealSheet
-        ref={addMealSheetRef}
+        visible={addMealVisible}
+        onClose={() => setAddMealVisible(false)}
+        initialMealType={addMealType}
         selectedDate={calendar.selectedDate}
         onAddRecipe={handleAddRecipe}
         onAddCustomMeal={handleAddCustomMeal}
@@ -470,6 +548,29 @@ export const MealPlanMain: React.FC = () => {
         onDuplicate={handleDuplicatePlan}
         loading={duplicatingPlan}
       />
+
+      {/* Mark Cooked Modal */}
+      <MarkCookedModal
+        visible={markCookedVisible}
+        recipeName={pendingCookItem?.recipe?.name ?? ''}
+        defaultServings={pendingCookItem?.servings ?? pendingCookItem?.recipe?.servings ?? 1}
+        onClose={() => {
+          setMarkCookedVisible(false);
+          setPendingCookItem(null);
+        }}
+        onConfirm={handleMarkCooked}
+      />
+
+      {/* Edit Custom Meal Sheet */}
+      <EditCustomMealSheet
+        visible={editCustomMealVisible}
+        item={editingCustomItem}
+        onClose={() => {
+          setEditCustomMealVisible(false);
+          setEditingCustomItem(null);
+        }}
+        onSave={handleSaveCustomMeal}
+      />
     </View>
   );
 };
@@ -496,8 +597,7 @@ const styles = StyleSheet.create(theme => ({
   headerActionButton: {
     padding: theme.spacing.xs,
   },
-  segmentContainer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
+  nutritionContainer: {
+    marginBottom: theme.spacing.sm,
   },
 }));

@@ -1,6 +1,7 @@
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { MealPlanMain } from '#screens/mealPlan/MealPlanMain';
 import { CreateMealPlanScreen } from '#screens/mealPlan/CreateMealPlanScreen';
+import { RecipeDetail } from '#screens/recipe/RecipeDetail';
 
 export const MealPlanStack = createNativeStackNavigator({
   screenOptions: {
@@ -12,5 +13,6 @@ export const MealPlanStack = createNativeStackNavigator({
   screens: {
     MealPlanMain: MealPlanMain,
     CreateMealPlan: CreateMealPlanScreen,
+    RecipeDetail: RecipeDetail,
   },
 });

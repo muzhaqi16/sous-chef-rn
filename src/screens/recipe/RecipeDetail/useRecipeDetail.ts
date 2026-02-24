@@ -1055,6 +1055,8 @@ export function useRecipeDetail() {
         summary: backendRecipe.description ?? undefined,
         ingredients: backendRecipe.ingredients || [],
         instructions: backendRecipe.instructions,
+        sourceName: backendRecipe.source ?? undefined,
+        sourceUrl: backendRecipe.sourceUrl ?? undefined,
       };
     } else if (externalRecipe) {
       return {

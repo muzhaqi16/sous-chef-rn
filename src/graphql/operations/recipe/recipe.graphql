@@ -68,10 +68,10 @@ query GetRecipe($id: ID!) {
   }
 }
 
-query MySavedRecipes($folder: String) {
+query MySavedRecipes($folder: String, $first: Int, $after: String) {
   me {
     id
-    savedRecipesConnection(folder: $folder) {
+    savedRecipesConnection(folder: $folder, first: $first, after: $after) {
       edges {
         node {
           id

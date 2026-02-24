@@ -1,5 +1,6 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
+import type { DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
@@ -116,7 +117,7 @@ export const createQueueLink = () => {
 /**
  * Check if operation is a mutation
  */
-function isMutation(operation: { query: import('graphql').DocumentNode }): boolean {
+function isMutation(operation: { query: DocumentNode }): boolean {
   const definition = getMainDefinition(operation.query);
   return (
     definition.kind === 'OperationDefinition' &&

@@ -126,7 +126,7 @@ const RootStack = createNativeStackNavigator({
         Home: { screen: HomeTabs },
         Profile: {
           screen: ProfileScreen,
-          options: { animation: 'fade', animationDuration: 150 },
+          options: { animation: 'slide_from_right', animationDuration: 200 },
         },
         HomeManagement: {
           screen: HomeManagement,

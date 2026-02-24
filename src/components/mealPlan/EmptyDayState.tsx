@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
+import { getTabBarBottomPadding } from '#constants/layout';
 import type { MealType } from '#generated';
 
 interface EmptyDayStateProps {
@@ -14,8 +16,9 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
   selectedDate,
   onAddMeal,
 }) => {
+  const { bottom: safeBottom } = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: getTabBarBottomPadding(safeBottom) }]}>
       <Icon
 
         name="restaurant-outline"

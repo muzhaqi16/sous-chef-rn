@@ -34,7 +34,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
       {!!showBackButton && (
         <View style={styles.header}>
           <IconButton
-            name="arrow-left"
+            name="arrow-back"
             onPress={goBack}
             color={theme.colors.textPrimary}
             accessibilityLabel="Go back"
