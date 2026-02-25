@@ -16,7 +16,6 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StorageState,
   ShoppingListItemDisplayFragment,
-  BasicPantryFragment,
 } from '#generated';
 
 const STORAGE_STATES = Object.values(StorageState);
@@ -24,7 +23,7 @@ const STORAGE_STATES = Object.values(StorageState);
 interface MoveToPantryModalProps {
   visible: boolean;
   shoppingListItem: ShoppingListItemDisplayFragment | null;
-  pantries: BasicPantryFragment[];
+  pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   selectedPantryId: string | null;
   onClose: () => void;
   onConfirm: (input: {

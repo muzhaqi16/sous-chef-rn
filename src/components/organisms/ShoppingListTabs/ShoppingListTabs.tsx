@@ -6,6 +6,8 @@ import { FilterTabBar } from './FilterTabBar';
 import { MemoizedShoppingTab } from './ShoppingTab';
 import { MemoizedPurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
+import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 
 type ShoppingListTabId = 'shopping' | 'purchased';
@@ -378,24 +380,31 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     ],
   );
 
-  // If no items at all AND not loading, show empty state
-  // Don't show empty state while loading - that's when skeletons should appear
-  if (items.length === 0 && emptyState && !loading) {
-    return (
-      <ScrollView
-        contentContainerStyle={{ flex: 1 }}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={refreshing || false}
-              onRefresh={onRefresh}
-            />
-          ) : undefined
-        }
-      >
-        <EmptyState {...emptyState} />
-      </ScrollView>
-    );
+  // Handle all empty-items cases before the TabView so tabs never appear for empty lists.
+  if (items.length === 0) {
+    // Initial load (loading but not refreshing): show skeletons without tabs
+    if (loading && !refreshing) {
+      return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
+    }
+
+    // After load or during refresh: show empty state (with optional RefreshControl)
+    if (emptyState) {
+      return (
+        <ScrollView
+          contentContainerStyle={{ flex: 1 }}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing || false}
+                onRefresh={onRefresh}
+              />
+            ) : undefined
+          }
+        >
+          <EmptyState {...emptyState} />
+        </ScrollView>
+      );
+    }
   }
 
   return (

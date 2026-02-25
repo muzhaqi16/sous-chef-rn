@@ -103,7 +103,7 @@ interface PantryContentProps {
   notificationCount?: number;
 
   // Stats
-  stats?: PantryStats | null;
+  stats?: Pick<PantryStats, 'totalItems' | 'expiringCount' | 'lowStockCount'> | null;
 
   // Items
   items: PantryItem[];

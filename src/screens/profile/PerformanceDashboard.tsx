@@ -100,8 +100,6 @@ export const PerformanceDashboard: React.FC = () => {
     const launchEnd = find('nativeLaunchEnd');
     const bundleStart = find('runJsBundleStart');
     const bundleEnd = find('runJsBundleEnd');
-    const contentAppeared = find('contentAppeared');
-
     return {
       nativeLaunch:
         launchStart && launchEnd
@@ -110,10 +108,6 @@ export const PerformanceDashboard: React.FC = () => {
       bundleLoad:
         bundleStart && bundleEnd
           ? bundleEnd.startTime - bundleStart.startTime
-          : null,
-      contentAppeared:
-        contentAppeared && launchStart
-          ? contentAppeared.startTime - launchStart.startTime
           : null,
     };
   }, []);
@@ -181,8 +175,7 @@ export const PerformanceDashboard: React.FC = () => {
 
         {/* Startup Metrics */}
         {(startupMetrics.nativeLaunch !== null ||
-          startupMetrics.bundleLoad !== null ||
-          startupMetrics.contentAppeared !== null) && (
+          startupMetrics.bundleLoad !== null) && (
           <View style={styles.metricsSection}>
             <Text style={styles.sectionTitle}>Startup Metrics</Text>
             <Text style={styles.sectionSubtitle}>
@@ -202,14 +195,6 @@ export const PerformanceDashboard: React.FC = () => {
                   <Text style={styles.startupLabel}>JS Bundle Load</Text>
                   <Text style={styles.startupValue}>
                     {formatTime(startupMetrics.bundleLoad)}
-                  </Text>
-                </View>
-              )}
-              {startupMetrics.contentAppeared !== null && (
-                <View style={styles.startupRow}>
-                  <Text style={styles.startupLabel}>Content Appeared</Text>
-                  <Text style={styles.startupValue}>
-                    {formatTime(startupMetrics.contentAppeared)}
                   </Text>
                 </View>
               )}

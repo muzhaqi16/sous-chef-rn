@@ -24,7 +24,7 @@ query GetPantry(
   $itemsCursor: String
   $itemsFirst: Int = 25
   $storageLocationsCursor: String
-  $storageLocationsFirst: Int = 50
+  $storageLocationsFirst: Int = 20
 ) {
   pantry(id: $id) {
     id
@@ -32,19 +32,13 @@ query GetPantry(
     name
     description
     isDefault
-    location
-    temperature
-    tags
-    metadata
     version
     createdAt
     updatedAt
     stats {
       totalItems
-      activeItems
       expiringCount
       lowStockCount
-      totalValue
     }
     itemsConnection(first: $itemsFirst, after: $itemsCursor) {
       edges {
@@ -55,8 +49,6 @@ query GetPantry(
       }
       pageInfo {
         hasNextPage
-        hasPreviousPage
-        startCursor
         endCursor
       }
       totalCount
@@ -71,15 +63,8 @@ query GetPantry(
           name
           type
           icon
-          color
-          temperature
           isDefault
-          sortOrder
           parentLocation {
-            id
-            name
-          }
-          childLocations {
             id
             name
           }
@@ -88,8 +73,6 @@ query GetPantry(
       }
       pageInfo {
         hasNextPage
-        hasPreviousPage
-        startCursor
         endCursor
       }
       totalCount

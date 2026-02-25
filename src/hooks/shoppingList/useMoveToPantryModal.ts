@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Alert } from 'react-native';
 import { ShoppingListItemDisplayFragment } from '#generated';
-import type { BasicPantryFragment } from '#generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
 
@@ -24,7 +23,7 @@ export interface UseMoveToPantryModalResult {
   /** Selected item for the modal */
   selectedItem: ShoppingListItemDisplayFragment | null;
   /** Available pantries (lazy-loaded) */
-  pantries: BasicPantryFragment[];
+  pantries: Array<{ id: string; name: string; isDefault: boolean }>;
   /** Default selected pantry ID */
   selectedPantryId: string | null;
   /** Whether pantry data is loading */

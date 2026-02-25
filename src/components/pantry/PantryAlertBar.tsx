@@ -6,7 +6,7 @@ import { Badge } from '#components/base/Badge';
 import type { PantryStats } from '#generated';
 
 interface PantryAlertBarProps {
-  stats: PantryStats;
+  stats: Pick<PantryStats, 'totalItems' | 'expiringCount' | 'lowStockCount'>;
   onAnalyticsPress?: () => void;
   onLowStockNavigate?: () => void;
 }

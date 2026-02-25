@@ -35,6 +35,8 @@
     "android:build": "npx react-native build-android --mode=release",
     "android:build:prod": "npm run android:clean && npx react-native build-android --mode=release",
     "ios": "react-native run-ios",
+    "ios:stg": "ENVFILE=.env.staging react-native run-ios",
+    "ios:prod": "ENVFILE=.env.production react-native run-ios",
     "ios:clean": "cd ios && rm -rf build && pod install && cd ..",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

@@ -135,11 +135,14 @@ const RootStack = createNativeStackNavigator({
         HomeDetail: {
           screen: HomeDetailScreen,
           options: {
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
+            presentation: 'card',
+            animation: 'slide_from_right',
           },
         },
-        StorageLocations: StorageLocationsScreen,
+        StorageLocations: {
+          screen: StorageLocationsScreen,
+          options: { presentation: 'card', animation: 'slide_from_right' },
+        },
         Barcode: { screen: BarcodeStack },
         Notifications: { screen: NotificationStack },
         ProfilePhotoUpload: {

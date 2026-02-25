@@ -58,13 +58,9 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
           code: 'SUCCESS',
           shoppingListItem: {
             ...item,
-            normalizedQuantity: null,
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
               isPurchased: variables.input.purchased,
-              purchasedQuantity: null,
-              purchasedPrice: null,
-              purchaseDate: variables.input.purchased ? new Date().toISOString() : null,
             },
             updatedAt: new Date().toISOString(),
           },

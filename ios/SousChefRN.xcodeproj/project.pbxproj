@@ -270,12 +270,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = AF21E45479A23913AB3C227A /* Pods-SousChef.debug.xcconfig */;
 			buildSettings = {
-				API_KEY = ios_89d944ffa4e92208003f9ac3ae56cf0117bcc8438ba402a21512076bf9642c03;
-				API_URL = "https://api.souschef.dev/graphql";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = SousChef/SousChef.entitlements;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SousChef/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sous Chef";
@@ -285,9 +283,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LOKI_ENDPOINT = "https://loki.souschef.dev";
-				MARKETING_VERSION = 3.0.1;
-				NODE_ENV = production;
+				MARKETING_VERSION = 3.0.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -295,11 +291,9 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.souschef.app;
 				PRODUCT_NAME = SousChef;
-				PROMETHEUS_ENDPOINT = "https://prom.souschef.dev";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
-				WEB_SOCKET_URL = "wss://api.souschef.dev/graphql";
 			};
 			name = Debug;
 		};
@@ -307,12 +301,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7D011261455248FCBEC7103F /* Pods-SousChef.release.xcconfig */;
 			buildSettings = {
-				API_KEY = ios_89d944ffa4e92208003f9ac3ae56cf0117bcc8438ba402a21512076bf9642c03;
-				API_URL = "https://api.souschef.dev/graphql";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = SousChef/SousChef.entitlements;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				INFOPLIST_FILE = SousChef/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Sous Chef";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
@@ -321,9 +313,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LOKI_ENDPOINT = "https://loki.souschef.dev";
-				MARKETING_VERSION = 3.0.1;
-				NODE_ENV = production;
+				MARKETING_VERSION = 3.0.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -331,10 +321,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.souschef.app;
 				PRODUCT_NAME = SousChef;
-				PROMETHEUS_ENDPOINT = "https://prom.souschef.dev";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
-				WEB_SOCKET_URL = "wss://api.souschef.dev/graphql";
 			};
 			name = Release;
 		};

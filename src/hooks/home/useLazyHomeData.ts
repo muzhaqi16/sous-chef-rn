@@ -3,7 +3,6 @@ import { useGetHomesLazyQuery } from '#generated';
 import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
 import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
-import type { BasicPantryFragment } from '#generated';
 
 /**
  * useLazyHomeData - Lazy-loads home data only when explicitly requested
@@ -33,12 +32,12 @@ export function useLazyHomeData() {
   const homes = usePreservedArrayData(rawHomes);
 
   // Get pantries for the current home
-  const pantries = useMemo((): BasicPantryFragment[] => {
+  const pantries = useMemo((): Array<{ id: string; name: string; isDefault: boolean }> => {
     if (!selectedHomeId || !homes.length) return [];
     const currentHome = homes.find(h => h.id === selectedHomeId);
     if (!currentHome) return [];
     const normalized = normalizeHome(currentHome);
-    return (normalized?.pantries || []) as BasicPantryFragment[];
+    return (normalized?.pantries || []) as Array<{ id: string; name: string; isDefault: boolean }>;
   }, [selectedHomeId, homes]);
 
   // Fetch home data on demand

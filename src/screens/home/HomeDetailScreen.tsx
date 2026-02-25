@@ -4,7 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useHomeDetailManagement } from '#hooks/home/useHomeDetailManagement';
-import { useGetHomeResourceCountsQuery } from '#generated';
+
 import { commonStyles } from '#/styles/commonStyles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { EditableField } from '#components/molecules/EditableField';
@@ -44,13 +44,6 @@ export const HomeDetailScreen: React.FC<{
     leaveHome,
     toggleJoinCode,
   } = useHomeDetailManagement(homeId);
-
-  // Fetch resource counts separately so a resolver failure doesn't break the whole screen
-  const { data: countsData } = useGetHomeResourceCountsQuery({
-    variables: { homeId },
-    fetchPolicy: 'cache-first',
-    errorPolicy: 'ignore',
-  });
 
   // Reset copied state after 2 seconds
   useEffect(() => {
@@ -189,38 +182,15 @@ export const HomeDetailScreen: React.FC<{
       ),
     },
     {
-      title: 'Shared Resources',
+      title: 'Storage',
       content: (
-        <>
-          <NavigationRow
-            icon="calendar-outline"
-            iconColor={theme.colors.primary}
-            title="Meal Plans"
-            subtitle={`${countsData?.home?.mealPlansConnection?.totalCount ?? 0} shared plans`}
-            onPress={() => navigate('Home', { screen: 'MealPlan', params: { screen: 'MealPlanMain' } })}
-          />
-          <NavigationRow
-            icon="document-text-outline"
-            iconColor={theme.colors.primary}
-            title="Meal Templates"
-            subtitle={`${countsData?.home?.mealTemplatesConnection?.totalCount ?? 0} shared templates`}
-            onPress={() => navigate('Home', { screen: 'MealPlan', params: { screen: 'MealPlanMain' } })}
-          />
-          <NavigationRow
-            icon="cart-outline"
-            iconColor={theme.colors.primary}
-            title="Shopping Lists"
-            subtitle={`${countsData?.home?.shoppingListsConnection?.totalCount ?? 0} shared lists`}
-            onPress={() => navigate('Home', { screen: 'ShoppingList', params: { screen: 'ShoppingListMain' } })}
-          />
-          <NavigationRow
-            icon="folder-open"
-            iconColor={theme.colors.primary}
-            title="Storage Locations"
-            subtitle="Manage where items are stored"
-            onPress={() => navigate('StorageLocations', { homeId })}
-          />
-        </>
+        <NavigationRow
+          icon="folder-open"
+          iconColor={theme.colors.primary}
+          title="Storage Locations"
+          subtitle="Manage where items are stored"
+          onPress={() => navigate('StorageLocations', { homeId })}
+        />
       ),
     },
     // Only show Leave Home section for non-owners

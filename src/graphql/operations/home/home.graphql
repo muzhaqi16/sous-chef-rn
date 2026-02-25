@@ -8,27 +8,12 @@ query GetHome($homeId: ID!) {
   }
 }
 
-query GetHomeResourceCounts($homeId: ID!) {
-  home(id: $homeId) {
-    id
-    shoppingListsConnection(first: 1) {
-      totalCount
-    }
-    mealPlansConnection(first: 1) {
-      totalCount
-    }
-    mealTemplatesConnection(first: 1) {
-      totalCount
-    }
-  }
-}
-
 query GetHomes($first: Int, $after: String) {
   homes(first: $first, after: $after) {
     edges {
       cursor
       node {
-        ...HomeDisplay
+        ...HomeListFragment
       }
     }
     pageInfo {
@@ -64,7 +49,7 @@ mutation CreateHome($input: CreateHomeInput!) {
     message
     code
     home {
-      ...HomeFragment
+      ...HomeListFragment
     }
   }
 }
