@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useCallback, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
 import { ActionTrayContent } from './ActionTrayContent';
@@ -25,6 +25,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
   ) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
     const isOpenRef = useRef(false);
+    const { height } = useWindowDimensions();
     const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
     // Handle sheet state changes for open/close tracking
@@ -91,6 +92,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         detached={true}
         bottomInset={30}
         enableDynamicSizing={true}
+        maxDynamicContentSize={height * 0.7}
         enablePanDownToClose={true}
         backdropComponent={NullBackdrop}
         onChange={handleSheetChanges}

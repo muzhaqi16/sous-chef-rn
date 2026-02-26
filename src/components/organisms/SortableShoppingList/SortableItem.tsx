@@ -114,7 +114,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
               hitSlop={HIT_SLOP}
             >
               <Icon
-                name="cube-outline"
+                name="archive-outline"
                 size={24}
                 color={themeColors?.primary}
               />

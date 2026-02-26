@@ -255,7 +255,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     // Show pantry move icon on purchased tab when there are items and handler exists
     if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
       buttons.push({
-        icon: 'cube-outline',
+        icon: 'archive-outline',
         onPress: handleBatchMoveToPantryWithConfirmation,
         disabled: batchMoveToPantryLoading,
         testID: 'shopping-list-batch-move-pantry',

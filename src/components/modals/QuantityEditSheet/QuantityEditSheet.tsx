@@ -7,7 +7,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { Header } from '#/components/molecules/Header';
 import { StyleSheet } from 'react-native-unistyles';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import Chip from '#/components/atoms/Chip';
@@ -241,61 +241,28 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
+      <Header
+        title="Edit Quantity"
+        centerTitle
+        onClose={onClose}
+        rightActions={[
+          {
+            icon: 'checkmark',
+            onPress: handleSave,
+            variant: 'primary',
+            disabled: !hasChanges || loading,
+            loading: loading,
+          },
+        ]}
+      />
+
+      <View style={styles.headerSpacer} />
+
       <BottomSheetKeyboardAwareScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
-        {/* Item Header */}
-        {!!item && (
-          <View style={styles.header}>
-            {!!item.imageUrl && (
-              <CachedImage
-                uri={item.imageUrl}
-                style={styles.itemImage}
-                displaySize={56}
-              />
-            )}
-            <View style={styles.headerText}>
-              <Text
-                style={[styles.itemName, { color: theme.colors.textPrimary }]}
-                numberOfLines={1}
-              >
-                {item.itemName}
-              </Text>
-              {!!item.category && (
-                <Text
-                  style={[
-                    styles.category,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.category}
-                </Text>
-              )}
-            </View>
-            <Pressable
-              onPress={handleSave}
-              disabled={!hasChanges || loading}
-              style={({pressed}) => [
-                styles.saveLink,
-                (!hasChanges || loading) && styles.saveLinkDisabled,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={[styles.saveLinkText, { color: theme.colors.primary }]}>
-                {loading ? 'Saving...' : 'Save'}
-              </Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* Divider */}
-        <View
-          style={[styles.divider, { backgroundColor: theme.colors.border }]}
-        />
-
         {/* Quantity Section */}
         <View style={styles.section}>
           <Text
@@ -441,31 +408,8 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: theme.spacing.md,
-  },
-  itemImage: {
-    width: 56,
-    height: 56,
-    borderRadius: theme.radii.md,
-  },
-  headerText: {
-    flex: 1,
-    marginLeft: theme.spacing.md,
-  },
-  itemName: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  category: {
-    fontSize: theme.typography.fontSize.sm,
-    marginTop: theme.spacing.xs,
-  },
-  divider: {
-    height: 1,
-    marginBottom: theme.spacing.md,
+  headerSpacer: {
+    height: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.lg,
@@ -519,17 +463,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     minWidth: 80,
     padding: 0,
-  },
-  saveLink: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-  },
-  saveLinkDisabled: {
-    opacity: 0.4,
-  },
-  saveLinkText: {
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
   },
   pressed: {
     opacity: theme.opacity.pressed,

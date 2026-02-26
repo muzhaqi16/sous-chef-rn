@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
-import { Text, ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { Text, ActivityIndicator, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { SelectorItem } from './SelectorItem';
@@ -77,15 +76,19 @@ export const SelectorContent = <T extends SelectableItem>({
         layout={LinearTransition}
         style={styles.listContainer}
       >
-        <FlashList
-          data={data}
-          renderItem={renderItem}
-          extraData={extraData}
-          keyExtractor={keyExtractor || ((item: T) => item.id)}
+        <ScrollView
           showsVerticalScrollIndicator={true}
           bounces={true}
           contentContainerStyle={styles.listContent}
-        />
+        >
+          {data.map(item => (
+            <React.Fragment
+              key={keyExtractor ? keyExtractor(item) : item.id}
+            >
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        </ScrollView>
       </Animated.View>
       <Animated.View style={styles.actionsWrapper}>
         <ActionButtons actions={actions} />
