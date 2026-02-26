@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -62,11 +62,32 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   // Adapt suggestions to the expected interface
   const suggestions: SuggestionsHookResult = useMemo(() => ({
-    grouped: suggestionsResult.grouped as unknown as Record<string, BaseSuggestionItem[]>,
+    grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch,
   }), [suggestionsResult]);
+
+  // Auto-refetch when suggestions are nearly depleted
+  const REFETCH_THRESHOLD = 3;
+  const hasAddedItemRef = useRef(false);
+
+  const totalFilteredCount = useMemo(
+    () => Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0),
+    [suggestions.grouped],
+  );
+
+  const isRefetchingRef = useRef(false);
+
+  useEffect(() => {
+    if (totalFilteredCount <= REFETCH_THRESHOLD && hasAddedItemRef.current && !isRefetchingRef.current) {
+      isRefetchingRef.current = true;
+      suggestionsResult.refetch().then(() => {
+        isRefetchingRef.current = false;
+        hasAddedItemRef.current = false;
+      });
+    }
+  }, [totalFilteredCount, suggestionsResult]);
 
   // Fetch pantry to get storage locations
   const { data: pantryData } = useGetPantryQuery({
@@ -217,8 +238,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         },
       };
 
-      // 1. Start exit animation immediately
+      // 1. Start exit animation and mark as having added an item
       state.startExitAnimation(pantryItem.itemId);
+      hasAddedItemRef.current = true;
 
       // 2. Show toast immediately
       toastService.success(pantrySheetConfig.quickAdd.toastMessage(pantryItem.name));

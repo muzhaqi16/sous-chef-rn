@@ -1,14 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, type AccessibilityActionEvent, type AccessibilityActionInfo } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  useAnimatedStyle,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { type SharedValue } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
-import { useSwipeableAnimation } from './hooks/useSwipeableAnimation';
 import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import { SwipeableItemProps } from './types';
@@ -33,8 +29,6 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   testIDPrefix,
   swipeMode,
 }) => {
-  const { itemOpacity, animateDelete } = useSwipeableAnimation();
-
   // Calculate thresholds based on number of actions
   // Fewer actions = smaller threshold for more natural swipe feel
   const leftActionCount = [
@@ -55,16 +49,9 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   } = useSwipeableActions({
     onEdit,
     onDelete,
-    animateDelete,
     enableSwipeToDelete,
     onSwipeableWillOpen,
     onSwipeableClose,
-  });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: itemOpacity.value,
-    };
   });
 
   const renderRightActions = useCallback(
@@ -137,15 +124,12 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     }
   }, [onEdit, onDelete, onTogglePurchase, onConsume, onWaste, onRestock]);
 
-  // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View,
-  // animated styles on inner Reanimated.View to avoid "2 unistyles styles" warning
   return (
     <View
       style={styles.gestureContainer}
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={handleAccessibilityAction}
     >
-      <Reanimated.View style={animatedStyle}>
       <Swipeable
         ref={swipeableRef}
         friction={friction}
@@ -165,9 +149,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
           {children}
         </SwipeableContent>
       </Swipeable>
-      </Reanimated.View>
     </View>
   );
 };
 
-export const SwipeableItem = SwipeableItemComponent;
+export const SwipeableItem = React.memo(SwipeableItemComponent);

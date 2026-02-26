@@ -5,14 +5,25 @@ import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';
 
 /**
- * Right slot component for BaseItemCard
- * Renders meta info, counter, drag handle, or custom content
+ * Lightweight meta slot — no useUnistyles, all colors from stylesheet
  */
-export const CardRightSlot: React.FC<CardRightSlotProps> = ({
-  type,
+const MetaSlot: React.FC<Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary'>> = ({
   primary,
   secondary,
   tertiary,
+}) => (
+  <View style={styles.metaContainer}>
+    {primary ? <Text style={styles.primary}>{primary}</Text> : null}
+    {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
+    {tertiary ? <Text style={styles.secondary}>{tertiary}</Text> : null}
+  </View>
+);
+
+/**
+ * Interactive slot — needs useUnistyles for Icon colors
+ */
+const InteractiveSlot: React.FC<CardRightSlotProps> = ({
+  type,
   quantity,
   unit,
   onIncrement,
@@ -35,50 +46,56 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
     );
   }
 
-  if (type === 'counter') {
-    return (
-      <View style={styles.counterContainer}>
-        <Pressable
-          onPress={onDecrement}
-          disabled={disabled || quantity === 0}
-          style={[
-            styles.counterButton,
-            (disabled || quantity === 0) && styles.counterButtonDisabled,
-          ]}
-        >
-          <Icon
-            name="remove-outline"
-            size={18}
-            color={disabled || quantity === 0 ? theme.colors.textTertiary : theme.colors.primary}
-          />
-        </Pressable>
-        <View style={styles.counterValue}>
-          <Text style={styles.counterText}>{quantity || 0}</Text>
-          {unit ? <Text style={styles.counterUnit}>{unit}</Text> : null}
-        </View>
-        <Pressable
-          onPress={onIncrement}
-          disabled={disabled}
-          style={[styles.counterButton, disabled && styles.counterButtonDisabled]}
-        >
-          <Icon
-            name="add"
-            size={18}
-            color={disabled ? theme.colors.textTertiary : theme.colors.primary}
-          />
-        </Pressable>
-      </View>
-    );
-  }
-
-  // Default to meta
+  // counter
   return (
-    <View style={styles.metaContainer}>
-      {primary ? <Text style={styles.primary}>{primary}</Text> : null}
-      {secondary ? <Text style={styles.secondary}>{secondary}</Text> : null}
-      {tertiary ? <Text style={styles.secondary}>{tertiary}</Text> : null}
+    <View style={styles.counterContainer}>
+      <Pressable
+        onPress={onDecrement}
+        disabled={disabled || quantity === 0}
+        style={[
+          styles.counterButton,
+          (disabled || quantity === 0) && styles.counterButtonDisabled,
+        ]}
+      >
+        <Icon
+          name="remove-outline"
+          size={18}
+          color={disabled || quantity === 0 ? theme.colors.textTertiary : theme.colors.primary}
+        />
+      </Pressable>
+      <View style={styles.counterValue}>
+        <Text style={styles.counterText}>{quantity || 0}</Text>
+        {unit ? <Text style={styles.counterUnit}>{unit}</Text> : null}
+      </View>
+      <Pressable
+        onPress={onIncrement}
+        disabled={disabled}
+        style={[styles.counterButton, disabled && styles.counterButtonDisabled]}
+      >
+        <Icon
+          name="add"
+          size={18}
+          color={disabled ? theme.colors.textTertiary : theme.colors.primary}
+        />
+      </Pressable>
     </View>
   );
+};
+
+/**
+ * Right slot component for BaseItemCard
+ * Renders meta info, counter, drag handle, or custom content
+ */
+export const CardRightSlot: React.FC<CardRightSlotProps> = (props) => {
+  const { type } = props;
+
+  // Meta path is lightweight — no useUnistyles needed
+  if (type === 'meta' || (!type && !props.children)) {
+    return <MetaSlot primary={props.primary} secondary={props.secondary} tertiary={props.tertiary} />;
+  }
+
+  // All other types need theme access
+  return <InteractiveSlot {...props} />;
 };
 
 const styles = StyleSheet.create(theme => ({

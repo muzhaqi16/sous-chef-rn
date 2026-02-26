@@ -1,10 +1,9 @@
-import {useNavigation, useRoute, useIsFocused, StackActions, CommonActions} from '@react-navigation/native';
+import {useNavigation, useRoute, StackActions, CommonActions} from '@react-navigation/native';
 import {useMemo, useCallback} from 'react';
 
 export function useAppNavigation() {
   const navigation = useNavigation();
   const route = useRoute();
-  const isFocused = useIsFocused();
 
   const navigate = useCallback(
     (name: string, params?: object) => {
@@ -148,7 +147,6 @@ export function useAppNavigation() {
     // Navigation state
     currentRoute: route.name,
     params: route.params,
-    isFocused,
     canGoBack: navigation.canGoBack(),
 
     // Core navigation

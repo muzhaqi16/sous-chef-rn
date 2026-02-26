@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import {
   useSharedValue,
   useAnimatedStyle,
@@ -64,16 +64,9 @@ export function useSlideAnimation({
   const isAnimatingShared = useSharedValue(false);
   const itemIdRef = useRef(itemId);
 
-  // Track animation state for JS-side consumers
-  const [isAnimating, setIsAnimating] = useState(false);
-
   // Ref to store pending completion callback
   // This allows dynamic callbacks to be invoked via a stable RN-runtime wrapper
   const onCompleteRef = useRef<(() => void) | null>(null);
-
-  const updateAnimatingState = useCallback((animating: boolean) => {
-    setIsAnimating(animating);
-  }, []);
 
   // Stable wrapper for completion callback - defined in RN runtime
   // scheduleOnRN requires functions to be defined in RN runtime scope
@@ -91,7 +84,6 @@ export function useSlideAnimation({
       translateX.set(0);
       opacity.set(1);
       isAnimatingShared.set(false);
-      setIsAnimating(false);
       onCompleteRef.current = null; // Clear pending callback
       itemIdRef.current = itemId;
     }
@@ -109,13 +101,12 @@ export function useSlideAnimation({
 
   const triggerSlide = useCallback(
     (direction: SlideDirection, onComplete?: () => void) => {
-      'worklet';
       // Guard: disabled mode
       if (disabled) {
         if (onComplete) {
           // Store callback and execute via RN-runtime wrapper
           onCompleteRef.current = onComplete;
-          scheduleOnRN(executeOnComplete);
+          executeOnComplete();
         }
         return;
       }
@@ -134,8 +125,6 @@ export function useSlideAnimation({
         onCompleteRef.current = onComplete;
       }
 
-      scheduleOnRN(updateAnimatingState, true);
-
       const animationEasing = easing ?? defaultEasing;
       const timingConfig = { duration, easing: animationEasing };
 
@@ -149,7 +138,6 @@ export function useSlideAnimation({
         timingConfig,
         finished => {
           isAnimatingShared.value = false;
-          scheduleOnRN(updateAnimatingState, false);
           if (finished && onComplete) {
             scheduleOnRN(executeOnComplete);
           }
@@ -167,13 +155,11 @@ export function useSlideAnimation({
       opacityTarget,
       allowedDirections,
       disabled,
-      updateAnimatingState,
       executeOnComplete,
     ],
   );
 
   const resetSlide = useCallback(() => {
-    'worklet';
     cancelAnimation(translateX);
     cancelAnimation(opacity);
     translateX.value = withTiming(0, { duration: duration / 2, easing: defaultEasing });
@@ -181,8 +167,7 @@ export function useSlideAnimation({
       opacity.value = withTiming(1, { duration: duration / 2, easing: defaultEasing });
     }
     isAnimatingShared.value = false;
-    scheduleOnRN(updateAnimatingState, false);
-  }, [translateX, opacity, isAnimatingShared, duration, withOpacity, updateAnimatingState]);
+  }, [translateX, opacity, isAnimatingShared, duration, withOpacity]);
 
-  return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating };
+  return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating: isAnimatingShared };
 }

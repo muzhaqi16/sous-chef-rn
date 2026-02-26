@@ -85,7 +85,7 @@ export const AnimatedListItem = forwardRef<AnimatedListItemRef, AnimatedListItem
       () => ({
         triggerSlide,
         resetSlide,
-        isAnimating,
+        get isAnimating() { return isAnimating.value; },
       }),
       [triggerSlide, resetSlide, isAnimating],
     );

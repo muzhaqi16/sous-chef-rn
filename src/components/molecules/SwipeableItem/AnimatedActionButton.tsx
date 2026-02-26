@@ -18,7 +18,7 @@ interface AnimatedActionButtonProps extends ActionButtonProps {
   index?: number;
 }
 
-export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
+const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   onPress,
   icon,
   label,
@@ -89,3 +89,5 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     </Pressable>
   );
 };
+
+export const AnimatedActionButton = React.memo(AnimatedActionButtonComponent);

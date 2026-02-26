@@ -45,6 +45,9 @@ export function useSearchableList<T>(
     // Use debounced query for filtering
     const searchQuery = debounceMs > 0 ? debouncedQuery : query;
 
+    // Preserve original array reference when not actively searching
+    if (!searchQuery) return list;
+
     // If query is shorter than minimum length, return all items
     if (searchQuery.length < minQueryLength) {
       return list;

@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { Header } from '#components/molecules/Header';
@@ -370,35 +370,29 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         <View style={styles.granularityRow}>
           <Text style={styles.granularityLabel}>Period:</Text>
           <View style={styles.granularityButtons}>
-            {granularityOptions.map(option => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setLedgerGranularity(option.value)}
-                style={[
-                  styles.granularityButton,
-                  {
-                    backgroundColor:
-                      ledgerGranularity === option.value
-                        ? theme.colors.primary
-                        : theme.colors.surface,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.granularityButtonText,
-                    {
-                      color:
-                        ledgerGranularity === option.value
-                          ? theme.colors.white
-                          : theme.colors.textSecondary,
-                    },
+            {granularityOptions.map(option => {
+              const isActive = ledgerGranularity === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setLedgerGranularity(option.value)}
+                  style={({pressed}) => [
+                    styles.granularityButton,
+                    isActive ? styles.granularityButtonActive : styles.granularityButtonInactive,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.granularityButtonText,
+                      isActive ? styles.granularityButtonTextActive : styles.granularityButtonTextInactive,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 
@@ -578,9 +572,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       theme.colors.success,
       theme.colors.error,
       theme.colors.warning,
-      theme.colors.surface,
-      theme.colors.white,
-      theme.colors.textSecondary,
       ledgerData,
       ledgerLoading,
       ledgerError,
@@ -654,9 +645,24 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.full,
   },
+  granularityButtonActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  granularityButtonInactive: {
+    backgroundColor: theme.colors.surface,
+  },
   granularityButtonText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
+  },
+  granularityButtonTextActive: {
+    color: theme.colors.white,
+  },
+  granularityButtonTextInactive: {
+    color: theme.colors.textSecondary,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   periodLegend: {
     flexDirection: 'row',

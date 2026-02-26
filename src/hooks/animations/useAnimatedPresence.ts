@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useSharedValue, withSpring } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import type {
@@ -26,58 +26,37 @@ export function useAnimatedPresence(
   const isVisible = useSharedValue(initialVisible);
   const progress = useSharedValue(initialVisible ? 1 : 0);
 
-  // Create stable function references for scheduleOnRN
-  // These run on the JS thread and can safely access callbacks
-  const setRenderTrue = useCallback(() => setShouldRender(true), []);
-  const setRenderFalse = useCallback(() => setShouldRender(false), []);
-
-  const handleOpenStart = useCallback(() => {
-    onOpenStart?.();
-  }, [onOpenStart]);
-
-  const handleOpenComplete = useCallback(() => {
-    onOpenComplete?.();
-  }, [onOpenComplete]);
-
-  const handleCloseStart = useCallback(() => {
-    onCloseStart?.();
-  }, [onCloseStart]);
-
-  const handleCloseComplete = useCallback(() => {
-    onCloseComplete?.();
-  }, [onCloseComplete]);
-
   const open = useCallback(() => {
     'worklet';
     if (isVisible.value) return;
 
     isVisible.value = true;
-    scheduleOnRN(setRenderTrue);
-    scheduleOnRN(handleOpenStart);
+    scheduleOnRN(setShouldRender, true);
+    if (onOpenStart) scheduleOnRN(onOpenStart);
 
     progress.value = withSpring(1, springConfig, finished => {
       'worklet';
       if (finished) {
-        scheduleOnRN(handleOpenComplete);
+        if (onOpenComplete) scheduleOnRN(onOpenComplete);
       }
     });
-  }, [isVisible, progress, springConfig, setRenderTrue, handleOpenStart, handleOpenComplete]);
+  }, [isVisible, progress, springConfig, setShouldRender, onOpenStart, onOpenComplete]);
 
   const close = useCallback(() => {
     'worklet';
     if (!isVisible.value) return;
 
     isVisible.value = false;
-    scheduleOnRN(handleCloseStart);
+    if (onCloseStart) scheduleOnRN(onCloseStart);
 
     progress.value = withSpring(0, springConfig, finished => {
       'worklet';
       if (finished) {
-        scheduleOnRN(setRenderFalse);
-        scheduleOnRN(handleCloseComplete);
+        scheduleOnRN(setShouldRender, false);
+        if (onCloseComplete) scheduleOnRN(onCloseComplete);
       }
     });
-  }, [isVisible, progress, springConfig, handleCloseStart, setRenderFalse, handleCloseComplete]);
+  }, [isVisible, progress, springConfig, onCloseStart, setShouldRender, onCloseComplete]);
 
   const toggle = useCallback(() => {
     'worklet';

@@ -183,6 +183,53 @@ const getItemVariant = (isExpired: boolean, isExpiringSoon: boolean): ItemVarian
   return 'normal';
 };
 
+/**
+ * Compute display data for a single pantry item.
+ * Pure function — only depends on the item and shared expiration colors.
+ */
+function computeItemDisplay(
+  item: PantryItem,
+  now: number,
+  expirationColors: { expired: string; warning: string; normal: string },
+  getLocation: (storageState?: string | null, storageLocation?: { name: string } | null) => string,
+): ItemDisplayData {
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const expiresIn = item.expiresAt
+    ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
+    : null;
+  const expStatus = getExpirationStatus(expiresIn);
+  const isExpired = expiresIn !== null && expiresIn < 0;
+  const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
+  const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
+  const hasExpiry = item.expiresAt != null;
+
+  let expirationColor: string | undefined;
+  if (hasExpiry) {
+    const expType = expStatus.type;
+    if (expType === 'expired' || expType === 'critical') {
+      expirationColor = expirationColors.expired;
+    } else if (expType === 'warning') {
+      expirationColor = expirationColors.warning;
+    } else {
+      expirationColor = expirationColors.normal;
+    }
+  }
+
+  return {
+    imageUrl: resolveImageUrl(item),
+    expirationText: hasExpiry ? expStatus.text : null,
+    expirationVariant: hasExpiry ? expStatus.type : undefined,
+    expirationColor,
+    variant,
+    quantityDisplay: formatQuantityDisplay(item.quantity, item.unit?.symbol),
+    location: getLocation(item.storageState, item.storageLocation),
+    isOutOfStock: item.quantity === 0,
+    packageBreakdownText: formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits),
+    remainingNetWeightText: formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit),
+    quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol),
+  };
+}
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -337,53 +384,32 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     normal: theme.colors.textSecondary,
   }), [theme.colors.expiration.expiredText, theme.colors.expiration.warningText, theme.colors.textSecondary]);
 
-  // Pre-compute ALL per-item display data once to avoid per-render Date allocations and string formatting
+  // PERFORMANCE: Reference-equality cache. Apollo Client's normalized cache gives
+  // updated items new object references while unchanged items keep the same reference.
+  // So `cached.item === item` is a perfect O(1) staleness check with zero allocations.
+  const displayCacheRef = useRef<Map<string, { item: PantryItem; data: ItemDisplayData }>>(new Map());
+
   const itemDisplayMap = useMemo(() => {
     const map = new Map<string, ItemDisplayData>();
     const now = Date.now();
-    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const prevCache = displayCacheRef.current;
+    const nextCache = new Map<string, { item: PantryItem; data: ItemDisplayData }>();
+
     for (const item of sortedItems) {
-      const expiresIn = item.expiresAt
-        ? Math.ceil((new Date(item.expiresAt).getTime() - now) / MS_PER_DAY)
-        : null;
-      const expStatus = getExpirationStatus(expiresIn);
-      const isExpired = expiresIn !== null && expiresIn < 0;
-      const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
-      const hasExpiry = item.expiresAt != null;
+      const cached = prevCache.get(item.id);
 
-      // Precompute expiration color to eliminate per-item useUnistyles
-      let expirationColor: string | undefined;
-      if (hasExpiry) {
-        const expType = expStatus.type;
-        if (expType === 'expired' || expType === 'critical') {
-          expirationColor = expirationColors.expired;
-        } else if (expType === 'warning') {
-          expirationColor = expirationColors.warning;
-        } else {
-          expirationColor = expirationColors.normal;
-        }
+      if (cached && cached.item === item) {
+        // Same object reference — Apollo hasn't updated this pantry item
+        map.set(item.id, cached.data);
+        nextCache.set(item.id, cached);
+      } else {
+        const data = computeItemDisplay(item, now, expirationColors, getLocationString);
+        map.set(item.id, data);
+        nextCache.set(item.id, { item, data });
       }
-
-      const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
-      const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits);
-      const remainingNetWeightText = formatRemainingNetWeight(item.remainingNetWeight, item.netWeightUnit);
-      const qtyBreakdownText = formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol);
-
-      map.set(item.id, {
-        imageUrl: resolveImageUrl(item),
-        expirationText: hasExpiry ? expStatus.text : null,
-        expirationVariant: hasExpiry ? expStatus.type : undefined,
-        expirationColor,
-        variant,
-        quantityDisplay,
-        location: getLocationString(item.storageState, item.storageLocation),
-        isOutOfStock: item.quantity === 0,
-        packageBreakdownText: pkgBreakdownText,
-        remainingNetWeightText,
-        quantityBreakdownText: qtyBreakdownText,
-      });
     }
+
+    displayCacheRef.current = nextCache;
     return map;
   }, [sortedItems, getLocationString, expirationColors]);
 
@@ -640,7 +666,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               getItemType={getItemType}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
-              drawDistance={250}
+              drawDistance={400}
             />
           </Animated.View>
 

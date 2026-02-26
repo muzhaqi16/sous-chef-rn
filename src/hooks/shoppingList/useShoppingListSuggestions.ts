@@ -14,6 +14,7 @@ export type ShoppingListSuggestionItem =
   NonNullable<GetShoppingListSuggestionsQuery['shoppingList']>['suggestions'][number];
 
 export interface GroupedSuggestions {
+  [key: string]: ShoppingListSuggestionItem[];
   recentlyDeleted: ShoppingListSuggestionItem[];
   frequentlyAdded: ShoppingListSuggestionItem[];
   popular: ShoppingListSuggestionItem[];
@@ -53,6 +54,7 @@ export function useShoppingListSuggestions({
     },
     skip: !shoppingListId || skip || isOffline,
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const suggestions = data?.shoppingList?.suggestions;

@@ -19,6 +19,7 @@ interface UsePantryItemSuggestionsOptions {
 }
 
 interface GroupedSuggestions {
+  [key: string]: PantryItemSuggestion[];
   lowStock: PantryItemSuggestion[];
   expiringSoon: PantryItemSuggestion[];
   recentlyDeleted: PantryItemSuggestion[];
@@ -47,6 +48,7 @@ export function usePantryItemSuggestions({
     variables: { pantryId: pantryId!, limit },
     skip: skip || !pantryId || isOffline,
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   const suggestions = useMemo(

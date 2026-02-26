@@ -13,7 +13,7 @@ const getContainerWidth = (buttonCount: number): number => {
   return 180; // 3 buttons
 };
 
-export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, onActionPress, testIDPrefix, progress, swipeMode }) => {
+const RightActionsComponent: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, onActionPress, testIDPrefix, progress, swipeMode }) => {
     const { theme } = useUnistyles();
 
     // Shopping mode: Only show delete on right (edit is on left swipe)
@@ -90,3 +90,5 @@ export const RightActions: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, on
       </Animated.View>
     );
   };
+
+export const RightActions = React.memo(RightActionsComponent);

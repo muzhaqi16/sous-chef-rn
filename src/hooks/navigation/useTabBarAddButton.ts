@@ -1,10 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useAppNavigation } from './useAppNavigation';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 
 /**
  * Register a handler for the tab bar add button when the screen is focused.
  * Automatically cleans up when unfocused or unmounted.
+ *
+ * Uses useFocusEffect instead of useIsFocused to avoid breaking freezeOnBlur.
  *
  * @param handler - Function to call when add button is pressed
  * @param disabled - Whether the button should be disabled (default: false)
@@ -28,7 +30,6 @@ export const useTabBarAddButton = (
   disabled: boolean = false,
   disabledTooltip?: string,
 ) => {
-  const { isFocused } = useAppNavigation();
   const { setAddProps } = useTabBarSetters();
 
   // Store handler in ref to avoid stale closures
@@ -52,23 +53,18 @@ export const useTabBarAddButton = (
     }
   }, []);
 
-  useEffect(() => {
-    // Early return if screen is not focused or no handler provided
-    if (!isFocused || !handler) {
+  useFocusEffect(useCallback(() => {
+    if (!handlerRef.current) {
       setAddProps(undefined);
       return;
     }
 
-    // Register the handler with current disabled state and tooltip
+    // Register on focus
     setAddProps(stableHandler, disabledRef.current, tooltipRef.current);
 
-    // Cleanup: always unregister when effect re-runs or component unmounts
+    // Unregister on blur
     return () => {
       setAddProps(undefined);
     };
-  }, [isFocused, handler, stableHandler, setAddProps]);
-
-  // Note: disabled and disabledTooltip are intentionally NOT in dependencies
-  // They're accessed via refs to avoid unnecessary re-registrations
-  // This prevents flickering when only disabled state changes
+  }, [stableHandler, setAddProps]));
 };

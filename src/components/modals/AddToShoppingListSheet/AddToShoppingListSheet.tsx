@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -54,11 +54,32 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
   // Adapt suggestions to the expected interface
   const suggestions: SuggestionsHookResult = useMemo(() => ({
-    grouped: suggestionsResult.grouped as unknown as Record<string, BaseSuggestionItem[]>,
+    grouped: suggestionsResult.grouped,
     loading: suggestionsResult.loading,
     hasSuggestions: suggestionsResult.hasSuggestions,
     refetch: suggestionsResult.refetch,
   }), [suggestionsResult]);
+
+  // Auto-refetch when suggestions are nearly depleted
+  const REFETCH_THRESHOLD = 3;
+  const hasAddedItemRef = useRef(false);
+
+  const totalFilteredCount = useMemo(
+    () => Object.values(suggestions.grouped).reduce((sum, items) => sum + items.length, 0),
+    [suggestions.grouped],
+  );
+
+  const isRefetchingRef = useRef(false);
+
+  useEffect(() => {
+    if (totalFilteredCount <= REFETCH_THRESHOLD && hasAddedItemRef.current && !isRefetchingRef.current) {
+      isRefetchingRef.current = true;
+      suggestionsResult.refetch().then(() => {
+        isRefetchingRef.current = false;
+        hasAddedItemRef.current = false;
+      });
+    }
+  }, [totalFilteredCount, suggestionsResult]);
 
   const removeFromSuggestionsCache = useCallback(
     (itemId: string) => {
@@ -160,8 +181,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       // Use lastUnitId if available (for recently deleted), otherwise defaultUnitId
       const unitId = shoppingItem.lastUnitId ?? shoppingItem.defaultUnitId ?? undefined;
 
-      // 1. Start exit animation immediately
+      // 1. Start exit animation and mark as having added an item
       state.startExitAnimation(shoppingItem.itemId);
+      hasAddedItemRef.current = true;
 
       // 2. Show toast immediately (don't wait for mutation)
       toastService.success(shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name));

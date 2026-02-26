@@ -4,7 +4,6 @@ import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 interface UseSwipeableActionsProps {
   onEdit?: () => void;
   onDelete?: () => void;
-  animateDelete: () => void;
   enableSwipeToDelete?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
@@ -13,7 +12,6 @@ interface UseSwipeableActionsProps {
 export const useSwipeableActions = ({
   onEdit,
   onDelete,
-  animateDelete,
   onSwipeableWillOpen,
   onSwipeableClose,
 }: UseSwipeableActionsProps) => {
@@ -25,8 +23,6 @@ export const useSwipeableActions = ({
     if (action === 'edit') {
       onEdit?.();
     } else if (action === 'delete') {
-      // Start fade animation and trigger delete in parallel
-      animateDelete();
       onDelete?.();
     }
   };

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {View, Text, Pressable, Modal, FlatList, ViewStyle} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
@@ -35,12 +35,12 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 
   const selectedOption = options.find(option => option.value === value);
 
-  const handleSelect = (optionValue: string) => {
+  const handleSelect = useCallback((optionValue: string) => {
     onValueChange(optionValue);
     setModalVisible(false);
-  };
+  }, [onValueChange]);
 
-  const renderOption = ({item}: {item: SelectOption}) => {
+  const renderOption = useCallback(({item}: {item: SelectOption}) => {
     const isSelected = item.value === value;
     return (
       <Pressable
@@ -51,7 +51,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         </Text>
       </Pressable>
     );
-  };
+  }, [value, handleSelect]);
 
   return (
     <FormFieldWrapper

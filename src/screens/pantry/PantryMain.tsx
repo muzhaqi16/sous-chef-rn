@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -40,7 +41,7 @@ import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageL
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
 const PantryMainScreen: React.FC = () => {
-  const { navigate, navigateTo, isFocused } = useAppNavigation();
+  const { navigate, navigateTo } = useAppNavigation();
   useUnistyles();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -93,12 +94,12 @@ const PantryMainScreen: React.FC = () => {
   }, []);
 
   // Scroll to top when returning from barcode scanner after adding an item
-  useEffect(() => {
-    if (isFocused && pendingPantryScrollToTop) {
+  useFocusEffect(useCallback(() => {
+    if (pendingPantryScrollToTop) {
       pantryContentRef.current?.scrollToTop();
       setPendingPantryScrollToTop(false);
     }
-  }, [isFocused, pendingPantryScrollToTop, setPendingPantryScrollToTop]);
+  }, [pendingPantryScrollToTop, setPendingPantryScrollToTop]));
 
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
@@ -130,16 +131,15 @@ const PantryMainScreen: React.FC = () => {
   } = useCurrentPantry();
 
   // Keep query for pull-to-refresh
-  // Gate query with isReady and isFocused to prevent firing:
-  // - before home selection is complete (isReady)
-  // - when screen loses focus during navigation (isFocused)
-  // - before interactions complete (isInteractive) — not needed during initial mount
+  // Gate query with isReady to prevent firing before home selection is complete
+  // freezeOnBlur handles suppressing updates when screen is not focused
   const shouldFetchHome =
-    isInteractive && isFocused && isReady && !!selectedHomeId && !currentHome;
+    isInteractive && isReady && !!selectedHomeId && !currentHome;
   const { refetch: refetchHome } = useGetHomeQuery({
     variables: { homeId: selectedHomeId! },
     skip: !shouldFetchHome,
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first',
   });
 
   // Set up scanner button (deferred — scanner not needed during initial render)
@@ -173,18 +173,17 @@ const PantryMainScreen: React.FC = () => {
 
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
   // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
-  const [storageLocationsReady, setStorageLocationsReady] = useState(false);
-  useEffect(() => {
-    if (!loading && isReady) {
-      setStorageLocationsReady(true);
-    }
-  }, [loading, isReady]);
+  // Uses a ref latch instead of state to avoid an extra re-render
+  const storageLocationsReadyRef = useRef(false);
+  if (!loading && isReady) {
+    storageLocationsReadyRef.current = true;
+  }
 
   const {
     locations: storageLocations,
     createLocation,
     creating: creatingLocation,
-  } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
+  } = useStorageLocationManagement(storageLocationsReadyRef.current ? selectedHomeId ?? undefined : undefined);
 
   // Stable navigateTo wrapper for usePantryItemActions
   const stableNavigateTo = useMemo(
@@ -236,12 +235,13 @@ const PantryMainScreen: React.FC = () => {
     navigate,
   });
 
-  // PERFORMANCE: Synchronous filter to ensure FlashList always receives stable data
-  // (startTransition created stale-data windows that caused FlashList layout crashes)
+  // PERFORMANCE: Synchronous filter to ensure FlashList always receives stable data.
+  // Short-circuit for 'all' returns the original pantryItems reference — prevents
+  // unnecessary downstream recomputation (sortedItems → itemDisplayMap → FlashList).
   const locationFilteredItems = useMemo(
-    () =>
-      pantryItems.filter(item => {
-        if (locationFilter === 'all') return true;
+    () => {
+      if (locationFilter === 'all') return pantryItems;
+      return pantryItems.filter(item => {
         switch (locationFilter) {
           case 'fridge':
             return item.storageState === StorageState.Refrigerated;
@@ -253,7 +253,8 @@ const PantryMainScreen: React.FC = () => {
             // Custom storage location filter
             return item.storageLocation?.id === locationFilter;
         }
-      }),
+      });
+    },
     [pantryItems, locationFilter],
   );
 
