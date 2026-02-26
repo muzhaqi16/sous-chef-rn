@@ -1,15 +1,12 @@
 import React, {
   forwardRef,
   useImperativeHandle,
-  useRef,
-  useCallback,
-} from 'react';
+  useRef } from 'react';
 import {View} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import BottomSheet, {
   BottomSheetProps,
-  BottomSheetBackdropProps,
-} from '@gorhom/bottom-sheet';
+  BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 
 // Define the methods that you want to expose from the bottom sheet.
@@ -32,11 +29,9 @@ const ReusableBottomSheet = forwardRef<
   // Expose imperative methods to control the bottom sheet.
   useImperativeHandle(ref, () => ({
     expand: () => bottomSheetRef.current?.expand(),
-    close: () => bottomSheetRef.current?.close(),
-  }));
+    close: () => bottomSheetRef.current?.close() }));
 
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => (
+  const renderBackdrop = (props: BottomSheetBackdropProps) => (
       <GlobalBottomSheetBackdrop
         {...props}
         disappearsOnIndex={0}
@@ -45,9 +40,7 @@ const ReusableBottomSheet = forwardRef<
         pressBehavior="collapse"
         onClose={() => bottomSheetRef.current?.collapse()}
       />
-    ),
-    [],
-  );
+    );
 
   return (
     <BottomSheet
@@ -67,8 +60,6 @@ const ReusableBottomSheet = forwardRef<
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    padding: theme.spacing.md,
-  },
-}));
+    padding: theme.spacing.md } }));
 
 export default ReusableBottomSheet;

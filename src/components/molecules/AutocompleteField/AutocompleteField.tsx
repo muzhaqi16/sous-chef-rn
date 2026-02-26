@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { InlineAutocomplete } from '../InlineAutocomplete';
@@ -111,7 +111,7 @@ const footerStyles = StyleSheet.create(theme => ({
 }));
 
 export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
-  const addNewFooter = useMemo(() => {
+  const addNewFooter = (() => {
     if (!props.showAddNew || !props.onAddNew || !props.addNewLabel) return null;
     return (
       <AddNewFooter
@@ -120,7 +120,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         onPress={props.onAddNew}
       />
     );
-  }, [props.showAddNew, props.onAddNew, props.addNewLabel, props.addNewSubtext]);
+  })();
 
   if (props.variant === 'inline') {
     return (

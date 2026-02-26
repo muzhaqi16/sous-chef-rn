@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useAddLowStockItemsToShoppingListMutation } from '#generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -8,16 +7,14 @@ interface UseAddLowStockToShoppingListOptions {
 }
 
 export function useAddLowStockToShoppingList({
-  homeId,
-}: UseAddLowStockToShoppingListOptions) {
+  homeId }: UseAddLowStockToShoppingListOptions) {
   const [addLowStockMutation, { loading }] =
     useAddLowStockItemsToShoppingListMutation({
       onError: error => {
         toastService.error(error.message || 'Failed to add low stock items');
-      },
-    });
+      } });
 
-  const addLowStockToShoppingList = useCallback(async () => {
+  const addLowStockToShoppingList = async () => {
     if (!homeId) {
       toastService.error('No home selected');
       return;
@@ -25,8 +22,7 @@ export function useAddLowStockToShoppingList({
 
     try {
       const result = await addLowStockMutation({
-        variables: { homeId },
-      });
+        variables: { homeId } });
 
       const data = result.data?.addLowStockItemsToShoppingList;
       if (!data) return;
@@ -47,15 +43,13 @@ export function useAddLowStockToShoppingList({
       Telemetry.trackEvent('low_stock_items_added_to_shopping_list', {
         home_id: homeId,
         added_count: addedCount,
-        skipped_count: skippedCount,
-      });
+        skipped_count: skippedCount });
     } catch {
       // Error handled by mutation onError
     }
-  }, [homeId, addLowStockMutation]);
+  };
 
   return {
     addLowStockToShoppingList,
-    loading,
-  };
+    loading };
 }

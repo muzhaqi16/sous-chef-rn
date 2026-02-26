@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
@@ -6,8 +6,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useGetRecipeQuery,
   useCreateRecipeMutation,
-  useUpdateRecipeMutation,
-} from '#generated';
+  useUpdateRecipeMutation } from '#generated';
 import { useRecipeForm } from './useRecipeForm';
 import { RecipeBasicFields } from './components/RecipeBasicFields';
 import { RecipeCategoryFields } from './components/RecipeCategoryFields';
@@ -31,22 +30,20 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
   // Fetch recipe for edit mode
   const { data: recipeData } = useGetRecipeQuery({
     variables: { id: recipeId! },
-    skip: !recipeId,
-  });
+    skip: !recipeId });
 
   // Populate form when recipe data arrives
   useEffect(() => {
     if (recipeData?.recipe) {
       form.populateFromRecipe(recipeData.recipe);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeData?.recipe]);
 
   const [createRecipeMutation, { loading: creating }] = useCreateRecipeMutation();
   const [updateRecipeMutation, { loading: updating }] = useUpdateRecipeMutation();
   const loading = creating || updating;
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     const error = form.validate();
     if (error) {
       Alert.alert('Validation Error', error);
@@ -57,8 +54,7 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       if (isEditMode && recipeId) {
         const input = form.buildUpdateInput();
         const result = await updateRecipeMutation({
-          variables: { id: recipeId, input },
-        });
+          variables: { id: recipeId, input } });
         if (result.data?.updateRecipe?.success) {
           goBack();
         } else {
@@ -67,8 +63,7 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       } else {
         const input = form.buildCreateInput();
         const result = await createRecipeMutation({
-          variables: { input },
-        });
+          variables: { input } });
         if (result.data?.createRecipe?.success) {
           goBack();
         } else {
@@ -79,19 +74,18 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       Alert.alert('Error', message);
     }
-  }, [form, isEditMode, recipeId, createRecipeMutation, updateRecipeMutation, goBack]);
+  };
 
   // Ingredient handlers
-  const handleEditIngredient = useCallback((ingredient: IngredientFormState) => {
+  const handleEditIngredient = (ingredient: IngredientFormState) => {
     ingredientEditorRef.current?.open(ingredient);
-  }, []);
+  };
 
-  const handleAddIngredient = useCallback(() => {
+  const handleAddIngredient = () => {
     ingredientEditorRef.current?.open();
-  }, []);
+  };
 
-  const handleSaveIngredient = useCallback(
-    (ingredient: IngredientFormState) => {
+  const handleSaveIngredient = (ingredient: IngredientFormState) => {
       // Check if this is an existing ingredient being edited
       const existing = form.state.ingredients.find(i => i.id === ingredient.id);
       if (existing) {
@@ -99,30 +93,25 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
       } else {
         form.addIngredient(ingredient);
       }
-    },
-    [form],
-  );
+    };
 
   // Step handlers
-  const handleEditStep = useCallback((step: StepFormState) => {
+  const handleEditStep = (step: StepFormState) => {
     stepEditorRef.current?.open(step);
-  }, []);
+  };
 
-  const handleAddStep = useCallback(() => {
+  const handleAddStep = () => {
     stepEditorRef.current?.open();
-  }, []);
+  };
 
-  const handleSaveStep = useCallback(
-    (step: StepFormState) => {
+  const handleSaveStep = (step: StepFormState) => {
       const existing = form.state.steps.find(s => s.id === step.id);
       if (existing) {
         form.updateStep(step.id, step.instruction);
       } else {
         form.addStep(step.instruction);
       }
-    },
-    [form],
-  );
+    };
 
   return (
     <>

@@ -1,9 +1,8 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -33,8 +32,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   template,
   onClose,
   onConfirm,
-  confirmLoading,
-}) => {
+  confirmLoading }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -57,16 +55,15 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
     }
   }, [visible, template]);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     if (!template || !startDate) return;
     const servingsNum = parseInt(servings);
     onConfirm({
       templateId: template.id,
       startDate: startDate.toISOString(),
       name: nameOverride.trim() || undefined,
-      servings: !isNaN(servingsNum) && servingsNum > 0 ? servingsNum : undefined,
-    });
-  }, [template, startDate, nameOverride, servings, onConfirm]);
+      servings: !isNaN(servingsNum) && servingsNum > 0 ? servingsNum : undefined });
+  };
 
   if (!template) return null;
 
@@ -195,88 +192,71 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   templateHeader: {
     marginBottom: theme.spacing.lg,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   templateName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   templateDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   metaText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   categoryText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   configSection: {
     marginBottom: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   sectionTitle: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   previewSection: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   emptyPreview: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
     textAlign: 'center',
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   dayGroup: {
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   dayLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   mealRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    paddingLeft: theme.spacing.sm,
-  },
+    paddingLeft: theme.spacing.sm },
   mealType: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textTertiary,
-    width: 70,
-  },
+    width: 70 },
   mealName: {
     flex: 1,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   confirmButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,17 +264,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   confirmText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   buttonPressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   buttonDisabled: {
-    opacity: 0.5,
-  },
-}));
+    opacity: 0.5 } }));

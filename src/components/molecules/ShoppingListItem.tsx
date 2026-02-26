@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, TextStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -29,7 +29,7 @@ interface ShoppingListItemProps {
   screenWidth?: number;
 }
 
-export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
+export const ShoppingListItem = ({
   id,
   name,
   quantity,
@@ -43,8 +43,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
   onUpdateQuantity,
   onDelete,
   onEdit,
-  screenWidth = 375,
-}) => {
+  screenWidth = 375 }: ShoppingListItemProps) => {
   useRenderTime('ShoppingListItem');
   const { theme } = useUnistyles();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
@@ -56,15 +55,14 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
     slideDistance: screenWidth,
     duration: SLIDE_PRESETS.exitWithFade.duration,
     withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
-  });
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget });
 
   // Wrap delete action with slide animation
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (onDelete) {
       triggerSlide(1, () => onDelete(id));
     }
-  }, [onDelete, triggerSlide, id]);
+  };
 
   // Select variants based on purchased state
   styles.useVariants({ purchased: isPurchased });
@@ -165,9 +163,7 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
       </SwipeableItem>
     </Animated.View>
   );
-});
-
-ShoppingListItem.displayName = 'ShoppingListItem';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -180,14 +176,9 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           opacity: theme.opacity.disabled,
-          backgroundColor: theme.colors.surfaceVariant,
-        },
-      },
-    },
-  },
+          backgroundColor: theme.colors.surfaceVariant } } } },
   checkboxContainer: {
-    marginRight: theme.spacing['3'],
-  },
+    marginRight: theme.spacing['3'] },
   checkbox: {
     width: theme.sizes.icon.md,
     height: theme.sizes.icon.md,
@@ -200,20 +191,14 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           backgroundColor: theme.colors.primary,
-          borderColor: theme.colors.primary,
-        },
-      },
-    },
-  },
+          borderColor: theme.colors.primary } } } },
   itemImage: {
     width: theme.sizes.avatar.lg,
     height: theme.sizes.avatar.lg,
     borderRadius: theme.radii.md,
-    marginRight: theme.spacing['3'],
-  },
+    marginRight: theme.spacing['3'] },
   contentContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   itemName: {
     fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.medium,
@@ -223,15 +208,10 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-          color: theme.colors.textSecondary,
-        },
-      },
-    },
-  },
+          color: theme.colors.textSecondary } } } },
   quantityContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   quantityText: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
@@ -239,17 +219,10 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       purchased: {
         true: {
-          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'],
-        },
-      },
-    },
-  },
+          textDecorationLine: 'line-through' as TextStyle['textDecorationLine'] } } } },
   editQuantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

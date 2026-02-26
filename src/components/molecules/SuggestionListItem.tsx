@@ -35,9 +35,7 @@ const EXIT_ANIMATION_DURATION = 250;
 /**
  * Static item content — no animation hooks, no shared values.
  */
-const SuggestionListItemContent = React.memo<
-  Omit<SuggestionListItemProps, 'isExiting' | 'onExitComplete'>
->(({
+const SuggestionListItemContent = ({
   imageUrl,
   title,
   subtitle,
@@ -48,7 +46,7 @@ const SuggestionListItemContent = React.memo<
   quickAddDisabled = false,
   testID,
   themeColors,
-}) => {
+}: Omit<SuggestionListItemProps, 'isExiting' | 'onExitComplete'>) => {
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -104,9 +102,7 @@ const SuggestionListItemContent = React.memo<
       )}
     </Pressable>
   );
-});
-
-SuggestionListItemContent.displayName = 'SuggestionListItemContent';
+};
 
 /**
  * Animated wrapper — only mounted when isExiting=true.
@@ -147,11 +143,11 @@ const ExitAnimationWrapper: React.FC<{
  * Conditionally wraps with exit animation only when isExiting is true,
  * avoiding unnecessary Reanimated shared value creation for non-exiting items.
  */
-export const SuggestionListItem = React.memo<SuggestionListItemProps>(({
+export const SuggestionListItem = ({
   isExiting = false,
   onExitComplete,
   ...contentProps
-}) => {
+}: SuggestionListItemProps) => {
   if (isExiting) {
     return (
       <ExitAnimationWrapper onExitComplete={onExitComplete}>
@@ -160,9 +156,7 @@ export const SuggestionListItem = React.memo<SuggestionListItemProps>(({
     );
   }
   return <SuggestionListItemContent {...contentProps} />;
-});
-
-SuggestionListItem.displayName = 'SuggestionListItem';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

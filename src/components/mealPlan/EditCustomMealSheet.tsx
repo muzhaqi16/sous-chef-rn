@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
@@ -21,14 +20,12 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
   visible,
   item,
   onClose,
-  onSave,
-}) => {
+  onSave }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['45%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
@@ -40,16 +37,15 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
     }
   }, [visible, item]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (!item) return;
     const trimmedName = name.trim();
     if (!trimmedName) return;
     onSave(item.id, {
       customMealName: trimmedName,
-      notes: notes.trim() || undefined,
-    });
+      notes: notes.trim() || undefined });
     onClose();
-  }, [item, name, notes, onSave, onClose]);
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -99,24 +95,18 @@ EditCustomMealSheet.displayName = 'EditCustomMealSheet';
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   previewSection: {
     marginBottom: theme.spacing.lg,
     padding: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   mealTypeLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   section: {
-    marginBottom: theme.spacing.lg,
-  },
-}));
+    marginBottom: theme.spacing.lg } }));

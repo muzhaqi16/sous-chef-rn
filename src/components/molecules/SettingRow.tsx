@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
@@ -7,8 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
 import {
   getInputLabelForField,
-  getPlaceholderForField,
-} from '#utils/inputMapping';
+  getPlaceholderForField } from '#utils/inputMapping';
 import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#/utils/iconUtils';
 import { TextEditBottomSheet } from '#/components/modals/TextEditBottomSheet/TextEditBottomSheet';
@@ -23,8 +22,7 @@ export interface SettingRowProps {
 export const SettingRow: React.FC<SettingRowProps> = ({
   item,
   isFirst,
-  isLast,
-}) => {
+  isLast }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditVisible, setTextEditVisible] = useState(false);
 
@@ -32,8 +30,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     useStandardBottomSheet({
       onDismiss: () => setModalVisible(false),
       snapPoints: [],
-      enableDynamicSizing: true,
-    });
+      enableDynamicSizing: true });
 
   // Sync bottom sheet visibility with state (complex: checks item.type)
   useEffect(() => {
@@ -44,13 +41,13 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         ref.current?.dismiss();
       }
     }
-  }, [modalVisible, item.type]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modalVisible, item.type]);
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);
   const placeholder = getPlaceholderForField(item.key);
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     if (item.type === 'modal') {
       setModalVisible(true);
     } else if (item.type === 'text') {
@@ -58,37 +55,31 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     } else if (item.onPress) {
       item.onPress();
     }
-  }, [item]);
+  };
 
-  const handleSwitchChange = useCallback(() => {
+  const handleSwitchChange = () => {
     if (item.type !== 'switch') return;
     if (item.onPress) {
       item.onPress();
     }
-  }, [item]);
+  };
 
-  const handleModalOptionPress = useCallback(
-    (optionValue: string) => () => {
+  const handleModalOptionPress = (optionValue: string) => () => {
       if (item.onSave) {
         item.onSave(optionValue);
       }
       setModalVisible(false);
-    },
-    [item],
-  );
+    };
 
-  const handleTextSave = useCallback(
-    (value: string) => {
+  const handleTextSave = (value: string) => {
       if (item.onSave) {
         item.onSave(value);
       }
-    },
-    [item],
-  );
+    };
 
-  const handleTextEditClose = useCallback(() => {
+  const handleTextEditClose = () => {
     setTextEditVisible(false);
-  }, []);
+  };
 
   // Build accessibility label based on setting type
   const getAccessibilityLabel = () => {
@@ -279,61 +270,48 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderColor: theme.colors.divider,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
+    backgroundColor: theme.colors.surfaceVariant },
   rowFirst: {
     borderTopLeftRadius: theme.radii.lg,
-    borderTopRightRadius: theme.radii.lg,
-  },
+    borderTopRightRadius: theme.radii.lg },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
     borderBottomRightRadius: theme.radii.lg,
-    borderBottomWidth: 0,
-  },
+    borderBottomWidth: 0 },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: {
     marginLeft: theme.spacing.sm,
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   rowSpacer: { flex: 1 },
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   modalValueText: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   sheetContent: {
-    paddingHorizontal: theme.spacing.lg,
-  },
+    paddingHorizontal: theme.spacing.lg },
   sheetTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   sheetDivider: {
     height: 1,
     backgroundColor: theme.colors.divider,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   sheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
-  },
+    paddingHorizontal: theme.spacing.sm },
   sheetOptionText: {
     fontSize: theme.typography.fontSize.md,
     flex: 1,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

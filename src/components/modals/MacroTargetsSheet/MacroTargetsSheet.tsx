@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -33,8 +32,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   visible,
   onClose,
   onSave,
-  initialValues,
-}) => {
+  initialValues }) => {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -61,7 +59,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     }
   }, [visible, initialValues]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     const updates: {
       calorieTarget?: number;
       proteinTarget?: number;
@@ -144,7 +142,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
     if (!success) {
       Alert.alert('Error', 'Failed to update macro targets');
     }
-  }, [calories, protein, carbs, fat, onSave]);
+  };
 
   return (
     <BottomSheetModal
@@ -245,17 +243,12 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   description: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   section: {
-    marginBottom: theme.spacing.lg,
-  },
-}));
+    marginBottom: theme.spacing.lg } }));

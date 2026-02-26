@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useCallback,
-  useState,
-  useEffect,
-  useRef,
-} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Alert, Text, Pressable } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
@@ -20,8 +14,7 @@ import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import {
   useUnfavoriteRecipeMutation,
   MySavedRecipesDocument,
-  type MySavedRecipesQuery,
-} from '#generated';
+  type MySavedRecipesQuery } from '#generated';
 import { useSavedRecipes } from '#/hooks/recipe/useSavedRecipes';
 import { useRecipeFolders } from '#/hooks/recipe/useRecipeFolders';
 import { useRecipeTags } from '#/hooks/recipe/useRecipeTags';
@@ -54,8 +47,7 @@ export const RecipeMain: React.FC = () => {
   const {
     renameFolder,
     deleteFolder,
-    loading: folderActionLoading,
-  } = useFolderActions();
+    loading: folderActionLoading } = useFolderActions();
 
   // State for random recipes (shown when user has no saved recipes)
   const [randomRecipes, setRandomRecipes] = useState<RecipeInformation[]>([]);
@@ -90,8 +82,7 @@ export const RecipeMain: React.FC = () => {
       setLoadingRandom(true);
       try {
         const random = await spoonacularService.getRandomRecipes({
-          number: 10,
-        }, controller.signal);
+          number: 10 }, controller.signal);
         setRandomRecipes(random);
       } catch (error: any) {
         if (error.name === 'AbortError') return;
@@ -106,7 +97,6 @@ export const RecipeMain: React.FC = () => {
     fetchRandomRecipes();
 
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipes.length, loading]); // Intentionally exclude loadingRandom to prevent infinite loop
 
   // Clear random recipes when user saves their first recipe
@@ -121,7 +111,7 @@ export const RecipeMain: React.FC = () => {
   useTabBarAddButton(() => navigate('RecipeCreate'));
 
   // Manual refresh to get new random recipes
-  const handleRefreshRandom = useCallback(async () => {
+  const handleRefreshRandom = async () => {
     if (loadingRandom) return;
 
     setLoadingRandom(true);
@@ -137,13 +127,13 @@ export const RecipeMain: React.FC = () => {
     } finally {
       setLoadingRandom(false);
     }
-  }, [loadingRandom]);
+  };
 
   // Determine if we should show random recipes
   const showRandomRecipes = recipes.length === 0 && randomRecipes.length > 0;
 
   // Filter recipes based on search query, folder, and tags
-  const filteredRecipes = useMemo(() => {
+  const filteredRecipes = (() => {
     let result = recipes;
 
     // Filter by folder
@@ -170,14 +160,14 @@ export const RecipeMain: React.FC = () => {
     }
 
     return result;
-  }, [recipes, searchQuery, selectedFolder, selectedTags]);
+  })();
 
   // Clear all filters
-  const handleClearFilters = useCallback(() => {
+  const handleClearFilters = () => {
     setSelectedFolder(null);
     setSelectedTags([]);
     setSearchQuery('');
-  }, []);
+  };
 
   // Unfavorite (remove from saved) recipe mutation
   const [unfavoriteRecipeMutation] = useUnfavoriteRecipeMutation({
@@ -199,17 +189,13 @@ export const RecipeMain: React.FC = () => {
                 edges: existing.me.savedRecipesConnection.edges.filter(
                   edge => edge.node.recipe.id !== variables.recipeId,
                 ),
-                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-              },
-            },
-          };
+                totalCount: (existing.me.savedRecipesConnection.totalCount ?? 0) - 1 } } };
         },
       );
-    },
-  });
+    } });
 
   // Transform filtered recipes to list items format (handles both saved and random)
-  const items = useMemo(() => {
+  const items = (() => {
     // Use random recipes if showing them, otherwise use filtered saved recipes
     const recipesToShow = showRandomRecipes ? randomRecipes : filteredRecipes;
 
@@ -238,40 +224,34 @@ export const RecipeMain: React.FC = () => {
           <View style={commonStyles.listItemImageContainerCompact}>
             <CachedImage uri={imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
           </View>
-        ) : undefined,
-      };
+        ) : undefined };
     });
-  }, [filteredRecipes, randomRecipes, showRandomRecipes]);
+  })();
 
-  const handleSearchRecipes = useCallback(() => {
+  const handleSearchRecipes = () => {
     navigate('RecipeSearch', { initialQuery: searchQuery });
-  }, [navigate, searchQuery]);
+  };
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     if (showRandomRecipes) {
       await handleRefreshRandom();
     } else {
       await refetch();
     }
-  }, [showRandomRecipes, handleRefreshRandom, refetch]);
+  };
 
-  const handleRemoveRecipe = useCallback(
-    async (recipeId: string) => {
+  const handleRemoveRecipe = async (recipeId: string) => {
       try {
         await unfavoriteRecipeMutation({
-          variables: { recipeId },
-        });
+          variables: { recipeId } });
       } catch (error) {
         console.error('Failed to remove recipe:', error);
         Alert.alert('Error', 'Failed to remove recipe. Please try again.');
       }
-    },
-    [unfavoriteRecipeMutation],
-  );
+    };
 
   // Header right action - navigate to recipe search
-  const headerRight = useMemo(
-    () => (
+  const headerRight = (
       <Pressable
         onPress={handleSearchRecipes}
         hitSlop={8}
@@ -284,9 +264,7 @@ export const RecipeMain: React.FC = () => {
           color={theme.colors.textSecondary}
         />
       </Pressable>
-    ),
-    [handleSearchRecipes, theme.colors.textSecondary],
-  );
+    );
 
   const emptyStateConfig = {
     icon: 'book' as const,
@@ -294,29 +272,23 @@ export const RecipeMain: React.FC = () => {
     description: 'Search for recipes and save your favorites',
     action: {
       label: 'Search Recipes',
-      onPress: handleSearchRecipes,
-    },
-  };
+      onPress: handleSearchRecipes } };
 
   // Handle item press - navigate differently for saved vs random recipes
-  const handleItemPress = useCallback(
-    (id: string | number) => {
+  const handleItemPress = (id: string | number) => {
       if (showRandomRecipes) {
         // Random recipe from Spoonacular - navigate with external source params
         navigate('RecipeDetail', {
           externalSource: 'SPOONACULAR',
-          externalId: String(id),
-        });
+          externalId: String(id) });
       } else {
         // Saved recipe - navigate with recipeId
         navigate('RecipeDetail', { recipeId: String(id) });
       }
-    },
-    [navigate, showRandomRecipes],
-  );
+    };
 
   // Suggested Recipes Header Component - shown when displaying random recipes
-  const SuggestedHeader = useMemo(() => {
+  const SuggestedHeader = (() => {
     if (!showRandomRecipes) return null;
     return (
       <View style={styles.suggestedHeader}>
@@ -344,24 +316,17 @@ export const RecipeMain: React.FC = () => {
         </Pressable>
       </View>
     );
-  }, [
-    showRandomRecipes,
-    handleRefreshRandom,
-    loadingRandom,
-    theme.colors.textSecondary,
-    theme.colors.primary,
-  ]);
+  })();
 
   // Check if any filters are active
   const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
 
   // Define filter tabs with modal triggers
-  const filterTabs = useMemo(() => {
+  const filterTabs = (() => {
     const tabs: FilterTabConfig<string>[] = [
       {
         id: 'all',
-        label: 'All',
-      },
+        label: 'All' },
     ];
 
     // Add folder pill if folders exist
@@ -371,8 +336,7 @@ export const RecipeMain: React.FC = () => {
         label: selectedFolder || 'Folders',
         icon: 'folder',
         onPress: () => setShowFolderPicker(true),
-        showDropdownIndicator: true,
-      });
+        showDropdownIndicator: true });
     }
 
     // Add tags pill if tags exist
@@ -385,36 +349,31 @@ export const RecipeMain: React.FC = () => {
             : 'Tags',
         icon: 'pricetag-outline',
         onPress: () => setShowTagPicker(true),
-        showDropdownIndicator: true,
-      });
+        showDropdownIndicator: true });
     }
 
     return tabs;
-  }, [folders.length, availableTags.length, selectedFolder, selectedTags]);
+  })();
 
   // Calculate counts for filter tabs
-  const filterCounts = useMemo(
-    () => ({
+  const filterCounts = ({
       all: recipes.length,
       folder: folders.length,
-      tags: availableTags.length,
-    }),
-    [recipes.length, folders.length, availableTags.length],
-  );
+      tags: availableTags.length });
 
   // Compute which tabs have active filters (shown with subtle filtered styling)
-  const filteredTabs = useMemo(() => {
+  const filteredTabs = (() => {
     const filtered: string[] = [];
     if (selectedFolder) filtered.push('folder');
     if (selectedTags.length > 0) filtered.push('tags');
     return filtered;
-  }, [selectedFolder, selectedTags.length]);
+  })();
 
   // "All" is only active when no filters are applied; otherwise no tab is active
   const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
 
   // Filter Header Component - shown when user has saved recipes
-  const FilterHeader = useMemo(() => {
+  const FilterHeader = (() => {
     // Show suggested header when showing random recipes
     if (showRandomRecipes) {
       return SuggestedHeader;
@@ -440,23 +399,11 @@ export const RecipeMain: React.FC = () => {
           icon: 'close',
           onPress: handleClearFilters,
           testID: 'recipe-clear-filters',
-          disabled: !hasActiveFilters,
-        }}
+          disabled: !hasActiveFilters }}
         testIDPrefix="recipe-filter-tab"
       />
     );
-  }, [
-    showRandomRecipes,
-    folders.length,
-    availableTags.length,
-    filterTabs,
-    activeFilterTab,
-    filteredTabs,
-    filterCounts,
-    hasActiveFilters,
-    handleClearFilters,
-    SuggestedHeader,
-  ]);
+  })();
 
   return (
     <View style={styles.container} testID="recipes-screen">
@@ -525,11 +472,9 @@ export const RecipeMain: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   searchBarContainer: {
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   suggestedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -539,27 +484,20 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   suggestedTextContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   suggestedTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   suggestedSubtitle: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   refreshButton: {
     padding: theme.spacing.sm,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

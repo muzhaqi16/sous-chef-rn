@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks/useSharedBottomSheetConfigs';
@@ -13,16 +12,14 @@ import { ItemSuggestion } from '#generated';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
 import {
   BottomSheetSearchBar,
-  type BottomSheetSearchBarRef,
-} from '#components/molecules/BottomSheetSearchBar';
+  type BottomSheetSearchBarRef } from '#components/molecules/BottomSheetSearchBar';
 import { ActionCard } from '#components/molecules/ActionCard';
 import { SuggestionListItem } from '#components/molecules/SuggestionListItem';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
 import type {
   AddItemSheetProps,
   BaseSuggestionItem,
-  SuggestionGroupConfig,
-} from './types';
+  SuggestionGroupConfig } from './types';
 import { useAddItemSheetState } from './useAddItemSheetState';
 
 /**
@@ -51,8 +48,7 @@ export function AddItemSheet({
   exitingItems: externalExitingItems,
   onExitComplete,
   initialSearchQuery = '',
-  children,
-}: AddItemSheetProps) {
+  children }: AddItemSheetProps) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -64,8 +60,7 @@ export function AddItemSheet({
   const state = useAddItemSheetState({
     visible,
     contextId,
-    deferFetch: config.deferFetch,
-  });
+    deferFetch: config.deferFetch });
 
   // Destructure for stable references in callbacks
   const { setSearchQuery } = state;
@@ -84,13 +79,10 @@ export function AddItemSheet({
   const showSuggestions = !showSearchResults;
 
   // Search handler - called after BottomSheetSearchBar debounce
-  const handleSearchChange = useCallback(
-    (text: string) => {
+  const handleSearchChange = (text: string) => {
       setSearchQuery(text);
       handleSearchTermChange(text);
-    },
-    [setSearchQuery, handleSearchTermChange],
-  );
+    };
 
   // Control bottom sheet visibility
   useEffect(() => {
@@ -105,32 +97,25 @@ export function AddItemSheet({
   }, [visible, contextId, resetAutocomplete]);
 
   // Wrap onAddManually to provide search value
-  const handleAddManually = useCallback(() => {
+  const handleAddManually = () => {
     const searchValue = searchBarRef.current?.getValue() || '';
     onAddManually(searchValue);
-  }, [onAddManually]);
+  };
 
   // Handle selecting a search suggestion
-  const handleSelectSearchSuggestion = useCallback(
-    (item: ItemSuggestion) => {
+  const handleSelectSearchSuggestion = (item: ItemSuggestion) => {
       onQuickAddSearchSuggestion(item);
       // Clear search after adding
       searchBarRef.current?.clear();
       setSearchQuery('');
       resetAutocomplete();
-    },
-    [onQuickAddSearchSuggestion, setSearchQuery, resetAutocomplete],
-  );
+    };
 
   // Stable theme colors reference for SuggestionListItem (avoids per-item useUnistyles)
-  const themeColors = useMemo(
-    () => ({ primary: theme.colors.primary, textTertiary: theme.colors.textTertiary }),
-    [theme.colors.primary, theme.colors.textTertiary],
-  );
+  const themeColors = ({ primary: theme.colors.primary, textTertiary: theme.colors.textTertiary });
 
   // Render a suggestion item with exit animation support
-  const renderSuggestionItem = useCallback(
-    (item: BaseSuggestionItem) => {
+  const renderSuggestionItem = (item: BaseSuggestionItem) => {
       const itemId = item.itemId;
       const isExiting = exitingItems.has(itemId);
 
@@ -148,20 +133,10 @@ export function AddItemSheet({
           themeColors={themeColors}
         />
       );
-    },
-    [
-      config.placeholderIcon,
-      exitingItems,
-      isMutating,
-      onExitComplete,
-      onQuickAddSuggestion,
-      themeColors,
-    ],
-  );
+    };
 
   // Render a section of suggestions
-  const renderSuggestionSection = useCallback(
-    (groupConfig: SuggestionGroupConfig) => {
+  const renderSuggestionSection = (groupConfig: SuggestionGroupConfig) => {
       const items = groupConfig.accessor(suggestions.grouped);
       if (items.length === 0) return null;
 
@@ -173,9 +148,7 @@ export function AddItemSheet({
           </View>
         </View>
       );
-    },
-    [suggestions.grouped, renderSuggestionItem],
-  );
+    };
 
   return (
     <>
@@ -228,8 +201,7 @@ export function AddItemSheet({
               rightActions={[
                 {
                   icon: 'barcode-outline',
-                  onPress: onScanPress,
-                },
+                  onPress: onScanPress },
               ]}
             />
 
@@ -306,65 +278,53 @@ export function AddItemSheet({
 export function useAddItemSheetRefs() {
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
 
-  const getSearchValue = useCallback(() => {
+  const getSearchValue = () => {
     return searchBarRef.current?.getValue() || '';
-  }, []);
+  };
 
-  const clearSearch = useCallback(() => {
+  const clearSearch = () => {
     searchBarRef.current?.clear();
-  }, []);
+  };
 
   return { searchBarRef, getSearchValue, clearSearch };
 }
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   actionButtons: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   sectionTitle: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     letterSpacing: 1,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   loadingContainer: {
     padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyContainer: {
     padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   emptySubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   suggestionSection: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   suggestionList: {
-    gap: theme.spacing.xs,
-  },
-}));
+    gap: theme.spacing.xs } }));

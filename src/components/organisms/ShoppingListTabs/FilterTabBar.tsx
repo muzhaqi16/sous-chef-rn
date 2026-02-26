@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -24,16 +24,12 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   jumpTo,
   counts,
   actionButtons,
-  testIDPrefix = 'filter-tab',
-}) => {
+  testIDPrefix = 'filter-tab' }) => {
   const { theme } = useUnistyles();
 
-  const handleTabPress = useCallback(
-    (key: string) => {
+  const handleTabPress = (key: string) => {
       jumpTo(key);
-    },
-    [jumpTo],
-  );
+    };
 
   return (
     <View style={styles.container}>
@@ -97,41 +93,31 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   scrollView: {
-    flexShrink: 1,
-  },
+    flexShrink: 1 },
   scrollContent: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   actionButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.xl,
-  },
+    borderRadius: theme.radii.xl },
   actionButtonWithBg: {
-    backgroundColor: theme.colors.filterTab.inactiveBg,
-  },
+    backgroundColor: theme.colors.filterTab.inactiveBg },
   actionLabelButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   actionDisabled: {
-    opacity: 0.4,
-  },
+    opacity: 0.4 },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
-}));
+    color: theme.colors.primary } }));

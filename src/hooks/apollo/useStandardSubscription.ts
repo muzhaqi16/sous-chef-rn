@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import type { ErrorLike } from '@apollo/client';
 import { useErrorService } from '#/services/errorService';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
@@ -106,9 +106,7 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
   // Memoize handlers so Apollo subscription doesn't restart on every render
   // Always provide onData when userId is set (for deduplication) or when customOnData is provided
   const needsOnData = !!customOnData || !!userId;
-  const onData = useMemo(
-    () =>
-      needsOnData
+  const onData = needsOnData
         ? ({ data }: { data: { data?: Record<string, unknown> } }) => {
             // Check deduplication if userId provided
             if (userId && data?.data) {
@@ -131,50 +129,37 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
             // Read from ref to always get the latest callback
             customOnDataRef.current?.({ data });
           }
-        : undefined,
-    // Only recreate when subscription identity changes, not when callbacks change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [userId, operation, entityId, enableLogging, shouldProcessUpdate, needsOnData],
-  );
+        : undefined;
 
   // Standardized onError handler
-  const onError = useMemo(
-    () =>
-      customOnError
-        ? (error: ErrorLike) => {
-            // Read from ref to always get the latest callback
-            customOnErrorRef.current?.(error);
-          }
-        : (error: ErrorLike) => {
-            const { message } = handleApolloError(error, { operation });
+  const onError = customOnError
+    ? (error: ErrorLike) => {
+        // Read from ref to always get the latest callback
+        customOnErrorRef.current?.(error);
+      }
+    : (error: ErrorLike) => {
+        const { message } = handleApolloError(error, { operation });
 
-            if (__DEV__) {
-              console.warn(`❌ ${operation}: Error`, {
-                entityId,
-                error: message,
-                timestamp: new Date().toISOString(),
-              });
-            }
+        if (__DEV__) {
+          console.warn(`❌ ${operation}: Error`, {
+            entityId,
+            error: message,
+            timestamp: new Date().toISOString(),
+          });
+        }
 
-            // Don't refetch on subscription errors - let the query handle reconnection
-            // Subscriptions will auto-reconnect when network returns
-          },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [operation, entityId, handleApolloError, !!customOnError],
-  );
+        // Don't refetch on subscription errors - let the query handle reconnection
+        // Subscriptions will auto-reconnect when network returns
+      };
 
   // Standardized onComplete handler
-  const onComplete = useMemo(
-    () =>
-      enableLogging
+  const onComplete = enableLogging
         ? () => {
             if (__DEV__) {
               console.log(`✅ ${operation}: Connected`, entityId);
             }
           }
-        : undefined,
-    [enableLogging, operation, entityId],
-  );
+        : undefined;
 
   return {
     onData,

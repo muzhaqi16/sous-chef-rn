@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
@@ -14,13 +14,13 @@ export function useBottomSheetBackHandler(
   ref: React.RefObject<BottomSheetModal | null>,
   enabled: boolean = true,
 ) {
-  const handleBackPress = useCallback(() => {
+  const handleBackPress = () => {
     if (enabled && ref.current) {
       ref.current.dismiss();
       return true; // Prevent default (exit app)
     }
     return false; // Allow default behavior
-  }, [enabled, ref]);
+  };
 
   useEffect(() => {
     if (!enabled) return;

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -44,13 +44,13 @@ export const TagPicker: React.FC<TagPickerProps> = ({
     } else {
       ref.current?.dismiss();
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible]);
 
-  const filteredTags = useMemo(() => {
+  const filteredTags = (() => {
     if (!searchQuery.trim()) return tags;
     const query = searchQuery.toLowerCase();
     return tags.filter(tag => tag.toLowerCase().includes(query));
-  }, [tags, searchQuery]);
+  })();
 
   const handleToggleTag = (tag: string) => {
     const newSelection = selectedTags.includes(tag)

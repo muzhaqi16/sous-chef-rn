@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useGetShoppingListQuery, GetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -56,35 +56,26 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
   // Sorting client-side ensures subscription updates to sortOrder are reflected in UI
   // Apollo's cached Connection order doesn't change when item fields are updated
   // NOTE: Only use previousData fallback if same list (prevents flash on list switch)
-  const items = useMemo((): ShoppingListItemDisplayFragment[] => {
-    // If list changed, don't fall back to previousData (it contains old list's items)
-    const edges = listIdChanged
-      ? data?.shoppingList?.itemsConnection?.edges ?? []
-      : data?.shoppingList?.itemsConnection?.edges ??
-        previousData?.shoppingList?.itemsConnection?.edges ??
-        [];
-    return edges
-      .map(edge => edge.node)
-      .sort((a, b) => {
-        // Sort by sortOrder (string comparison for fractional indexing)
-        const sortA = a.sortOrder ?? 'zzz';
-        const sortB = b.sortOrder ?? 'zzz';
-        return sortA.localeCompare(sortB);
-      });
-  }, [
-    listIdChanged,
-    data?.shoppingList?.itemsConnection?.edges,
-    previousData?.shoppingList?.itemsConnection?.edges,
-  ]);
+  // If list changed, don't fall back to previousData (it contains old list's items)
+  const itemEdges = listIdChanged
+    ? data?.shoppingList?.itemsConnection?.edges ?? []
+    : data?.shoppingList?.itemsConnection?.edges ??
+      previousData?.shoppingList?.itemsConnection?.edges ??
+      [];
+  const items: ShoppingListItemDisplayFragment[] = itemEdges
+    .map(edge => edge.node)
+    .sort((a, b) => {
+      // Sort by sortOrder (string comparison for fractional indexing)
+      const sortA = a.sortOrder ?? 'zzz';
+      const sortB = b.sortOrder ?? 'zzz';
+      return sortA.localeCompare(sortB);
+    });
 
   // Extract the shopping list detail (with previousData fallback for same list)
   // Used for permissions, collaborators, and home membership
-  const shoppingList = useMemo((): ShoppingListDetail | null => {
-    if (listIdChanged) {
-      return data?.shoppingList ?? null;
-    }
-    return data?.shoppingList ?? previousData?.shoppingList ?? null;
-  }, [listIdChanged, data?.shoppingList, previousData?.shoppingList]);
+  const shoppingList: ShoppingListDetail | null = listIdChanged
+    ? data?.shoppingList ?? null
+    : data?.shoppingList ?? previousData?.shoppingList ?? null;
 
   return {
     items,

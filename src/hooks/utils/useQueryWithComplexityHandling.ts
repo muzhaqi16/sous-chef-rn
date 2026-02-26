@@ -65,7 +65,6 @@ export function useQueryWithComplexityHandling<T extends { error?: ErrorLike; re
       hasShownAlertRef.current = false;
       lastErrorRef.current = null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryHookResult.error]);
 
   return {

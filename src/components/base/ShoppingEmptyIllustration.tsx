@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import {
   Canvas,
@@ -34,11 +34,11 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
   const { theme } = useUnistyles();
 
   // Theme-aware colors
-  const colors = useMemo(() => ({
+  const colors = ({
     // Cart - use secondary/tertiary icon colors for theme support
     cart: theme.colors.iconSecondary,
     cartOutline: theme.colors.iconTertiary,
-  }), [theme]);
+  });
 
   const config = SIZES[size];
   const cx = config.canvas / 2;
@@ -67,7 +67,7 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
   ]);
 
   // Create empty cart paths
-  const cartBodyPath = useMemo(() => {
+  const cartBodyPath = (() => {
     const path = Skia.Path.Make();
     // Cart basket
     path.moveTo(cx - 35 * scale, cy - 15 * scale);
@@ -75,18 +75,18 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
     path.lineTo(cx + 30 * scale, cy + 25 * scale);
     path.lineTo(cx + 35 * scale, cy - 15 * scale);
     return path;
-  }, [cx, cy, scale]);
+  })();
 
-  const cartHandlePath = useMemo(() => {
+  const cartHandlePath = (() => {
     const path = Skia.Path.Make();
     // Cart handle extending left
     path.moveTo(cx - 35 * scale, cy - 15 * scale);
     path.lineTo(cx - 50 * scale, cy - 15 * scale);
     path.lineTo(cx - 55 * scale, cy - 25 * scale);
     return path;
-  }, [cx, cy, scale]);
+  })();
 
-  const cartGridLines = useMemo(() => {
+  const cartGridLines = (() => {
     const lines: ReturnType<typeof Skia.Path.Make>[] = [];
     // Vertical lines
     for (let i = -1; i <= 1; i++) {
@@ -106,7 +106,7 @@ export const ShoppingEmptyIllustration: React.FC<ShoppingEmptyIllustrationProps>
       lines.push(line);
     }
     return lines;
-  }, [cx, cy, scale]);
+  })();
 
   return (
     <View style={componentStyles.container}>

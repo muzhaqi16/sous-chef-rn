@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useMovePurchasedItemsToPantryMutation } from '#generated';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
@@ -16,8 +15,7 @@ interface UseBatchMoveToPantryReturn {
 
 export function useBatchMoveToPantry({
   currentListId,
-  onSuccess,
-}: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
+  onSuccess }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
   const [movePurchasedMutation, { loading }] =
     useMovePurchasedItemsToPantryMutation({
       update: (cache, { data }) => {
@@ -41,8 +39,7 @@ export function useBatchMoveToPantry({
           if (movedCount > 0) {
             const parentCacheId = cache.identify({
               __typename: 'ShoppingList',
-              id: currentListId,
-            });
+              id: currentListId });
             if (parentCacheId) {
               cache.modify({
                 id: parentCacheId,
@@ -52,9 +49,7 @@ export function useBatchMoveToPantry({
                   },
                   completedItems(existing: number = 0) {
                     return Math.max(0, existing - movedCount);
-                  },
-                },
-              });
+                  } } });
             }
           }
         } catch (error) {
@@ -63,10 +58,9 @@ export function useBatchMoveToPantry({
       },
       onError: error => {
         toastService.error(error.message || 'Failed to move items to pantry');
-      },
-    });
+      } });
 
-  const batchMoveToPantry = useCallback(async () => {
+  const batchMoveToPantry = async () => {
     if (!currentListId) {
       toastService.error('No shopping list selected');
       return;
@@ -74,8 +68,7 @@ export function useBatchMoveToPantry({
 
     try {
       const result = await movePurchasedMutation({
-        variables: { shoppingListId: currentListId },
-      });
+        variables: { shoppingListId: currentListId } });
 
       const data = result.data?.movePurchasedItemsToPantry;
       if (!data) return;
@@ -94,17 +87,15 @@ export function useBatchMoveToPantry({
       Telemetry.trackEvent('batch_move_purchased_to_pantry', {
         shopping_list_id: currentListId,
         moved_count: movedCount,
-        skipped_count: skippedCount,
-      });
+        skipped_count: skippedCount });
 
       onSuccess?.();
     } catch {
       // Error handled by mutation onError
     }
-  }, [currentListId, movePurchasedMutation, onSuccess]);
+  };
 
   return {
     batchMoveToPantry,
-    loading,
-  };
+    loading };
 }

@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useAppStore } from '#store/useAppStore';
 import { hasCredentialsForAccount, getBiometricCapability } from '#/storage/keychain';
 
@@ -12,7 +11,7 @@ export const useBiometricPrompting = () => {
   const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
   const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
 
-  const shouldShowPostLoginBiometricPrompt = useCallback(async (targetUser?: { id: string; email: string }): Promise<BiometricPromptDecision> => {
+  const shouldShowPostLoginBiometricPrompt = async (targetUser?: { id: string; email: string }): Promise<BiometricPromptDecision> => {
     const checkUser = targetUser || user;
     if (!checkUser?.id || !checkUser?.email) {
       return { shouldShow: false, reason: 'No user found' };
@@ -47,36 +46,32 @@ export const useBiometricPrompting = () => {
       console.error('Error checking biometric prompt eligibility:', error);
       return { shouldShow: false, reason: 'Error checking eligibility' };
     }
-  }, [user, getUserNavigationState]);
+  };
 
-  const recordBiometricPromptResponse = useCallback((enabled: boolean, declinedPermanently = false) => {
+  const recordBiometricPromptResponse = (enabled: boolean, declinedPermanently = false) => {
     if (!user?.id) return;
 
     if (enabled) {
       // User enabled biometric - clear any decline state
       setUserNavigationState(user.id, {
         biometricEnabled: true,
-        biometricDeclinedPermanently: false,
-      });
+        biometricDeclinedPermanently: false });
     } else if (declinedPermanently) {
       // User chose "Never ask again"
       setUserNavigationState(user.id, {
-        biometricDeclinedPermanently: true,
-      });
+        biometricDeclinedPermanently: true });
     }
-  }, [user?.id, setUserNavigationState]);
+  };
 
-  const resetBiometricDeclination = useCallback(() => {
+  const resetBiometricDeclination = () => {
     if (!user?.id) return;
 
     setUserNavigationState(user.id, {
-      biometricDeclinedPermanently: false,
-    });
-  }, [user?.id, setUserNavigationState]);
+      biometricDeclinedPermanently: false });
+  };
 
   return {
     shouldShowPostLoginBiometricPrompt,
     recordBiometricPromptResponse,
-    resetBiometricDeclination,
-  };
+    resetBiometricDeclination };
 };

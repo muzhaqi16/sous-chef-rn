@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -22,11 +22,10 @@ function MacroStat({ label, value, unit }: { label: string; value: number; unit:
 
 export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
   nutritionSummary,
-  nutritionGoalProgress,
-}) => {
+  nutritionGoalProgress }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const toggle = useCallback(() => setExpanded(prev => !prev), []);
+  const toggle = () => setExpanded(prev => !prev);
 
   return (
     <View style={styles.container}>
@@ -105,59 +104,46 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   title: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   collapsedCalories: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   chevron: {
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   body: {
     gap: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-  },
+    paddingBottom: theme.spacing.md },
   section: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   sectionTitle: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   macroRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+    justifyContent: 'space-between' },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
-  },
+    paddingVertical: 4 },
   infoLabel: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   infoValue: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-}));
+    color: theme.colors.textPrimary } }));
 
 const statStyles = StyleSheet.create(theme => ({
   container: {
@@ -166,20 +152,15 @@ const statStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    marginHorizontal: 2,
-  },
+    marginHorizontal: 2 },
   value: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   unit: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   label: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-}));
+    marginTop: 2 } }));

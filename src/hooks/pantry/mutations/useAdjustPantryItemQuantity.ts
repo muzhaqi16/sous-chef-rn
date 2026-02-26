@@ -5,33 +5,27 @@
  * Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useAdjustPantryItemQuantityMutation,
-  PantryItemDisplayFragmentDoc,
-} from '#generated';
+  PantryItemDisplayFragmentDoc } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  getVersionConflictMessage } from '#/utils/errors/versionConflict';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
 }
 
 export function useAdjustPantryItemQuantity({
-  onSuccess,
-}: UseAdjustPantryItemQuantityOptions = {}) {
+  onSuccess }: UseAdjustPantryItemQuantityOptions = {}) {
   const { handleApolloError } = useErrorService();
 
   const [adjustMutation, { loading }] = useAdjustPantryItemQuantityMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
-  const adjustQuantity = useCallback(
-    async (
+  const adjustQuantity = async (
       pantryItemId: string,
       newQuantity: number,
       reason: string,
@@ -45,9 +39,7 @@ export function useAdjustPantryItemQuantity({
             newQuantity,
             reason,
             ...(version != null ? { version } : {}),
-            ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
-          },
-        },
+            ...(remainingNetWeight != null ? { remainingNetWeight } : {}) } },
         update: (cache, { data: mutationData }) => {
           const pantryItem = mutationData?.adjustPantryItemQuantity?.pantryItem;
           if (!pantryItem) return;
@@ -55,14 +47,11 @@ export function useAdjustPantryItemQuantity({
           cache.writeFragment({
             id: cache.identify({
               __typename: 'PantryItem',
-              id: pantryItem.id,
-            }),
+              id: pantryItem.id }),
             fragment: PantryItemDisplayFragmentDoc,
             fragmentName: 'PantryItemDisplay',
-            data: pantryItem,
-          });
-        },
-      });
+            data: pantryItem });
+        } });
 
       if (result.data?.adjustPantryItemQuantity?.pantryItem) {
         onSuccess?.();
@@ -74,16 +63,13 @@ export function useAdjustPantryItemQuantity({
           Alert.alert('Item Updated', getVersionConflictMessage(result.error));
         } else {
           const { message } = handleApolloError(result.error, {
-            operation: 'Adjust Quantity',
-          });
+            operation: 'Adjust Quantity' });
           Alert.alert('Error', message);
         }
       }
 
       return false;
-    },
-    [adjustMutation, onSuccess, handleApolloError],
-  );
+    };
 
   return { adjustQuantity, loading };
 }

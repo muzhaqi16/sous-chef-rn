@@ -1,10 +1,9 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Pressable, Text, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+  withSpring } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
@@ -47,26 +46,24 @@ export const Button: React.FC<ButtonProps> = ({
   txtStyle,
   testID,
   accessibilityLabel,
-  accessibilityHint,
-}) => {
+  accessibilityHint }) => {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+    transform: [{ scale: scale.value }] }));
 
-  const handlePressIn = useCallback(() => {
+  const handlePressIn = () => {
     scale.set(withSpring(0.97, { damping: 15, stiffness: 300 }));
-  }, [scale]);
+  };
 
-  const handlePressOut = useCallback(() => {
+  const handlePressOut = () => {
     scale.set(withSpring(1, { damping: 15, stiffness: 300 }));
-  }, [scale]);
+  };
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     HapticService.light();
     onPress();
-  }, [onPress]);
+  };
 
   // Use title/children as fallback for accessibility label
   const buttonLabel = accessibilityLabel || title || (typeof children === 'string' ? children : undefined);
@@ -130,68 +127,50 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   primary: {
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   secondary: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   danger: {
-    backgroundColor: theme.colors.error,
-  },
+    backgroundColor: theme.colors.error },
   ghost: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'transparent',
-  },
+    borderColor: 'transparent' },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   small: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    minHeight: theme.sizes.button.sm,
-  },
+    minHeight: theme.sizes.button.sm },
   medium: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    minHeight: theme.sizes.button.md,
-  },
+    minHeight: theme.sizes.button.md },
   large: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
-    minHeight: theme.sizes.button.lg,
-  },
+    minHeight: theme.sizes.button.lg },
   fullWidth: {
-    flex: 1,
-  },
+    flex: 1 },
   disabled: {
-    opacity: theme.opacity.disabled,
-  },
+    opacity: theme.opacity.disabled },
   text: {
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    fontSize: theme.fonts.size.md,
-  },
+    fontSize: theme.fonts.size.md },
   primaryText: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   secondaryText: {
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   dangerText: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   ghostText: {
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   outlineText: {
-    color: theme.colors.primary,
-  },
-}));
+    color: theme.colors.primary } }));

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -23,13 +23,11 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm,
-}) => {
+  onConfirm }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!pantryItem,
     onDismiss: onClose,
-    snapPoints: ['65%', '85%'],
-  });
+    snapPoints: ['65%', '85%'] });
   const [quantityInput, setQuantityInput] = useState('');
   const [reason, setReason] = useState('');
   const [remainingWeightInput, setRemainingWeightInput] = useState('');
@@ -42,7 +40,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     }
   }, [visible, pantryItem]);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     if (!pantryItem) return;
 
     const newQuantity = parseFractionalInput(quantityInput);
@@ -64,7 +62,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
 
     onConfirm(newQuantity, reason.trim(), remainingNetWeight);
     onClose();
-  }, [pantryItem, quantityInput, reason, remainingWeightInput, onConfirm, onClose]);
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>

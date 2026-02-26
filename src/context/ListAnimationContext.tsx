@@ -1,8 +1,6 @@
 import React, {
   createContext,
   useContext,
-  useCallback,
-  useMemo,
   useRef,
   useEffect,
   ReactNode,
@@ -105,114 +103,105 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
    * Register an item's animation trigger function.
    * Called by item component via useLayoutEffect on mount.
    */
-  const registerAnimationTrigger = useCallback(
-    (itemId: string, trigger: ExitAnimationTrigger) => {
-      animationTriggersRef.current.set(itemId, trigger);
+  const registerAnimationTrigger = (itemId: string, trigger: ExitAnimationTrigger) => {
+    animationTriggersRef.current.set(itemId, trigger);
 
-      // Check if there's a pending animation waiting for this item to register
-      const pending = pendingAnimationsRef.current.get(itemId);
-      if (pending) {
-        // Clear the timeout since we can now trigger directly
-        if (pending.timeoutId) {
-          clearTimeout(pending.timeoutId);
-        }
-        pendingAnimationsRef.current.delete(itemId);
-
-        // Trigger the animation now that item is registered
-        // Use setTimeout to ensure component is fully mounted
-        setTimeout(() => {
-          const currentTrigger = animationTriggersRef.current.get(itemId);
-          if (currentTrigger) {
-            // Default to left direction for delayed triggers
-            currentTrigger(-1, pending.onComplete);
-          } else {
-            // Trigger was unregistered, just run callback
-            pending.onComplete();
-          }
-        }, 0);
+    // Check if there's a pending animation waiting for this item to register
+    const pending = pendingAnimationsRef.current.get(itemId);
+    if (pending) {
+      // Clear the timeout since we can now trigger directly
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
       }
-    },
-    [],
-  );
+      pendingAnimationsRef.current.delete(itemId);
+
+      // Trigger the animation now that item is registered
+      // Use setTimeout to ensure component is fully mounted
+      setTimeout(() => {
+        const currentTrigger = animationTriggersRef.current.get(itemId);
+        if (currentTrigger) {
+          // Default to left direction for delayed triggers
+          currentTrigger(-1, pending.onComplete);
+        } else {
+          // Trigger was unregistered, just run callback
+          pending.onComplete();
+        }
+      }, 0);
+    }
+  };
 
   /**
    * Unregister an item's animation trigger.
    * Called by item component cleanup on unmount.
    */
-  const unregisterAnimationTrigger = useCallback((itemId: string) => {
+  const unregisterAnimationTrigger = (itemId: string) => {
     animationTriggersRef.current.delete(itemId);
-  }, []);
+  };
 
   /**
    * Schedule an exit animation for an item.
    * O(1) performance - directly calls registered trigger.
    * No context state changes = no re-renders.
    */
-  const scheduleAnimation = useCallback(
-    (itemId: string, direction: AnimationDirection, onComplete: () => void) => {
-      // Check if animation already pending for this item (deduplicate)
-      if (pendingAnimationsRef.current.has(itemId)) {
-        return;
-      }
+  const scheduleAnimation = (itemId: string, direction: AnimationDirection, onComplete: () => void) => {
+    // Check if animation already pending for this item (deduplicate)
+    if (pendingAnimationsRef.current.has(itemId)) {
+      return;
+    }
 
-      // Try to get the registered trigger
-      const trigger = animationTriggersRef.current.get(itemId);
+    // Try to get the registered trigger
+    const trigger = animationTriggersRef.current.get(itemId);
 
-      if (trigger) {
-        // Direct call - O(1), no re-renders!
-        trigger(direction, onComplete);
-      } else {
-        // Item not registered (off-screen/virtualized)
-        // Set up timeout fallback to ensure cache update happens
-        const timeoutId = setTimeout(() => {
-          const pending = pendingAnimationsRef.current.get(itemId);
-          if (pending) {
-            pendingAnimationsRef.current.delete(itemId);
-            onComplete();
-          }
-        }, ANIMATION_TIMEOUT_MS);
+    if (trigger) {
+      // Direct call - O(1), no re-renders!
+      trigger(direction, onComplete);
+    } else {
+      // Item not registered (off-screen/virtualized)
+      // Set up timeout fallback to ensure cache update happens
+      const timeoutId = setTimeout(() => {
+        const pending = pendingAnimationsRef.current.get(itemId);
+        if (pending) {
+          pendingAnimationsRef.current.delete(itemId);
+          onComplete();
+        }
+      }, ANIMATION_TIMEOUT_MS);
 
-        pendingAnimationsRef.current.set(itemId, {
-          itemId,
-          onComplete,
-          timeoutId,
-        });
-      }
-    },
-    [],
-  );
+      pendingAnimationsRef.current.set(itemId, {
+        itemId,
+        onComplete,
+        timeoutId,
+      });
+    }
+  };
 
   /**
    * Schedule an entry animation for an item appearing in a new list.
    * Called after cache update moves the item.
    */
-  const scheduleEntryAnimation = useCallback(
-    (itemId: string, direction: AnimationDirection) => {
-      // Clear any existing timeout for this item
-      const existingTimeout = entryAnimationTimeoutsRef.current.get(itemId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
+  const scheduleEntryAnimation = (itemId: string, direction: AnimationDirection) => {
+    // Clear any existing timeout for this item
+    const existingTimeout = entryAnimationTimeoutsRef.current.get(itemId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
 
-      // Store the pending entry animation
-      pendingEntryAnimationsRef.current.set(itemId, { itemId, direction });
+    // Store the pending entry animation
+    pendingEntryAnimationsRef.current.set(itemId, { itemId, direction });
 
-      // Auto-expire entry animations after timeout (item should mount quickly)
-      const timeoutId = setTimeout(() => {
-        pendingEntryAnimationsRef.current.delete(itemId);
-        entryAnimationTimeoutsRef.current.delete(itemId);
-      }, ENTRY_ANIMATION_EXPIRY_MS);
+    // Auto-expire entry animations after timeout (item should mount quickly)
+    const timeoutId = setTimeout(() => {
+      pendingEntryAnimationsRef.current.delete(itemId);
+      entryAnimationTimeoutsRef.current.delete(itemId);
+    }, ENTRY_ANIMATION_EXPIRY_MS);
 
-      entryAnimationTimeoutsRef.current.set(itemId, timeoutId);
-    },
-    [],
-  );
+    entryAnimationTimeoutsRef.current.set(itemId, timeoutId);
+  };
 
   /**
    * Claim a pending entry animation.
    * Called by item component on mount to check if it should animate in.
    */
-  const claimEntryAnimation = useCallback((itemId: string) => {
+  const claimEntryAnimation = (itemId: string) => {
     const pending = pendingEntryAnimationsRef.current.get(itemId);
     if (pending) {
       pendingEntryAnimationsRef.current.delete(itemId);
@@ -225,24 +214,15 @@ export const ListAnimationProvider: React.FC<ListAnimationProviderProps> = ({
       return pending;
     }
     return undefined;
-  }, []);
+  };
 
-  const contextValue = useMemo(
-    () => ({
-      registerAnimationTrigger,
-      unregisterAnimationTrigger,
-      scheduleAnimation,
-      scheduleEntryAnimation,
-      claimEntryAnimation,
-    }),
-    [
-      registerAnimationTrigger,
-      unregisterAnimationTrigger,
-      scheduleAnimation,
-      scheduleEntryAnimation,
-      claimEntryAnimation,
-    ],
-  );
+  const contextValue = {
+    registerAnimationTrigger,
+    unregisterAnimationTrigger,
+    scheduleAnimation,
+    scheduleEntryAnimation,
+    claimEntryAnimation,
+  };
 
   return (
     <ListAnimationContext.Provider value={contextValue}>

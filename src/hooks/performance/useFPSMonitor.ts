@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * FPS Monitor Hook for Development
@@ -36,8 +36,7 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
   const {
     lowFPSThreshold = 30,
     logInterval = 5000,
-    autoStart = __DEV__,
-  } = options;
+    autoStart = __DEV__ } = options;
 
   const [fps, setFps] = useState(60);
   const [isMonitoring, setIsMonitoring] = useState(false);
@@ -46,8 +45,7 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     min: 60,
     max: 60,
     avg: 60,
-    lowFPSCount: 0,
-  });
+    lowFPSCount: 0 });
 
   const frameCountRef = useRef(0);
   const lastTimeRef = useRef(Date.now());
@@ -58,13 +56,13 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
   const fpsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Frame counting loop
-  const countFrame = useCallback(() => {
+  const countFrame = () => {
     frameCountRef.current++;
     rafIdRef.current = requestAnimationFrame(countFrame);
-  }, []);
+  };
 
   // Calculate and update FPS
-  const updateFPS = useCallback(() => {
+  const updateFPS = () => {
     const now = Date.now();
     const elapsed = now - lastTimeRef.current;
 
@@ -96,13 +94,12 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
         min,
         max,
         avg,
-        lowFPSCount: lowFPSCountRef.current,
-      });
+        lowFPSCount: lowFPSCountRef.current });
     }
-  }, [lowFPSThreshold]);
+  };
 
   // Periodic logging
-  const logStats = useCallback(() => {
+  const logStats = () => {
     if (!__DEV__) return;
 
     const history = fpsHistoryRef.current;
@@ -117,10 +114,10 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     if (avg < lowFPSThreshold) {
       console.log(`[PERF] Low FPS: ${avg} avg`);
     }
-  }, [fps, lowFPSThreshold]);
+  };
 
   // Start monitoring
-  const startMonitoring = useCallback(() => {
+  const startMonitoring = () => {
     if (!__DEV__ || isMonitoring) return;
 
     setIsMonitoring(true);
@@ -139,10 +136,10 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     logTimerRef.current = setInterval(logStats, logInterval);
 
     console.log('[PERF] FPS monitor: started');
-  }, [isMonitoring, countFrame, updateFPS, logStats, logInterval]);
+  };
 
   // Stop monitoring
-  const stopMonitoring = useCallback(() => {
+  const stopMonitoring = () => {
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
@@ -161,10 +158,10 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
       console.log('[PERF] FPS monitor: stopped');
       logStats(); // Log final stats
     }
-  }, [logStats]);
+  };
 
   // Reset stats
-  const resetStats = useCallback(() => {
+  const resetStats = () => {
     fpsHistoryRef.current = [];
     lowFPSCountRef.current = 0;
     setStats({
@@ -172,9 +169,8 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
       min: 60,
       max: 60,
       avg: 60,
-      lowFPSCount: 0,
-    });
-  }, []);
+      lowFPSCount: 0 });
+  };
 
   // Auto-start on mount if enabled
   useEffect(() => {
@@ -208,8 +204,7 @@ export function useFPSMonitor(options: FPSMonitorOptions = {}) {
     stats,
     startMonitoring,
     stopMonitoring,
-    resetStats,
-  };
+    resetStats };
 }
 
 /**

@@ -28,6 +28,7 @@ module.exports = {
     'no-barrel-files/no-barrel-files': 'error',
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
+    // Prevent useMemo/useCallback — React Compiler handles memoization automatically
     'no-restricted-imports': [
       'error',
       {
@@ -37,12 +38,19 @@ module.exports = {
             importNames: ['StyleSheet'],
             message: 'Import StyleSheet from "react-native-unistyles" instead.',
           },
+          {
+            name: 'react',
+            importNames: ['useMemo', 'useCallback'],
+            message:
+              'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
         ],
       },
     ],
 
     'react-hooks/rules-of-hooks': 'error',
-    'react-hooks/exhaustive-deps': 'warn',
+    // Disabled — React Compiler tracks dependencies automatically
+    'react-hooks/exhaustive-deps': 'off',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': 'warn',

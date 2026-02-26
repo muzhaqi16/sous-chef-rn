@@ -1,9 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   useDeleteRecipeFolderMutation,
   SavedRecipeFoldersDocument,
-  SavedRecipeFoldersQuery,
-} from '#generated';
+  SavedRecipeFoldersQuery } from '#generated';
 import { toastService } from '#/services/toastService';
 
 /**
@@ -18,16 +17,14 @@ export function useFolderActions() {
   const [deleteRecipeFolderMutation] = useDeleteRecipeFolderMutation({
     onError: err => {
       console.error('Folder action error:', err);
-    },
-  });
+    } });
 
   /**
    * Rename a folder by moving all recipes to a new folder name
    * @param oldName - Current folder name
    * @param newName - New folder name
    */
-  const renameFolder = useCallback(
-    async (oldName: string, newName: string): Promise<boolean> => {
+  const renameFolder = async (oldName: string, newName: string): Promise<boolean> => {
       if (!oldName || !newName || oldName === newName) return false;
 
       setLoading(true);
@@ -36,8 +33,7 @@ export function useFolderActions() {
           variables: { input: { folder: oldName, moveTo: newName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
-              query: SavedRecipeFoldersDocument,
-            });
+              query: SavedRecipeFoldersDocument });
             if (existing?.savedRecipeFolders) {
               cache.writeQuery<SavedRecipeFoldersQuery>({
                 query: SavedRecipeFoldersDocument,
@@ -45,12 +41,9 @@ export function useFolderActions() {
                   __typename: 'Query',
                   savedRecipeFolders: existing.savedRecipeFolders.map(f =>
                     f === oldName ? newName : f,
-                  ),
-                },
-              });
+                  ) } });
             }
-          },
-        });
+          } });
         const payload = result.data?.deleteRecipeFolder;
         if (payload?.success) {
           toastService.success(`Renamed "${oldName}" to "${newName}"${payload.message ? ` - ${payload.message}` : ''}`);
@@ -65,16 +58,13 @@ export function useFolderActions() {
       } finally {
         setLoading(false);
       }
-    },
-    [deleteRecipeFolderMutation],
-  );
+    };
 
   /**
    * Delete a folder - all recipes become unfoldered
    * @param folderName - Folder to delete
    */
-  const deleteFolder = useCallback(
-    async (folderName: string): Promise<boolean> => {
+  const deleteFolder = async (folderName: string): Promise<boolean> => {
       if (!folderName) return false;
 
       setLoading(true);
@@ -83,8 +73,7 @@ export function useFolderActions() {
           variables: { input: { folder: folderName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
-              query: SavedRecipeFoldersDocument,
-            });
+              query: SavedRecipeFoldersDocument });
             if (existing?.savedRecipeFolders) {
               cache.writeQuery<SavedRecipeFoldersQuery>({
                 query: SavedRecipeFoldersDocument,
@@ -92,12 +81,9 @@ export function useFolderActions() {
                   __typename: 'Query',
                   savedRecipeFolders: existing.savedRecipeFolders.filter(
                     f => f !== folderName,
-                  ),
-                },
-              });
+                  ) } });
             }
-          },
-        });
+          } });
         const payload = result.data?.deleteRecipeFolder;
         if (payload?.success) {
           toastService.success(
@@ -114,13 +100,10 @@ export function useFolderActions() {
       } finally {
         setLoading(false);
       }
-    },
-    [deleteRecipeFolderMutation],
-  );
+    };
 
   return {
     loading,
     renameFolder,
-    deleteFolder,
-  };
+    deleteFolder };
 }

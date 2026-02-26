@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -33,26 +33,15 @@ export const PerformanceDashboard: React.FC = () => {
   const [_clearCounter, setClearCounter] = useState(0);
 
   // Derive sorted metrics from raw data
-  const slowestComponents = useMemo(
-    () =>
-      [...componentMetrics.values()]
+  const slowestComponents = [...componentMetrics.values()]
         .sort((a, b) => b.avgRenderTime - a.avgRenderTime)
-        .slice(0, 10),
-    [componentMetrics],
-  );
-  const slowestScreens = useMemo(
-    () =>
-      [...screenMetrics.values()]
+        .slice(0, 10);
+  const slowestScreens = [...screenMetrics.values()]
         .sort((a, b) => b.avgInteractiveTime - a.avgInteractiveTime)
-        .slice(0, 10),
-    [screenMetrics],
-  );
-  const recentMemorySnapshots = useMemo(
-    () => memorySnapshots.slice(-5),
-    [memorySnapshots],
-  );
+        .slice(0, 10);
+  const recentMemorySnapshots = memorySnapshots.slice(-5);
 
-  const handleClearData = useCallback(() => {
+  const handleClearData = () => {
     Alert.alert(
       'Clear Performance Data',
       'Are you sure you want to clear all performance metrics?',
@@ -67,11 +56,10 @@ export const PerformanceDashboard: React.FC = () => {
             performance.clearMeasures();
             performance.clearResourceTimings();
             setClearCounter(c => c + 1);
-          },
-        },
+          } },
       ],
     );
-  }, [clearPerformanceData]);
+  };
 
   const formatTime = (ms: number) => {
     if (ms < 1) {
@@ -92,7 +80,7 @@ export const PerformanceDashboard: React.FC = () => {
 
   const isAdminUser = useAppStore(selectIsAdminUser);
 
-  const startupMetrics = useMemo(() => {
+  const startupMetrics = (() => {
     const entries = performance.getEntriesByType('react-native-mark');
     const find = (name: string) => entries.find(e => e.name === name);
 
@@ -108,11 +96,10 @@ export const PerformanceDashboard: React.FC = () => {
       bundleLoad:
         bundleStart && bundleEnd
           ? bundleEnd.startTime - bundleStart.startTime
-          : null,
-    };
-  }, []);
+          : null };
+  })();
 
-  const recentHttpRequests = useMemo(() => {
+  const recentHttpRequests = (() => {
     const entries = performance.getEntriesByType('resource');
     return entries
       .slice(-10)
@@ -126,7 +113,7 @@ export const PerformanceDashboard: React.FC = () => {
         }
         return { host, duration: entry.duration, url: entry.name };
       });
-  }, []);
+  })();
 
   if (!Environment.shouldEnableDebugFeatures() && !isAdminUser) {
     return (
@@ -415,137 +402,110 @@ export const PerformanceDashboard: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   notAvailableContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
+    padding: theme.spacing.xl },
   notAvailableText: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   metricsSection: {
     marginVertical: theme.spacing['3'],
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   sectionTitle: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   sectionSubtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing['3'],
-  },
+    marginBottom: theme.spacing['3'] },
   table: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: theme.colors.backgroundSecondary,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   tableHeaderText: {
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-  },
+    textTransform: 'uppercase' },
   tableRow: {
     flexDirection: 'row',
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing['3'],
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   tableRowEven: {
-    backgroundColor: theme.colors.backgroundSecondary,
-  },
+    backgroundColor: theme.colors.backgroundSecondary },
   tableCell: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   nameColumn: {
-    flex: 2,
-  },
+    flex: 2 },
   avgColumn: {
     flex: 1,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   maxColumn: {
     flex: 1,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   countColumn: {
     flex: 1,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   memoryList: {
-    gap: theme.spacing['3'],
-  },
+    gap: theme.spacing['3'] },
   memoryItem: {
     backgroundColor: theme.colors.backgroundSecondary,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.sm,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.primary,
-  },
+    borderLeftColor: theme.colors.primary },
   memoryItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   memoryTime: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   memoryUsage: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
-    color: theme.colors.success,
-  },
+    color: theme.colors.success },
   memoryWarning: {
-    color: theme.colors.warning,
-  },
+    color: theme.colors.warning },
   memoryCritical: {
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   memoryDetails: {
     fontSize: theme.typography.fontSize.xs,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing['3xl'],
-  },
+    padding: theme.spacing['3xl'] },
   emptyStateText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   emptyStateSubtext: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   clearButton: {
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.xl,
@@ -553,23 +513,19 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   clearButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   startupRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -577,17 +533,13 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   startupLabel: {
     fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   startupValue: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-}));
+    color: theme.colors.textPrimary } }));
 
 export default PerformanceDashboard;

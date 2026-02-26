@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { Text } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
-  type SharedValue,
-} from 'react-native-reanimated';
+  type SharedValue } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import { styles } from './styles';
 import { useUnistyles } from 'react-native-unistyles';
@@ -26,8 +25,7 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   library,
   testID,
   progress,
-  index = 0,
-}) => {
+  index = 0 }) => {
   const { theme } = useUnistyles();
 
   const buttonStyle = circular
@@ -41,10 +39,8 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   // Second button starts at 0.25, fully visible at 0.5
   // Third button starts at 0.4, fully visible at 0.7
   // PERFORMANCE: Memoize to avoid recalculating on every render
-  const { startThreshold, endThreshold } = useMemo(() => {
-    const start = 0.1 + index * 0.15;
-    return { startThreshold: start, endThreshold: start + 0.25 };
-  }, [index]);
+  const start = 0.1 + index * 0.15;
+  const { startThreshold, endThreshold } = { startThreshold: start, endThreshold: start + 0.25 };
 
   // Use Reanimated's useAnimatedStyle for SharedValue-based animations
   const animatedStyle = useAnimatedStyle(() => {
@@ -68,14 +64,13 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
 
     return {
       opacity,
-      transform: [{ scale }],
-    };
+      transform: [{ scale }] };
   }, [progress, startThreshold, endThreshold]);
 
   // PERFORMANCE: Memoize the press handler
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     onPress();
-  }, [onPress]);
+  };
 
   // PERFORMANCE: Use Pressable instead of GestureDetector + Gesture.Tap()
   // Pressable is lighter weight and sufficient for simple tap actions
@@ -90,4 +85,4 @@ const AnimatedActionButtonComponent: React.FC<AnimatedActionButtonProps> = ({
   );
 };
 
-export const AnimatedActionButton = React.memo(AnimatedActionButtonComponent);
+export const AnimatedActionButton = AnimatedActionButtonComponent;

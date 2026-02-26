@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StorageType } from '#generated';
@@ -36,8 +35,7 @@ export const AddStorageLocationSheet: React.FC<
       visible,
       onDismiss: onClose,
       snapPoints: ['35%'],
-      keyboardBehavior: 'interactive',
-    });
+      keyboardBehavior: 'interactive' });
   const inputRef =
     useRef<React.ComponentRef<typeof BottomSheetTextInput>>(null);
 
@@ -56,7 +54,7 @@ export const AddStorageLocationSheet: React.FC<
     }
   }, [visible]);
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = async () => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -72,27 +70,23 @@ export const AddStorageLocationSheet: React.FC<
     try {
       await onCreateLocation({
         name: trimmedName,
-        type: StorageType.Custom,
-      });
+        type: StorageType.Custom });
       onClose();
     } catch {
       setError('Failed to create location');
     }
-  }, [name, onCreateLocation, onClose]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setName('');
     setError(null);
     onClose();
-  }, [onClose]);
+  };
 
-  const handleNameChange = useCallback(
-    (text: string) => {
+  const handleNameChange = (text: string) => {
       setName(text);
       if (error) setError(null);
-    },
-    [error],
-  );
+    };
 
   const isCreateDisabled = creating || name.trim().length < 2;
 
@@ -140,8 +134,7 @@ export const AddStorageLocationSheet: React.FC<
                   {
                     color: isCreateDisabled
                       ? theme.colors.textTertiary
-                      : theme.colors.primary,
-                  },
+                      : theme.colors.primary },
                 ]}
               >
                 Create
@@ -168,8 +161,7 @@ export const AddStorageLocationSheet: React.FC<
               {
                 color: theme.colors.textPrimary,
                 backgroundColor: theme.colors.surfaceVariant,
-                borderColor: error ? theme.colors.error : theme.colors.border,
-              },
+                borderColor: error ? theme.colors.error : theme.colors.border },
             ]}
             defaultValue={name}
             onChangeText={handleNameChange}
@@ -198,63 +190,49 @@ export const AddStorageLocationSheet: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
-  },
+    paddingHorizontal: theme.spacing.lg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   headerButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xs,
-    minWidth: 60,
-  },
+    minWidth: 60 },
   title: {
     fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    flex: 1,
-  },
+    flex: 1 },
   cancelText: {
-    fontSize: theme.typography.fontSize.md,
-  },
+    fontSize: theme.typography.fontSize.md },
   saveText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   divider: {
     height: 1,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   inputContainer: {
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   label: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   input: {
     fontSize: theme.typography.fontSize.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
-    borderWidth: 1,
-  },
+    borderWidth: 1 },
   errorText: {
     fontSize: theme.typography.fontSize.sm,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   hint: {
     fontSize: theme.typography.fontSize.xs,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));
 
 export default AddStorageLocationSheet;

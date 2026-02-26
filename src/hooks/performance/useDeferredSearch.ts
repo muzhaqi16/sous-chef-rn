@@ -1,4 +1,4 @@
-import { useMemo, useDeferredValue } from 'react';
+import { useDeferredValue } from 'react';
 
 interface UseDeferredSearchOptions<T> {
   /** Items to search through */
@@ -62,7 +62,7 @@ export function useDeferredSearch<T>(
   const deferredQuery = useDeferredValue(searchQuery);
 
   // Compute results using deferred query
-  const results = useMemo(() => {
+  const results = (() => {
     const trimmedQuery = deferredQuery.trim();
 
     // Return all items if query is too short
@@ -72,7 +72,7 @@ export function useDeferredSearch<T>(
 
     // Filter items using search function
     return items.filter(item => searchFn(item, trimmedQuery));
-  }, [items, deferredQuery, searchFn, minQueryLength]);
+  })();
 
   // Check if results are stale (query changed but deferred hasn't caught up)
   const isStale = searchQuery !== deferredQuery;
@@ -111,7 +111,7 @@ export function useDeferredSearchWithSort<T>(
   const deferredQuery = useDeferredValue(searchQuery);
 
   // Compute results using deferred query with optional sorting
-  const results = useMemo(() => {
+  const results = (() => {
     const trimmedQuery = deferredQuery.trim();
 
     // Start with all items or filtered items
@@ -128,7 +128,7 @@ export function useDeferredSearchWithSort<T>(
     }
 
     return filtered;
-  }, [items, deferredQuery, searchFn, sortFn, minQueryLength]);
+  })();
 
   // Check if results are stale
   const isStale = searchQuery !== deferredQuery;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,7 @@ import {
   Pressable,
   Switch,
   Alert,
-  TextInput,
-} from 'react-native';
+  TextInput } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -22,12 +21,10 @@ import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
-  useRemoveCollaboratorMutation,
-} from '#generated';
+  useRemoveCollaboratorMutation } from '#generated';
 import {
   createRemoveFromQueryConnectionUpdater,
-  createAddToQueryConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useAppStore } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -37,8 +34,7 @@ import {
   isShoppingListOwner,
   getShoppingListRole,
   formatRoleDisplay,
-  getShoppingListOwnerInfo,
-} from '#utils/ownershipHelpers';
+  getShoppingListOwnerInfo } from '#utils/ownershipHelpers';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 
@@ -93,8 +89,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
     errorPolicy: 'all',
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
-        operation: 'Delete Shopping List',
-      });
+        operation: 'Delete Shopping List' });
       toastService.error(message);
     },
     update: (cache, { data }, { variables }) => {
@@ -109,8 +104,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
       } catch (error) {
         console.warn('Cache update failed for deleteList:', error);
       }
-    },
-  });
+    } });
   const addToShoppingListsCache = createAddToQueryConnectionUpdater(
     'shoppingLists',
     'ShoppingList',
@@ -133,8 +127,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
     },
     onError: () => {
       toastService.error('Failed to create list');
-    },
-  });
+    } });
 
   useEffect(() => {
     if (shoppingList && listId) {
@@ -164,18 +157,13 @@ export const ListSettings: React.FC<StaticScreenProps<{
               description: 'Created from list settings',
               isDefault,
               tags: ['user-created'],
-              homeId: selectedHomeId || undefined,
-            },
-          },
-        });
+              homeId: selectedHomeId || undefined } } });
       } else {
         // Update existing list
         await updateList({
           variables: {
             id: listId!,
-            input: { name: name.trim(), isDefault },
-          },
-        });
+            input: { name: name.trim(), isDefault } } });
       }
     } catch {
       toastService.error(
@@ -217,21 +205,20 @@ export const ListSettings: React.FC<StaticScreenProps<{
               // Deletion failed — list wasn't actually deleted, so unregister immediately
               subscriptionService.unregisterParentDeletion(listId);
             }
-          },
-        },
+          } },
       ],
     );
   };
 
   // Lazy-load homes when opening the picker
-  const handleOpenHomePicker = useCallback(() => {
+  const handleOpenHomePicker = () => {
     if (!homesLoaded) {
       fetchHomeData();
     }
     setShowHomePicker(true);
-  }, [homesLoaded, fetchHomeData]);
+  };
 
-  const handleLeaveList = useCallback(() => {
+  const handleLeaveList = () => {
     Alert.alert(
       'Leave Shopping List',
       `Are you sure you want to leave "${name || 'this list'}"? You will lose access to all shared items.`,
@@ -249,8 +236,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
             setLeaving(true);
             try {
               await removeMember({
-                variables: { id: currentUserCollaborator.id },
-              });
+                variables: { id: currentUserCollaborator.id } });
               setSelectedShoppingListId(null);
               goBack();
             } catch {
@@ -258,11 +244,10 @@ export const ListSettings: React.FC<StaticScreenProps<{
             } finally {
               setLeaving(false);
             }
-          },
-        },
+          } },
       ],
     );
-  }, [name, currentUserCollaborator?.id, removeMember, setSelectedShoppingListId, goBack]);
+  };
 
   return (
     <View style={styles.container}>
@@ -436,8 +421,7 @@ export const ListSettings: React.FC<StaticScreenProps<{
           { label: 'Personal (No Home)', value: '' },
           ...(homes?.map(home => ({
             label: home.name,
-            value: home.id,
-          })) || []),
+            value: home.id })) || []),
         ]}
         selected={selectedHomeId || ''}
         onSelect={value => {
@@ -453,32 +437,26 @@ export const ListSettings: React.FC<StaticScreenProps<{
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   saveButton: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing['3'],
-  },
+    paddingVertical: theme.spacing['3'] },
   actionText: {
     flex: 1,
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.primary,
-    marginLeft: theme.spacing['3'],
-  },
+    marginLeft: theme.spacing['3'] },
   sharedInfo: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -486,14 +464,12 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderWidth: 1,
     borderColor: theme.colors.error,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   deleteButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.error,
-    marginLeft: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm },
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -503,28 +479,21 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.sm,
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm + 2,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   pickerText: {
     fontSize: theme.typography.fontSize.md,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   leaveDescription: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   disabledButton: {
     borderColor: theme.colors.border,
-    opacity: 0.6,
-  },
+    opacity: 0.6 },
   disabledButtonText: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.sm,
-  },
+    marginLeft: theme.spacing.sm },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

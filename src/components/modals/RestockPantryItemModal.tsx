@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -29,21 +29,20 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   visible,
   pantryItem,
   onClose,
-  onConfirm,
-}) => {
+  onConfirm }) => {
   const [quantityInput, setQuantityInput] = useState('1');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
 
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     setQuantityInput('1');
     setCostPerUnitInput('');
     setTotalCostInput('');
     setExpiresAt(null);
-  }, []);
+  };
 
-  const handleConfirm = useCallback((shared: PantryActionSharedState) => {
+  const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItem) return;
 
     const quantityValue = parseFractionalInput(quantityInput);
@@ -73,7 +72,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       expiresAt,
     );
     onClose();
-  }, [pantryItem, quantityInput, costPerUnitInput, totalCostInput, expiresAt, onConfirm, onClose]);
+  };
 
   return (
     <PantryActionModal
@@ -171,18 +170,13 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 const styles = StyleSheet.create(theme => ({
   costRow: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   costField: {
-    flex: 1,
-  },
+    flex: 1 },
   newQuantityText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     marginTop: theme.spacing.xs,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

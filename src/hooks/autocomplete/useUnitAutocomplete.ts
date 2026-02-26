@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useSearchUnitsQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
@@ -19,33 +19,29 @@ export function useUnitAutocomplete() {
   const { data: searchData, loading } = useSearchUnitsQuery({
     variables: { query: debouncedSearchTerm, limit: 10 },
     skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
-    fetchPolicy: 'cache-first',
-  });
+    fetchPolicy: 'cache-first' });
 
-  const search = useCallback((term: string) => {
+  const search = (term: string) => {
     setDebouncedSearchTerm(term);
-  }, []);
+  };
 
-  const getResults = useCallback((): UnitItem[] => {
+  const getResults = (): UnitItem[] => {
     if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
       return (searchData?.searchUnits || []) as UnitItem[];
     }
     return [];
-  }, [debouncedSearchTerm, searchData?.searchUnits]);
+  };
 
-  const fallbackItems = useMemo(() => cachedUnits as UnitItem[], [cachedUnits]);
+  const fallbackItems = cachedUnits as UnitItem[];
 
-  const filterFallback = useCallback(
-    (term: string, items: UnitItem[]): UnitItem[] => {
+  const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
       const lower = term.toLowerCase();
       return items.filter(
         unit =>
           unit.symbol.toLowerCase().includes(lower) ||
           unit.name.toLowerCase().includes(lower),
       );
-    },
-    [],
-  );
+    };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({
     search,
@@ -57,8 +53,7 @@ export function useUnitAutocomplete() {
     requiresNetwork: true,
     fallbackItems,
     filterFallback,
-    maxResults: 10,
-  });
+    maxResults: 10 });
 
   return autocomplete;
 }

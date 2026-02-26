@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "react-native-animations": {
+      "source": "pluginagentmarketplace/custom-plugin-react-native",
+      "sourceType": "github",
+      "computedHash": "3b336655ba72cc1593fb5124f2e02c19a4e19fe3aaa43d3ce245e719f1c8a33e"
+    },
     "react-native-architecture": {
       "source": "wshobson/agents",
       "sourceType": "github",
@@ -9,12 +14,17 @@
     "react-native-best-practices": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
-      "computedHash": "2ed3fe70a80a1ab21cc797501624b583b1be5bddb7b43b4516e46d8788723a23"
+      "computedHash": "cc54bc37531c0221b2bfde241ef18c5f6e22423665955587f6dd63b0454355d8"
     },
     "react-native-design": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "computedHash": "26c9e2198b8534330ff7862a6c33d2eee07e2302810b80473deaced469db1b12"
+    },
+    "react-native-specialist": {
+      "source": "404kidwiz/claude-supercode-skills",
+      "sourceType": "github",
+      "computedHash": "443e9cfc48ce9149142a1092ae5c88962e589cacaf6961a66d30d88037e0334a"
     },
     "react-state-management": {
       "source": "wshobson/agents",

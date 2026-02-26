@@ -9,17 +9,14 @@
  * - Handles PANTRY_ITEM_ALREADY_EXISTS with restock/force-add options
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import {
   useCreatePantryItemMutation,
-  useRestockPantryItemMutation,
-} from '#generated';
+  useRestockPantryItemMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   isPantryItemDuplicateError,
-  getPantryItemDuplicateInfo,
-} from '#/utils/errors/pantryItemDuplicate';
+  getPantryItemDuplicateInfo } from '#/utils/errors/pantryItemDuplicate';
 import { addToPantryItemsCache } from './utils';
 import type { CreatePantryItemParams } from './types';
 
@@ -46,8 +43,7 @@ interface UseCreatePantryItemOptions {
  */
 export function useCreatePantryItem({
   pantryId,
-  onSuccess,
-}: UseCreatePantryItemOptions) {
+  onSuccess }: UseCreatePantryItemOptions) {
   const { handleApolloError } = useErrorService();
 
   const [createMutation] = useCreatePantryItemMutation({
@@ -61,22 +57,18 @@ export function useCreatePantryItem({
       } catch (error) {
         console.warn('Cache update failed:', error);
       }
-    },
-  });
+    } });
 
   const [restockMutation] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
-  const createPantryItem = useCallback(
-    async ({
+  const createPantryItem = async ({
       input,
       pantryId: targetPantryId,
       quantityValue,
       unitId,
       selectedLocationId,
-      selectedCategoryId,
-    }: CreatePantryItemParams): Promise<boolean> => {
+      selectedCategoryId }: CreatePantryItemParams): Promise<boolean> => {
       if (!input.itemName?.trim()) {
         Alert.alert('Error', 'Please enter an item name');
         return false;
@@ -95,32 +87,23 @@ export function useCreatePantryItem({
         storage: {
           storageState: input.storageState,
           storageNotes: input.notes.trim() || null,
-          ...storageLocationInput,
-        },
+          ...storageLocationInput },
         expiresAt: input.expirationDate?.toISOString() || null,
         ...(input.minQuantity || input.restockQuantity
           ? {
               thresholds: {
                 ...(input.minQuantity && {
-                  minQuantity: parseFloat(input.minQuantity),
-                }),
+                  minQuantity: parseFloat(input.minQuantity) }),
                 ...(input.restockQuantity && {
-                  restockQuantity: parseFloat(input.restockQuantity),
-                }),
-              },
-            }
+                  restockQuantity: parseFloat(input.restockQuantity) }) } }
           : {}),
         ...(input.netWeight
           ? {
               netWeight: {
                 netWeight: parseFloat(input.netWeight),
                 ...(input.netWeightUnitId && {
-                  netWeightUnitId: input.netWeightUnitId,
-                }),
-              },
-            }
-          : {}),
-      };
+                  netWeightUnitId: input.netWeightUnitId }) } }
+          : {}) };
 
       let mutationInput: any;
 
@@ -128,8 +111,7 @@ export function useCreatePantryItem({
         // Linking to existing catalog item
         mutationInput = {
           ...baseInput,
-          itemId: input.selectedItemId,
-        };
+          itemId: input.selectedItemId };
       } else {
         // Creating new item via inline item input
         const category = selectedCategoryId
@@ -142,14 +124,11 @@ export function useCreatePantryItem({
             name: input.itemName.trim(),
             description: input.notes.trim() || null,
             ...(input.brand?.trim() && { brand: input.brand.trim() }),
-            ...(category && { category }),
-          },
-        };
+            ...(category && { category }) } };
       }
 
       const result = await createMutation({
-        variables: { input: mutationInput },
-      });
+        variables: { input: mutationInput } });
 
       if (result.data?.createPantryItem?.success) {
         onSuccess?.();
@@ -168,8 +147,7 @@ export function useCreatePantryItem({
                 {
                   text: 'Cancel',
                   style: 'cancel',
-                  onPress: () => resolve(false),
-                },
+                  onPress: () => resolve(false) },
                 {
                   text: 'Restock',
                   onPress: async () => {
@@ -177,26 +155,21 @@ export function useCreatePantryItem({
                       await restockMutation({
                         variables: {
                           id: duplicateInfo.existingPantryItemId,
-                          input: { quantity: quantityValue ?? 1 },
-                        },
-                      });
+                          input: { quantity: quantityValue ?? 1 } } });
                       onSuccess?.();
                       resolve(true);
                     } catch {
                       Alert.alert('Error', 'Failed to restock item. Please try again.');
                       resolve(false);
                     }
-                  },
-                },
+                  } },
                 {
                   text: 'Add Anyway',
                   onPress: async () => {
                     try {
                       const retryResult = await createMutation({
                         variables: {
-                          input: { ...mutationInput, forceAdd: true },
-                        },
-                      });
+                          input: { ...mutationInput, forceAdd: true } } });
                       if (retryResult.data?.createPantryItem?.success) {
                         onSuccess?.();
                         resolve(true);
@@ -208,8 +181,7 @@ export function useCreatePantryItem({
                       Alert.alert('Error', 'Failed to add item. Please try again.');
                       resolve(false);
                     }
-                  },
-                },
+                  } },
               ],
             );
           });
@@ -219,15 +191,12 @@ export function useCreatePantryItem({
       // Non-duplicate error
       if (result.error) {
         const { message } = handleApolloError(result.error, {
-          operation: 'Create Pantry Item',
-        });
+          operation: 'Create Pantry Item' });
         Alert.alert('Error', message);
       }
 
       return false;
-    },
-    [createMutation, restockMutation, onSuccess, handleApolloError],
-  );
+    };
 
   return { createPantryItem };
 }

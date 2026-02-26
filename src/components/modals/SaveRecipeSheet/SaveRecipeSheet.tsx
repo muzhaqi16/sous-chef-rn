@@ -1,15 +1,13 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Pressable,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+  BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
@@ -32,13 +30,11 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   availableTags,
   onSave,
   saving = false,
-  recipeName,
-}) => {
+  recipeName }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['75%', '95%'],
-  });
+    snapPoints: ['75%', '95%'] });
 
   // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>('Favorites');
@@ -60,25 +56,24 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
     }
   }, [visible]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     if (saving) return;
 
     await onSave({
       folder: selectedFolder ?? undefined,
       tags: tags.length > 0 ? tags : undefined,
-      notes: notes.trim() || undefined,
-    });
+      notes: notes.trim() || undefined });
 
     onClose();
-  }, [saving, selectedFolder, tags, notes, onSave, onClose]);
+  };
 
-  const handleSelectFolder = useCallback((folder: string | null) => {
+  const handleSelectFolder = (folder: string | null) => {
     setSelectedFolder(folder);
     setShowNewFolder(false);
     setNewFolderName('');
-  }, []);
+  };
 
-  const handleCreateFolder = useCallback(() => {
+  const handleCreateFolder = () => {
     const trimmedName = newFolderName.trim();
     if (trimmedName) {
       // Add to local folders list so it appears in the UI
@@ -89,13 +84,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       setShowNewFolder(false);
       setNewFolderName('');
     }
-  }, [newFolderName]);
+  };
 
   // Dedupe folders with "Favorites" first, then existing folders, then locally created folders
-  const displayFolders = useMemo(() => {
+  const displayFolders = (() => {
     const allFolders = [...new Set([...folders, ...localFolders])];
     return ['Favorites', ...allFolders.filter(f => f !== 'Favorites')];
-  }, [folders, localFolders]);
+  })();
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -258,44 +253,36 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   headerLeft: {
     flex: 1,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   title: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   recipeName: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
+    marginTop: theme.spacing.xs },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md },
   folderList: {},
   folderOption: {
     flexDirection: 'row',
@@ -304,39 +291,32 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   folderOptionSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
+    backgroundColor: theme.colors.primaryLight },
   folderOptionText: {
     flex: 1,
     fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   folderOptionTextSelected: {
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   newFolderButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   newFolderButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   newFolderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   newFolderInput: {
     flex: 1,
     borderWidth: 1,
@@ -346,25 +326,20 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   createButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
+    backgroundColor: theme.colors.border },
   createButtonText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   notesInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -374,9 +349,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
-    minHeight: 60,
-  },
+    minHeight: 60 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

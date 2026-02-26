@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { Platform, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTabBarState, useTabBarSetters } from '#context/TabBarActionsContext';
 import { toastService } from '#/services/toastService';
@@ -26,15 +25,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
       addButtonConfig,
       isAddButtonDisabled,
       addButtonDisabledMessage,
-      isOverlayOpen,
-    } = useTabBarState();
+      isOverlayOpen } = useTabBarState();
     const { setActiveTab } = useTabBarSetters();
 
     // Navigation labels preference
     const showNavigationLabels = useShowNavigationLabels();
 
     // Handle add button press - show toast if disabled
-    const handleAddPress = useCallback(() => {
+    const handleAddPress = () => {
       if (isAddButtonDisabled) {
         toastService.info(
           addButtonDisabledMessage ||
@@ -43,12 +41,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
         return;
       }
       onAddPress?.();
-    }, [isAddButtonDisabled, addButtonDisabledMessage, onAddPress]);
+    };
     const { bottom: safeBottom } = useSafeAreaInsets();
     const { width: screenWidth } = useWindowDimensions();
 
     // Memoize tab bar width calculation
-    const tabBarWidth = useMemo(() => screenWidth * 0.95, [screenWidth]);
+    const tabBarWidth = screenWidth * 0.95;
 
     // Shared value for immediate tab icon feedback (UI thread)
     const activeTabIndex = useSharedValue(state.index);
@@ -91,27 +89,21 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
     // Animated style for smooth transitions
     const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ translateY: translateY.value }],
-      opacity: opacity.value,
-    }));
+      opacity: opacity.value }));
 
     // Memoize container style
-    const containerStyle = useMemo(
-      () => ({
+    const containerStyle = ({
         width: tabBarWidth,
         bottom:
           Platform.OS === 'ios'
             ? Math.max(safeBottom * 0.5, 16)
-            : Math.max(safeBottom, 16),
-      }),
-      [tabBarWidth, safeBottom],
-    );
+            : Math.max(safeBottom, 16) });
 
     // Split tabs: first half before add button, second half after
     const middleIndex = Math.floor(state.routes.length / 2);
 
     // Create press handler for each tab
-    const handleTabPress = useCallback(
-      (
+    const handleTabPress = (
         route: { key: string; name: string; params?: object },
         isFocused: boolean,
         targetIndex: number,
@@ -123,8 +115,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
         const event = navigation.emit({
           type: 'tabPress',
           target: route.key,
-          canPreventDefault: true,
-        });
+          canPreventDefault: true });
 
         if (!event.defaultPrevented) {
           // Map tab names to their main screens for stack reset
@@ -132,8 +123,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
             Pantry: 'PantryMain',
             ShoppingList: 'ShoppingListMain',
             Recipe: 'RecipeMain',
-            MealPlan: 'MealPlanMain',
-          };
+            MealPlan: 'MealPlanMain' };
 
           const mainScreen = mainScreenMap[route.name];
 
@@ -151,9 +141,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({ state, descripto
           }
 
         }
-      },
-      [navigation, activeTabIndex],
-    );
+      };
 
     return (
       <Animated.View
@@ -230,27 +218,21 @@ const styles = StyleSheet.create(theme => ({
           shadowColor: theme.colors.black,
           shadowOffset: {
             width: 0,
-            height: theme.spacing.sm,
-          },
+            height: theme.spacing.sm },
           shadowOpacity: 0.15,
           shadowRadius: theme.spacing.md,
-          elevation: 12,
-        }
+          elevation: 12 }
       : {
           elevation: 0, // Explicitly prevent Android elevation artifacts
         }),
-    zIndex: theme.zIndex.overlay,
-  },
+    zIndex: theme.zIndex.overlay },
   tabsRow: {
     flex: 1,
-    flexDirection: 'row',
-  },
+    flexDirection: 'row' },
   addButtonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
-  },
+    paddingHorizontal: theme.spacing.sm },
   addButtonPlaceholder: {
     width: theme.sizes.fab.md + theme.spacing.md, // Same width as addButtonContainer to maintain layout
-  },
-}));
+  } }));

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 
@@ -26,7 +26,7 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
   const toast = useToast();
   const { markCredentialPromptDeclined } = useUserPreferences();
 
-  const handleRememberMeAccept = useCallback(async () => {
+  const handleRememberMeAccept = async () => {
     if (pendingCredentials) {
       try {
         await onAccept(pendingCredentials);
@@ -35,15 +35,14 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
         console.error('Failed to process credential acceptance:', error);
         toast({
           message: 'Failed to save login information',
-          type: 'error',
-        });
+          type: 'error' });
       }
     }
     setShowRememberMeModal(false);
     setPendingCredentials(null);
-  }, [pendingCredentials, onAccept, toast]);
+  };
 
-  const handleRememberMeDecline = useCallback(() => {
+  const handleRememberMeDecline = () => {
     setShowRememberMeModal(false);
 
     // Track credential prompt declination to avoid showing it again
@@ -51,13 +50,13 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
     setPendingCredentials(null);
     onDecline();
-  }, [markCredentialPromptDeclined, onDecline]);
+  };
 
   // Helper function to show the RememberMe modal
-  const showRememberMePrompt = useCallback((credentials: RememberMeCredentials) => {
+  const showRememberMePrompt = (credentials: RememberMeCredentials) => {
     setPendingCredentials(credentials);
     setShowRememberMeModal(true);
-  }, []);
+  };
 
   return {
     // State
@@ -71,6 +70,5 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
     // Internal state management
     setShowRememberMeModal,
-    setPendingCredentials,
-  };
+    setPendingCredentials };
 };

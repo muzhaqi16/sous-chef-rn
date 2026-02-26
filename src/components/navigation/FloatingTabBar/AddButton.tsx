@@ -1,10 +1,9 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Platform, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+  withSpring } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
@@ -17,27 +16,25 @@ export const AddButton: React.FC<AddButtonProps> = ({
   onPress,
   icon = 'add',
   iconLibrary,
-  disabled = false,
-}) => {
+  disabled = false }) => {
   const { theme } = useUnistyles();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+    transform: [{ scale: scale.value }] }));
 
-  const handlePressIn = useCallback(() => {
+  const handlePressIn = () => {
     scale.set(withSpring(0.9, SPRING.PRESS));
-  }, [scale]);
+  };
 
-  const handlePressOut = useCallback(() => {
+  const handlePressOut = () => {
     scale.set(withSpring(1, SPRING.PRESS));
-  }, [scale]);
+  };
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     HapticService.medium();
     onPress();
-  }, [onPress]);
+  };
 
   return (
     <AnimatedPressable
@@ -74,15 +71,11 @@ const styles = StyleSheet.create(theme => ({
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
-      height: theme.spacing.xs,
-    },
+      height: theme.spacing.xs },
     shadowOpacity: 0.3,
     shadowRadius: theme.radii.md,
-    ...(Platform.OS === 'ios' && { elevation: 8 }),
-  },
+    ...(Platform.OS === 'ios' && { elevation: 8 }) },
   addButtonDisabled: {
     opacity: 0.4,
     shadowOpacity: 0,
-    elevation: 0,
-  },
-}));
+    elevation: 0 } }));

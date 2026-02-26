@@ -1,19 +1,17 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   ActivityIndicator,
-  Linking,
-} from 'react-native';
+  Linking } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   useAnimatedStyle,
   interpolate,
-  Extrapolation,
-} from 'react-native-reanimated';
+  Extrapolation } from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -91,8 +89,7 @@ const RecipeDetailScreen: React.FC = () => {
     savedNotes,
     savedRating,
     cookedCount,
-    handleUnfavoriteRecipe,
-  } = useRecipeDetail();
+    handleUnfavoriteRecipe } = useRecipeDetail();
 
   // Get available folders and tags for picker and autocomplete
   const { folders } = useRecipeFolders();
@@ -101,8 +98,7 @@ const RecipeDetailScreen: React.FC = () => {
   // Recipe reviews
   const recipeReviews = useRecipeReviews({
     recipeId: recipeId ?? '',
-    backendRecipe: backendRecipe ?? null,
-  });
+    backendRecipe: backendRecipe ?? null });
 
   // Derive icon visibility state
   const isInFavorites = isSaved && savedFolder === 'Favorites';
@@ -113,11 +109,11 @@ const RecipeDetailScreen: React.FC = () => {
   // Check if user is recipe creator (can edit)
   const isOwner = isBackendRecipe && backendRecipe?.createdBy?.id === user?.id;
 
-  const handleEditRecipe = useCallback(() => {
+  const handleEditRecipe = () => {
     if (recipeId) {
       navigate('RecipeEdit', { recipeId });
     }
-  }, [recipeId, navigate]);
+  };
 
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
@@ -125,7 +121,7 @@ const RecipeDetailScreen: React.FC = () => {
   const [showAddToMealPlanSheet, setShowAddToMealPlanSheet] = useState(false);
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
-  const handleHeartPress = useCallback(() => {
+  const handleHeartPress = () => {
     if (saving || updatingFolderTags) return;
 
     if (isInFavorites) {
@@ -135,10 +131,10 @@ const RecipeDetailScreen: React.FC = () => {
       // Not saved - quick save to "Favorites" folder
       handleSaveRecipe('Favorites');
     }
-  }, [saving, updatingFolderTags, isInFavorites, handleSaveRecipe]);
+  };
 
   // Handle folder icon press - show advanced options
-  const handleFolderPress = useCallback(() => {
+  const handleFolderPress = () => {
     if (saving || updatingFolderTags) return;
 
     if (isSaved) {
@@ -148,45 +144,38 @@ const RecipeDetailScreen: React.FC = () => {
       // Not saved - show save sheet with folder/tag options
       setShowSaveSheet(true);
     }
-  }, [saving, updatingFolderTags, isSaved]);
+  };
 
   // Handle save from SaveRecipeSheet
-  const handleConfirmSave = useCallback(
-    async (options: { folder?: string; tags?: string[]; notes?: string }) => {
+  const handleConfirmSave = async (options: { folder?: string; tags?: string[]; notes?: string }) => {
       await handleSaveRecipe(
         options.folder ?? null,
         options.tags,
         options.notes,
       );
       setShowSaveSheet(false);
-    },
-    [handleSaveRecipe],
-  );
+    };
 
   // Handle close save sheet
-  const handleCloseSaveSheet = useCallback(() => {
+  const handleCloseSaveSheet = () => {
     setShowSaveSheet(false);
-  }, []);
+  };
 
   // Handle close manage sheet
-  const handleCloseManageSheet = useCallback(() => {
+  const handleCloseManageSheet = () => {
     setShowManageSheet(false);
-  }, []);
+  };
 
   // Render callbacks for list components
-  const renderIngredientItem = useCallback(
-    ({ item: ingredient }: { item: NonNullable<typeof displayData>['ingredients'][number] }) => (
+  const renderIngredientItem = ({ item: ingredient }: { item: NonNullable<typeof displayData>['ingredients'][number] }) => (
       <IngredientCard
         ingredient={ingredient}
         isAdded={addedIngredients.has(ingredient.id)}
         onPress={() => handleAddSingleIngredient(ingredient)}
       />
-    ),
-    [addedIngredients, handleAddSingleIngredient],
-  );
+    );
 
-  const renderSelectableIngredientItem = useCallback(
-    ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
+  const renderSelectableIngredientItem = ({ item }: { item: NonNullable<typeof backendRecipe>['ingredients'][number] }) => {
       const isSelected = selectedIngredients.has(item.id);
       return (
         <Pressable
@@ -210,12 +199,9 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         </Pressable>
       );
-    },
-    [selectedIngredients, toggleIngredient, theme.colors.primary, theme.colors.textSecondary],
-  );
+    };
 
-  const renderShoppingListItem = useCallback(
-    ({ item }: { item: (typeof shoppingLists)[number] }) => (
+  const renderShoppingListItem = ({ item }: { item: (typeof shoppingLists)[number] }) => (
       <Pressable
         style={({pressed}) => [styles.listPickerItem, pressed && styles.pressed]}
         onPress={() => handleListSelected(item.id)}
@@ -249,17 +235,14 @@ const RecipeDetailScreen: React.FC = () => {
           color={theme.colors.textSecondary}
         />
       </Pressable>
-    ),
-    [handleListSelected, theme.colors.primary, theme.colors.textSecondary],
-  );
+    );
 
   // Scroll animation for parallax effect
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       scrollY.value = event.contentOffset.y;
-    },
-  });
+    } });
 
   const imageAnimatedStyle = useAnimatedStyle(() => {
     const scale = interpolate(
@@ -848,45 +831,36 @@ export const RecipeDetail: React.FC = () => (
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   centerContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
+    padding: theme.spacing.xl },
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   loadingText: {
     marginTop: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   errorText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.error,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   errorDetails: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.md,
     fontFamily: 'monospace',
-    textAlign: 'left',
-  },
+    textAlign: 'left' },
   imageContainer: {
-    position: 'relative',
-  },
+    position: 'relative' },
   recipeImage: {
     width: '100%',
-    height: 300,
-  },
+    height: 300 },
   backButton: {
     position: 'absolute',
     top: 48,
@@ -901,15 +875,13 @@ const styles = StyleSheet.create(theme => ({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
-    elevation: 3,
-  },
+    elevation: 3 },
   rightButtons: {
     position: 'absolute',
     top: 48,
     right: 12,
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   actionButton: {
     width: 40,
     height: 40,
@@ -921,238 +893,192 @@ const styles = StyleSheet.create(theme => ({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
-    elevation: 3,
-  },
+    elevation: 3 },
   content: {
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radii.xl,
     borderTopRightRadius: theme.radii.xl,
-    marginTop: -20,
-  },
+    marginTop: -20 },
   title: {
     fontSize: theme.fonts.size['2xl'],
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   metadata: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   metadataText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   cookedMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   cookedMetadataTextActive: {
-    color: theme.colors.success,
-  },
+    color: theme.colors.success },
   folderTagsSection: {
     marginBottom: theme.spacing.lg,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xs,
-  },
+    paddingVertical: theme.spacing.xs },
   detailLabel: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   detailValue: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   detailValueText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   detailValueTextActive: {
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-  },
+    gap: 2 },
   tagsDisplayRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.xs,
-  },
+    paddingVertical: theme.spacing.xs },
   tagsChipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
     gap: theme.spacing.xs,
     flex: 1,
-    marginLeft: theme.spacing.md,
-  },
+    marginLeft: theme.spacing.md },
   tagChip: {
     backgroundColor: theme.colors.primary + '15',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   tagChipText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   notesDisplayRow: {
     paddingVertical: theme.spacing.xs,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   notesText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     lineHeight: 18,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   tag: {
     backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   tagText: {
     fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   section: {
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   addAllButton: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   description: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   ingredientsList: {
     paddingVertical: theme.spacing.sm,
-    paddingLeft: theme.spacing.lg,
-  },
+    paddingLeft: theme.spacing.lg },
   instructionStep: {
     flexDirection: 'row',
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   stepNumber: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-    minWidth: 24,
-  },
+    minWidth: 24 },
   stepText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    lineHeight: 22,
-  },
+    lineHeight: 22 },
   attribution: {
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.xl,
-  },
+    marginTop: theme.spacing.xl },
   attributionText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   viewOriginalLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   viewOriginalText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   shoppingListOptions: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   optionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   optionTextContainer: {
-    flex: 1,
-  },
+    flex: 1 },
   optionTitle: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   optionDescription: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   ingredientInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   ingredientName: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   ingredientAmount: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.md,
-    marginTop: theme.spacing.xl,
-  },
+    marginTop: theme.spacing.xl },
   addSelectedButton: {
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
@@ -1160,13 +1086,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     minHeight: 48,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   addSelectedButtonText: {
     color: theme.colors.onPrimary,
     fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   // List picker styles
   listPickerItem: {
     flexDirection: 'row',
@@ -1174,41 +1098,31 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   listPickerInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   listPickerName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   listPickerCount: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   defaultBadge: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.sm,
-  },
+    borderRadius: theme.radii.sm },
   defaultBadgeText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   emptyListPicker: {
     padding: theme.spacing.xl,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptySubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

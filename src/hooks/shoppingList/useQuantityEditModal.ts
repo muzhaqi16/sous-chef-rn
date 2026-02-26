@@ -1,9 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 import {
   useUpdateShoppingListItemQuantityMutation,
-  ShoppingListItemDisplayFragment,
-} from '#generated';
+  ShoppingListItemDisplayFragment } from '#generated';
 import { Telemetry } from '#/services/telemetry';
 import { resolveImageUrl } from '#utils/imageUtils';
 
@@ -98,13 +97,10 @@ export function useQuantityEditModal(
     errorPolicy: 'all',
     onError: error => {
       Alert.alert('Error', error.message || 'Failed to update item');
-    },
-  });
+    } });
 
   // Transform raw item to QuantityEditItem format
-  const selectedItem: QuantityEditItem | null = useMemo(
-    () =>
-      selectedItemRaw
+  const selectedItem: QuantityEditItem | null = selectedItemRaw
         ? {
             id: selectedItemRaw.id,
             itemName: selectedItemRaw.itemName || 'Item',
@@ -126,30 +122,25 @@ export function useQuantityEditModal(
                     isDefault: true,
                     isPreferred: true,
                     displayNameSingular: null,
-                    displayNamePlural: null,
-                  },
+                    displayNamePlural: null },
                 ]
-              : [],
-          }
-        : null,
-    [selectedItemRaw],
-  );
+              : [] }
+        : null;
 
-  const openForItem = useCallback((itemId: string) => {
+  const openForItem = (itemId: string) => {
     const item = items.find(i => i.id === itemId);
     if (item) {
       setSelectedItemRaw(item as ShoppingListItemDisplayFragment);
       setVisible(true);
     }
-  }, [items]);
+  };
 
-  const close = useCallback(() => {
+  const close = () => {
     setVisible(false);
     setSelectedItemRaw(null);
-  }, []);
+  };
 
-  const save = useCallback(
-    async (
+  const save = async (
       quantity: string,
       _unitName: string | null,
       unitId: string | null,
@@ -163,14 +154,11 @@ export function useQuantityEditModal(
             itemId: selectedItemRaw.id,
             quantity,
             unitId,
-            version: selectedItemRaw.version,
-          },
-        });
+            version: selectedItemRaw.version } });
 
         Telemetry.trackEvent('shopping_item_quantity_updated', {
           item_id: selectedItemRaw.id,
-          quantity,
-        });
+          quantity });
 
         setVisible(false);
         setSelectedItemRaw(null);
@@ -179,9 +167,7 @@ export function useQuantityEditModal(
       } finally {
         setIsLoading(false);
       }
-    },
-    [selectedItemRaw, updateQuantity],
-  );
+    };
 
   return { visible, selectedItem, isLoading, openForItem, close, save };
 }

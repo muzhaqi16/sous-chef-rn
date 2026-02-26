@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -46,14 +45,12 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   homeName,
   onClose,
   onSave,
-  saving,
-}) => {
+  saving }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -69,7 +66,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     }
   }, [visible, mealPlanName]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (!mealPlanId || !name.trim()) return;
     const tags = tagsInput
       .split(',')
@@ -80,9 +77,8 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       name: name.trim(),
       description: description.trim() || undefined,
       category,
-      tags: tags.length > 0 ? tags : undefined,
-    });
-  }, [mealPlanId, name, description, category, tagsInput, onSave]);
+      tags: tags.length > 0 ? tags : undefined });
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -149,28 +145,21 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   section: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   label: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   infoNote: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   infoNoteText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-  },
-}));
+    color: theme.colors.primary } }));

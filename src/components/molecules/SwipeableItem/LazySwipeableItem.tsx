@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem';
@@ -74,13 +74,13 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = ({
     // Activate the full swipeable on first touch
     // Defer state update to next tick so onPress can fire first (for taps)
     // Swipes won't trigger onPress, so they just activate the swipeable
-    const handlePressIn = useCallback(() => {
+    const handlePressIn = () => {
       if (!isActivatedRef.current) {
         isActivatedRef.current = true;
         // Defer to allow onPress to fire before re-render
         activationTimeoutRef.current = setTimeout(() => setIsActivated(true), 0);
       }
-    }, []);
+    };
 
     // Before activation: render lightweight touchable
     // First tap: handlePressIn activates AND executes onPress
@@ -123,9 +123,7 @@ LazySwipeableItem.displayName = 'LazySwipeableItem';
 
 const styles = StyleSheet.create(() => ({
   container: {
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   touchable: {
     // Match the styling of SwipeableContent
-  },
-}));
+  } }));

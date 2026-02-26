@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
 import {
@@ -7,8 +7,7 @@ import {
   useConfirmItemImageUploadMutation,
   useUpdateUserProfileMutation,
   useUpdateItemImageMutation,
-  ImageUploadPurpose,
-} from '#generated';
+  ImageUploadPurpose } from '#generated';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { useStore } from '#store';
 
@@ -53,8 +52,7 @@ export const useImageUpload = () => {
   const [updateProfile] = useUpdateUserProfileMutation();
   const [updateItemImage] = useUpdateItemImageMutation();
 
-  const uploadToMinIO = useCallback(
-    async (
+  const uploadToMinIO = async (
       file: ImageFile,
       uploadData: PresignedUploadData,
       onProgress?: (progress: number) => void,
@@ -117,15 +115,11 @@ export const useImageUpload = () => {
         xhr.send({
           uri: file.uri,
           type: mimeType,
-          name: file.fileName || 'image.jpg',
-        });
+          name: file.fileName || 'image.jpg' });
       });
-    },
-    [],
-  );
+    };
 
-  const uploadImage = useCallback(
-    async (
+  const uploadImage = async (
       file: ImageFile,
       purpose: ImageUploadPurpose,
       isProfileImage: boolean,
@@ -172,9 +166,7 @@ export const useImageUpload = () => {
           variables: {
             mime: mimeType,
             purpose: purpose,
-            itemId: itemId,
-          },
-        });
+            itemId: itemId } });
 
         const uploadResult = uploadData?.createImageUploadUrl;
         if (!uploadResult) {
@@ -204,12 +196,9 @@ export const useImageUpload = () => {
         setUploading(false);
         setProgress(0);
       }
-    },
-    [createUploadUrl, uploadToMinIO],
-  );
+    };
 
-  const uploadProfileImage = useCallback(
-    async (
+  const uploadProfileImage = async (
       file: ImageFile,
       purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
       options: ImageUploadOptions = {},
@@ -222,8 +211,7 @@ export const useImageUpload = () => {
           undefined,
           async (key: string) => {
             const { data } = await confirmProfileUpload({
-              variables: { key },
-            });
+              variables: { key } });
             return data?.confirmProfileImageUpload?.url || null;
           },
           options,
@@ -248,12 +236,9 @@ export const useImageUpload = () => {
         Alert.alert('Upload Failed', userErrorMessage);
         return null;
       }
-    },
-    [uploadImage, confirmProfileUpload],
-  );
+    };
 
-  const uploadItemImage = useCallback(
-    async (
+  const uploadItemImage = async (
       file: ImageFile,
       itemId: string,
       options: ImageUploadOptions = {},
@@ -266,8 +251,7 @@ export const useImageUpload = () => {
           itemId,
           async (key: string) => {
             const { data } = await confirmItemUpload({
-              variables: { itemId, key },
-            });
+              variables: { itemId, key } });
             return data?.confirmItemImageUpload?.url || null;
           },
           options,
@@ -280,12 +264,9 @@ export const useImageUpload = () => {
         Alert.alert('Upload Failed', errorMessage);
         return null;
       }
-    },
-    [uploadImage, confirmItemUpload],
-  );
+    };
 
-  const uploadItemImages = useCallback(
-    async (
+  const uploadItemImages = async (
       files: Array<ImageFile & { perspective?: string }>,
       itemId: string,
       options: ImageUploadOptions = {},
@@ -294,55 +275,42 @@ export const useImageUpload = () => {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const imageUrl = await uploadItemImage(file, itemId, {
-          onProgress: (p) => options?.onProgress?.(((i + p) / files.length)),
-        });
+          onProgress: (p) => options?.onProgress?.(((i + p) / files.length)) });
         if (imageUrl) {
           results.push({ imageUrl, perspective: file.perspective || 'front' });
         }
       }
       return results;
-    },
-    [uploadItemImage],
-  );
+    };
 
-  const updateProfileAvatarUrl = useCallback(
-    async (avatarUrl: string) => {
+  const updateProfileAvatarUrl = async (avatarUrl: string) => {
       try {
         const { data } = await updateProfile({
-          variables: { input: { avatar: avatarUrl } },
-        });
+          variables: { input: { avatar: avatarUrl } } });
         return data?.updateProfile?.userProfile || null;
       } catch (error) {
         console.error('Update profile avatar failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile avatar');
         return null;
       }
-    },
-    [updateProfile],
-  );
+    };
 
-  const updateProfileCoverUrl = useCallback(
-    async (coverImageUrl: string) => {
+  const updateProfileCoverUrl = async (coverImageUrl: string) => {
       try {
         const { data } = await updateProfile({
-          variables: { input: { coverImage: coverImageUrl } },
-        });
+          variables: { input: { coverImage: coverImageUrl } } });
         return data?.updateProfile?.userProfile || null;
       } catch (error) {
         console.error('Update profile cover failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile cover');
         return null;
       }
-    },
-    [updateProfile],
-  );
+    };
 
-  const updateItemImageUrl = useCallback(
-    async (id: string, imageUrl: string) => {
+  const updateItemImageUrl = async (id: string, imageUrl: string) => {
       try {
         const { data } = await updateItemImage({
-          variables: { id, imageUrl },
-        });
+          variables: { id, imageUrl } });
         const result = data?.updateItem;
         return result || null;
       } catch (error) {
@@ -350,9 +318,7 @@ export const useImageUpload = () => {
         Alert.alert('Update Failed', 'Failed to update item image');
         return null;
       }
-    },
-    [updateItemImage],
-  );
+    };
 
   return {
     uploading,
@@ -362,6 +328,5 @@ export const useImageUpload = () => {
     uploadItemImages,
     updateProfileAvatarUrl,
     updateProfileCoverUrl,
-    updateItemImageUrl,
-  };
+    updateItemImageUrl };
 };

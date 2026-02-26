@@ -1,28 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import {
   PermissionService,
   type AppPermission,
-  type PermissionStatus,
-} from '#/services/permissions/PermissionService';
+  type PermissionStatus } from '#/services/permissions/PermissionService';
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
 
-  const checkPermission = useCallback(async () => {
+  const checkPermission = async () => {
     const result = await PermissionService.check(permission);
     setStatus(result);
-  }, [permission]);
+  };
 
-  const requestPermission = useCallback(async () => {
+  const requestPermission = async () => {
     const result = await PermissionService.request(permission);
     setStatus(result);
     return result;
-  }, [permission]);
+  };
 
-  const openSettings = useCallback(() => {
+  const openSettings = () => {
     return PermissionService.openSettings();
-  }, []);
+  };
 
   // Check on mount
   useEffect(() => {
@@ -44,6 +43,5 @@ export function usePermission(permission: AppPermission) {
     request: requestPermission,
     openSettings,
     isGranted: status === 'granted',
-    isBlocked: status === 'blocked',
-  };
+    isBlocked: status === 'blocked' };
 }

@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+
 import {Item} from '#generated';
 import {
   getAllCategories,
@@ -9,9 +9,9 @@ import {
 
 export function useCategoryManagement(items: Item[]) {
   // Get all categories with item counts
-  const categories = useMemo(() => {
+  const categories = (() => {
     return getAllCategories(items);
-  }, [items]);
+  })();
 
   // Helper functions
   const getItemsByCategoryName = (categoryName: string) => {

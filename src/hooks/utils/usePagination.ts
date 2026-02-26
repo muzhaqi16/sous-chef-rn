@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useRef } from 'react';
 import { errorService } from '#/services/errorService';
 
 /**
@@ -70,8 +70,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     itemCount,
     fetchMore,
     fetchMoreVariables = {},
-    cursorVariableName = 'cursor',
-  } = config;
+    cursorVariableName = 'cursor' } = config;
 
   const hasMore = pageInfo?.hasNextPage || false;
   const endCursor = pageInfo?.endCursor;
@@ -87,7 +86,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     fetchMoreVariablesRef.current = fetchMoreVariables;
   }
 
-  const loadMore = useCallback(async () => {
+  const loadMore = async () => {
     // Don't load if:
     // - No more items to load
     // - Already loading
@@ -100,14 +99,12 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
       await fetchMore({
         variables: {
           ...fetchMoreVariablesRef.current,
-          [cursorVariableName]: endCursor,
-        },
-      });
+          [cursorVariableName]: endCursor } });
     } catch (error) {
       errorService.reportError(error, { operation: 'Pagination.loadMore' });
       // Fail silently - user can try scrolling again
     }
-  }, [hasMore, loading, endCursor, fetchMore, cursorVariableName]);
+  };
 
   // Loading more = loading but already have items (not initial load)
   const isLoadingMore = loading && itemCount > 0;
@@ -116,6 +113,5 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     hasMore,
     endCursor,
     loadMore,
-    isLoadingMore,
-  };
+    isLoadingMore };
 }

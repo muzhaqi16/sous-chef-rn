@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useGetPopularItemsQuery } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 
@@ -33,7 +32,7 @@ export function usePopularItems(limit = 10) {
     skip: isOffline,
   });
 
-  const popularItems = useMemo<PopularItem[]>(() => {
+  const popularItems = (() => {
     if (!data?.items?.edges) return [];
 
     return data.items.edges.map(edge => {
@@ -60,7 +59,7 @@ export function usePopularItems(limit = 10) {
         } : null,
       };
     });
-  }, [data?.items?.edges]);
+  })();
 
   return {
     popularItems: isOffline ? [] : popularItems,

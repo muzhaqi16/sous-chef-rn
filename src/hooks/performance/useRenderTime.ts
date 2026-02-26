@@ -54,7 +54,6 @@ export function useRenderTime(
 
   // Measure render time after paint
   // Intentionally omitting deps — this effect must run after every render to capture timing.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!__DEV__) return;
 

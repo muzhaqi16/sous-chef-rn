@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Switch } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -31,14 +30,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   defaultServings,
   onClose,
   onConfirm,
-  hasPantry = false,
-}) => {
+  hasPantry = false }) => {
   const { ref, modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   // Form state
   const [servingsInput, setServingsInput] = useState('');
@@ -56,7 +53,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     }
   }, [visible, defaultServings]);
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     const servingsValue = parseFractionalInput(servingsInput);
     const finalServings = servingsValue && !isNaN(servingsValue) && servingsValue > 0
       ? servingsValue
@@ -66,10 +63,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       servings: finalServings,
       deductFromPantry,
       useGranularDeduction: deductFromPantry && hasPantry && useGranularDeduction,
-      notes: notes || undefined,
-    });
+      notes: notes || undefined });
     onClose();
-  }, [servingsInput, deductFromPantry, useGranularDeduction, hasPantry, notes, defaultServings, onConfirm, onClose]);
+  };
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -158,27 +154,22 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
-    padding: theme.spacing.md,
-  },
+    padding: theme.spacing.md },
   recipeInfo: {
     marginBottom: theme.spacing.xl,
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   recipeName: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   section: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   toggleSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,20 +178,15 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   toggleLabel: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   toggleDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
-  },
-}));
+    marginTop: theme.spacing.xs } }));

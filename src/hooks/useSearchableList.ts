@@ -1,4 +1,4 @@
-import {useMemo, useState, useCallback, useEffect} from 'react';
+import {useState, useEffect} from 'react';
 
 export interface SearchableListOptions {
   /** Debounce delay in milliseconds (default: 0) */
@@ -38,42 +38,30 @@ export function useSearchableList<T>(
     }
   }, [query, debounceMs]);
 
-  const filtered = useMemo(() => {
-    // Ensure we have an array
-    const list = Array.isArray(items) ? items : [];
+  // Ensure we have an array
+  const list = Array.isArray(items) ? items : [];
 
-    // Use debounced query for filtering
-    const searchQuery = debounceMs > 0 ? debouncedQuery : query;
+  // Use debounced query for filtering
+  const searchQuery = debounceMs > 0 ? debouncedQuery : query;
 
-    // Preserve original array reference when not actively searching
-    if (!searchQuery) return list;
-
-    // If query is shorter than minimum length, return all items
-    if (searchQuery.length < minQueryLength) {
-      return list;
-    }
-
+  let filtered: T[];
+  // Preserve original array reference when not actively searching
+  if (!searchQuery || searchQuery.length < minQueryLength) {
+    filtered = list;
+  } else {
     // Apply case sensitivity if needed
     const processedQuery = caseSensitive
       ? searchQuery
       : searchQuery.toLowerCase();
 
-    return list.filter(item => filterFn(item, processedQuery));
-  }, [
-    items,
-    query,
-    debouncedQuery,
-    filterFn,
-    debounceMs,
-    minQueryLength,
-    caseSensitive,
-  ]);
+    filtered = list.filter(item => filterFn(item, processedQuery));
+  }
 
   // Clear search function
-  const clearQuery = useCallback(() => {
+  const clearQuery = () => {
     setQuery('');
     setDebouncedQuery('');
-  }, []);
+  };
 
   // Check if currently filtering
   const isFiltering = query.length >= minQueryLength;
@@ -85,6 +73,5 @@ export function useSearchableList<T>(
     clearQuery,
     isFiltering,
     resultCount: filtered.length,
-    totalCount: Array.isArray(items) ? items.length : 0,
-  };
+    totalCount: Array.isArray(items) ? items.length : 0 };
 }

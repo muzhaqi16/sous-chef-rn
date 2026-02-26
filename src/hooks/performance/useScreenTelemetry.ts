@@ -51,6 +51,5 @@ export function useScreenTelemetry(
 
     return () => clearTimeout(timer);
     // Fire once — getProperties is read from ref at fire time
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReady, screenName]);
 }

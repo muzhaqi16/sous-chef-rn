@@ -1,4 +1,3 @@
-import { useCallback, useMemo } from 'react';
 import { useGetHomesLazyQuery } from '#generated';
 import { useAppStore, selectSelectedHomeId, selectSelectedPantryId } from '#store/useAppStore';
 import { normalizeHome, normalizeHomes, extractNodes } from '#/utils/connectionUtils';
@@ -21,32 +20,30 @@ export function useLazyHomeData() {
 
   const [getHomes, { data: homesData, loading }] = useGetHomesLazyQuery({
     fetchPolicy: 'cache-first', // Use cache if available
-    errorPolicy: 'ignore',
-  });
+    errorPolicy: 'ignore' });
 
   // Normalize homes data (extract nodes from connection type)
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
-  const rawHomes = useMemo(() => {
-    return normalizeHomes(extractNodes(homesData?.homes));
-  }, [homesData?.homes]);
+  const rawHomes = normalizeHomes(extractNodes(homesData?.homes));
   const homes = usePreservedArrayData(rawHomes);
 
   // Get pantries for the current home
-  const pantries = useMemo((): Array<{ id: string; name: string; isDefault: boolean }> => {
-    if (!selectedHomeId || !homes.length) return [];
+  let pantries: Array<{ id: string; name: string; isDefault: boolean }> = [];
+  if (selectedHomeId && homes.length) {
     const currentHome = homes.find(h => h.id === selectedHomeId);
-    if (!currentHome) return [];
-    const normalized = normalizeHome(currentHome);
-    return (normalized?.pantries || []) as Array<{ id: string; name: string; isDefault: boolean }>;
-  }, [selectedHomeId, homes]);
+    if (currentHome) {
+      const normalized = normalizeHome(currentHome);
+      pantries = (normalized?.pantries || []) as Array<{ id: string; name: string; isDefault: boolean }>;
+    }
+  }
 
   // Fetch home data on demand
-  const fetchHomeData = useCallback(async () => {
+  const fetchHomeData = async () => {
     // Only fetch if not already loaded
     if (!homesData) {
       await getHomes();
     }
-  }, [homesData, getHomes]);
+  };
 
   return {
     homes,
@@ -55,6 +52,5 @@ export function useLazyHomeData() {
     selectedPantryId,
     loading,
     isLoaded: !!homesData,
-    fetchHomeData,
-  };
+    fetchHomeData };
 }

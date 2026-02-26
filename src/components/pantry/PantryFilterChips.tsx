@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Chip from '../atoms/Chip';
@@ -34,36 +34,27 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
   activeFilters,
   onFilterChange,
   stats,
-  storageCounts,
-}) => {
+  storageCounts }) => {
   const { theme } = useUnistyles();
 
-  const filterConfigs = useMemo<FilterConfig[]>(
-    () => [
-      { id: 'expiring', label: 'Expiring', color: theme.colors.warning },
-      { id: 'expired', label: 'Expired', color: theme.colors.error },
-      { id: 'lowStock', label: 'Low Stock', color: theme.colors.warning },
-      { id: 'refrigerated', label: 'Refrigerated', color: theme.colors.info },
-      { id: 'frozen', label: 'Frozen', color: theme.colors.primary },
-    ],
-    [theme.colors],
-  );
+  const filterConfigs: FilterConfig[] = [
+    { id: 'expiring', label: 'Expiring', color: theme.colors.warning },
+    { id: 'expired', label: 'Expired', color: theme.colors.error },
+    { id: 'lowStock', label: 'Low Stock', color: theme.colors.warning },
+    { id: 'refrigerated', label: 'Refrigerated', color: theme.colors.info },
+    { id: 'frozen', label: 'Frozen', color: theme.colors.primary },
+  ];
 
   // Pre-compute badge styles to avoid inline object creation
-  const badgeStyles = useMemo(
-    () =>
-      filterConfigs.reduce(
+  const badgeStyles = filterConfigs.reduce(
         (acc, config) => {
           acc[config.id] = [styles.badge, { backgroundColor: config.color }];
           return acc;
         },
         {} as Record<FilterType, (typeof styles.badge | { backgroundColor: string })[]>,
-      ),
-    [filterConfigs],
-  );
+      );
 
-  const getFilterCount = useCallback(
-    (filterId: FilterType): number => {
+  const getFilterCount = (filterId: FilterType): number => {
       switch (filterId) {
         case 'expiring':
           return stats.expiringSoon;
@@ -78,12 +69,9 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
         default:
           return 0;
       }
-    },
-    [stats, storageCounts],
-  );
+    };
 
-  const handleFilterToggle = useCallback(
-    (filterId: FilterType) => {
+  const handleFilterToggle = (filterId: FilterType) => {
       const newFilters = new Set(activeFilters);
       if (newFilters.has(filterId)) {
         newFilters.delete(filterId);
@@ -91,15 +79,10 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
         newFilters.add(filterId);
       }
       onFilterChange(newFilters);
-    },
-    [activeFilters, onFilterChange],
-  );
+    };
 
   // Only show filters that have items - memoized to avoid re-filtering on every render
-  const visibleFilters = useMemo(
-    () => filterConfigs.filter(config => getFilterCount(config.id) > 0),
-    [filterConfigs, getFilterCount],
-  );
+  const visibleFilters = filterConfigs.filter(config => getFilterCount(config.id) > 0);
 
   // Don't render anything if no filters have items
   if (visibleFilters.length === 0) {
@@ -139,14 +122,11 @@ export const PantryFilterChips: React.FC<PantryFilterChipsProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingVertical: theme.spacing.sm,
-  },
+    paddingVertical: theme.spacing.sm },
   scrollContent: {
-    paddingHorizontal: theme.spacing.md,
-  },
+    paddingHorizontal: theme.spacing.md },
   chipWrapper: {
-    position: 'relative',
-  },
+    position: 'relative' },
   badge: {
     position: 'absolute',
     top: -theme.spacing.xs,
@@ -156,11 +136,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.xs,
-  },
+    paddingHorizontal: theme.spacing.xs },
   badgeText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.xs - 2,
-    fontWeight: theme.fonts.weight.bold,
-  },
-}));
+    fontWeight: theme.fonts.weight.bold } }));

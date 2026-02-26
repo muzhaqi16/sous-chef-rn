@@ -18,15 +18,13 @@
  * ```
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
 import { errorService } from '#/services/errorService';
 import {
   handleVersionConflictAlert,
-  handleMutationErrorAlert,
-} from '#/utils/errorHandlers';
+  handleMutationErrorAlert } from '#/utils/errorHandlers';
 
 /**
  * Configuration for create operation
@@ -98,8 +96,7 @@ export function useCrudOperations() {
    * const result = await addItem({ name: 'New Item' });
    * ```
    */
-  const createAddOperation = useCallback(
-    <TInput, TResult>(config: CreateOperationConfig<TInput, TResult>) => {
+  const createAddOperation = <TInput, TResult>(config: CreateOperationConfig<TInput, TResult>) => {
       return async (input: TInput): Promise<TResult | false> => {
         const {
           mutation,
@@ -108,8 +105,7 @@ export function useCrudOperations() {
           validateInput,
           onSuccess,
           onError,
-          operationName = 'Create Item',
-        } = config;
+          operationName = 'Create Item' } = config;
 
         // Validate parent ID only if it was explicitly provided in config
         const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
@@ -161,9 +157,7 @@ export function useCrudOperations() {
           return false;
         }
       };
-    },
-    [],
-  );
+    };
 
   /**
    * Creates a generic update operation with version conflict handling
@@ -183,8 +177,7 @@ export function useCrudOperations() {
    * const result = await updateItem({ name: 'Updated Name' });
    * ```
    */
-  const createUpdateOperation = useCallback(
-    <TInput, TResult>(config: UpdateOperationConfig<TInput, TResult>) => {
+  const createUpdateOperation = <TInput, TResult>(config: UpdateOperationConfig<TInput, TResult>) => {
       return async (input: TInput): Promise<TResult | false> => {
         const {
           mutation,
@@ -197,8 +190,7 @@ export function useCrudOperations() {
           onSuccess,
           onError,
           onVersionConflict,
-          operationName = 'Update Item',
-        } = config;
+          operationName = 'Update Item' } = config;
 
         // Validate parent ID if required
         const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
@@ -236,16 +228,13 @@ export function useCrudOperations() {
           if (includeVersion && currentData?.version) {
             transformedInput = {
               ...transformedInput,
-              version: currentData.version,
-            };
+              version: currentData.version };
           }
 
           const result = await mutation({
             variables: {
               id: itemId,
-              input: transformedInput,
-            },
-          });
+              input: transformedInput } });
 
           if (result.data) {
             onSuccess?.(result.data);
@@ -259,8 +248,7 @@ export function useCrudOperations() {
           if (
             handleVersionConflictAlert(error, {
               itemName: 'Item',
-              onRefresh: onVersionConflict,
-            })
+              onRefresh: onVersionConflict })
           ) {
             return false;
           }
@@ -271,9 +259,7 @@ export function useCrudOperations() {
           return false;
         }
       };
-    },
-    [client],
-  );
+    };
 
   /**
    * Creates a generic remove/delete operation with confirmation
@@ -291,8 +277,7 @@ export function useCrudOperations() {
    * const result = await removeItem(); // Shows confirmation dialog
    * ```
    */
-  const createRemoveOperation = useCallback(
-    <TResult>(config: RemoveOperationConfig<TResult>) => {
+  const createRemoveOperation = <TResult>(config: RemoveOperationConfig<TResult>) => {
       return async (): Promise<TResult | false> => {
         const {
           mutation,
@@ -302,8 +287,7 @@ export function useCrudOperations() {
           itemName,
           onSuccess,
           onError,
-          operationName = 'Delete Item',
-        } = config;
+          operationName = 'Delete Item' } = config;
 
         // Validate parent ID if required
         const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
@@ -324,16 +308,14 @@ export function useCrudOperations() {
                 {
                   text: 'Cancel',
                   style: 'cancel',
-                  onPress: () => resolve(false),
-                },
+                  onPress: () => resolve(false) },
                 {
                   text: 'Delete',
                   style: 'destructive',
                   onPress: async () => {
                     const result = await executeRemove();
                     resolve(result);
-                  },
-                },
+                  } },
               ],
             );
           });
@@ -360,9 +342,7 @@ export function useCrudOperations() {
           }
         }
       };
-    },
-    [],
-  );
+    };
 
   /**
    * Creates a simple operation wrapper without specific CRUD logic
@@ -378,8 +358,7 @@ export function useCrudOperations() {
    * });
    * ```
    */
-  const createSimpleOperation = useCallback(
-    <TArgs extends unknown[], TResult>(config: {
+  const createSimpleOperation = <TArgs extends unknown[], TResult>(config: {
       operation: (...args: TArgs) => Promise<{ data?: TResult }>;
       validate?: (...args: TArgs) => boolean | string;
       onSuccess?: (data: TResult) => void;
@@ -392,8 +371,7 @@ export function useCrudOperations() {
           validate,
           onSuccess,
           onError,
-          operationName = 'Operation',
-        } = config;
+          operationName = 'Operation' } = config;
 
         // Validate if validator provided
         if (validate) {
@@ -425,14 +403,11 @@ export function useCrudOperations() {
           return false;
         }
       };
-    },
-    [],
-  );
+    };
 
   return {
     createAddOperation,
     createUpdateOperation,
     createRemoveOperation,
-    createSimpleOperation,
-  };
+    createSimpleOperation };
 }

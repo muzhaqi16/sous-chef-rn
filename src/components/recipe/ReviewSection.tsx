@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -44,8 +44,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   deleteReview,
   toggleHelpful,
   hasVotedHelpful,
-  submitting,
-}) => {
+  submitting }) => {
   const { theme } = useUnistyles();
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -54,18 +53,15 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
     ? reviews.filter(r => r.id !== userReview.id)
     : reviews;
 
-  const handleSubmit = useCallback(
-    async (rating: number, comment?: string) => {
+  const handleSubmit = async (rating: number, comment?: string) => {
       if (hasReviewed && userReview) {
         await updateReview(userReview.id, { rating, comment });
       } else {
         await createReview(rating, comment);
       }
-    },
-    [hasReviewed, userReview, createReview, updateReview],
-  );
+    };
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (!userReview) return;
     Alert.alert(
       'Delete Review',
@@ -75,11 +71,10 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteReview(userReview.id),
-        },
+          onPress: () => deleteReview(userReview.id) },
       ],
     );
-  }, [userReview, deleteReview]);
+  };
 
   if (isOwnRecipe) return null;
 
@@ -158,23 +153,19 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   ownReviewSection: {
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md },
   ownReviewLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   writeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -185,24 +176,18 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.primary,
     borderRadius: theme.radii.md,
-    borderStyle: 'dashed',
-  },
+    borderStyle: 'dashed' },
   writeButtonText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   reviewsList: {
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   emptyText: {
     textAlign: 'center',
     color: theme.colors.textSecondary,
     fontSize: theme.fonts.size.sm,
     marginTop: theme.spacing.md,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

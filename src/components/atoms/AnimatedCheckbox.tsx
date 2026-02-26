@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+  withTiming } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing } from '#/constants/animations';
@@ -27,8 +26,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   size = 24,
   disabled = false,
   animationDuration: _animationDuration = 400,
-  testID,
-}) => {
+  testID }) => {
   const { theme } = useUnistyles();
   const isPressed = useSharedValue(false);
 
@@ -55,57 +53,44 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     }
   }, [checked, pendingChecked]);
 
-  // Animated style for the checkbox container
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    // Combine checked scale (1.05) with press scale (0.9)
+  // Color animation — only re-evaluates when visuallyChecked changes
+  const animatedColorStyle = useAnimatedStyle(() => ({
+    backgroundColor: withTiming(
+      visuallyChecked ? theme.colors.primary : 'transparent',
+      { duration: 120, easing: standardEasing },
+    ),
+    borderColor: withTiming(
+      visuallyChecked ? theme.colors.primary : theme.colors.border,
+      { duration: 120, easing: standardEasing },
+    ) }), [visuallyChecked, theme]);
+
+  // Scale animation — separated so press changes don't re-evaluate color withTiming
+  const animatedScaleStyle = useAnimatedStyle(() => {
     const baseScale = visuallyChecked ? 1.05 : 1;
     const pressScale = isPressed.value ? 0.9 : 1;
-    const finalScale = baseScale * pressScale;
-
     return {
-      backgroundColor: withTiming(
-        visuallyChecked ? theme.colors.primary : 'transparent',
-        {
-          duration: 120,
-          easing: standardEasing,
-        },
-      ),
-      borderColor: withTiming(
-        visuallyChecked ? theme.colors.primary : theme.colors.border,
-        {
-          duration: 120,
-          easing: standardEasing,
-        },
-      ),
-      // PERFORMANCE: Use timing instead of spring for cheaper animation
       transform: [
-        {
-          scale: withTiming(finalScale, {
-            duration: 100,
-            easing: standardEasing,
-          }),
-        },
-      ],
-    };
-  }, [visuallyChecked, theme]);
+        { scale: withTiming(baseScale * pressScale, { duration: 100, easing: standardEasing }) },
+      ] };
+  }, [visuallyChecked]);
 
-  const handlePressIn = useCallback(() => {
+  const handlePressIn = () => {
     if (!disabled) {
       isPressed.set(true);
       // Short haptic feedback for checkbox toggle
       HapticService.light();
     }
-  }, [disabled, isPressed]);
+  };
 
-  const handlePressOut = useCallback(() => {
+  const handlePressOut = () => {
     if (!disabled) {
       isPressed.set(false);
     }
-  }, [disabled, isPressed]);
+  };
 
   // Handle press: show animation immediately, then call onPress
   // The caller is responsible for timing any state changes (e.g., via slide animation callback)
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     if (disabled) return;
 
     // Immediately show opposite state visually
@@ -114,7 +99,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 
     // Fire onPress - caller handles timing of actual state change
     onPress?.();
-  }, [checked, disabled, onPress]);
+  };
 
   return (
     <Pressable
@@ -129,7 +114,8 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         style={[
           styles.container,
           { width: size, height: size, borderRadius: 6 },
-          animatedContainerStyle,
+          animatedColorStyle,
+          animatedScaleStyle,
         ]}
       >
         {/* PERFORMANCE: Simple conditional render without layout animations */}
@@ -144,6 +130,4 @@ const styles = StyleSheet.create(_theme => ({
   container: {
     borderWidth: 2,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-}));
+    alignItems: 'center' } }));

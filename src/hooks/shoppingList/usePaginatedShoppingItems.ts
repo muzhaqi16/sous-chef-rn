@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import {
   useGetShoppingListItemsPaginatedQuery,
-  ShoppingListItemDisplayFragment,
-} from '#generated';
+  ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
@@ -43,8 +42,7 @@ interface UsePaginatedShoppingItemsResult {
  */
 export function usePaginatedShoppingItems({
   listId,
-  skip = false,
-}: UsePaginatedShoppingItemsOptions): UsePaginatedShoppingItemsResult {
+  skip = false }: UsePaginatedShoppingItemsOptions): UsePaginatedShoppingItemsResult {
   const { isLoggedOut } = useAuth();
 
   // Track if we're currently loading more for each tab
@@ -71,8 +69,7 @@ export function usePaginatedShoppingItems({
     useGetShoppingListItemsPaginatedQuery({
       variables: {
         id: listId!,
-        first: PAGINATION.ITEMS_PAGE_SIZE,
-      },
+        first: PAGINATION.ITEMS_PAGE_SIZE },
       skip: shouldSkip,
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first',
@@ -87,8 +84,7 @@ export function usePaginatedShoppingItems({
   // Helper to extract and sort items from edges
   // Includes defensive filtering to prevent blank items from appearing when
   // cache has incomplete data (e.g., after subscription sync between devices)
-  const extractItems = useCallback(
-    (
+  const extractItems = (
       edges:
         | Array<{ node: ShoppingListItemDisplayFragment }>
         | null
@@ -113,39 +109,23 @@ export function usePaginatedShoppingItems({
           if (sortA > sortB) return 1;
           return 0;
         });
-    },
-    [],
-  );
+    };
 
   // Extract unpurchased items
-  const unpurchasedItems = useMemo((): ShoppingListItemDisplayFragment[] => {
-    const edges = listIdChanged
-      ? data?.shoppingList?.unpurchasedItems?.edges ?? []
-      : data?.shoppingList?.unpurchasedItems?.edges ??
-        previousData?.shoppingList?.unpurchasedItems?.edges ??
-        [];
-    return extractItems(edges);
-  }, [
-    listIdChanged,
-    data?.shoppingList?.unpurchasedItems?.edges,
-    previousData?.shoppingList?.unpurchasedItems?.edges,
-    extractItems,
-  ]);
+  const unpurchasedEdges = listIdChanged
+    ? data?.shoppingList?.unpurchasedItems?.edges ?? []
+    : data?.shoppingList?.unpurchasedItems?.edges ??
+      previousData?.shoppingList?.unpurchasedItems?.edges ??
+      [];
+  const unpurchasedItems = extractItems(unpurchasedEdges);
 
   // Extract purchased items
-  const purchasedItems = useMemo((): ShoppingListItemDisplayFragment[] => {
-    const edges = listIdChanged
-      ? data?.shoppingList?.purchasedItems?.edges ?? []
-      : data?.shoppingList?.purchasedItems?.edges ??
-        previousData?.shoppingList?.purchasedItems?.edges ??
-        [];
-    return extractItems(edges);
-  }, [
-    listIdChanged,
-    data?.shoppingList?.purchasedItems?.edges,
-    previousData?.shoppingList?.purchasedItems?.edges,
-    extractItems,
-  ]);
+  const purchasedEdges = listIdChanged
+    ? data?.shoppingList?.purchasedItems?.edges ?? []
+    : data?.shoppingList?.purchasedItems?.edges ??
+      previousData?.shoppingList?.purchasedItems?.edges ??
+      [];
+  const purchasedItems = extractItems(purchasedEdges);
 
   // Extract pagination info for unpurchased
   const unpurchasedPageInfo = data?.shoppingList?.unpurchasedItems?.pageInfo;
@@ -166,7 +146,7 @@ export function usePaginatedShoppingItems({
   const isLoadingMorePurchased = loading && purchasedItems.length > 0;
 
   // Load more unpurchased items
-  const loadMoreUnpurchased = useCallback(async () => {
+  const loadMoreUnpurchased = async () => {
     if (
       !unpurchasedHasMore ||
       isLoadingMoreUnpurchasedRef.current ||
@@ -180,16 +160,14 @@ export function usePaginatedShoppingItems({
     try {
       await fetchMore({
         variables: {
-          unpurchasedAfter: unpurchasedEndCursor,
-        },
-      });
+          unpurchasedAfter: unpurchasedEndCursor } });
     } finally {
       isLoadingMoreUnpurchasedRef.current = false;
     }
-  }, [unpurchasedHasMore, unpurchasedEndCursor, fetchMore]);
+  };
 
   // Load more purchased items
-  const loadMorePurchased = useCallback(async () => {
+  const loadMorePurchased = async () => {
     if (
       !purchasedHasMore ||
       isLoadingMorePurchasedRef.current ||
@@ -203,24 +181,22 @@ export function usePaginatedShoppingItems({
     try {
       await fetchMore({
         variables: {
-          purchasedAfter: purchasedEndCursor,
-        },
-      });
+          purchasedAfter: purchasedEndCursor } });
     } finally {
       isLoadingMorePurchasedRef.current = false;
     }
-  }, [purchasedHasMore, purchasedEndCursor, fetchMore]);
+  };
 
   // Wrap refetch with error handling to ensure promise always resolves
   // This prevents the refresh spinner from getting stuck if refetch fails
-  const handleRefetch = useCallback(async () => {
+  const handleRefetch = async () => {
     try {
       await refetch();
     } catch (error) {
       // Log error but don't rethrow - let finally block run in caller
       console.warn('[usePaginatedShoppingItems] Refetch failed:', error);
     }
-  }, [refetch]);
+  };
 
   // Auto-refetch when edges are depleted but totalCount indicates items remain
   // This handles the case where all visible items are toggled but server has more
@@ -266,21 +242,19 @@ export function usePaginatedShoppingItems({
     refetch,
   ]);
 
-  const unpurchased = useMemo<ConnectionData>(() => ({
+  const unpurchased: ConnectionData = {
     items: unpurchasedItems,
     totalCount: unpurchasedTotalCount,
     hasMore: unpurchasedHasMore,
     isLoadingMore: isLoadingMoreUnpurchased,
-    loadMore: loadMoreUnpurchased,
-  }), [unpurchasedItems, unpurchasedTotalCount, unpurchasedHasMore, isLoadingMoreUnpurchased, loadMoreUnpurchased]);
+    loadMore: loadMoreUnpurchased };
 
-  const purchased = useMemo<ConnectionData>(() => ({
+  const purchased: ConnectionData = {
     items: purchasedItems,
     totalCount: purchasedTotalCount,
     hasMore: purchasedHasMore,
     isLoadingMore: isLoadingMorePurchased,
-    loadMore: loadMorePurchased,
-  }), [purchasedItems, purchasedTotalCount, purchasedHasMore, isLoadingMorePurchased, loadMorePurchased]);
+    loadMore: loadMorePurchased };
 
   return {
     unpurchased,
@@ -288,6 +262,5 @@ export function usePaginatedShoppingItems({
     loading: loading && unpurchasedItems.length === 0 && purchasedItems.length === 0,
     error: error as Error | undefined,
     refetch: handleRefetch,
-    isTransitioning: listIdChanged && loading,
-  };
+    isTransitioning: listIdChanged && loading };
 }

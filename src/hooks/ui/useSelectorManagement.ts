@@ -1,4 +1,4 @@
-import { useCallback, RefObject } from 'react';
+import { RefObject } from 'react';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 
 interface UseSelectorManagementOptions {
@@ -47,28 +47,27 @@ export function useSelectorManagement(options: UseSelectorManagementOptions) {
   /**
    * Open the selector and overlay
    */
-  const handleOpenSelector = useCallback(() => {
+  const handleOpenSelector = () => {
     setOverlayOpen(true);
     selectorRef.current?.open();
-  }, [setOverlayOpen, selectorRef]);
+  };
 
   /**
    * Handle overlay open event from selector
    */
-  const handleOverlayOpen = useCallback(() => {
+  const handleOverlayOpen = () => {
     setOverlayOpen(true);
-  }, [setOverlayOpen]);
+  };
 
   /**
    * Handle overlay close event from selector
    */
-  const handleOverlayClose = useCallback(() => {
+  const handleOverlayClose = () => {
     setOverlayOpen(false);
-  }, [setOverlayOpen]);
+  };
 
   return {
     handleOpenSelector,
     handleOverlayOpen,
-    handleOverlayClose,
-  };
+    handleOverlayClose };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Keyboard } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -36,7 +36,7 @@ export const TagInput: React.FC<TagInputProps> = ({
     };
   }, []);
 
-  const filteredSuggestions = useMemo(() => {
+  const filteredSuggestions = (() => {
     if (!inputValue.trim()) return [];
     const query = inputValue.toLowerCase();
     return suggestions
@@ -46,7 +46,7 @@ export const TagInput: React.FC<TagInputProps> = ({
           !tags.includes(suggestion)
       )
       .slice(0, 5);
-  }, [inputValue, suggestions, tags]);
+  })();
 
   const handleAddTag = (tag: string) => {
     const trimmedTag = tag.trim();

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 
@@ -54,7 +54,7 @@ export function useAddItemSheet(
 
   const [visible, setVisible] = useState(false);
 
-  const open = useCallback(() => {
+  const open = () => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
       Alert.alert(
@@ -67,19 +67,18 @@ export function useAddItemSheet(
             onPress: () => {
               Telemetry.trackEvent('create_list_from_add_item');
               onNavigateToListSettings?.();
-            },
-          },
+            } },
         ],
       );
       return;
     }
     Telemetry.trackEvent('add_item_clicked', { list_id: currentListId });
     setVisible(true);
-  }, [currentListId, onNavigateToListSettings]);
+  };
 
-  const close = useCallback(() => {
+  const close = () => {
     setVisible(false);
-  }, []);
+  };
 
   return { visible, open, close };
 }

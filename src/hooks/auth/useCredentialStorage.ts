@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   loadCredentials,
   loadCredentialsForAccount,
@@ -7,8 +7,7 @@ import {
   hasCredentialsForAccount,
   clearCredentials,
   getStoredAccounts,
-  getBiometricCapability,
-} from '#/storage/keychain';
+  getBiometricCapability } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
 
 export interface Credentials {
@@ -24,8 +23,7 @@ export const useCredentialStorage = () => {
   // Local state for credential operations
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
-  const checkStoredCredentials = useCallback(
-    async (email?: string): Promise<boolean> => {
+  const checkStoredCredentials = async (email?: string): Promise<boolean> => {
       try {
         let result;
         if (email) {
@@ -39,12 +37,9 @@ export const useCredentialStorage = () => {
         logger.error('Error checking credentials:', error);
         return false;
       }
-    },
-    [],
-  );
+    };
 
-  const loadStoredCredentials = useCallback(
-    async (email?: string): Promise<Credentials | null> => {
+  const loadStoredCredentials = async (email?: string): Promise<Credentials | null> => {
       try {
         setIsLoadingCredentials(true);
 
@@ -58,8 +53,7 @@ export const useCredentialStorage = () => {
         const result = credentials
           ? {
               email: credentials.username,
-              password: credentials.password,
-            }
+              password: credentials.password }
           : null;
 
         return result;
@@ -70,30 +64,27 @@ export const useCredentialStorage = () => {
       } finally {
         setIsLoadingCredentials(false);
       }
-    },
-    [],
-  );
+    };
 
-  const getAvailableAccounts = useCallback(async () => {
+  const getAvailableAccounts = async () => {
     try {
       return await getStoredAccounts();
     } catch (error) {
       logger.error('Error getting available accounts:', error);
       return [];
     }
-  }, []);
+  };
 
-  const getBiometricInfo = useCallback(async () => {
+  const getBiometricInfo = async () => {
     try {
       return await getBiometricCapability();
     } catch (error) {
       logger.error('Error getting biometric capability:', error);
       return { isAvailable: false, biometryType: null };
     }
-  }, []);
+  };
 
-  const storeCredentials = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
+  const storeCredentials = async (email: string, password: string): Promise<boolean> => {
       try {
         await saveCredentials(email, password);
         return true;
@@ -102,12 +93,9 @@ export const useCredentialStorage = () => {
         logger.error('Error storing credentials:', error);
         return false;
       }
-    },
-    [],
-  );
+    };
 
-  const removeCredentials = useCallback(
-    async (email?: string): Promise<boolean> => {
+  const removeCredentials = async (email?: string): Promise<boolean> => {
       try {
         await clearCredentials(email);
         return true;
@@ -115,9 +103,7 @@ export const useCredentialStorage = () => {
         logger.error('Error removing credentials:', error);
         return false;
       }
-    },
-    [],
-  );
+    };
 
   return {
     // State
@@ -129,6 +115,5 @@ export const useCredentialStorage = () => {
     getAvailableAccounts,
     getBiometricInfo,
     storeCredentials,
-    removeCredentials,
-  };
+    removeCredentials };
 };

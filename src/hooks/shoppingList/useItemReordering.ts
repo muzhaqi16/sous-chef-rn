@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { useMoveShoppingListItemMutation } from '#generated';
@@ -6,8 +5,7 @@ import { generatePosition } from '#/utils/fractionalIndexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+  getVersionConflictMessage } from '#/utils/errors/versionConflict';
 
 interface ShoppingListItem {
   id: string;
@@ -82,8 +80,7 @@ export function useItemReordering<T extends ShoppingListItem>(
    * @param afterSortOrder - sortOrder value of the item before the new position
    * @param beforeSortOrder - sortOrder value of the item after the new position
    */
-  const handleSortOrderUpdate = useCallback(
-    async (
+  const handleSortOrderUpdate = async (
       itemId: string,
       afterItemId: string | null,
       beforeItemId: string | null,
@@ -119,8 +116,7 @@ export function useItemReordering<T extends ShoppingListItem>(
               afterId: afterItemId,
               afterSortOrder: afterItem.sortOrder,
               beforeId: beforeItemId,
-              beforeSortOrder: beforeItem.sortOrder,
-            });
+              beforeSortOrder: beforeItem.sortOrder });
             refetch?.();
             return;
           }
@@ -131,8 +127,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             console.warn('Duplicate sortOrder in cache, using fallback positioning', {
               afterId: afterItemId,
               beforeId: beforeItemId,
-              sharedSortOrder: afterItem.sortOrder,
-            });
+              sharedSortOrder: afterItem.sortOrder });
 
             // Find the next item with a different (higher) sortOrder
             const nextItem = items
@@ -161,9 +156,7 @@ export function useItemReordering<T extends ShoppingListItem>(
               id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
               fields: {
                 sortOrder() { return newSortOrder; },
-                updatedAt() { return new Date().toISOString(); },
-              },
-            });
+                updatedAt() { return new Date().toISOString(); } } });
 
             // Helper to sort edges by sortOrder with secondary sort by id
             // justified: Apollo readField returns opaque cache references — no public type for edge/node access
@@ -199,8 +192,7 @@ export function useItemReordering<T extends ShoppingListItem>(
 
                   return {
                     ...existing,
-                    edges: sortEdges(existing?.edges || [], readField),
-                  };
+                    edges: sortEdges(existing?.edges || [], readField) };
                 },
                 // Also target aliased fields - Apollo may cache under the alias name
                 // when using GetShoppingListItemsPaginated query
@@ -208,13 +200,9 @@ export function useItemReordering<T extends ShoppingListItem>(
                   if (!existing?.edges) return existing;
                   return {
                     ...existing,
-                    edges: sortEdges(existing.edges, readField),
-                  };
-                },
-              },
-            });
-          },
-        });
+                    edges: sortEdges(existing.edges, readField) };
+                } } });
+          } });
 
         // Execute mutation (NO optimisticResponse - cache already updated above)
         const result = await moveItem({
@@ -222,10 +210,7 @@ export function useItemReordering<T extends ShoppingListItem>(
             input: {
               itemId,
               afterItemId: afterItemId ?? undefined,
-              beforeItemId: beforeItemId ?? undefined,
-            },
-          },
-        });
+              beforeItemId: beforeItemId ?? undefined } } });
 
         // Check for GraphQL errors (with errorPolicy: 'all', errors don't throw)
         if (result.error) {
@@ -245,8 +230,7 @@ export function useItemReordering<T extends ShoppingListItem>(
           // No-op move - item was already in correct position
           console.log('⊘ Move was no-op (item already in position):', {
             itemId,
-            version: serverVersion,
-          });
+            version: serverVersion });
           return;
         }
 
@@ -255,22 +239,18 @@ export function useItemReordering<T extends ShoppingListItem>(
           itemId,
           serverSortOrder,
           oldVersion: originalVersion,
-          newVersion: serverVersion,
-        });
+          newVersion: serverVersion });
 
         // Ensure server's sortOrder is in cache (may differ from optimistic value)
         // This prevents cache desync when server calculates a different sortOrder
         if (serverSortOrder && serverSortOrder !== newSortOrder) {
           console.log('Server returned different sortOrder, updating cache:', {
             optimistic: newSortOrder,
-            server: serverSortOrder,
-          });
+            server: serverSortOrder });
           client.cache.modify({
             id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
             fields: {
-              sortOrder() { return serverSortOrder; },
-            },
-          });
+              sortOrder() { return serverSortOrder; } } });
         }
 
         // Mark this item as recently reordered to ignore subscription echo
@@ -290,9 +270,7 @@ export function useItemReordering<T extends ShoppingListItem>(
         // Generic error fallback
         Alert.alert('Error', 'Failed to reorder items. Please try again.');
       }
-    },
-    [listId, moveItem, items, refetch, client],
-  );
+    };
 
   return { handleSortOrderUpdate };
 }

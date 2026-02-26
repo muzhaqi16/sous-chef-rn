@@ -7,7 +7,7 @@
  * - Handle home switching with pantry coordination
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 import { useSetDefaultHomeMutation } from '#generated';
@@ -16,8 +16,7 @@ import {
   selectSelectedHomeId,
   selectHomeState,
   selectSetHomeAndPantry,
-  selectSetIsHomeSelectionReady,
-} from '#store/useAppStore';
+  selectSetIsHomeSelectionReady } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
 
 interface UseHomeSelectionOptions {
@@ -49,8 +48,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
   const { selectedPantryId, setSelectedPantryId } = useAppStore(
     useShallow(state => ({
       selectedPantryId: state.selectedPantryId,
-      setSelectedPantryId: state.setSelectedPantryId,
-    })),
+      setSelectedPantryId: state.setSelectedPantryId })),
   );
   const setHomeAndPantry = useAppStore(selectSetHomeAndPantry);
   const setIsHomeSelectionReady = useAppStore(selectSetIsHomeSelectionReady);
@@ -72,12 +70,9 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
         message: 'Default home set',
         settings: {
           __typename: 'UserSettings',
-          id: variables.homeId,
-        },
+          id: variables.homeId },
         // defaultPantry will be returned by server, null in optimistic response
-        defaultPantry: null,
-      },
-    }),
+        defaultPantry: null } }),
 
     // Update Apollo cache to set isDefault on the correct home
     update: (cache, _result, { variables }) => {
@@ -104,19 +99,14 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
                 cache.modify({
                   id: cacheId,
                   fields: {
-                    isDefault: () => homeId === variables.homeId,
-                  },
-                });
+                    isDefault: () => homeId === variables.homeId } });
               }
             });
 
             // Return existing unchanged - we modified entities directly
             return existingHomes;
-          },
-        },
-      });
-    },
-  });
+          } } });
+    } });
 
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
   // This runs ONCE when the user has homes but no default home set anywhere
@@ -135,15 +125,12 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
 
       // Sync this choice to the backend
       setDefaultHomeMutation({
-        variables: { homeId: firstHome.id },
-      }).catch((error: any) => {
+        variables: { homeId: firstHome.id } }).catch((error: any) => {
         const { message } = handleApolloError(error, {
-          operation: 'Set First Home as Default',
-        });
+          operation: 'Set First Home as Default' });
         console.warn('Failed to set first home as default:', message);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedHomeId,
     remoteDefaultHomeId,
@@ -153,8 +140,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
     setSelectedHomeId,
   ]);
 
-  const setDefaultHome = useCallback(
-    async (homeId: string) => {
+  const setDefaultHome = async (homeId: string) => {
       // Prevent redundant calls if already set as default (check both local and remote)
       if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
         return true;
@@ -193,8 +179,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
 
       try {
         const result = await setDefaultHomeMutation({
-          variables: { homeId },
-        });
+          variables: { homeId } });
 
         if (result.data?.setDefaultHome?.success) {
           // Update pantry from server response (server is source of truth)
@@ -218,18 +203,7 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
         Alert.alert('Error', 'Failed to set default home');
         return false;
       }
-    },
-    [
-      selectedHomeId,
-      remoteDefaultHomeId,
-      homes,
-      selectedPantryId,
-      setIsHomeSelectionReady,
-      setHomeAndPantry,
-      setDefaultHomeMutation,
-      setSelectedPantryId,
-    ],
-  );
+    };
 
   // Computed value for current default home
   const defaultHome = homes?.find((home: any) => home.id === selectedHomeId) || null;
@@ -242,6 +216,5 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
     setDefaultHome,
     setDefaultHomeMutation,
     setSelectedHomeId,
-    setSelectedPantryId,
-  };
+    setSelectedPantryId };
 }

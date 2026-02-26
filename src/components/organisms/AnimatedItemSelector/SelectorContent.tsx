@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Text, ActivityIndicator, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -27,8 +27,7 @@ const EmptyState: React.FC<{ message: string }> = ({ message }) => (
 );
 
 export const SelectorContent = <T extends SelectableItem>({
-  config,
-}: SelectorContentProps<T>) => {
+  config }: SelectorContentProps<T>) => {
   const {
     data,
     selectedId,
@@ -39,11 +38,9 @@ export const SelectorContent = <T extends SelectableItem>({
     keyExtractor,
     renderCustomItem,
     actions,
-    extraData,
-  } = config;
+    extraData } = config;
 
-  const renderItem = useCallback(
-    ({ item }: { item: T }) => (
+  const renderItem = ({ item }: { item: T }) => (
       <SelectorItem
         item={item}
         isSelected={item.id === selectedId}
@@ -52,9 +49,7 @@ export const SelectorContent = <T extends SelectableItem>({
         renderCustomItem={renderCustomItem}
         extraData={extraData}
       />
-    ),
-    [selectedId, onSelect, displayProperty, renderCustomItem, extraData],
-  );
+    );
 
   if (loading) {
     return <LoadingState />;
@@ -104,34 +99,27 @@ const styles = StyleSheet.create(theme => ({
   },
   listContainer: {
     flex: 1,
-    minHeight: 100,
-  },
+    minHeight: 100 },
   actionsWrapper: {
     flexShrink: 0, // Prevent ActionButtons from being compressed/hidden
   },
   listContent: {
-    paddingBottom: theme.spacing.sm,
-  },
+    paddingBottom: theme.spacing.sm },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   loadingText: {
     marginTop: theme.spacing.md,
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
-  },
+    paddingVertical: theme.spacing.xl },
   emptyText: {
     fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
-}));
+    textAlign: 'center' } }));

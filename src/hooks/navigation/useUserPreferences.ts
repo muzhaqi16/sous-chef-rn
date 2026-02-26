@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useAppStore } from '#store/useAppStore';
 
 export const useUserPreferences = () => {
@@ -6,24 +5,23 @@ export const useUserPreferences = () => {
   const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
   const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
 
-  const shouldShowCredentialPrompt = useCallback((userId?: string): boolean => {
+  const shouldShowCredentialPrompt = (userId?: string): boolean => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return false;
 
     const navState = getUserNavigationState(targetUserId);
     return !navState?.credentialPromptDeclined;
-  }, [user?.id, getUserNavigationState]);
+  };
 
-  const markBiometricDeclined = useCallback((userId?: string) => {
+  const markBiometricDeclined = (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
-      biometricDeclinedPermanently: true,
-    });
-  }, [user?.id, setUserNavigationState]);
+      biometricDeclinedPermanently: true });
+  };
 
-  const markBiometricEnabled = useCallback((userId?: string) => {
+  const markBiometricEnabled = (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
@@ -31,60 +29,53 @@ export const useUserPreferences = () => {
       biometricEnabled: true,
       biometricPromptRemindLater: false,
       lastBiometricPromptDeclined: undefined,
-      biometricDeclinedPermanently: false,
-    });
-  }, [user?.id, setUserNavigationState]);
+      biometricDeclinedPermanently: false });
+  };
 
-  const markCredentialPromptDeclined = useCallback((userId?: string) => {
+  const markCredentialPromptDeclined = (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
       credentialPromptDeclined: true,
-      lastCredentialPromptShown: Date.now(),
-    });
-  }, [user?.id, setUserNavigationState]);
+      lastCredentialPromptShown: Date.now() });
+  };
 
-  const resetBiometricDeclination = useCallback((userId?: string) => {
+  const resetBiometricDeclination = (userId?: string) => {
+    const targetUserId = userId || user?.id;
+    if (!targetUserId) return;
+
+    setUserNavigationState(targetUserId, {
+      biometricDeclinedPermanently: false });
+  };
+
+  const resetAllPreferences = (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
       biometricDeclinedPermanently: false,
-    });
-  }, [user?.id, setUserNavigationState]);
+      credentialPromptDeclined: false });
+  };
 
-  const resetAllPreferences = useCallback((userId?: string) => {
+  const trackCredentialPromptShown = (userId?: string) => {
     const targetUserId = userId || user?.id;
     if (!targetUserId) return;
 
     setUserNavigationState(targetUserId, {
-      biometricDeclinedPermanently: false,
-      credentialPromptDeclined: false,
-    });
-  }, [user?.id, setUserNavigationState]);
+      lastCredentialPromptShown: Date.now() });
+  };
 
-  const trackCredentialPromptShown = useCallback((userId?: string) => {
-    const targetUserId = userId || user?.id;
-    if (!targetUserId) return;
-
-    setUserNavigationState(targetUserId, {
-      lastCredentialPromptShown: Date.now(),
-    });
-  }, [user?.id, setUserNavigationState]);
-
-  const clearRegistrationPreferences = useCallback((userId: string) => {
+  const clearRegistrationPreferences = (userId: string) => {
     setUserNavigationState(userId, {
       credentialPromptDeclined: false,
-      biometricDeclinedPermanently: false,
-    });
-  }, [setUserNavigationState]);
+      biometricDeclinedPermanently: false });
+  };
 
-  const trackLogout = useCallback((userId: string) => {
+  const trackLogout = (userId: string) => {
     setUserNavigationState(userId, {
-      biometricEnabled: false,
-    });
-  }, [setUserNavigationState]);
+      biometricEnabled: false });
+  };
 
   return {
     shouldShowCredentialPrompt,
@@ -95,6 +86,5 @@ export const useUserPreferences = () => {
     resetAllPreferences,
     trackCredentialPromptShown,
     clearRegistrationPreferences,
-    trackLogout,
-  };
+    trackLogout };
 };

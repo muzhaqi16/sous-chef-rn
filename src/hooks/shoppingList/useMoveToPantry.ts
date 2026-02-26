@@ -1,15 +1,13 @@
-import { useCallback, useRef } from 'react';
+import { useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useMoveShoppingItemToPantryMutation,
   StorageState,
-  ShoppingListItemDisplayFragment,
-} from '#generated';
+  ShoppingListItemDisplayFragment } from '#generated';
 import { Telemetry } from '#/services/telemetry';
 import {
   createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+  createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -33,8 +31,7 @@ interface UseMoveToPantryOptions {
  */
 export function useMoveToPantry({
   currentListId,
-  onSuccess,
-}: UseMoveToPantryOptions) {
+  onSuccess }: UseMoveToPantryOptions) {
   // Refs to track mutation input for cache update
   const moveToPantryIdRef = useRef<string | null>(null);
   const removeFromListRef = useRef<boolean>(true);
@@ -76,8 +73,7 @@ export function useMoveToPantry({
             // If keeping in list, mark as unpurchased in cache (server does this automatically)
             const cacheId = cache.identify({
               __typename: 'ShoppingListItem',
-              id: selectedItem.id,
-            });
+              id: selectedItem.id });
             if (cacheId) {
               cache.modify({
                 id: cacheId,
@@ -90,9 +86,7 @@ export function useMoveToPantry({
                   },
                   updatedAt() {
                     return new Date().toISOString();
-                  },
-                },
-              });
+                  } } });
             }
           }
         } catch (error) {
@@ -107,14 +101,12 @@ export function useMoveToPantry({
       },
       onError: error => {
         Alert.alert('Error', error.message || 'Failed to move item to pantry');
-      },
-    });
+      } });
 
   /**
    * Move a shopping list item to pantry
    */
-  const moveToPantry = useCallback(
-    async (item: ShoppingListItemDisplayFragment, input: MoveToPantryInput) => {
+  const moveToPantry = async (item: ShoppingListItemDisplayFragment, input: MoveToPantryInput) => {
       // Store refs for cache update
       selectedItemRef.current = item;
       moveToPantryIdRef.current = input.pantryId;
@@ -132,28 +124,21 @@ export function useMoveToPantry({
               expiresAt: input.expiresAt,
               removeFromList: input.removeFromList,
               actualPrice: input.actualPrice,
-              notes: input.notes,
-            },
-          },
-        });
+              notes: input.notes } } });
 
         Telemetry.trackEvent('shopping_item_moved_to_pantry', {
           shopping_list_id: currentListId,
           pantry_id: input.pantryId,
-          remove_from_list: input.removeFromList,
-        });
+          remove_from_list: input.removeFromList });
 
         return true;
       } catch (error) {
         console.error('Failed to move item to pantry:', error);
         return false;
       }
-    },
-    [moveShoppingItemToPantry, currentListId],
-  );
+    };
 
   return {
     moveToPantry,
-    loading,
-  };
+    loading };
 }

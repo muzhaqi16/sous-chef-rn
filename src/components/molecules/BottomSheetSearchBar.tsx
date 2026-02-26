@@ -1,10 +1,9 @@
 import React, {
   forwardRef,
-  useCallback,
+  
   useImperativeHandle,
   useRef,
-  useEffect,
-} from 'react';
+  useEffect } from 'react';
 import { View, Pressable, ActivityIndicator } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -69,8 +68,7 @@ export const BottomSheetSearchBar = forwardRef<
       returnKeyType = 'search',
       testID,
       initialValue,
-      isLoading = false,
-    },
+      isLoading = false },
     ref,
   ) => {
     const { theme } = useUnistyles();
@@ -84,14 +82,14 @@ export const BottomSheetSearchBar = forwardRef<
     const [hasText, setHasText] = React.useState(false);
 
     // Helper to set input value programmatically
-    const setInputValue = useCallback((value: string) => {
+    const setInputValue = (value: string) => {
       inputValueRef.current = value;
       setHasText(value.length > 0);
       // Use setNativeProps for uncontrolled input
       if (inputRef.current) {
         inputRef.current.setNativeProps?.({ text: value });
       }
-    }, []);
+    };
 
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
@@ -108,8 +106,7 @@ export const BottomSheetSearchBar = forwardRef<
         inputRef.current?.blur();
       },
       getValue: () => inputValueRef.current,
-      setValue: setInputValue,
-    }), [setInputValue, onClear]);
+      setValue: setInputValue }), [setInputValue, onClear]);
 
     // Set initial value when provided
     useEffect(() => {
@@ -130,8 +127,7 @@ export const BottomSheetSearchBar = forwardRef<
     }, []);
 
     // Debounced change handler - prevents cursor jumping
-    const handleChangeText = useCallback(
-      (text: string) => {
+    const handleChangeText = (text: string) => {
         // Store value immediately in ref
         inputValueRef.current = text;
         setHasText(text.length > 0);
@@ -145,12 +141,10 @@ export const BottomSheetSearchBar = forwardRef<
         debounceTimerRef.current = setTimeout(() => {
           onChangeText(text);
         }, debounceMs);
-      },
-      [onChangeText, debounceMs],
-    );
+      };
 
     // Handle clear button press
-    const handleClear = useCallback(() => {
+    const handleClear = () => {
       inputRef.current?.clear();
       inputValueRef.current = '';
       setHasText(false);
@@ -161,7 +155,7 @@ export const BottomSheetSearchBar = forwardRef<
       }
       onChangeText('');
       onClear?.();
-    }, [onChangeText, onClear]);
+    };
 
     return (
       <View style={styles.container}>
@@ -231,26 +225,19 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.lg,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   input: {
     flex: 1,
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-  },
+    paddingVertical: theme.spacing.xs },
   clearButton: {
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   loadingIndicator: {
-    marginRight: theme.spacing.xs,
-  },
+    marginRight: theme.spacing.xs },
   actionButton: {
     padding: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
+    marginLeft: theme.spacing.xs },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

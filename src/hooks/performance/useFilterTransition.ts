@@ -1,4 +1,4 @@
-import { useState, useCallback, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 
 interface UseFilterTransitionOptions<T> {
   /** Initial items to filter */
@@ -55,11 +55,11 @@ export function useFilterTransition<T>(
   );
 
   // Apply filter with transition (non-blocking)
-  const applyFilter = useCallback(() => {
+  const applyFilter = () => {
     startTransition(() => {
       setFilteredItems(items.filter(filterFn));
     });
-  }, [items, filterFn]);
+  };
 
   // Auto-apply filter when items or filterFn changes
   useEffect(() => {
@@ -69,8 +69,7 @@ export function useFilterTransition<T>(
   return {
     filteredItems,
     isPending,
-    applyFilter,
-  };
+    applyFilter };
 }
 
 /**
@@ -91,7 +90,7 @@ export function useFilterTransition<T>(
 export function useFilterTransitionWithDeps<T>(
   options: UseFilterTransitionOptions<T> & { deps?: unknown[] },
 ): UseFilterTransitionResult<T> {
-  const { items, filterFn, applyOnMount = true, deps = [] } = options;
+  const { items, filterFn, applyOnMount = true } = options;
 
   const [isPending, startTransition] = useTransition();
   const [filteredItems, setFilteredItems] = useState<T[]>(() =>
@@ -99,12 +98,11 @@ export function useFilterTransitionWithDeps<T>(
   );
 
   // Apply filter with transition (non-blocking)
-  const applyFilter = useCallback(() => {
+  const applyFilter = () => {
     startTransition(() => {
       setFilteredItems(items.filter(filterFn));
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, filterFn, ...deps]);
+  };
 
   // Auto-apply filter when dependencies change
   useEffect(() => {
@@ -114,6 +112,5 @@ export function useFilterTransitionWithDeps<T>(
   return {
     filteredItems,
     isPending,
-    applyFilter,
-  };
+    applyFilter };
 }

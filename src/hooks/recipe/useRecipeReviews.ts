@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+;
 import {
   useCreateRecipeReviewMutation,
   useUpdateRecipeReviewMutation,
@@ -6,8 +6,7 @@ import {
   useToggleReviewHelpfulMutation,
   GetRecipeDocument,
   type RecipeFragment,
-  type RecipeReviewFragment,
-} from '#generated';
+  type RecipeReviewFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { toastService } from '#/services/toastService';
 
@@ -30,19 +29,16 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
   const rating5Count = backendRecipe?.rating5Count ?? 0;
 
   // Sort reviews: most helpful first, then newest
-  const reviews = useMemo(() => {
+  const reviews = (() => {
     const raw = backendRecipe?.reviews?.edges?.map(edge => edge.node) ?? [];
     return [...raw].sort((a, b) => {
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [backendRecipe?.reviews]);
+  })();
 
   // Current user's review
-  const userReview = useMemo(
-    () => (userId ? reviews.find(r => r.user.id === userId) ?? null : null),
-    [reviews, userId],
-  );
+  const userReview = (userId ? reviews.find(r => r.user.id === userId) ?? null : null);
 
   const hasReviewed = !!userReview;
   const isOwnRecipe = backendRecipe?.createdBy?.id === userId;
@@ -50,8 +46,7 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
   // Refetch recipe query to refresh all review-related fields (reviews, counts, average)
   const refetchRecipe = {
     query: GetRecipeDocument,
-    variables: { id: recipeId },
-  };
+    variables: { id: recipeId } };
 
   // Mutations
   const [createReviewMutation, { loading: createLoading }] =
@@ -59,16 +54,14 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
       refetchQueries: [refetchRecipe],
       onError: err => {
         toastService.error(err.message || 'Failed to submit review');
-      },
-    });
+      } });
 
   const [updateReviewMutation, { loading: updateLoading }] =
     useUpdateRecipeReviewMutation({
       refetchQueries: [refetchRecipe],
       onError: err => {
         toastService.error(err.message || 'Failed to update review');
-      },
-    });
+      } });
 
   const [deleteReviewMutation, { loading: deleteLoading }] =
     useDeleteRecipeReviewMutation({
@@ -80,8 +73,7 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
       },
       onError: err => {
         toastService.error(err.message || 'Failed to delete review');
-      },
-    });
+      } });
 
   const [toggleHelpfulMutation] = useToggleReviewHelpfulMutation({
     update: (cache, { data }, { variables }) => {
@@ -92,71 +84,47 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
         fields: {
           helpful(existing: number) {
             return isHelpful ? existing + 1 : Math.max(0, existing - 1);
-          },
-        },
-      });
+          } } });
     },
     onError: err => {
       toastService.error(err.message || 'Failed to update helpful vote');
-    },
-  });
+    } });
 
   const submitting = createLoading || updateLoading || deleteLoading;
 
   // Actions
-  const createReview = useCallback(
-    async (rating: number, comment?: string) => {
+  const createReview = async (rating: number, comment?: string) => {
       await createReviewMutation({
         variables: {
-          input: { recipeId, rating, comment: comment || undefined },
-        },
-      });
+          input: { recipeId, rating, comment: comment || undefined } } });
       toastService.success('Review submitted');
-    },
-    [recipeId, createReviewMutation],
-  );
+    };
 
-  const updateReview = useCallback(
-    async (id: string, input: { rating?: number; comment?: string }) => {
+  const updateReview = async (id: string, input: { rating?: number; comment?: string }) => {
       await updateReviewMutation({
         variables: {
           id,
           input: {
             rating: input.rating,
-            comment: input.comment,
-          },
-        },
-      });
+            comment: input.comment } } });
       toastService.success('Review updated');
-    },
-    [updateReviewMutation],
-  );
+    };
 
-  const deleteReview = useCallback(
-    async (id: string) => {
+  const deleteReview = async (id: string) => {
       await deleteReviewMutation({ variables: { id } });
       toastService.success('Review deleted');
-    },
-    [deleteReviewMutation],
-  );
+    };
 
-  const toggleHelpful = useCallback(
-    async (reviewId: string, isHelpful: boolean) => {
+  const toggleHelpful = async (reviewId: string, isHelpful: boolean) => {
       await toggleHelpfulMutation({
-        variables: { input: { reviewId, isHelpful } },
-      });
-    },
-    [toggleHelpfulMutation],
-  );
+        variables: { input: { reviewId, isHelpful } } });
+    };
 
   // Check if user has voted helpful on a review
-  const hasVotedHelpful = useCallback(
-    (review: RecipeReviewFragment) => {
+  const hasVotedHelpful = (review: RecipeReviewFragment) => {
       if (!userId) return false;
       return review.helpfulVotes.some(v => v.user.id === userId);
-    },
-    [userId],
-  );
+    };
 
   return {
     reviews,
@@ -175,6 +143,5 @@ export function useRecipeReviews({ recipeId, backendRecipe }: UseRecipeReviewsOp
     deleteReview,
     toggleHelpful,
     hasVotedHelpful,
-    submitting,
-  };
+    submitting };
 }

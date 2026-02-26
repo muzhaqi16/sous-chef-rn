@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, Image, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -30,8 +30,7 @@ const PERSPECTIVES = [
 
 const PERSPECTIVE_OPTIONS = PERSPECTIVES.map(p => ({
   label: getPerspectiveLabel(p),
-  value: p,
-}));
+  value: p }));
 
 const getNextAvailablePerspective = (existingImages: SelectedImage[]): string => {
   const usedPerspectives = new Set(existingImages.map(img => img.perspective));
@@ -49,12 +48,10 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   onError,
   disabled = false,
   maxImages = 6,
-  label = 'Product Images',
-}) => {
+  label = 'Product Images' }) => {
   const { theme } = useUnistyles();
 
-  const handleMultiImagesSelected = useCallback(
-    (newFiles: ImageFile[]) => {
+  const handleMultiImagesSelected = (newFiles: ImageFile[]) => {
       const remaining = maxImages - images.length;
       const filesToAdd = newFiles.slice(0, remaining);
 
@@ -67,49 +64,35 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
             perspective: getNextAvailablePerspective([
               ...images,
               ...filesToAdd.slice(0, i).map(ff => ({ ...ff, perspective: '' })),
-            ]),
-          })),
+            ]) })),
         ];
         return {
           ...file,
-          perspective: getNextAvailablePerspective(allSoFar),
-        };
+          perspective: getNextAvailablePerspective(allSoFar) };
       });
 
       onImagesChanged([...images, ...newImages]);
-    },
-    [images, maxImages, onImagesChanged],
-  );
+    };
 
-  const handleSingleImageSelected = useCallback(
-    (file: ImageFile) => {
+  const handleSingleImageSelected = (file: ImageFile) => {
       if (images.length >= maxImages) return;
       const newImage: SelectedImage = {
         ...file,
-        perspective: getNextAvailablePerspective(images),
-      };
+        perspective: getNextAvailablePerspective(images) };
       onImagesChanged([...images, newImage]);
-    },
-    [images, maxImages, onImagesChanged],
-  );
+    };
 
-  const handleRemoveImage = useCallback(
-    (index: number) => {
+  const handleRemoveImage = (index: number) => {
       const updated = images.filter((_, i) => i !== index);
       onImagesChanged(updated);
-    },
-    [images, onImagesChanged],
-  );
+    };
 
-  const handlePerspectiveChange = useCallback(
-    (index: number, perspective: string) => {
+  const handlePerspectiveChange = (index: number, perspective: string) => {
       const updated = images.map((img, i) =>
         i === index ? { ...img, perspective } : img,
       );
       onImagesChanged(updated);
-    },
-    [images, onImagesChanged],
-  );
+    };
 
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
 
@@ -229,14 +212,12 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   label: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   placeholderContainer: {
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
@@ -248,36 +229,29 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    minHeight: 120,
-  },
+    minHeight: 120 },
   placeholderText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   placeholderSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   scrollContent: {
     gap: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-  },
+    paddingVertical: theme.spacing.xs },
   imageEntry: {
     width: 120,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   thumbnailWrapper: {
     position: 'relative',
     borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   thumbnail: {
     width: 80,
     height: 80,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
+    backgroundColor: theme.colors.surfaceVariant },
   removeButton: {
     position: 'absolute',
     top: 2,
@@ -287,8 +261,7 @@ const styles = StyleSheet.create(theme => ({
     width: 22,
     height: 22,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   perspectiveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,14 +272,12 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
-    maxWidth: 120,
-  },
+    maxWidth: 120 },
   perspectiveText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    flexShrink: 1,
-  },
+    flexShrink: 1 },
   addMoreButton: {
     width: 80,
     height: 80,
@@ -316,14 +287,10 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   addMoreText: {
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

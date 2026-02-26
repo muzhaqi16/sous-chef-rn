@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { isSameDay } from 'date-fns';
 import { MealType, type MealPlanItemFragment } from '#generated';
 
@@ -40,7 +39,7 @@ export function useDailyMeals(
   items: MealPlanItemFragment[],
   selectedDate: Date,
 ) {
-  const dailyMeals = useMemo(() => {
+  const dailyMeals = (() => {
     // Filter items for the selected date
     const dayItems = items.filter(item =>
       isSameDay(new Date(item.date), selectedDate),
@@ -63,22 +62,15 @@ export function useDailyMeals(
       .filter(group => group.items.length > 0);
 
     return groups;
-  }, [items, selectedDate]);
+  })();
 
-  const totalMeals = useMemo(
-    () => dailyMeals.reduce((sum, group) => sum + group.items.length, 0),
-    [dailyMeals],
-  );
+  const totalMeals = dailyMeals.reduce((sum, group) => sum + group.items.length, 0);
 
-  const totalCalories = useMemo(
-    () =>
-      dailyMeals.reduce(
-        (sum, group) =>
-          sum +
-          group.items.reduce((s, item) => s + (item.calories ?? 0), 0),
-        0,
-      ),
-    [dailyMeals],
+  const totalCalories = dailyMeals.reduce(
+    (sum, group) =>
+      sum +
+      group.items.reduce((s, item) => s + (item.calories ?? 0), 0),
+    0,
   );
 
   return {

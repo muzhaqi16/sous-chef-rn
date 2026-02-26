@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   useGetPantryItemSuggestionsQuery,
   PantrySuggestionSource,
@@ -51,46 +51,38 @@ export function usePantryItemSuggestions({
     nextFetchPolicy: 'cache-first',
   });
 
-  const suggestions = useMemo(
-    () =>
-      (data?.pantry?.suggestions ?? []).map((s: PantryItemSuggestion) => ({
-        ...s,
-        imageUrl: resolveImageUrl(s),
-      })),
-    [data?.pantry?.suggestions],
-  );
+  const suggestions = (data?.pantry?.suggestions ?? []).map((s: PantryItemSuggestion) => ({
+    ...s,
+    imageUrl: resolveImageUrl(s),
+  }));
 
-  const grouped = useMemo<GroupedSuggestions>(() => {
-    const result: GroupedSuggestions = {
-      lowStock: [],
-      expiringSoon: [],
-      recentlyDeleted: [],
-      frequentlyAdded: [],
-      popular: [],
-    };
+  const grouped: GroupedSuggestions = {
+    lowStock: [],
+    expiringSoon: [],
+    recentlyDeleted: [],
+    frequentlyAdded: [],
+    popular: [],
+  };
 
-    for (const suggestion of suggestions) {
-      switch (suggestion.source) {
-        case PantrySuggestionSource.LowStock:
-          result.lowStock.push(suggestion);
-          break;
-        case PantrySuggestionSource.ExpiringSoon:
-          result.expiringSoon.push(suggestion);
-          break;
-        case PantrySuggestionSource.RecentlyDeleted:
-          result.recentlyDeleted.push(suggestion);
-          break;
-        case PantrySuggestionSource.FrequentlyAdded:
-          result.frequentlyAdded.push(suggestion);
-          break;
-        case PantrySuggestionSource.Popular:
-          result.popular.push(suggestion);
-          break;
-      }
+  for (const suggestion of suggestions) {
+    switch (suggestion.source) {
+      case PantrySuggestionSource.LowStock:
+        grouped.lowStock.push(suggestion);
+        break;
+      case PantrySuggestionSource.ExpiringSoon:
+        grouped.expiringSoon.push(suggestion);
+        break;
+      case PantrySuggestionSource.RecentlyDeleted:
+        grouped.recentlyDeleted.push(suggestion);
+        break;
+      case PantrySuggestionSource.FrequentlyAdded:
+        grouped.frequentlyAdded.push(suggestion);
+        break;
+      case PantrySuggestionSource.Popular:
+        grouped.popular.push(suggestion);
+        break;
     }
-
-    return result;
-  }, [suggestions]);
+  }
 
   // Preload suggestion images into disk cache for instant display
   useEffect(() => {

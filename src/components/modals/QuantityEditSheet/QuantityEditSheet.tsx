@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, Keyboard } from 'react-native';
 import { TextInput } from 'react-native-gesture-handler';
 import {
   BottomSheetModal,
-  BottomSheetTextInput,
-} from '@gorhom/bottom-sheet';
+  BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Header } from '#/components/molecules/Header';
@@ -96,13 +95,11 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   item,
   onClose,
   onSave,
-  loading = false,
-}) => {
+  loading = false }) => {
   const { ref, modalProps, theme } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
-    snapPoints: ['55%', '95%'],
-  });
+    snapPoints: ['55%', '95%'] });
 
   // Snap back to initial position when keyboard dismisses
   // keyboardBlurBehavior="restore" is unreliable with "extend", so handle manually
@@ -164,7 +161,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         setUnitId(item.unitId ?? null);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally skip item prop changes to prevent flash-back
   }, [visible, item?.id]);
 
   useEffect(() => {
@@ -174,7 +170,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   }, [visible, item]);
 
   // Handle quantity changes (with hybrid mode support)
-  const handleIncrement = useCallback(() => {
+  const handleIncrement = () => {
     const parsed = parseFractionInput(quantityInput) ?? 0;
     const newValue = parsed + 1;
     const formatted = formatQuantity(newValue);
@@ -182,9 +178,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     if (isEditing) {
       setInputValue(formatted);
     }
-  }, [quantityInput, isEditing]);
+  };
 
-  const handleDecrement = useCallback(() => {
+  const handleDecrement = () => {
     const parsed = parseFractionInput(quantityInput) ?? 0;
     const newValue = Math.max(0, parsed - 1);
     const formatted = formatQuantity(newValue);
@@ -192,32 +188,32 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     if (isEditing) {
       setInputValue(formatted);
     }
-  }, [quantityInput, isEditing]);
+  };
 
   // Handle unit chip selection
-  const handleUnitChipPress = useCallback((unit: ItemUnit) => {
+  const handleUnitChipPress = (unit: ItemUnit) => {
     setUnitName(unit.symbol);
     setUnitId(unit.id);
-  }, []);
+  };
 
   // Handle tap on quantity to enter edit mode
-  const handleQuantityPress = useCallback(() => {
+  const handleQuantityPress = () => {
     setInputValue(quantityInput);
     setIsEditing(true);
     // Focus after state update
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
-  }, [quantityInput]);
+  };
 
   // Handle input text change - no sanitization to avoid cursor jumping
   // Validation happens on blur instead
-  const handleInputChange = useCallback((text: string) => {
+  const handleInputChange = (text: string) => {
     setInputValue(text);
-  }, []);
+  };
 
   // Handle input blur - update quantityInput (validation happens on save by server)
-  const handleInputBlur = useCallback(() => {
+  const handleInputBlur = () => {
     setIsEditing(false);
 
     if (inputValue.trim() === '') {
@@ -227,12 +223,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       // Keep whatever the user typed - validation happens on save
       setQuantityInput(inputValue);
     }
-  }, [inputValue]);
+  };
 
   // Handle save
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     onSave(quantityInput, unitName, unitId);
-  }, [quantityInput, unitName, unitId, onSave]);
+  };
 
   // Check if values changed
   const originalQuantityInput = item?.quantityInput || formatQuantity(item?.quantity ?? 0);
@@ -251,8 +247,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             onPress: handleSave,
             variant: 'primary',
             disabled: !hasChanges || loading,
-            loading: loading,
-          },
+            loading: loading },
         ]}
       />
 
@@ -277,8 +272,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 styles.counterButton,
                 {
                   backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
+                  borderColor: theme.colors.border },
                 pressed && styles.pressed,
               ]}
               onPress={handleDecrement}
@@ -406,65 +400,51 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
+    paddingTop: theme.spacing.sm },
   headerSpacer: {
-    height: theme.spacing.md,
-  },
+    height: theme.spacing.md },
   section: {
-    marginBottom: theme.spacing.lg,
-  },
+    marginBottom: theme.spacing.lg },
   sectionLabel: {
     fontSize: theme.typography.fontSize.sm,
     fontWeight: theme.fonts.weight.medium,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   chipsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.xs,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   counterButton: {
     width: 56,
     height: 56,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-  },
+    borderWidth: 1 },
   incrementButton: {
-    borderWidth: 0,
-  },
+    borderWidth: 0 },
   quantityDisplay: {
     minWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: theme.spacing.lg,
-  },
+    paddingHorizontal: theme.spacing.lg },
   quantityText: {
     fontSize: theme.typography.fontSize['5xl'],
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   quantityDisplayEditing: {
     borderWidth: 2,
     borderRadius: theme.radii.md,
     paddingVertical: theme.spacing.xs,
-    marginHorizontal: theme.spacing.md,
-  },
+    marginHorizontal: theme.spacing.md },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
     minWidth: 80,
-    padding: 0,
-  },
+    padding: 0 },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

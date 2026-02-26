@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+
+
 import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
@@ -40,15 +41,9 @@ export function useRecipeManagement(filters?: RecipeFilters) {
   useApolloErrorLogger('MyRecipes', error);
 
   // Normalize recipes data to flatten Connection pattern and preserve pagination metadata
-  const normalizedRecipes = useMemo(
-    () => normalizeRecipes(data?.recipes),
-    [data?.recipes],
-  );
+  const normalizedRecipes = normalizeRecipes(data?.recipes);
 
-  const recipes = useMemo(
-    () => normalizedRecipes?.recipes || [],
-    [normalizedRecipes],
-  );
+  const recipes = normalizedRecipes?.recipes || [];
 
   const totalCount = normalizedRecipes?.totalCount || 0;
 

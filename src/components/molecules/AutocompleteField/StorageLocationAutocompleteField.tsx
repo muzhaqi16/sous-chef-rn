@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   useStorageLocationAutocomplete,
-  type StorageLocation,
-} from '#hooks/autocomplete/useStorageLocationAutocomplete';
+  type StorageLocation } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import { AutocompleteField } from './AutocompleteField';
 import { AutocompleteRow } from './AutocompleteRow';
 
@@ -31,30 +30,24 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
   testID,
   storageLocations = [],
   onStorageLocationSelected,
-  onAddNewLocation,
-}) => {
+  onAddNewLocation }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const hasSelectionRef = useRef(false);
 
   const { displayItems, showAddNew } = useStorageLocationAutocomplete({
     storageLocations,
-    searchTerm,
-  });
+    searchTerm });
 
-  const handleTextChange = useCallback(
-    (text: string) => {
+  const handleTextChange = (text: string) => {
       onChangeText(text);
       setSearchTerm(text);
       if (hasSelectionRef.current) {
         hasSelectionRef.current = false;
         onStorageLocationSelected?.(null, null);
       }
-    },
-    [onChangeText, onStorageLocationSelected],
-  );
+    };
 
-  const handleSelect = useCallback(
-    (item: StorageLocation) => {
+  const handleSelect = (item: StorageLocation) => {
       hasSelectionRef.current = true;
       const displayName = item.parentLocation
         ? `${item.name} (${item.parentLocation.name})`
@@ -62,31 +55,26 @@ export const StorageLocationAutocompleteField: React.FC<StorageLocationAutocompl
       onChangeText(displayName);
       setSearchTerm('');
       onStorageLocationSelected?.(item.id, item);
-    },
-    [onChangeText, onStorageLocationSelected],
-  );
+    };
 
-  const handleAddNew = useCallback(() => {
+  const handleAddNew = () => {
     hasSelectionRef.current = false;
     onChangeText(searchTerm);
     setSearchTerm('');
     onStorageLocationSelected?.(null, null);
     onAddNewLocation?.(searchTerm);
-  }, [searchTerm, onChangeText, onStorageLocationSelected, onAddNewLocation]);
+  };
 
-  const renderItem = useCallback(
-    (item: StorageLocation) => (
+  const renderItem = (item: StorageLocation) => (
       <AutocompleteRow
         icon={item.icon ?? undefined}
         title={item.name}
         subtitle={item.parentLocation ? `Inside ${item.parentLocation.name}` : undefined}
         badge={item.isDefault ? 'Default' : undefined}
       />
-    ),
-    [],
-  );
+    );
 
-  const keyExtractor = useCallback((item: StorageLocation) => item.id, []);
+  const keyExtractor = (item: StorageLocation) => item.id;
 
   if (variant === 'inline') {
     return (

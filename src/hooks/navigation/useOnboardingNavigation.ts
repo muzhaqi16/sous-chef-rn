@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useShallow } from 'zustand/shallow';
 import { useAppStore, selectUser, selectNavigationUtils } from '#store/useAppStore';
@@ -21,20 +20,18 @@ const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
   ProfilePictureUpload: OnBoardingSteps.profilePictureUpload,
   InviteMembers: OnBoardingSteps.inviteMembers,
   BiometricSetup: OnBoardingSteps.complete, // Temporarily using complete enum
-  OnboardingComplete: OnBoardingSteps.complete,
-};
+  OnboardingComplete: OnBoardingSteps.complete };
 
 export function useOnboardingNavigation() {
   const navigation = useNavigation();
   const {setOnBoardingStep, setOnboarded, setUserNavigationState, getUserNavigationState} = useAppStore(useShallow(selectNavigationUtils));
   const user = useAppStore(selectUser);
 
-  const getCurrentStepIndex = useCallback((screenName: string) => {
+  const getCurrentStepIndex = (screenName: string) => {
     return ONBOARDING_STEPS.indexOf(screenName);
-  }, []);
+  };
 
-  const navigateToNextStep = useCallback(
-    (currentScreen: string) => {
+  const navigateToNextStep = (currentScreen: string) => {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex < ONBOARDING_STEPS.length - 1) {
         const nextScreen = ONBOARDING_STEPS[currentIndex + 1];
@@ -44,8 +41,7 @@ export function useOnboardingNavigation() {
           navigation.dispatch(
             CommonActions.reset({
               index: 0,
-              routes: [{ name: nextScreen }],
-            }),
+              routes: [{ name: nextScreen }] }),
           );
         } else {
           navigation.dispatch(CommonActions.navigate(nextScreen));
@@ -57,12 +53,9 @@ export function useOnboardingNavigation() {
           setOnBoardingStep(stepEnum);
         }
       }
-    },
-    [navigation, getCurrentStepIndex, setOnBoardingStep],
-  );
+    };
 
-  const navigateToPreviousStep = useCallback(
-    (currentScreen: string) => {
+  const navigateToPreviousStep = (currentScreen: string) => {
       const currentIndex = getCurrentStepIndex(currentScreen);
       if (currentIndex > 0) {
         const previousScreen = ONBOARDING_STEPS[currentIndex - 1];
@@ -74,12 +67,9 @@ export function useOnboardingNavigation() {
           setOnBoardingStep(stepEnum);
         }
       }
-    },
-    [navigation, getCurrentStepIndex, setOnBoardingStep],
-  );
+    };
 
-  const skipToStep = useCallback(
-    (stepName: string) => {
+  const skipToStep = (stepName: string) => {
       if (ONBOARDING_STEPS.includes(stepName)) {
         navigation.dispatch(CommonActions.navigate(stepName));
 
@@ -89,11 +79,9 @@ export function useOnboardingNavigation() {
           setOnBoardingStep(stepEnum);
         }
       }
-    },
-    [navigation, setOnBoardingStep],
-  );
+    };
 
-  const completeOnboarding = useCallback(() => {
+  const completeOnboarding = () => {
     if (!user) {
       console.warn('Cannot complete onboarding without user');
       return false;
@@ -107,22 +95,21 @@ export function useOnboardingNavigation() {
     if (user.id) {
       setUserNavigationState(user.id, {
         hasCompletedOnboarding: true,
-        onboardingCompletedAt: Date.now(),
-      });
+        onboardingCompletedAt: Date.now() });
     }
 
     return true;
-  }, [user, setOnboarded, setOnBoardingStep, setUserNavigationState]);
+  };
 
   // Helper to get progress percentage
-  const getProgressPercentage = useCallback(() => {
+  const getProgressPercentage = () => {
     const state = navigation.getState();
     const currentStep = state?.routes[state?.index ?? 0]?.name;
     const currentIndex = ONBOARDING_STEPS.indexOf(currentStep as string);
 
     if (currentIndex === -1) return 0;
     return Math.round(((currentIndex + 1) / ONBOARDING_STEPS.length) * 100);
-  }, [navigation]);
+  };
 
   return {
     steps: ONBOARDING_STEPS,
@@ -133,6 +120,5 @@ export function useOnboardingNavigation() {
     getCurrentStepIndex,
     getProgressPercentage,
     setUserNavigationState,
-    getUserNavigationState,
-  };
+    getUserNavigationState };
 }

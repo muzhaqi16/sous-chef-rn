@@ -7,15 +7,13 @@
  * - Persist optimistic state for offline support
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useToggleShoppingListItemPurchasedMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import {
   moveShoppingListItemToPurchased,
-  moveShoppingListItemToUnpurchased,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+  moveShoppingListItemToUnpurchased } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 
@@ -60,12 +58,8 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
             ...item,
             purchaseInfo: {
               __typename: 'ShoppingListItemPurchaseInfo',
-              isPurchased: variables.input.purchased,
-            },
-            updatedAt: new Date().toISOString(),
-          },
-        },
-      };
+              isPurchased: variables.input.purchased },
+            updatedAt: new Date().toISOString() } } };
     },
     update(cache, _result, { variables }) {
       if (!variables || !listId) return;
@@ -80,14 +74,11 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
           purchaseInfo(existingPurchaseInfo = {}) {
             return {
               ...existingPurchaseInfo,
-              isPurchased: newStatus,
-            };
+              isPurchased: newStatus };
           },
           updatedAt() {
             return new Date().toISOString();
-          },
-        },
-      });
+          } } });
 
       // 2. Move item between purchased/unpurchased connections
       // moveShoppingListItem* handles BOTH itemsConnection filtered variants
@@ -127,16 +118,13 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
 
       // For server/validation errors, show alert and refetch to restore correct state
       const { message } = handleApolloError(error, {
-        operation: 'Toggle Item Purchased',
-      });
+        operation: 'Toggle Item Purchased' });
       Alert.alert('Error', message);
       refetch();
-    },
-  });
+    } });
 
   // Simplified toggleItem - uses items ref instead of cache read
-  const toggleItem = useCallback(
-    async (itemId: string) => {
+  const toggleItem = async (itemId: string) => {
       if (!listId) return false;
 
       try {
@@ -146,17 +134,14 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
         const newStatus = !item.purchaseInfo?.isPurchased;
 
         const result = await togglePurchasedMutation({
-          variables: { input: { id: itemId, purchased: newStatus } },
-        });
+          variables: { input: { id: itemId, purchased: newStatus } } });
 
         return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;
       } catch (error) {
         console.error('Toggle shopping list item purchased error:', error);
         return false;
       }
-    },
-    [listId, items, togglePurchasedMutation],
-  );
+    };
 
   return { toggleItem };
 }

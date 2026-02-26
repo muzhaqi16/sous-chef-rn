@@ -8,7 +8,7 @@
  * - Preserve data during failures
  */
 
-import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
@@ -45,8 +45,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     variables: {
       id: pantryId || '',
       itemsFirst: 25, // Initial page size
-      storageLocationsFirst: 50,
-    },
+      storageLocationsFirst: 50 },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first',
@@ -59,26 +58,19 @@ export function usePantryQuery(pantryId: string | undefined) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Normalize pantry data to flatten Connection pattern
-  const normalizedPantry = useMemo(
-    () => normalizePantry(data?.pantry),
-    [data?.pantry],
-  );
+  const normalizedPantry = normalizePantry(data?.pantry);
 
   // Preserve pantry items across network failures
   const preservedItems = usePreservedArrayData(normalizedPantry?.items);
 
   // Filter out items that are pending deletion to prevent flicker
-  const pantryItems = useMemo(
-    () => subscriptionService.filterPendingDeletes(preservedItems),
-    [preservedItems],
-  );
+  const pantryItems = subscriptionService.filterPendingDeletes(preservedItems);
 
   // Search functionality
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
-    filtered: filteredItems,
-  } = useSearchableList(pantryItems, pantryItemSearch);
+    filtered: filteredItems } = useSearchableList(pantryItems, pantryItemSearch);
 
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
@@ -87,18 +79,17 @@ export function usePantryQuery(pantryId: string | undefined) {
     itemCount: pantryItems.length,
     fetchMore,
     fetchMoreVariables: { id: pantryId },
-    cursorVariableName: 'itemsCursor',
-  });
+    cursorVariableName: 'itemsCursor' });
 
   // Wrap refetch to track pull-to-refresh state
-  const memoizedRefetch = useCallback(async () => {
+  const memoizedRefetch = async () => {
     setIsRefreshing(true);
     try {
       await refetch();
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch]);
+  };
 
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
@@ -166,6 +157,5 @@ export function usePantryQuery(pantryId: string | undefined) {
 
     // Search
     searchQuery,
-    setSearchQuery,
-  };
+    setSearchQuery };
 }

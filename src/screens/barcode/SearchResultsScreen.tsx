@@ -66,7 +66,7 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [scannerSheetVisible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scannerSheetVisible]);
 
   const handleScanAnother = () => {
     clearSearch();

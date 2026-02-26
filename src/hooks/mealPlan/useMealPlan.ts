@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+
+
 import { useGetMealPlanQuery } from '#generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -15,9 +16,7 @@ export function useMealPlan(id: string | null) {
 
   const mealPlan = data?.mealPlan ?? null;
 
-  const items = useMemo(() => {
-    return mealPlan?.mealPlanItems ?? [];
-  }, [mealPlan?.mealPlanItems]);
+  const items = mealPlan?.mealPlanItems ?? [];
 
   return {
     mealPlan,

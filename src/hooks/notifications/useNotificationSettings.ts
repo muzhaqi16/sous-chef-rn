@@ -1,12 +1,11 @@
-import { useCallback, useMemo } from 'react';
+;
 import { Alert } from 'react-native';
 import { useAppStore } from '#store/useAppStore';
 import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
-  type UpdateNotificationPreferencesInput,
-} from '#generated';
+  type UpdateNotificationPreferencesInput } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -108,8 +107,7 @@ export const useNotificationSettings = () => {
   const { data, loading, error } = useGetNotificationPreferencesQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-first',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   const preferences = data?.me?.notificationPreferences;
 
@@ -139,21 +137,16 @@ export const useNotificationSettings = () => {
             ...preferences,
             ...definedInputs,
             __typename: 'NotificationPreferences',
-            updatedAt: new Date().toISOString(),
-          },
-        },
-      };
+            updatedAt: new Date().toISOString() } } };
     },
     onError: error => {
       const { message } = handleApolloError(error, {
-        operation: 'Update Notification Preferences',
-      });
+        operation: 'Update Notification Preferences' });
       Alert.alert('Error', message);
-    },
-  });
+    } });
 
   // PERFORMANCE: Memoize settings object to prevent recreating on every render
-  const settings = useMemo((): NotificationSettings => {
+  const settings = (() => {
     return {
       // Core toggles
       emailEnabled: preferences?.emailEnabled ?? true,
@@ -188,21 +181,17 @@ export const useNotificationSettings = () => {
       quietHoursEnabled: preferences?.quietHoursEnabled ?? false,
       quietHoursStart: preferences?.quietHoursStart ?? '22:00',
       quietHoursEnd: preferences?.quietHoursEnd ?? '08:00',
-      quietHoursTimezone: preferences?.quietHoursTimezone ?? null,
-    };
-  }, [preferences]);
+      quietHoursTimezone: preferences?.quietHoursTimezone ?? null };
+  })();
 
-  const updateNotificationSetting = useCallback(
-    async (
+  const updateNotificationSetting = async (
       key: keyof NotificationSettings,
       value: boolean | string | number | ExpirationFrequency,
     ) => {
       try {
         const result = await updatePreferences({
           variables: {
-            input: toNestedInput({ [key]: value }),
-          },
-        });
+            input: toNestedInput({ [key]: value }) } });
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
@@ -210,12 +199,9 @@ export const useNotificationSettings = () => {
         // Error handled by onError handler
         return false;
       }
-    },
-    [updatePreferences],
-  );
+    };
 
-  const updateMultipleSettings = useCallback(
-    async (updates: Partial<NotificationSettings>) => {
+  const updateMultipleSettings = async (updates: Partial<NotificationSettings>) => {
       try {
         // Convert null to undefined for GraphQL input
         const cleanedUpdates = Object.fromEntries(
@@ -227,9 +213,7 @@ export const useNotificationSettings = () => {
 
         const result = await updatePreferences({
           variables: {
-            input: toNestedInput(cleanedUpdates),
-          },
-        });
+            input: toNestedInput(cleanedUpdates) } });
 
         // No refetch needed - automatic normalization + optimistic response handle UI updates
         return !!result.data;
@@ -237,11 +221,9 @@ export const useNotificationSettings = () => {
         // Error handled by onError handler
         return false;
       }
-    },
-    [updatePreferences],
-  );
+    };
 
-  const resetToDefaults = useCallback(async () => {
+  const resetToDefaults = async () => {
     const defaultSettings: Partial<NotificationSettings> = {
       emailEnabled: true,
       pushEnabled: false,
@@ -262,14 +244,13 @@ export const useNotificationSettings = () => {
       monthlyReport: false,
       quietHoursEnabled: false,
       quietHoursStart: '22:00',
-      quietHoursEnd: '08:00',
-    };
+      quietHoursEnd: '08:00' };
 
     return updateMultipleSettings(defaultSettings);
-  }, [updateMultipleSettings]);
+  };
 
   // PERFORMANCE: Use memoized settings instead of calling function
-  const isQuietTime = useCallback((): boolean => {
+  const isQuietTime = (): boolean => {
     if (
       !settings.quietHoursEnabled ||
       !settings.quietHoursStart ||
@@ -295,7 +276,7 @@ export const useNotificationSettings = () => {
     } else {
       return currentTime >= startTime && currentTime <= endTime;
     }
-  }, [settings]);
+  };
 
   return {
     settings,
@@ -303,6 +284,5 @@ export const useNotificationSettings = () => {
     updateNotificationSetting,
     updateMultipleSettings,
     resetToDefaults,
-    isQuietTime,
-  };
+    isQuietTime };
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { View, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
@@ -88,95 +88,60 @@ export const DietaryRestrictionSelector: React.FC<
   const [isSavingIntolerances, setIsSavingIntolerances] = useState(false);
   const [isSavingGoals, setIsSavingGoals] = useState(false);
 
-  // Memoize existing restrictions to prevent infinite loops
-  const existingDiets = useMemo(
-    () => existingRestrictions.map(r => r.diet).filter(Boolean) as Diet[],
-    [existingRestrictions],
-  );
-  const existingIntolerances = useMemo(
-    () =>
-      existingRestrictions
+  // Derive existing restrictions
+  const existingDiets = existingRestrictions.map(r => r.diet).filter(Boolean) as Diet[];
+  const existingIntolerances = existingRestrictions
         .map(r => r.intolerance)
-        .filter(Boolean) as Intolerance[],
-    [existingRestrictions],
-  );
-  const existingHealthGoals = useMemo(
-    () =>
-      existingRestrictions
+        .filter(Boolean) as Intolerance[];
+  const existingHealthGoals = existingRestrictions
         .map(r => r.healthGoal)
-        .filter(Boolean) as HealthGoal[],
-    [existingRestrictions],
-  );
+        .filter(Boolean) as HealthGoal[];
 
   // Map existing restrictions to display items
-  const existingDietItems = useMemo(
-    () =>
-      existingRestrictions
+  const existingDietItems = existingRestrictions
         .filter(r => r.diet)
         .map(r => ({
           id: r.id,
           label: DIETS.find(d => d.value === r.diet)?.label || r.diet!,
-        })),
-    [existingRestrictions],
-  );
+        }));
 
-  const existingIntoleranceItems = useMemo(
-    () =>
-      existingRestrictions
+  const existingIntoleranceItems = existingRestrictions
         .filter(r => r.intolerance)
         .map(r => ({
           id: r.id,
           label:
             INTOLERANCES.find(i => i.value === r.intolerance)?.label ||
             r.intolerance!,
-        })),
-    [existingRestrictions],
-  );
+        }));
 
-  const existingGoalItems = useMemo(
-    () =>
-      existingRestrictions
+  const existingGoalItems = existingRestrictions
         .filter(r => r.healthGoal)
         .map(r => ({
           id: r.id,
           label:
             HEALTH_GOALS.find(h => h.value === r.healthGoal)?.label ||
             r.healthGoal!,
-        })),
-    [existingRestrictions],
-  );
+        }));
 
   // Prepare available items for sheets (exclude already added)
-  const availableDiets = useMemo(
-    () =>
-      DIETS.filter(d => !existingDiets.includes(d.value)).map(d => ({
+  const availableDiets = DIETS.filter(d => !existingDiets.includes(d.value)).map(d => ({
         id: d.value,
         label: d.label,
-      })),
-    [existingDiets],
-  );
+      }));
 
-  const availableIntolerances = useMemo(
-    () =>
-      INTOLERANCES.filter(i => !existingIntolerances.includes(i.value)).map(
+  const availableIntolerances = INTOLERANCES.filter(i => !existingIntolerances.includes(i.value)).map(
         i => ({
           id: i.value,
           label: i.label,
         }),
-      ),
-    [existingIntolerances],
-  );
+      );
 
-  const availableGoals = useMemo(
-    () =>
-      HEALTH_GOALS.filter(h => !existingHealthGoals.includes(h.value)).map(
+  const availableGoals = HEALTH_GOALS.filter(h => !existingHealthGoals.includes(h.value)).map(
         h => ({
           id: h.value,
           label: h.label,
         }),
-      ),
-    [existingHealthGoals],
-  );
+      );
 
   // Handle opening sheets
   const handleOpenDietSheet = () => {

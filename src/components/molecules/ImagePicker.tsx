@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Text, Pressable, Alert } from 'react-native';
 import {
   launchCamera,
@@ -6,14 +6,12 @@ import {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
+  ImageLibraryOptions } from 'react-native-image-picker';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import {
   validateImageFile,
-  ImageValidationError,
-} from '#utils/imageValidation';
+  ImageValidationError } from '#utils/imageValidation';
 import { useBottomSheetModal } from '#hooks/useBottomSheetModal';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ImagePickerSheet } from './ImagePickerSheet';
@@ -40,8 +38,7 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   includeBase64: false,
   maxHeight: 2000,
   maxWidth: 2000,
-  quality: 0.8,
-};
+  quality: 0.8 };
 
 export const ImagePicker: React.FC<ImagePickerProps> = ({
   onImageSelected,
@@ -50,14 +47,12 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   onError,
   disabled = false,
   isProfile = false,
-  children,
-}) => {
+  children }) => {
   const { theme } = useUnistyles();
   const { ref: sheetRef, open: openSheet } = useBottomSheetModal();
   const { request: requestCamera, isBlocked, openSettings } = usePermission('camera');
 
-  const handleImageResponse = useCallback(
-    (response: ImagePickerResponse) => {
+  const handleImageResponse = (response: ImagePickerResponse) => {
       if (response.didCancel || response.errorCode || !response.assets?.length) {
         return;
       }
@@ -71,8 +66,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
             uri: asset.uri,
             fileName: asset.fileName,
             fileSize: asset.fileSize,
-            type: asset.type,
-          };
+            type: asset.type };
           try {
             validateImageFile(imageFile, isProfile);
             validImages.push(imageFile);
@@ -92,8 +86,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           uri: asset.uri,
           fileName: asset.fileName,
           fileSize: asset.fileSize,
-          type: asset.type,
-        };
+          type: asset.type };
 
         try {
           validateImageFile(imageFile, isProfile);
@@ -104,11 +97,9 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           Alert.alert('Invalid Image', validationError.message);
         }
       }
-    },
-    [onImageSelected, onMultiImageSelected, multiSelect, onError, isProfile],
-  );
+    };
 
-  const handleCameraPress = useCallback(async () => {
+  const handleCameraPress = async () => {
     if (isBlocked) {
       Alert.alert(
         'Camera Permission',
@@ -124,20 +115,19 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
     if (result === 'granted') {
       launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     }
-  }, [isBlocked, requestCamera, openSettings, handleImageResponse]);
+  };
 
-  const handleLibraryPress = useCallback(() => {
+  const handleLibraryPress = () => {
     const libraryOptions: ImageLibraryOptions = {
       ...DEFAULT_OPTIONS,
-      ...(multiSelect && { selectionLimit: 0 }),
-    };
+      ...(multiSelect && { selectionLimit: 0 }) };
     launchImageLibrary(libraryOptions, handleImageResponse);
-  }, [handleImageResponse, multiSelect]);
+  };
 
-  const showImagePicker = useCallback(() => {
+  const showImagePicker = () => {
     if (disabled) return;
     openSheet();
-  }, [disabled, openSheet]);
+  };
 
   const renderSheet = () => (
     <ImagePickerSheet
@@ -185,18 +175,13 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   pickerButtonDisabled: {
     opacity: theme.opacity.disabled,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   pickerButtonText: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

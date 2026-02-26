@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useEffect } from 'react';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
@@ -43,8 +43,7 @@ export function useStandardBottomSheet({
   onDismiss,
   snapPoints,
   keyboardBehavior = 'extend',
-  enableDynamicSizing = false,
-}: UseStandardBottomSheetOptions) {
+  enableDynamicSizing = false }: UseStandardBottomSheetOptions) {
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const ref = useRef<BottomSheetModal>(null);
@@ -62,21 +61,16 @@ export function useStandardBottomSheet({
   }, [visible]);
 
   // Backdrop component that dismisses via ref
-  const backdropComponent = useCallback(
-    (props: any) =>
+  const backdropComponent = (props: any) =>
       React.createElement(GlobalBottomSheetBackdrop, {
         ...props,
         disappearsOnIndex: -1,
         appearsOnIndex: 0,
         pressBehavior: 'close',
-        onClose: () => ref.current?.dismiss(),
-      }),
-    [],
-  );
+        onClose: () => ref.current?.dismiss() });
 
   // All standard BottomSheetModal props as a spread-ready object
-  const modalProps = useMemo(
-    () => ({
+  const modalProps = ({
       snapPoints,
       enablePanDownToClose: true,
       enableDynamicSizing,
@@ -88,26 +82,10 @@ export function useStandardBottomSheet({
       keyboardBehavior,
       keyboardBlurBehavior: 'restore' as const,
       android_keyboardInputMode: 'adjustPan' as const,
-      backdropComponent,
-    }),
-    [
-      snapPoints,
-      enableDynamicSizing,
-      insets.top,
-      onDismiss,
-      animationConfigs,
-      theme.colors.background,
-      theme.colors.textSecondary,
-      keyboardBehavior,
-      backdropComponent,
-    ],
-  );
+      backdropComponent });
 
   // Standard content container padding
-  const contentContainerStyle = useMemo(
-    () => ({ paddingBottom: insets.bottom + 16 }),
-    [insets.bottom],
-  );
+  const contentContainerStyle = ({ paddingBottom: insets.bottom + 16 });
 
   return { ref, modalProps, contentContainerStyle, theme, insets };
 }

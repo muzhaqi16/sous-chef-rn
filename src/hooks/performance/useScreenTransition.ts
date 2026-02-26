@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
@@ -41,7 +41,7 @@ export function useScreenTransition(
 
   // Track focus event (navigation to this screen)
   useFocusEffect(
-    useCallback(() => {
+    () => {
       if (!enabled) {
         return;
       }
@@ -58,7 +58,7 @@ export function useScreenTransition(
         focusMarkRef.current = null;
         mountMarkRef.current = null;
       };
-    }, [enabled, screenName]),
+    },
   );
 
   // Track mount time
@@ -132,8 +132,7 @@ export function useScreenTransition(
 
           Telemetry.increment('slow_screen_transitions_total', 1, {
             screen: screenName,
-            duration: interactiveDuration.toFixed(2),
-          });
+            duration: interactiveDuration.toFixed(2) });
         }
       });
     }

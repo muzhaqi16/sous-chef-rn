@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { jwtDecode } from 'jwt-decode';
 import { useAppStore } from '#store/useAppStore';
@@ -64,8 +64,7 @@ const validateDeepLinkToken = (
       return {
         valid: false,
         error: `Invalid token type. Expected ${expectedType}, got ${decoded.type}`,
-        payload: decoded,
-      };
+        payload: decoded };
     }
 
     return { valid: true, payload: decoded };
@@ -73,8 +72,7 @@ const validateDeepLinkToken = (
     logger.error('Token validation error:', error);
     return {
       valid: false,
-      error: error instanceof Error ? error.message : 'Failed to decode token',
-    };
+      error: error instanceof Error ? error.message : 'Failed to decode token' };
   }
 };
 
@@ -92,11 +90,9 @@ export const useDeepLinkRouter = () => {
   const setPendingDeepLinkAction = useAppStore(state => state.setPendingDeepLinkAction);
   const clearPendingDeepLinkAction = useAppStore(state => state.clearPendingDeepLinkAction);
 
-  const handleEmailVerification = useCallback(
-    (token: string) => {
+  const handleEmailVerification = (token: string) => {
       logger.info('Handling email verification deep link', {
-        token: token.substring(0, 8) + '...',
-      });
+        token: token.substring(0, 8) + '...' });
 
       // Validate token before proceeding
       const validation = validateDeepLinkToken(token, 'email_verification');
@@ -111,23 +107,18 @@ export const useDeepLinkRouter = () => {
         setPendingDeepLinkAction({
           type: 'email_verification',
           token,
-          timestamp: Date.now(),
-        });
+          timestamp: Date.now() });
         navigation.dispatch(CommonActions.navigate('Auth'));
         return;
       }
 
       // User is authenticated, proceed with verification
       navigation.dispatch(CommonActions.navigate('EmailVerification', { token }));
-    },
-    [isAuthenticated, navigation, setPendingDeepLinkAction],
-  );
+    };
 
-  const handlePasswordReset = useCallback(
-    (token: string) => {
+  const handlePasswordReset = (token: string) => {
       logger.info('Handling password reset deep link', {
-        token: token.substring(0, 8) + '...',
-      });
+        token: token.substring(0, 8) + '...' });
 
       // Validate token before proceeding
       const validation = validateDeepLinkToken(token, 'password_reset');
@@ -140,15 +131,11 @@ export const useDeepLinkRouter = () => {
       // Always redirect to auth stack for password reset
       // This will clear any existing auth state
       navigation.dispatch(CommonActions.navigate('ResetPassword', { token }));
-    },
-    [navigation],
-  );
+    };
 
-  const handleAcceptInvitation = useCallback(
-    (token: string) => {
+  const handleAcceptInvitation = (token: string) => {
       logger.info('Handling accept invitation deep link', {
-        token: token.substring(0, 8) + '...',
-      });
+        token: token.substring(0, 8) + '...' });
 
       // Validate token before proceeding
       const validation = validateDeepLinkToken(token, 'invitation');
@@ -163,20 +150,16 @@ export const useDeepLinkRouter = () => {
         setPendingDeepLinkAction({
           type: 'accept_invitation',
           token,
-          timestamp: Date.now(),
-        });
+          timestamp: Date.now() });
         navigation.dispatch(CommonActions.navigate('Auth'));
         return;
       }
 
       // User is authenticated, proceed with invitation
       navigation.dispatch(CommonActions.navigate('AcceptInvitation', { token }));
-    },
-    [isAuthenticated, navigation, setPendingDeepLinkAction],
-  );
+    };
 
-  const routeDeepLink = useCallback(
-    (action: DeepLinkAction) => {
+  const routeDeepLink = (action: DeepLinkAction) => {
       const { type, token } = action;
 
       switch (type) {
@@ -192,9 +175,7 @@ export const useDeepLinkRouter = () => {
         default:
           logger.warn('Unknown deep link action type', { type });
       }
-    },
-    [handleEmailVerification, handlePasswordReset, handleAcceptInvitation],
-  );
+    };
 
   // Process pending deep link actions when conditions are met
   useEffect(() => {
@@ -206,8 +187,7 @@ export const useDeepLinkRouter = () => {
     const fiveMinutes = 5 * 60 * 1000;
     if (Date.now() - pendingDeepLinkAction.timestamp > fiveMinutes) {
       logger.warn('Discarding stale deep link action', {
-        action: pendingDeepLinkAction,
-      });
+        action: pendingDeepLinkAction });
       clearPendingDeepLinkAction();
       return;
     }
@@ -223,8 +203,7 @@ export const useDeepLinkRouter = () => {
 
     // Process the pending action
     logger.info('Processing pending deep link action', {
-      action: pendingDeepLinkAction,
-    });
+      action: pendingDeepLinkAction });
     routeDeepLink(pendingDeepLinkAction);
     clearPendingDeepLinkAction();
   }, [
@@ -236,8 +215,7 @@ export const useDeepLinkRouter = () => {
   ]);
 
   // Public API for triggering deep link actions
-  const triggerDeepLinkAction = useCallback(
-    (action: DeepLinkAction) => {
+  const triggerDeepLinkAction = (action: DeepLinkAction) => {
       if (!isHydrated) {
         // Queue the action if app isn't ready
         setPendingDeepLinkAction(action);
@@ -246,15 +224,12 @@ export const useDeepLinkRouter = () => {
 
       // Process immediately if app is ready
       routeDeepLink(action);
-    },
-    [isHydrated, setPendingDeepLinkAction, routeDeepLink],
-  );
+    };
 
   return {
     triggerDeepLinkAction,
     handleEmailVerification,
     handlePasswordReset,
     handleAcceptInvitation,
-    pendingDeepLinkAction,
-  };
+    pendingDeepLinkAction };
 };

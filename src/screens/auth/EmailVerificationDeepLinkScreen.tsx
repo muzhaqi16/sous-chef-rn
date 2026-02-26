@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
-  Pressable,
-} from 'react-native';
+  Pressable } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -32,7 +31,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<'success' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const performVerification = useCallback(async () => {
+  const performVerification = async () => {
     if (!token) {
       setVerificationResult('error');
       setErrorMessage('Invalid verification token');
@@ -47,12 +46,10 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
     try {
       logger.info('Attempting email verification', {
         tokenPrefix: token.substring(0, 8) + '...',
-        userId: user?.id,
-      });
+        userId: user?.id });
 
       const result = await verifyEmail({
-        variables: { code: token },
-      });
+        variables: { code: token } });
 
       if (result.data?.verifyEmail?.success) {
         logger.info('Email verification successful');
@@ -65,8 +62,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 
         toast({
           message: 'Email verified successfully!',
-          type: 'success',
-        });
+          type: 'success' });
       } else {
         throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
       }
@@ -79,12 +75,11 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 
       toast({
         message: errorMsg,
-        type: 'error',
-      });
+        type: 'error' });
     } finally {
       setIsVerifying(false);
     }
-  }, [token, verifyEmail, user, updateUser, toast]);
+  };
 
   useEffect(() => {
     performVerification();
@@ -146,50 +141,39 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: theme.spacing.xl,
-  },
+    padding: theme.spacing.xl },
   iconContainer: {
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   title: {
     fontSize: theme.typography.fontSize.xl,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    marginTop: theme.spacing.md,
-  },
+    marginTop: theme.spacing.md },
   subtitle: {
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing['3'],
-    lineHeight: theme.typography.lineHeight.relaxed,
-  },
+    lineHeight: theme.typography.lineHeight.relaxed },
   actions: {
     marginTop: theme.spacing.xl,
-    width: '100%',
-  },
+    width: '100%' },
   button: {
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   retryButton: {
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   retryButtonText: {
     color: theme.colors.white,
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

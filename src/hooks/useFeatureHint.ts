@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
@@ -69,8 +69,7 @@ export interface UseFeatureHintReturn {
 export const useFeatureHint = ({
   featureId,
   showOnMount = false,
-  delay = 0,
-}: UseFeatureHintOptions): UseFeatureHintReturn => {
+  delay = 0 }: UseFeatureHintOptions): UseFeatureHintReturn => {
   // Per-user storage key scoping
   const userId = useAppStore(state => state.user?.id);
   const storageKey = userId
@@ -101,35 +100,31 @@ export const useFeatureHint = ({
     }
   }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 
-  const show = useCallback(() => {
+  const show = () => {
     // Only show if tutorials are enabled globally and hint hasn't been dismissed
     if (tutorialsEnabled && !(storage.getBoolean(storageKey) ?? false)) {
       setIsVisible(true);
     }
-  }, [tutorialsEnabled, storageKey]);
+  };
 
-  const hide = useCallback(() => {
+  const hide = () => {
     setIsVisible(false);
-  }, []);
+  };
 
-  const dismiss = useCallback(() => {
+  const dismiss = () => {
     setIsVisible(false);
     setHasBeenShown(true);
     storage.set(storageKey, true);
-  }, [storageKey]);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     storage.remove(storageKey);
     setHasBeenShown(false);
     setIsVisible(false);
-  }, [storageKey]);
+  };
 
-  // Stable actions object — all callbacks are stable useCallbacks,
-  // so this object reference is created once and never changes
-  const actions = useMemo<UseFeatureHintActions>(
-    () => ({ show, dismiss, hide, reset }),
-    [show, dismiss, hide, reset],
-  );
+  // Actions object
+  const actions: UseFeatureHintActions = { show, dismiss, hide, reset };
 
   return { isVisible, hasBeenShown, actions };
 };

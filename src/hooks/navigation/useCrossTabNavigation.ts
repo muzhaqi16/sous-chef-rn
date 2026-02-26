@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { CommonActions } from '@react-navigation/native';
 import { useAppNavigation } from './useAppNavigation';
 
@@ -30,7 +29,7 @@ export function useCrossTabNavigation(_currentMainScreen: string) {
    * - For intra-Home navigation (tab to tab): uses standard goBack()
    * - For modal dismissal (fromModalStack: true): uses navigate to dismiss modal and preserve state
    */
-  const goBackToSource = useCallback((source?: CrossTabSource) => {
+  const goBackToSource = (source?: CrossTabSource) => {
     if (!source?.sourceTab) {
       // No cross-tab source, use normal back
       goBack();
@@ -56,13 +55,12 @@ export function useCrossTabNavigation(_currentMainScreen: string) {
           params: {
             screen: source.sourceTab,
             // Don't specify nested screen params - preserve the tab's current state
-          },
-        })
+          } })
       );
     } else {
       goBack();
     }
-  }, [goBack, navigation]);
+  };
 
   return { goBackToSource };
 }

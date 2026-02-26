@@ -105,7 +105,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     };
 
     initializeWebSocket();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Delay subscription mounting by 3s so startup queries (GetHomes, GetPantry)

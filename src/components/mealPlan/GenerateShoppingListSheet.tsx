@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
+  BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -29,15 +28,13 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
   onClose,
   onGenerate,
   loading,
-  homeName,
-}) => {
+  homeName }) => {
   const { theme } = useUnistyles();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
     snapPoints: ['65%'],
-    keyboardBehavior: 'interactive',
-  });
+    keyboardBehavior: 'interactive' });
 
   const [checkPantry, setCheckPantry] = useState(true);
   const [mode, setMode] = useState<'new' | 'existing'>('new');
@@ -46,8 +43,7 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
 
   const { data: listsData } = useGetShoppingListsLiteQuery({
     variables: { first: 20 },
-    skip: !visible,
-  });
+    skip: !visible });
 
   const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
 
@@ -60,13 +56,12 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
     }
   }, [visible]);
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerate = () => {
     onGenerate({
       checkPantry,
       name: mode === 'new' && customName.trim() ? customName.trim() : undefined,
-      shoppingListId: mode === 'existing' ? (selectedListId ?? undefined) : undefined,
-    });
-  }, [checkPantry, mode, customName, selectedListId, onGenerate]);
+      shoppingListId: mode === 'existing' ? (selectedListId ?? undefined) : undefined });
+  };
 
   const canGenerate = mode === 'new' || (mode === 'existing' && selectedListId);
 
@@ -199,12 +194,10 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     padding: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   infoNote: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,13 +205,11 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   infoNoteText: {
     flex: 1,
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -226,34 +217,27 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-  },
+    borderRadius: theme.radii.md },
   toggleInfo: {
     flex: 1,
-    marginRight: theme.spacing.md,
-  },
+    marginRight: theme.spacing.md },
   toggleLabel: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   toggleDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   section: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   sectionLabel: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   modeRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   modeOption: {
     flex: 1,
     flexDirection: 'row',
@@ -264,20 +248,16 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   modeOptionActive: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   modeText: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   modeTextActive: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,39 +265,30 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   listItemSelected: {
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   listItemContent: {
-    flex: 1,
-  },
+    flex: 1 },
   listItemName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   listItemMeta: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   emptyText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textTertiary,
     textAlign: 'center',
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-  },
+    paddingVertical: theme.spacing.md },
   loadingText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-}));
+    color: theme.colors.textSecondary } }));

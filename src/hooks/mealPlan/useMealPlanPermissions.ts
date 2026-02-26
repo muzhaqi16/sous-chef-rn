@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+;
 import { useAuth } from '#hooks/auth/useAuth';
 import {
   getMealPlanPermissions,
@@ -17,7 +17,7 @@ export function useMealPlanPermissions(
 ): MealPlanPermissions {
   const { user } = useAuth();
 
-  return useMemo(() => {
+  return (() => {
     if (!mealPlan) {
       return {
         canEdit: false,
@@ -29,5 +29,5 @@ export function useMealPlanPermissions(
     }
 
     return getMealPlanPermissions(mealPlan, user?.id);
-  }, [mealPlan, user?.id]);
+  })();
 }

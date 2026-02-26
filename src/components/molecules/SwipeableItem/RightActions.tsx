@@ -91,4 +91,4 @@ const RightActionsComponent: React.FC<SwipeActionsProps> = ({ onEdit, onDelete, 
     );
   };
 
-export const RightActions = React.memo(RightActionsComponent);
+export const RightActions = RightActionsComponent;

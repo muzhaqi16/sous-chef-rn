@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   useGetPantryUsageAnalyticsQuery,
   useGetPantryWasteAnalyticsQuery,
@@ -8,8 +8,7 @@ import {
   type AnalyticsFilters,
   type GetPantryUsageAnalyticsQuery,
   type GetPantryWasteAnalyticsQuery,
-  type GetPantryLedgerAnalyticsQuery,
-} from '#generated';
+  type GetPantryLedgerAnalyticsQuery } from '#generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantry']>['usageAnalytics'];
@@ -43,8 +42,7 @@ interface UsePantryAnalyticsReturn {
 export function usePantryAnalytics({
   pantryId,
   initialDateRange = DateRange.LastMonth,
-  ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
-}: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
+  ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
   const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
     initialLedgerGranularity,
@@ -54,60 +52,52 @@ export function usePantryAnalytics({
 
   const filter: AnalyticsFilters = {
     dateRange,
-    topItemsLimit: 10,
-  };
+    topItemsLimit: 10 };
 
   const {
     data: usageQueryData,
     loading: usageLoading,
     error: usageError,
-    refetch: refetchUsage,
-  } = useGetPantryUsageAnalyticsQuery({
+    refetch: refetchUsage } = useGetPantryUsageAnalyticsQuery({
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   const {
     data: wasteQueryData,
     loading: wasteLoading,
     error: wasteError,
-    refetch: refetchWaste,
-  } = useGetPantryWasteAnalyticsQuery({
+    refetch: refetchWaste } = useGetPantryWasteAnalyticsQuery({
     variables: { pantryId: pantryId ?? '', filter },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   const {
     data: ledgerQueryData,
     loading: ledgerLoading,
     error: ledgerError,
-    refetch: refetchLedger,
-  } = useGetPantryLedgerAnalyticsQuery({
+    refetch: refetchLedger } = useGetPantryLedgerAnalyticsQuery({
     variables: {
       pantryId: pantryId ?? '',
       filter,
-      granularity: ledgerGranularity,
-    },
+      granularity: ledgerGranularity },
     skip: !hasValidPantryId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   useApolloErrorLogger('GetPantryUsageAnalytics', usageError);
   useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
   useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
-  const refetch = useCallback(async () => {
+  const refetch = async () => {
     await Promise.all([
       refetchUsage(),
       refetchWaste(),
       refetchLedger(),
     ]);
-  }, [refetchUsage, refetchWaste, refetchLedger]);
+  };
 
   return {
     usageData: usageQueryData?.pantry?.usageAnalytics ?? null,
@@ -124,6 +114,5 @@ export function usePantryAnalytics({
     setDateRange,
     ledgerGranularity,
     setLedgerGranularity,
-    refetch,
-  };
+    refetch };
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAppStore } from '#store/useAppStore';
 
 export interface AutocompleteSearchConfig<TItem> {
@@ -55,8 +55,7 @@ export function useAutocompleteSearch<TItem>(
     requiresNetwork = true,
     fallbackItems = [],
     filterFallback,
-    maxResults = 10,
-  } = config;
+    maxResults = 10 } = config;
 
   const [searchTerm, setSearchTerm] = useState('');
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -108,7 +107,7 @@ export function useAutocompleteSearch<TItem>(
   }, [results, loading]);
 
   // Compute display items
-  const displayItems = useMemo(() => {
+  const displayItems = (() => {
     // If below min chars or no search term, use fallback
     if (searchTerm.length < minChars) {
       if (filterFallback && searchTerm.length > 0) {
@@ -128,20 +127,20 @@ export function useAutocompleteSearch<TItem>(
     }
 
     return [];
-  }, [searchTerm, minChars, results, loading, fallbackItems, filterFallback, maxResults]);
+  })();
 
-  const handleSearchTermChange = useCallback((text: string) => {
+  const handleSearchTermChange = (text: string) => {
     setSearchTerm(text);
-  }, []);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setSearchTerm('');
     lastResultsRef.current = [];
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
-  }, []);
+  };
 
   return {
     displayItems,
@@ -151,6 +150,5 @@ export function useAutocompleteSearch<TItem>(
     shouldSearch,
     handleSearchTermChange,
     setSearchTerm,
-    reset,
-  };
+    reset };
 }

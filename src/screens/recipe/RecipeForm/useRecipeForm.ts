@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   type CreateRecipeInput,
   type UpdateRecipeInput,
@@ -9,8 +9,7 @@ import {
   type Diet,
   type HealthGoal,
   type Intolerance,
-  type RecipeFragment,
-} from '#generated';
+  type RecipeFragment } from '#generated';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -81,21 +80,17 @@ export function useRecipeForm() {
     intolerances: [],
     ingredients: [],
     steps: [],
-    notes: '',
-  });
+    notes: '' });
 
   const initialState = useRef<RecipeFormState | null>(null);
 
   // Field updaters
-  const updateField = useCallback(
-    <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
+  const updateField = <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
       setState(prev => ({ ...prev, [field]: value }));
-    },
-    [],
-  );
+    };
 
   // Ingredient management
-  const addIngredient = useCallback((ingredient?: Partial<IngredientFormState>) => {
+  const addIngredient = (ingredient?: Partial<IngredientFormState>) => {
     setState(prev => ({
       ...prev,
       ingredients: [
@@ -111,33 +106,26 @@ export function useRecipeForm() {
           notes: '',
           isOptional: false,
           sortOrder: prev.ingredients.length,
-          ...ingredient,
-        },
-      ],
-    }));
-  }, []);
+          ...ingredient },
+      ] }));
+  };
 
-  const updateIngredient = useCallback(
-    (id: string, updates: Partial<IngredientFormState>) => {
+  const updateIngredient = (id: string, updates: Partial<IngredientFormState>) => {
       setState(prev => ({
         ...prev,
         ingredients: prev.ingredients.map(ing =>
           ing.id === id ? { ...ing, ...updates } : ing,
-        ),
-      }));
-    },
-    [],
-  );
+        ) }));
+    };
 
-  const removeIngredient = useCallback((id: string) => {
+  const removeIngredient = (id: string) => {
     setState(prev => ({
       ...prev,
-      ingredients: prev.ingredients.filter(ing => ing.id !== id),
-    }));
-  }, []);
+      ingredients: prev.ingredients.filter(ing => ing.id !== id) }));
+  };
 
   // Step management
-  const addStep = useCallback((instruction?: string) => {
+  const addStep = (instruction?: string) => {
     setState(prev => ({
       ...prev,
       steps: [
@@ -145,55 +133,50 @@ export function useRecipeForm() {
         {
           id: generateTempId(),
           instruction: instruction ?? '',
-          sortOrder: prev.steps.length,
-        },
-      ],
-    }));
-  }, []);
+          sortOrder: prev.steps.length },
+      ] }));
+  };
 
-  const updateStep = useCallback((id: string, instruction: string) => {
+  const updateStep = (id: string, instruction: string) => {
     setState(prev => ({
       ...prev,
       steps: prev.steps.map(step =>
         step.id === id ? { ...step, instruction } : step,
-      ),
-    }));
-  }, []);
+      ) }));
+  };
 
-  const removeStep = useCallback((id: string) => {
+  const removeStep = (id: string) => {
     setState(prev => ({
       ...prev,
-      steps: prev.steps.filter(step => step.id !== id),
-    }));
-  }, []);
+      steps: prev.steps.filter(step => step.id !== id) }));
+  };
 
-  const moveStep = useCallback((fromIndex: number, toIndex: number) => {
+  const moveStep = (fromIndex: number, toIndex: number) => {
     setState(prev => {
       const newSteps = [...prev.steps];
       const [moved] = newSteps.splice(fromIndex, 1);
       newSteps.splice(toIndex, 0, moved);
       return {
         ...prev,
-        steps: newSteps.map((step, i) => ({ ...step, sortOrder: i })),
-      };
+        steps: newSteps.map((step, i) => ({ ...step, sortOrder: i })) };
     });
-  }, []);
+  };
 
   // Tags
-  const setDiets = useCallback((diets: Diet[]) => {
+  const setDiets = (diets: Diet[]) => {
     setState(prev => ({ ...prev, diets }));
-  }, []);
+  };
 
-  const setHealthGoals = useCallback((healthGoals: HealthGoal[]) => {
+  const setHealthGoals = (healthGoals: HealthGoal[]) => {
     setState(prev => ({ ...prev, healthGoals }));
-  }, []);
+  };
 
-  const setIntolerances = useCallback((intolerances: Intolerance[]) => {
+  const setIntolerances = (intolerances: Intolerance[]) => {
     setState(prev => ({ ...prev, intolerances }));
-  }, []);
+  };
 
   // Validation
-  const validate = useCallback((): string | null => {
+  const validate = (): string | null => {
     if (!state.name.trim()) return 'Recipe name is required';
     if (state.ingredients.length === 0) return 'At least one ingredient is required';
     if (state.steps.length === 0) return 'At least one instruction step is required';
@@ -204,10 +187,10 @@ export function useRecipeForm() {
     const emptyStep = state.steps.find(s => !s.instruction.trim());
     if (emptyStep) return 'All steps must have instructions';
     return null;
-  }, [state]);
+  };
 
   // Build CreateRecipeInput
-  const buildCreateInput = useCallback((): CreateRecipeInput => {
+  const buildCreateInput = (): CreateRecipeInput => {
     const ingredients: RecipeIngredientInput[] = state.ingredients.map((ing, index) => ({
       name: ing.name.trim(),
       quantity: ing.quantity,
@@ -217,13 +200,11 @@ export function useRecipeForm() {
       section: ing.section?.trim() || undefined,
       notes: ing.notes?.trim() || undefined,
       isOptional: ing.isOptional,
-      sortOrder: index,
-    }));
+      sortOrder: index }));
 
     const instructions = state.steps.map((step, index) => ({
       step: index + 1,
-      text: step.instruction.trim(),
-    }));
+      text: step.instruction.trim() }));
 
     return {
       name: state.name.trim(),
@@ -243,12 +224,11 @@ export function useRecipeForm() {
       intolerances: state.intolerances.length > 0 ? state.intolerances : undefined,
       notes: state.notes.trim() || undefined,
       ingredients,
-      instructions,
-    };
-  }, [state]);
+      instructions };
+  };
 
   // Build UpdateRecipeInput
-  const buildUpdateInput = useCallback((): UpdateRecipeInput => {
+  const buildUpdateInput = (): UpdateRecipeInput => {
     return {
       name: state.name.trim() || undefined,
       description: state.description.trim() || undefined,
@@ -263,14 +243,12 @@ export function useRecipeForm() {
       isPublished: state.isPublished,
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
-        text: step.instruction.trim(),
-      })),
-      notes: state.notes.trim() || undefined,
-    };
-  }, [state]);
+        text: step.instruction.trim() })),
+      notes: state.notes.trim() || undefined };
+  };
 
   // Populate from existing recipe (edit mode)
-  const populateFromRecipe = useCallback((recipe: RecipeFragment) => {
+  const populateFromRecipe = (recipe: RecipeFragment) => {
     const formState: RecipeFormState = {
       name: recipe.name ?? '',
       description: recipe.description ?? '',
@@ -297,25 +275,22 @@ export function useRecipeForm() {
         section: ing.section ?? '',
         notes: ing.notes ?? '',
         isOptional: ing.isOptional ?? false,
-        sortOrder: ing.sortOrder ?? 0,
-      })),
+        sortOrder: ing.sortOrder ?? 0 })),
       steps: Array.isArray(recipe.instructions)
         ? (recipe.instructions as unknown[]).map((step: unknown, i: number) => ({
             id: generateTempId(),
             instruction: typeof step === 'string' ? step : (step && typeof step === 'object' && 'text' in step ? String((step as { text: unknown }).text) : ''),
-            sortOrder: i,
-          }))
+            sortOrder: i }))
         : [],
-      notes: recipe.notes ?? '',
-    };
+      notes: recipe.notes ?? '' };
     setState(formState);
     initialState.current = formState;
-  }, []);
+  };
 
-  const hasDirtyFields = useMemo(() => {
+  const hasDirtyFields = (() => {
     if (!initialState.current) return state.name.trim().length > 0;
     return JSON.stringify(state) !== JSON.stringify(initialState.current);
-  }, [state]);
+  })();
 
   return {
     state,
@@ -334,6 +309,5 @@ export function useRecipeForm() {
     buildCreateInput,
     buildUpdateInput,
     populateFromRecipe,
-    hasDirtyFields,
-  };
+    hasDirtyFields };
 }

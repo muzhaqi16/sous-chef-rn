@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Alert, Text, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -52,7 +52,7 @@ export const CreateMealPlanScreen: React.FC = () => {
   const [servings, setServings] = useState('2');
   const [homeSelection, setHomeSelection] = useState<string>(selectedHomeId ?? PERSONAL_VALUE);
 
-  const homeOptions = useMemo(() => {
+  const homeOptions = (() => {
     const opts = [{ label: 'Personal', value: PERSONAL_VALUE }];
     if (homes) {
       for (const home of homes) {
@@ -62,20 +62,20 @@ export const CreateMealPlanScreen: React.FC = () => {
       }
     }
     return opts;
-  }, [homes]);
+  })();
 
   // Template state
   const [templateBrowserVisible, setTemplateBrowserVisible] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MealTemplateDisplayFragment | null>(null);
   const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false);
 
-  const handleSelectTemplate = useCallback((template: MealTemplateDisplayFragment) => {
+  const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
     setSelectedTemplate(template);
     setTemplateBrowserVisible(false);
     setTemplatePreviewVisible(true);
-  }, []);
+  };
 
-  const handleCreateFromTemplate = useCallback(
+  const handleCreateFromTemplate = 
     async (config: {
       templateId: string;
       startDate: string;
@@ -88,11 +88,9 @@ export const CreateMealPlanScreen: React.FC = () => {
         setSelectedTemplate(null);
         goBack();
       }
-    },
-    [createPlanFromTemplate, goBack],
-  );
+    };
 
-  const handleSave = useCallback(async () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Name Required', 'Please enter a name for your meal plan.');
       return;
@@ -112,8 +110,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         servings: parseInt(servings) || 2,
-        homeId,
-      });
+        homeId });
 
       if (result?.success) {
         goBack();
@@ -123,7 +120,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     } catch (error: any) {
       Alert.alert('Error', error.message ?? 'Failed to create meal plan.');
     }
-  }, [name, description, planType, startDate, servings, homeSelection, createMealPlan, goBack]);
+  };
 
   return (
     <FormModal
@@ -232,17 +229,12 @@ const createFromTemplateStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.lg,
-    marginTop: theme.spacing.sm,
-  },
+    marginTop: theme.spacing.sm },
   linkPressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   linkIcon: {
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   linkText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-}));
+    fontWeight: theme.fonts.weight.medium } }));

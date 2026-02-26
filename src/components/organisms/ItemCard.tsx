@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
@@ -42,8 +42,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   badge,
   rightElement,
   leftElement,
-  testID,
-}) => {
+  testID }) => {
   const { width: screenWidth } = useWindowDimensions();
 
   // Slide animation for delete/consume/waste actions
@@ -52,29 +51,28 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     slideDistance: screenWidth,
     duration: SLIDE_PRESETS.exitWithFade.duration,
     withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
-  });
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget });
 
   // Wrap delete action with slide animation
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (onDelete) {
       triggerSlide(1, onDelete);
     }
-  }, [onDelete, triggerSlide]);
+  };
 
   // Wrap consume action with slide animation
-  const handleConsume = useCallback(() => {
+  const handleConsume = () => {
     if (onConsume) {
       triggerSlide(1, onConsume);
     }
-  }, [onConsume, triggerSlide]);
+  };
 
   // Wrap waste action with slide animation
-  const handleWaste = useCallback(() => {
+  const handleWaste = () => {
     if (onWaste) {
       triggerSlide(1, onWaste);
     }
-  }, [onWaste, triggerSlide]);
+  };
 
   const innerContent =
     onEdit || onDelete || onConsume || onWaste || onRestock ? (
@@ -124,6 +122,4 @@ const styles = StyleSheet.create(theme => ({
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
     marginVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
-    boxSizing: 'border-box',
-  },
-}));
+    boxSizing: 'border-box' } }));

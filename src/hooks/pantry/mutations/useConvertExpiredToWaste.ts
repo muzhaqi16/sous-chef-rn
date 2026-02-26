@@ -7,7 +7,6 @@
  * - Sets quantity to 0
  */
 
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useConvertExpiredToWasteMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
@@ -17,16 +16,13 @@ interface UseConvertExpiredToWasteOptions {
 }
 
 export function useConvertExpiredToWaste({
-  onSuccess,
-}: UseConvertExpiredToWasteOptions = {}) {
+  onSuccess }: UseConvertExpiredToWasteOptions = {}) {
   const { handleApolloError } = useErrorService();
 
   const [convertMutation, { loading }] = useConvertExpiredToWasteMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
-  const convertExpiredToWaste = useCallback(
-    async (pantryItemId: string): Promise<boolean> => {
+  const convertExpiredToWaste = async (pantryItemId: string): Promise<boolean> => {
       const result = await convertMutation({
         variables: { pantryItemId },
         update: (cache, { data: mutationData }) => {
@@ -38,11 +34,8 @@ export function useConvertExpiredToWaste({
             id: cache.identify({ __typename: 'PantryItem', id: updatedItem.id }),
             fields: {
               quantity: () => updatedItem.quantity,
-              condition: () => updatedItem.condition,
-            },
-          });
-        },
-      });
+              condition: () => updatedItem.condition } });
+        } });
 
       if (result.data?.convertExpiredToWaste?.pantryItem) {
         onSuccess?.();
@@ -51,15 +44,12 @@ export function useConvertExpiredToWaste({
 
       if (result.error) {
         const { message } = handleApolloError(result.error, {
-          operation: 'Discard Expired Item',
-        });
+          operation: 'Discard Expired Item' });
         Alert.alert('Error', message);
       }
 
       return false;
-    },
-    [convertMutation, onSuccess, handleApolloError],
-  );
+    };
 
   return { convertExpiredToWaste, loading };
 }

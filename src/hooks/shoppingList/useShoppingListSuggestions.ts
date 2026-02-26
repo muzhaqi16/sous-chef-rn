@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   useGetShoppingListSuggestionsQuery,
   SuggestionSource,
@@ -59,29 +59,27 @@ export function useShoppingListSuggestions({
 
   const suggestions = data?.shoppingList?.suggestions;
 
-  const grouped = useMemo<GroupedSuggestions>(() => {
-    const recentlyDeleted: ShoppingListSuggestionItem[] = [];
-    const frequentlyAdded: ShoppingListSuggestionItem[] = [];
-    const popular: ShoppingListSuggestionItem[] = [];
+  const recentlyDeleted: ShoppingListSuggestionItem[] = [];
+  const frequentlyAdded: ShoppingListSuggestionItem[] = [];
+  const popular: ShoppingListSuggestionItem[] = [];
 
-    if (suggestions) {
-      for (const suggestion of suggestions) {
-        switch (suggestion.source) {
-          case SuggestionSource.RecentlyDeleted:
-            recentlyDeleted.push(suggestion);
-            break;
-          case SuggestionSource.FrequentlyAdded:
-            frequentlyAdded.push(suggestion);
-            break;
-          case SuggestionSource.Popular:
-            popular.push(suggestion);
-            break;
-        }
+  if (suggestions) {
+    for (const suggestion of suggestions) {
+      switch (suggestion.source) {
+        case SuggestionSource.RecentlyDeleted:
+          recentlyDeleted.push(suggestion);
+          break;
+        case SuggestionSource.FrequentlyAdded:
+          frequentlyAdded.push(suggestion);
+          break;
+        case SuggestionSource.Popular:
+          popular.push(suggestion);
+          break;
       }
     }
+  }
 
-    return { recentlyDeleted, frequentlyAdded, popular };
-  }, [suggestions]);
+  const grouped: GroupedSuggestions = { recentlyDeleted, frequentlyAdded, popular };
 
   // Preload suggestion images into disk cache for instant display
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -34,8 +34,7 @@ export function useRecipeSearch() {
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
@@ -55,15 +54,14 @@ export function useRecipeSearch() {
     diet: null,
     intolerances: [],
     mealType: null,
-    maxReadyTime: null,
-  });
+    maxReadyTime: null });
 
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const hasAutoSearchedRef = useRef(false);
 
   // Memoize excluded ingredients
-  const excludedIngredients = useMemo(() => {
+  const excludedIngredients = (() => {
     const restrictions = dietaryProfile?.restrictions || [];
     const excluded: string[] = [];
 
@@ -86,14 +84,14 @@ export function useRecipeSearch() {
     }
 
     return excluded;
-  }, [dietaryProfile?.restrictions]);
+  })();
 
   // Note: Filters are NOT auto-initialized from dietary profile
   // User can manually apply filters via the filter sheet when needed
   // This allows unfiltered searches by default
 
   // Text-based search (with pantry fallback when empty)
-  const handleTextSearch = useCallback(async () => {
+  const handleTextSearch = async () => {
     // If no query, fall back to pantry ingredient search
     if (!searchQuery.trim()) {
       if (pantryItems?.length) {
@@ -112,8 +110,7 @@ export function useRecipeSearch() {
               ingredients: ingredientNames,
               number: 10,
               ranking: 1,
-              ignorePantry: true,
-            });
+              ignorePantry: true });
             setSearchResults(results);
           } catch (error: any) {
             console.error('Pantry search error:', error);
@@ -144,14 +141,11 @@ export function useRecipeSearch() {
         addRecipeInformation: true,
         ...(activeFilters.diet && { diet: activeFilters.diet }),
         ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(','),
-        }),
+          intolerances: activeFilters.intolerances.join(',') }),
         ...(activeFilters.mealType && { type: activeFilters.mealType }),
         ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
         ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(','),
-        }),
-      });
+          excludeIngredients: excludedIngredients.join(',') }) });
 
       setSearchResults(data.results || []);
     } catch (error: any) {
@@ -166,10 +160,10 @@ export function useRecipeSearch() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, activeFilters, excludedIngredients, pantryItems]);
+  };
 
   // Pantry-based search (auto-search on mount)
-  const handlePantrySearch = useCallback(async (ingredients: string) => {
+  const handlePantrySearch = async (ingredients: string) => {
     setLoading(true);
     setSearchPerformed(true);
 
@@ -178,8 +172,7 @@ export function useRecipeSearch() {
         ingredients,
         number: 10,
         ranking: 1, // Maximize used ingredients
-        ignorePantry: true,
-      });
+        ignorePantry: true });
 
       setSearchResults(results);
     } catch (error: any) {
@@ -194,7 +187,7 @@ export function useRecipeSearch() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   // Auto-trigger search on mount
   useEffect(() => {
@@ -220,7 +213,7 @@ export function useRecipeSearch() {
   }, [initialQuery, pantryItems, handleTextSearch, handlePantrySearch]);
 
   // Ingredient-based search
-  const handleIngredientSearch = useCallback(async () => {
+  const handleIngredientSearch = async () => {
     if (selectedIngredients.size === 0) {
       Alert.alert('No Ingredients Selected', 'Please select at least one ingredient');
       return;
@@ -238,14 +231,11 @@ export function useRecipeSearch() {
         number: 10,
         ...(activeFilters.diet && { diet: activeFilters.diet }),
         ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(','),
-        }),
+          intolerances: activeFilters.intolerances.join(',') }),
         ...(activeFilters.mealType && { type: activeFilters.mealType }),
         ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
         ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(','),
-        }),
-      });
+          excludeIngredients: excludedIngredients.join(',') }) });
 
       setSearchResults(results);
     } catch (error: any) {
@@ -260,17 +250,17 @@ export function useRecipeSearch() {
     } finally {
       setLoading(false);
     }
-  }, [selectedIngredients, activeFilters, excludedIngredients]);
+  };
 
-  const openIngredientSelector = useCallback(() => {
+  const openIngredientSelector = () => {
     if (!pantryItems || pantryItems.length === 0) {
       Alert.alert('No Pantry Items', 'Add items to your pantry first to search by ingredients.');
       return;
     }
     ingredientSheetRef.current?.present();
-  }, [pantryItems]);
+  };
 
-  const toggleIngredient = useCallback((itemName: string) => {
+  const toggleIngredient = (itemName: string) => {
     setSelectedIngredients(prev => {
       const next = new Set(prev);
       if (next.has(itemName)) {
@@ -280,56 +270,51 @@ export function useRecipeSearch() {
       }
       return next;
     });
-  }, []);
+  };
 
-  const openFilterSheet = useCallback(() => {
+  const openFilterSheet = () => {
     filterSheetRef.current?.present();
-  }, []);
+  };
 
-  const clearFilters = useCallback(() => {
+  const clearFilters = () => {
     setActiveFilters({
       diet: null,
       intolerances: [],
       mealType: null,
-      maxReadyTime: null,
-    });
-  }, []);
+      maxReadyTime: null });
+  };
 
-  const applyFilters = useCallback(() => {
+  const applyFilters = () => {
     filterSheetRef.current?.dismiss();
     if (searchQuery.trim()) {
       handleTextSearch();
     } else if (selectedIngredients.size > 0) {
       handleIngredientSearch();
     }
-  }, [searchQuery, selectedIngredients, handleTextSearch, handleIngredientSearch]);
+  };
 
-  const activeFilterCount = useMemo(() => {
+  const activeFilterCount = (() => {
     let count = 0;
     if (activeFilters.diet) count++;
     if (activeFilters.intolerances.length > 0) count += activeFilters.intolerances.length;
     if (activeFilters.mealType) count++;
     if (activeFilters.maxReadyTime) count++;
     return count;
-  }, [activeFilters]);
+  })();
 
   // Transform results to list items
-  const items = useMemo(() => {
+  const items = (() => {
     return searchResults.map(recipe => transformRecipeForDisplay(recipe));
-  }, [searchResults]);
+  })();
 
-  const handleItemPress = useCallback(
-    (id: string) => {
+  const handleItemPress = (id: string) => {
       const item = items.find(i => i.id === id);
       if (!item) return;
 
       navigate('RecipeDetail', {
         externalSource: 'SPOONACULAR',
-        externalId: String(item.spoonacularId),
-      });
-    },
-    [items, navigate],
-  );
+        externalId: String(item.spoonacularId) });
+    };
 
   return {
     navigate,
@@ -354,6 +339,5 @@ export function useRecipeSearch() {
     applyFilters,
     activeFilterCount,
     items,
-    handleItemPress,
-  };
+    handleItemPress };
 }

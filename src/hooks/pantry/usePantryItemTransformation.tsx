@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text } from 'react-native';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
@@ -338,10 +338,9 @@ export function usePantryItemTransformation<T extends PantryItem>(
 ): TransformedItem[] {
   const { items, theme } = options;
 
-  return useMemo(() => {
-    // Filter out items with missing or invalid IDs to prevent key warnings
-    // This can happen during cache updates when items are being removed
-    return items.filter(item => item.id).map(item => {
+  // Filter out items with missing or invalid IDs to prevent key warnings
+  // This can happen during cache updates when items are being removed
+  return items.filter(item => item.id).map(item => {
       // Calculate expired status for badge
       const isExpired =
         item.expiresAt && new Date(item.expiresAt) < new Date();
@@ -470,7 +469,6 @@ export function usePantryItemTransformation<T extends PantryItem>(
         netWeightText,
         remainingNetWeightText,
         quantityBreakdownText,
-      };
-    });
-  }, [items, theme]);
+    };
+  });
 }

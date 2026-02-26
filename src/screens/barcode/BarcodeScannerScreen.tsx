@@ -1,23 +1,15 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StatusBar,
   Dimensions,
-  Platform,
-} from 'react-native';
+  Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
-  useCodeScanner,
-} from 'react-native-vision-camera';
+  useCodeScanner } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -39,10 +31,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
   const { navigate, goBack, navigation } = useAppNavigation();
   const { source, pantryId, shoppingListId } = route?.params || {};
   const devices = useCameraDevices();
-  const device = useMemo(
-    () => devices.find(d => d.position === 'back'),
-    [devices],
-  );
+  const device = devices.find(d => d.position === 'back');
 
   const { theme } = useUnistyles();
 
@@ -69,7 +58,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
   useFocusEffect(
-    useCallback(() => {
+    () => {
       if (!hasPermission) {
         // we'll show the "grant permission" UI instead
         return () => {};
@@ -89,7 +78,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
         StatusBar.setHidden(false, 'slide');
         // Don't set barStyle - let App.tsx handle theme-aware styling
       };
-    }, [hasPermission, setScanning]),
+    },
   );
 
   // 3) Set up the VisionCamera code‐scanner callback
@@ -120,21 +109,19 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
           format: type,
           source,
           pantryId,
-          shoppingListId,
-        });
+          shoppingListId });
       }
-    },
-  });
+    } });
 
-  const toggleFlash = useCallback(() => setFlashEnabled(f => !f), []);
-  const resetScan = useCallback(() => {
+  const toggleFlash = () => setFlashEnabled(f => !f);
+  const resetScan = () => {
     setHasScanned(false);
     resetScanner();
     setScanning(true);
     hasNavigatedRef.current = false;
-  }, [resetScanner, setScanning]);
+  };
 
-  const handleGoBack = useCallback(() => {
+  const handleGoBack = () => {
     // Simply pop the Barcode stack to reveal Home
     // This preserves Home's state without triggering remounts
     const rootNavigator = navigation.getParent();
@@ -143,7 +130,7 @@ export const BarcodeScannerScreen: React.FC<StaticScreenProps<{
     } else {
       goBack();
     }
-  }, [navigation, goBack]);
+  };
 
   // --- RENDER FALLBACKS ---
 
@@ -261,8 +248,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
-  },
+    backgroundColor: 'black' },
   camera: { flex: 1 },
   centeredContainer: {
     position: 'absolute',
@@ -274,14 +260,12 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: 'black',
     paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   messageText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   header: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 20,
@@ -291,61 +275,51 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    zIndex: 1,
-  },
+    zIndex: 1 },
   headerButton: {
     width: 44,
     height: 44,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   headerTitle: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   instructionsContainer: {
     position: 'absolute',
     top: screenHeight * 0.25,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',
-    zIndex: 1,
-  },
+    zIndex: 1 },
   instructionsText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   subInstructionsText: {
     color: theme.colors.overlays.light,
     fontSize: theme.fonts.size.sm,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   bottomControls: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 50 : 30,
     left: theme.spacing.lg,
     right: theme.spacing.lg,
     alignItems: 'center',
-    zIndex: 1,
-  },
+    zIndex: 1 },
   scanIndicator: { alignItems: 'center' },
   scanDot: {
     width: 12,
     height: 12,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.overlays.medium,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   scanDotActive: { backgroundColor: theme.colors.primary },
   scanStatusText: {
     color: theme.colors.white,
     fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-  },
-}));
+    fontWeight: theme.fonts.weight.medium } }));

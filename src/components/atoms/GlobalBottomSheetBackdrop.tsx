@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
@@ -25,8 +25,7 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
   disappearsOnIndex = -1,
   opacity = 0.5,
   pressBehavior = 'close',
-  onClose,
-}) => {
+  onClose }) => {
   const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
   // Store onClose in a ref to avoid stale closures in worklet callbacks
@@ -36,24 +35,24 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
   // Track whether this instance has an active backdrop request to prevent double show/hide
   const isActiveRef = useRef(false);
 
-  const handlePress = useCallback(() => {
+  const handlePress = () => {
     if (pressBehavior === 'none') return;
     onCloseRef.current?.();
-  }, [pressBehavior]);
+  };
 
-  const handleShow = useCallback(() => {
+  const handleShow = () => {
     if (!isActiveRef.current) {
       isActiveRef.current = true;
       showBackdrop({ opacity, onPress: pressBehavior !== 'none' ? handlePress : undefined });
     }
-  }, [showBackdrop, opacity, pressBehavior, handlePress]);
+  };
 
-  const handleHide = useCallback(() => {
+  const handleHide = () => {
     if (isActiveRef.current) {
       isActiveRef.current = false;
       hideBackdrop();
     }
-  }, [hideBackdrop]);
+  };
 
   // React to animated index changes to show/hide global backdrop
   useAnimatedReaction(
@@ -98,6 +97,4 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent',
-  },
-});
+    backgroundColor: 'transparent' } });

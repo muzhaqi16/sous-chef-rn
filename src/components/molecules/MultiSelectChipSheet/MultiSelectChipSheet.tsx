@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -53,13 +53,13 @@ export function MultiSelectChipSheet<T extends string = string>({
     } else {
       ref.current?.dismiss();
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible]);
 
-  const filteredItems = useMemo(() => {
+  const filteredItems = (() => {
     if (!searchQuery.trim()) return items;
     const query = searchQuery.toLowerCase();
     return items.filter(item => item.label.toLowerCase().includes(query));
-  }, [items, searchQuery]);
+  })();
 
   const handleToggleItem = (id: T) => {
     const newSelection = selectedItems.includes(id)

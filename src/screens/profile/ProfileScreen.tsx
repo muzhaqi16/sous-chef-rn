@@ -1,13 +1,11 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef } from 'react';
 import { Pressable, Text } from 'react-native';
 import Animated, {
   useSharedValue,
-  useAnimatedScrollHandler,
-} from 'react-native-reanimated';
+  useAnimatedScrollHandler } from 'react-native-reanimated';
 import {
   SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+  useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ProfileHeader } from '#components/organisms/ProfileHeader';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -38,15 +36,13 @@ export const ProfileScreen = () => {
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
       scrollY.value = event.contentOffset.y;
-    },
-  });
+    } });
 
   // Track screen view on mount
   useEffect(() => {
     Telemetry.trackScreen('ProfileScreen', {
       has_profile: !!profile,
-      has_avatar: !!profile?.avatar,
-    });
+      has_avatar: !!profile?.avatar });
   }, [profile]);
 
   const handleAvatarPress = () => {
@@ -67,24 +63,24 @@ export const ProfileScreen = () => {
     }
   };
 
-  const handleMorePress = useCallback(() => {
+  const handleMorePress = () => {
     Telemetry.trackEvent('profile_more_menu_opened');
     actionTrayRef.current?.open();
-  }, []);
+  };
 
-  const handleDeleteAccount = useCallback(() => {
+  const handleDeleteAccount = () => {
     Telemetry.trackEvent('delete_account_clicked');
     actionTrayRef.current?.close();
     navigate('DeleteAccount');
-  }, [navigate]);
+  };
 
-  const handleOverlayOpen = useCallback(() => {
+  const handleOverlayOpen = () => {
     // No-op: Profile is no longer in tab bar context
-  }, []);
+  };
 
-  const handleOverlayClose = useCallback(() => {
+  const handleOverlayClose = () => {
     // No-op: Profile is no longer in tab bar context
-  }, []);
+  };
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
@@ -135,8 +131,7 @@ export const ProfileScreen = () => {
                   return {
                     ...item,
                     testID: 'profile-logout-button',
-                    onPress: handleLogout,
-                  };
+                    onPress: handleLogout };
                 }
                 // Handle navigation items
                 if (item.type === 'navigation') {
@@ -159,8 +154,7 @@ export const ProfileScreen = () => {
                       } else if (item.key === 'changePassword') {
                         navigate('ChangePassword');
                       }
-                    },
-                  };
+                    } };
                 }
                 return item;
               })}
@@ -191,11 +185,9 @@ export const ProfileScreen = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   scrollContent: {
-    paddingVertical: theme.spacing.lg,
-  },
+    paddingVertical: theme.spacing.lg },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,15 +196,11 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.error,
-    backgroundColor: 'transparent',
-  },
+    backgroundColor: 'transparent' },
   menuItemTextDestructive: {
     marginLeft: theme.spacing.md,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

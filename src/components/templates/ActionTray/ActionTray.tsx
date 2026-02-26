@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useCallback, useEffect, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useEffect, useRef } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
@@ -19,8 +19,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       title,
       headerRight,
       showCloseButton = true,
-      enableBackdrop = true,
-    },
+      enableBackdrop = true },
     ref,
   ) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -29,8 +28,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     const { showBackdrop, hideBackdrop } = useOverlayBackdrop();
 
     // Handle sheet state changes for open/close tracking
-    const handleSheetChanges = useCallback(
-      (index: number) => {
+    const handleSheetChanges = (index: number) => {
         if (index >= 0) {
           isOpenRef.current = true;
           onOpen?.();
@@ -42,9 +40,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           isOpenRef.current = false;
           onClose?.();
         }
-      },
-      [onOpen, onClose, enableBackdrop, hideBackdrop],
-    );
+      };
 
     // Cleanup on unmount
     useEffect(() => {
@@ -77,14 +73,13 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
             bottomSheetRef.current?.present();
           }
         },
-        isActive: () => isOpenRef.current,
-      }),
+        isActive: () => isOpenRef.current }),
       [enableBackdrop, showBackdrop],
     );
 
-    const handleClose = useCallback(() => {
+    const handleClose = () => {
       bottomSheetRef.current?.dismiss();
-    }, []);
+    };
 
     return (
       <BottomSheetModal
@@ -129,26 +124,19 @@ const styles = UnistylesStyleSheet.create(theme => ({
           shadowColor: theme.colors.textPrimary,
           shadowOffset: {
             width: 0,
-            height: -2,
-          },
+            height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
-          elevation: 8,
-        }
+          elevation: 8 }
       : {
-          elevation: 0,
-        }),
-  },
+          elevation: 0 }) },
   background: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-  },
+    borderRadius: 16 },
   handle: {
     display: 'none', // Hide default handle, ActionTrayContent has its own UI
   },
   content: {
     paddingTop: 0,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-  },
-}));
+    paddingBottom: theme.spacing.lg } }));

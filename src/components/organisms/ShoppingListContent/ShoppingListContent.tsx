@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { EmptyState } from '#components/base/EmptyState';
 import { SortableShoppingList } from '#components/organisms/SortableShoppingList/SortableList';
@@ -39,15 +39,9 @@ const ShoppingListContentComponent: React.FC<ShoppingListContentProps> = ({
   onPurchasedSectionExpandedChange,
 }) => {
   // Separate items by purchased status with memoization
-  const unpurchasedItems = useMemo(
-    () => items.filter(item => !item.isPurchased),
-    [items],
-  );
+  const unpurchasedItems = items.filter(item => !item.isPurchased);
 
-  const purchasedItems = useMemo(
-    () => items.filter(item => item.isPurchased),
-    [items],
-  );
+  const purchasedItems = items.filter(item => item.isPurchased);
 
   if (items.length === 0 && emptyState) {
     return (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '#store/useAppStore';
 import { storage } from '#/storage/mmkv';
 
@@ -47,7 +47,7 @@ export const useOfflineMode = () => {
   const isEffectivelyOffline = isOfflineModeEnabled || isDeviceOffline;
   const canUseNetwork = isOnline && !isOfflineModeEnabled;
 
-  return useMemo(() => ({
+  return ({
     /**
      * True if app should behave as offline (user enabled OR device offline)
      * Use this to switch fetch policies to cache-only
@@ -74,7 +74,7 @@ export const useOfflineMode = () => {
      * Loading state - always false since we read from MMKV
      */
     loading: false,
-  }), [isEffectivelyOffline, isDeviceOffline, isOfflineModeEnabled, canUseNetwork]);
+  });
 };
 
 /**

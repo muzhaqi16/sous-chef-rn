@@ -48,7 +48,7 @@ interface ShoppingListAvatarProps {
   size?: number;
 }
 
-export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = React.memo(({
+export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = ({
   list,
   size = 40,
 }) => {
@@ -62,4 +62,4 @@ export const ShoppingListAvatar: React.FC<ShoppingListAvatarProps> = React.memo(
       fallbackIcon="cart-outline"
     />
   );
-});
+};

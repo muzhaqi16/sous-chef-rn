@@ -36,7 +36,6 @@ export function useNetworkStatus() {
         unsubscribe();
       };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 }

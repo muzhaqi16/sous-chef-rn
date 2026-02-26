@@ -11,14 +11,13 @@
  * 3. Refetch on error to restore consistency
  */
 
-import { useCallback, useRef } from 'react';
+import { useRef } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useClearShoppingListItemsMutation } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import {
   clearAllPurchasedItemsFromCache,
-  clearAllUnpurchasedItemsFromCache,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+  clearAllUnpurchasedItemsFromCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 
 interface UseClearShoppingListItemsOptions {
   listId: string | null | undefined;
@@ -46,17 +45,14 @@ interface UseClearShoppingListItemsOptions {
 export function useClearShoppingListItems({
   listId,
   items,
-  refetch,
-}: UseClearShoppingListItemsOptions) {
+  refetch }: UseClearShoppingListItemsOptions) {
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
   const [clearMutation] = useClearShoppingListItemsMutation({
-    errorPolicy: 'all',
-  });
+    errorPolicy: 'all' });
 
-  const clearItems = useCallback(
-    async (purchased: boolean) => {
+  const clearItems = async (purchased: boolean) => {
       if (!listId || isClearingRef.current) return;
 
       const targetItems = items.filter(i =>
@@ -91,9 +87,7 @@ export function useClearShoppingListItems({
       } finally {
         isClearingRef.current = false;
       }
-    },
-    [listId, items, client.cache, clearMutation, refetch],
-  );
+    };
 
   return { clearItems };
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+;
 import { useAppStore, selectAuthTokens, selectAuthActions, selectPostLoginState } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -45,8 +45,7 @@ export const useAuthState = () => {
 
   // PERFORMANCE: Memoize return object to prevent infinite re-renders
   // Without memoization, every render creates a new object reference causing cascade re-renders
-  return useMemo(
-    () => ({
+  return ({
       // Core auth state
       user,
       accessToken,
@@ -79,33 +78,5 @@ export const useAuthState = () => {
       setNavigationState,
       setShowBiometricSetup,
       setPostLoginCredentials,
-    }),
-    [
-      user,
-      accessToken,
-      refreshToken,
-      isLoggingOut,
-      isAutoLoggingIn,
-      isAuthenticated,
-      hasAnyToken,
-      isLoggedOut,
-      isTokenRefreshing,
-      canAttemptQueries,
-      setAuth,
-      clearAuth,
-      setTokens,
-      updateUser,
-      setEmailVerified,
-      setOnboarded,
-      setRememberMe,
-      setIsAutoLoggingIn,
-      setUserNavigationState,
-      navigationState,
-      showBiometricSetup,
-      postLoginCredentials,
-      setNavigationState,
-      setShowBiometricSetup,
-      setPostLoginCredentials,
-    ],
-  );
+    });
 };

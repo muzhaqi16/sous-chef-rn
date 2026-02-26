@@ -1,11 +1,10 @@
-import React, { useMemo, useCallback, RefObject } from 'react';
+import React, { RefObject } from 'react';
 import { Pressable, Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type {
   SelectorConfig,
-  ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector/types';
+  ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 
 interface UsePantrySelectorConfigOptions {
   /**
@@ -48,15 +47,12 @@ export function usePantrySelectorConfig(
     loading,
     setSelectedPantryId,
     selectorRef,
-    navigate,
-  } = options;
+    navigate } = options;
 
   const {
-    theme: { colors },
-  } = useUnistyles();
+    theme: { colors } } = useUnistyles();
 
-  const renderPantryItem = useCallback(
-    (item: any, isSelected: boolean, onPress: () => void) => {
+  const renderPantryItem = (item: any, isSelected: boolean, onPress: () => void) => {
       return (
         <Pressable
           style={({ pressed }) => [
@@ -70,12 +66,9 @@ export function usePantrySelectorConfig(
           {!!isSelected && <Icon name="checkmark" size={20} color={colors.primary} />}
         </Pressable>
       );
-    },
-    [colors],
-  );
+    };
 
-  return useMemo(
-    () => ({
+  return ({
       title: 'Select Pantry',
       data: pantries,
       selectedId: selectedPantryId,
@@ -94,8 +87,7 @@ export function usePantrySelectorConfig(
           onPress: () => {
             selectorRef.current?.close();
             navigate('PantrySettings', { pantryId: undefined });
-          },
-        },
+          } },
         {
           icon: 'settings-outline',
           label: 'Edit Selected Pantry',
@@ -105,8 +97,7 @@ export function usePantrySelectorConfig(
               navigate('PantrySettings', { pantryId: selectedPantryId });
             }
           },
-          disabled: !selectedPantryId,
-        },
+          disabled: !selectedPantryId },
         {
           icon: 'bar-chart-outline',
           label: 'View Analytics',
@@ -116,20 +107,8 @@ export function usePantrySelectorConfig(
               navigate('PantryAnalytics', { pantryId: selectedPantryId });
             }
           },
-          disabled: !selectedPantryId,
-        },
-      ],
-    }),
-    [
-      pantries,
-      selectedPantryId,
-      loading,
-      setSelectedPantryId,
-      selectorRef,
-      navigate,
-      renderPantryItem,
-    ],
-  );
+          disabled: !selectedPantryId },
+      ] });
 }
 
 const styles = StyleSheet.create(theme => ({
@@ -143,19 +122,14 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   itemSelected: {
     backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   itemName: {
     flex: 1,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

@@ -7,25 +7,18 @@ import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustr
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { StaggeredEntryProvider } from '#context/StaggeredEntryContext';
 import { StaggeredTabContent } from './StaggeredTabContent';
+import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
+
+// Module-level flag: once shopping tab content has been shown, skip skeletons on remount.
+// Persists across component unmount/remount (stack navigation), resets on app restart.
+let hasShoppingTabShownContent = false;
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
-  onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
-  onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
   disabled?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
   // Pagination props
   onEndReached?: () => void;
   hasMore?: boolean;
@@ -41,17 +34,9 @@ interface ShoppingTabProps {
 
 const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   items,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onTogglePurchase,
-  onQuantityPress,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   disabled,
-  onSwipeableWillOpen,
-  onSwipeableClose,
   onEndReached,
   canRemoveItems = true,
   canEditItems = true,
@@ -59,12 +44,22 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   canReorderItems = false,
   isTransitioning = false,
 }) => {
+  // PERF: Action callbacks from context (not props) so renderScene in
+  // ShoppingListTabs doesn't depend on them and stays stable.
+  const actions = useShoppingListTabsActions();
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Show skeletons during initial render OR during list transitions
-  if (!isReady || isTransitioning) {
+  // Once content has been shown, latch the module-level flag so skeletons
+  // never reappear on remounts (only resets on app restart).
+  if (isReady && !isTransitioning && items.length > 0) {
+    hasShoppingTabShownContent = true;
+  }
+
+  // Show skeletons only on the very first data load
+  const showSkeletons = !hasShoppingTabShownContent && (!isReady || isTransitioning);
+  if (showSkeletons) {
     return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }
 
@@ -83,17 +78,17 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
     <StaggeredEntryProvider>
       <StaggeredTabContent
         items={items}
-        onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
-        onTogglePurchase={onTogglePurchase}
-        onQuantityPress={onQuantityPress}
-        onSortOrderUpdate={onSortOrderUpdate}
+        onItemPress={actions.onItemPress}
+        onItemEdit={actions.onItemEdit}
+        onItemDelete={actions.onItemDelete}
+        onTogglePurchase={actions.onTogglePurchase}
+        onQuantityPress={actions.onQuantityPress}
+        onSortOrderUpdate={actions.onSortOrderUpdate}
         onRefresh={onRefresh}
         refreshing={refreshing}
         disabled={disabled}
-        onSwipeableWillOpen={onSwipeableWillOpen}
-        onSwipeableClose={onSwipeableClose}
+        onSwipeableWillOpen={actions.onSwipeableWillOpen}
+        onSwipeableClose={actions.onSwipeableClose}
         onEndReached={onEndReached}
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
@@ -103,8 +98,5 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
     </StaggeredEntryProvider>
   );
 };
-
-export const MemoizedShoppingTab = React.memo(ShoppingTabComponent);
-MemoizedShoppingTab.displayName = 'ShoppingTab';
 
 export const ShoppingTab = ShoppingTabComponent;

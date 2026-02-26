@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -9,7 +9,7 @@ import { SPRING } from '#/constants/animations';
 import { StepDot } from './StepDot';
 import type { OnboardingStepsProps } from './types';
 
-export const OnboardingSteps: React.FC<OnboardingStepsProps> = memo(({
+export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
   steps,
   activeIndex,
   stepSize = 12,
@@ -63,9 +63,7 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = memo(({
       ))}
     </View>
   );
-});
-
-OnboardingSteps.displayName = 'OnboardingSteps';
+};
 
 const styles = StyleSheet.create(theme => ({
   container: {

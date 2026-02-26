@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React from 'react';
 import {Text, TextStyle, StyleProp} from 'react-native';
 import {DisplayFormat} from '#/graphql/generated';
 
@@ -32,7 +32,7 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
 }) => {
   // Memoize the expensive fraction conversion to avoid O(n²) loop on every render
   // Must be called before any conditional returns to follow Rules of Hooks
-  const formattedQuantity = useMemo(() => {
+  const formattedQuantity = (() => {
     // If we have the original user input, we'll use it instead (handled below)
     if (quantityInput) {
       return null;
@@ -56,7 +56,7 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
         }
         return formatDecimal(quantity);
     }
-  }, [quantity, quantityInput, displayFormat, displayAsFraction]);
+  })();
 
   // If we have the original user input, use it (preserves fractions)
   if (quantityInput) {

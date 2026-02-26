@@ -1,11 +1,10 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
   Image,
   Pressable,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils/iconUtils';
 import {ImagePicker, ImageFile} from './ImagePicker';
@@ -36,16 +35,14 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   itemId,
   profilePurpose,
   required = false,
-  placeholder = 'No image selected',
-}) => {
+  placeholder = 'No image selected' }) => {
   const {theme} = useUnistyles();
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const {uploading, uploadProfileImage, uploadItemImage} = useImageUpload();
 
-  const handleImageSelected = useCallback(
-    (image: ImageFile) => {
+  const handleImageSelected = (image: ImageFile) => {
       setSelectedImage(image);
 
       // Start upload immediately after selection
@@ -57,14 +54,12 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             imageUrl = await uploadProfileImage(image, profilePurpose, {
               onProgress: setUploadProgress,
               onSuccess: onImageUploaded,
-              onError,
-            });
+              onError });
           } else if (itemId) {
             imageUrl = await uploadItemImage(image, itemId, {
               onProgress: setUploadProgress,
               onSuccess: onImageUploaded,
-              onError,
-            });
+              onError });
           } else {
             const error = new Error(
               'Either itemId or profilePurpose must be provided',
@@ -86,23 +81,13 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       };
 
       startUpload();
-    },
-    [
-      isProfile,
-      profilePurpose,
-      itemId,
-      uploadProfileImage,
-      uploadItemImage,
-      onImageUploaded,
-      onError,
-    ],
-  );
+    };
 
-  const handleRemoveImage = useCallback(() => {
+  const handleRemoveImage = () => {
     setSelectedImage(null);
     setUploadProgress(0);
     onImageUploaded?.('');
-  }, [onImageUploaded]);
+  };
 
   const currentImageUri = selectedImage?.uri || value;
   const hasImage = Boolean(currentImageUri);
@@ -196,45 +181,37 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    minHeight: 120,
-  },
+    minHeight: 120 },
   requiredLabel: {
-    color: theme.colors.error,
-  },
+    color: theme.colors.error },
   imageContainer: {
     position: 'relative',
     borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
+    overflow: 'hidden' },
   imagePreview: {
     width: '100%',
     height: 200,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
+    backgroundColor: theme.colors.surfaceVariant },
   profileImagePreview: {
-    height: 120,
-  },
+    height: 120 },
   uploadOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   imageActions: {
     position: 'absolute',
     top: theme.spacing.sm,
     right: theme.spacing.sm,
     flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   actionButton: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: theme.radii.full,
     padding: theme.spacing.sm,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   placeholderContainer: {
     backgroundColor: theme.colors.surface,
     borderWidth: 2,
@@ -246,24 +223,18 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    minHeight: 120,
-  },
+    minHeight: 120 },
   placeholderText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   progressText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

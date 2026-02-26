@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useShallow } from 'zustand/shallow';
 import {
@@ -6,15 +6,13 @@ import {
   selectUser,
   selectSetters,
   selectNavigationUtils,
-  selectPreferences,
-} from '#store/useAppStore';
+  selectPreferences } from '#store/useAppStore';
 import { useTheme } from '#hooks/useTheme';
 import { useAuth } from '#hooks/auth/useAuth';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
-  ProfileVisibility,
-} from '#generated';
+  ProfileVisibility } from '#generated';
 import { ThemePreference } from '#store/slices/preferencesSlice';
 
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
@@ -47,15 +45,12 @@ export const useConfigurableSettings = (profile: any) => {
         updateProfile: {
           ...profile,
           ...variables.input,
-          __typename: 'UserProfile',
-        },
-      };
+          __typename: 'UserProfile' } };
     },
     onError: error => {
       console.error('Failed to update profile:', error);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
-    },
-  });
+    } });
 
   // ===== MUTATION 2: Update User Preferences =====
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation({
@@ -66,8 +61,7 @@ export const useConfigurableSettings = (profile: any) => {
     onError: error => {
       console.error('Failed to update preferences:', error);
       Alert.alert('Error', 'Failed to update preferences. Please try again.');
-    },
-  });
+    } });
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -105,8 +99,7 @@ export const useConfigurableSettings = (profile: any) => {
   // BiometricSetupModal state
   const [showBiometricModal, setShowBiometricModal] = useState(false);
 
-  const handleBiometricModalComplete = useCallback(
-    async (enabled: boolean) => {
+  const handleBiometricModalComplete = async (enabled: boolean) => {
       setShowBiometricModal(false);
       if (enabled) {
         setBiometricEnabled(true);
@@ -119,54 +112,34 @@ export const useConfigurableSettings = (profile: any) => {
         const hasCredentials = await checkStoredCredentials(user?.email);
         setBiometricEnabled(hasCredentials && biometricAvailable);
       }
-    },
-    [
-      checkStoredCredentials,
-      user?.email,
-      biometricAvailable,
-      resetBiometricDeclination,
-      markBiometricEnabled,
-    ],
-  );
+    };
 
-  const updateProfile = useCallback(
-    async (input: Partial<Record<any, any>>) => {
+  const updateProfile = async (input: Partial<Record<any, any>>) => {
       try {
         // Mutation uses automatic normalization + optimistic response
         // No manual cache update needed (Pattern 2)
         await updateProfileMutation({
           variables: {
-            input,
-          },
-        });
+            input } });
       } catch (error) {
         // Error handled by onError handler in mutation options
         console.error('Failed to update profile:', error);
       }
-    },
-    [updateProfileMutation],
-  );
+    };
 
-  const updateUserPreferences = useCallback(
-    (input: any) => {
+  const updateUserPreferences = (input: any) => {
       updateSettingsMutation({
         variables: {
-          input,
-        },
-      });
+          input } });
       // Don't call store.updatePreferences since it doesn't exist
       // The individual setters will be called instead
-    },
-    [updateSettingsMutation],
-  );
+    };
 
-  const createSettingItem = useCallback(
-    (config: any) => {
+  const createSettingItem = (config: any) => {
       const baseItem: any = {
         key: config.key,
         label: config.label,
-        type: config.type,
-      };
+        type: config.type };
 
       // Map configuration keys to actual implementation
       switch (config.key) {
@@ -388,8 +361,7 @@ export const useConfigurableSettings = (profile: any) => {
                               'Failed to disable biometric authentication.',
                             );
                           }
-                        },
-                      },
+                        } },
                     ],
                   );
                 }
@@ -483,47 +455,25 @@ export const useConfigurableSettings = (profile: any) => {
       }
 
       return baseItem;
-    },
-    [
-      profile,
-      user,
-      language,
-      setLanguage,
-      updateProfile,
-      updateUserPreferences,
-      userThemePreference,
-      setTheme,
-      logout,
-      biometricAvailable,
-      biometricEnabled,
-      biometricType,
-      removeCredentials,
-      getUserNavigationState,
-    ],
-  );
+    };
 
-  const sections = useMemo((): any[] => {
+  const sections = (() => {
     return PROFILE_SETTINGS_CONFIG.map(configSection => ({
       title: configSection.title,
-      items: configSection.items.map(createSettingItem),
-    }));
-  }, [createSettingItem]);
+      items: configSection.items.map(createSettingItem) }));
+  })();
 
-  const BiometricModal = useMemo(
-    () => (
+  const BiometricModal = (
       <BiometricSetupModal
         visible={showBiometricModal}
         onComplete={handleBiometricModalComplete}
         userEmail={user?.email || ''}
         mode="settings"
       />
-    ),
-    [showBiometricModal, handleBiometricModalComplete, user?.email],
-  );
+    );
 
   return {
     sections,
     BiometricModal,
-    biometricLoading,
-  };
+    biometricLoading };
 };

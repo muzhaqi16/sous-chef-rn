@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -23,58 +23,44 @@ let entryCounter = 0;
 const generateEntryId = () => `nw-entry-${++entryCounter}-${Date.now()}`;
 
 const createDefaultEntry = (): NetWeightEntry => ({
-  id: generateEntryId(),
-});
+  id: generateEntryId() });
 
 export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   entries,
   onEntriesChanged,
-  disabled = false,
-}) => {
+  disabled = false }) => {
   const { theme } = useUnistyles();
 
-  const handleAddEntry = useCallback(() => {
+  const handleAddEntry = () => {
     onEntriesChanged([...entries, createDefaultEntry()]);
-  }, [entries, onEntriesChanged]);
+  };
 
-  const handleRemoveEntry = useCallback(
-    (index: number) => {
+  const handleRemoveEntry = (index: number) => {
       onEntriesChanged(entries.filter((_, i) => i !== index));
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleValueChange = useCallback(
-    (index: number, text: string) => {
+  const handleValueChange = (index: number, text: string) => {
       const updated = entries.map((entry, i) =>
         i === index ? { ...entry, value: text } : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleUnitSelected = useCallback(
-    (index: number, unitId: string | null, unitName: string | null) => {
+  const handleUnitSelected = (index: number, unitId: string | null, unitName: string | null) => {
       const updated = entries.map((entry, i) =>
         i === index
           ? { ...entry, unitId: unitId ?? undefined, unitName: unitName ?? undefined }
           : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
-  const handleUnitTextChange = useCallback(
-    (index: number, text: string) => {
+  const handleUnitTextChange = (index: number, text: string) => {
       const updated = entries.map((entry, i) =>
         i === index ? { ...entry, unitName: text } : entry,
       );
       onEntriesChanged(updated);
-    },
-    [entries, onEntriesChanged],
-  );
+    };
 
   return (
     <View style={styles.container}>
@@ -126,8 +112,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
@@ -135,26 +120,19 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderLight,
-  },
+    borderBottomColor: theme.colors.borderLight },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   valueField: {
-    flex: 0.35,
-  },
+    flex: 0.35 },
   unitField: {
-    flex: 0.55,
-  },
+    flex: 0.55 },
   deleteButton: {
     flex: 0.1,
     alignItems: 'center',
-    paddingTop: theme.spacing.xl,
-  },
+    paddingTop: theme.spacing.xl },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

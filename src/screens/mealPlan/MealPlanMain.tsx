@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
@@ -42,8 +42,7 @@ import {
   SortOrder,
   MealType,
   type MealPlanItemFragment,
-  type MealTemplateDisplayFragment,
-} from '#generated';
+  type MealTemplateDisplayFragment } from '#generated';
 import { toastService } from '#/services/toastService';
 
 export const MealPlanMain: React.FC = () => {
@@ -88,8 +87,7 @@ export const MealPlanMain: React.FC = () => {
     createPlanFromTemplate,
     createTemplateFromPlan,
     creatingFromTemplate,
-    creatingTemplate,
-  } = useMealTemplateActions();
+    creatingTemplate } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
   const { currentPlan, mealPlans, loading: plansLoading } = useMealPlans();
@@ -102,20 +100,13 @@ export const MealPlanMain: React.FC = () => {
   const permissions = useMealPlanPermissions(activeMealPlan);
 
   // Compute plan date boundaries
-  const planStartDate = useMemo(
-    () => (activeMealPlan?.startDate ? parseISO(activeMealPlan.startDate) : undefined),
-    [activeMealPlan?.startDate],
-  );
-  const planEndDate = useMemo(
-    () => (activeMealPlan?.endDate ? parseISO(activeMealPlan.endDate) : undefined),
-    [activeMealPlan?.endDate],
-  );
+  const planStartDate = (activeMealPlan?.startDate ? parseISO(activeMealPlan.startDate) : undefined);
+  const planEndDate = (activeMealPlan?.endDate ? parseISO(activeMealPlan.endDate) : undefined);
 
   // Calendar state
   const calendar = useMealPlanCalendar({
     minDate: planStartDate,
-    maxDate: planEndDate,
-  });
+    maxDate: planEndDate });
 
   // Daily meals for selected date
   const { dailyMeals, totalCalories, isEmpty } = useDailyMeals(
@@ -139,26 +130,25 @@ export const MealPlanMain: React.FC = () => {
     refetchQueries: [{ query: GetMealPlansDocument, variables: { first: 20, orderBy: { startDate: SortOrder.Desc } } }],
     onError: error => {
       toastService.error(error.message || 'Failed to delete meal plan');
-    },
-  });
+    } });
 
   // Compute days with meals for calendar indicators
-  const daysWithMeals = useMemo(() => {
+  const daysWithMeals = (() => {
     const days = new Set<string>();
     items.forEach(item => {
       days.add(format(new Date(item.date), 'yyyy-MM-dd'));
     });
     return days;
-  }, [items]);
+  })();
 
   // Tap-to-toggle calendar between week and month view
-  const toggleCalendarView = useCallback(() => {
+  const toggleCalendarView = () => {
     if (calendar.viewMode === 'week') {
       calendar.setViewMode('month');
     } else {
       calendar.setViewMode('week');
     }
-  }, [calendar]);
+  };
 
   // Register add button - opens add meal sheet
   useTabBarAddButton(() => {
@@ -166,8 +156,7 @@ export const MealPlanMain: React.FC = () => {
     setAddMealVisible(true);
   });
 
-  const handleToggleCompleted = useCallback(
-    (id: string, isCompleted: boolean, hasRecipe: boolean) => {
+  const handleToggleCompleted = (id: string, isCompleted: boolean, hasRecipe: boolean) => {
       const item = items.find(i => i.id === id);
       if (!item) return;
 
@@ -180,12 +169,9 @@ export const MealPlanMain: React.FC = () => {
 
       // For unchecking or custom meals, toggle directly
       toggleCompleted(item);
-    },
-    [items, toggleCompleted],
-  );
+    };
 
-  const handleMarkCooked = useCallback(
-    (input: {
+  const handleMarkCooked = (input: {
       servings: number;
       deductFromPantry: boolean;
       useGranularDeduction: boolean;
@@ -195,89 +181,65 @@ export const MealPlanMain: React.FC = () => {
       toggleCompleted(pendingCookItem, {
         deductFromPantry: input.deductFromPantry,
         servings: input.servings,
-        notes: input.notes,
-      });
+        notes: input.notes });
       setPendingCookItem(null);
-    },
-    [pendingCookItem, toggleCompleted],
-  );
+    };
 
-  const handleDeleteItem = useCallback(
-    (id: string) => {
+  const handleDeleteItem = (id: string) => {
       deleteItem(id);
-    },
-    [deleteItem],
-  );
+    };
 
-  const handleAddRecipe = useCallback(
-    async (recipeId: string, mealType: MealType) => {
+  const handleAddRecipe = async (recipeId: string, mealType: MealType) => {
       if (!activePlanId) return;
       const result = await createItem({
         mealPlanId: activePlanId,
         recipeId,
         mealType,
-        date: calendar.selectedDate.toISOString(),
-      });
+        date: calendar.selectedDate.toISOString() });
       if (result) {
         setAddMealVisible(false);
       }
-    },
-    [activePlanId, createItem, calendar.selectedDate],
-  );
+    };
 
-  const handleAddCustomMeal = useCallback(
-    async (name: string, mealType: MealType) => {
+  const handleAddCustomMeal = async (name: string, mealType: MealType) => {
       if (!activePlanId) return;
       const result = await createItem({
         mealPlanId: activePlanId,
         customMealName: name,
         mealType,
-        date: calendar.selectedDate.toISOString(),
-      });
+        date: calendar.selectedDate.toISOString() });
       if (result) {
         setAddMealVisible(false);
       }
-    },
-    [activePlanId, createItem, calendar.selectedDate],
-  );
+    };
 
-  const handleOpenAddMeal = useCallback(
-    (mealType?: MealType) => {
+  const handleOpenAddMeal = (mealType?: MealType) => {
       setAddMealType(mealType);
       setAddMealVisible(true);
-    },
-    [],
-  );
+    };
 
-  const handleItemPress = useCallback(
-    (item: MealPlanItemFragment) => {
+  const handleItemPress = (item: MealPlanItemFragment) => {
       if (item.recipe?.id) {
         navigate('RecipeDetail', { recipeId: item.recipe.id });
       } else if (item.customMealName) {
         setEditingCustomItem(item);
         setEditCustomMealVisible(true);
       }
-    },
-    [navigate],
-  );
+    };
 
-  const handleSaveCustomMeal = useCallback(
-    (id: string, input: { customMealName?: string; notes?: string }) => {
+  const handleSaveCustomMeal = (id: string, input: { customMealName?: string; notes?: string }) => {
       updateItem(id, input);
-    },
-    [updateItem],
-  );
+    };
 
-  const handleCreatePlan = useCallback(() => {
+  const handleCreatePlan = () => {
     navigate('CreateMealPlan');
-  }, [navigate]);
+  };
 
-  const handleSaveAsTemplate = useCallback(() => {
+  const handleSaveAsTemplate = () => {
     setSaveTemplateVisible(true);
-  }, []);
+  };
 
-  const handleSaveTemplate = useCallback(
-    async (input: {
+  const handleSaveTemplate = async (input: {
       mealPlanId: string;
       name: string;
       description?: string;
@@ -288,13 +250,11 @@ export const MealPlanMain: React.FC = () => {
       if (result?.success) {
         setSaveTemplateVisible(false);
       }
-    },
-    [createTemplateFromPlan],
-  );
+    };
 
-  const handleOpenTemplateBrowser = useCallback(() => {
+  const handleOpenTemplateBrowser = () => {
     setTemplateBrowserVisible(true);
-  }, []);
+  };
 
   // Plan selector config
   const planConfig = useMealPlanSelectorConfig({
@@ -304,20 +264,15 @@ export const MealPlanMain: React.FC = () => {
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
     selectorRef,
     navigate,
-    onCreateFromTemplate: handleOpenTemplateBrowser,
-  });
+    onCreateFromTemplate: handleOpenTemplateBrowser });
 
-  const handleSelectTemplate = useCallback(
-    (template: MealTemplateDisplayFragment) => {
+  const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
       setSelectedTemplate(template);
       setTemplateBrowserVisible(false);
       setTemplatePreviewVisible(true);
-    },
-    [],
-  );
+    };
 
-  const handleCreateFromTemplate = useCallback(
-    async (config: {
+  const handleCreateFromTemplate = async (config: {
       templateId: string;
       startDate: string;
       name?: string;
@@ -328,12 +283,9 @@ export const MealPlanMain: React.FC = () => {
         setTemplatePreviewVisible(false);
         setSelectedTemplate(null);
       }
-    },
-    [createPlanFromTemplate],
-  );
+    };
 
-  const handleDuplicatePlan = useCallback(
-    async (input: {
+  const handleDuplicatePlan = async (input: {
       mealPlanId: string;
       newName: string;
       newStartDate: string;
@@ -343,12 +295,9 @@ export const MealPlanMain: React.FC = () => {
       if (result?.success) {
         setDuplicateVisible(false);
       }
-    },
-    [duplicatePlan],
-  );
+    };
 
-  const handleDeletePlan = useCallback(
-    async (id: string) => {
+  const handleDeletePlan = async (id: string) => {
       try {
         const result = await deletePlanMutation({ variables: { id } });
         if (result.data?.deleteMealPlan?.success) {
@@ -357,12 +306,9 @@ export const MealPlanMain: React.FC = () => {
       } catch {
         // Error handled by onError callback
       }
-    },
-    [deletePlanMutation],
-  );
+    };
 
-  const handleGenerateShoppingList = useCallback(
-    async (options: {
+  const handleGenerateShoppingList = async (options: {
       checkPantry?: boolean;
       name?: string;
       shoppingListId?: string;
@@ -371,9 +317,7 @@ export const MealPlanMain: React.FC = () => {
       if (result?.success) {
         setShoppingListSheetVisible(false);
       }
-    },
-    [generateShoppingList],
-  );
+    };
 
   // Show empty state if no plans exist and not loading
   if (!plansLoading && mealPlans.length === 0) {
@@ -631,26 +575,19 @@ export const MealPlanMain: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+    backgroundColor: theme.colors.background },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
+    alignItems: 'flex-start' },
   headerContent: {
-    flex: 1,
-  },
+    flex: 1 },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: theme.spacing.md,
     paddingRight: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   headerActionButton: {
-    padding: theme.spacing.xs,
-  },
+    padding: theme.spacing.xs },
   nutritionContainer: {
-    marginBottom: theme.spacing.sm,
-  },
-}));
+    marginBottom: theme.spacing.sm } }));

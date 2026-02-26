@@ -1,11 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
 import {
   useLoginMutation,
   useRegisterMutation,
   LoginInput,
-  RegisterInput,
-} from '#generated';
+  RegisterInput } from '#generated';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
@@ -16,8 +15,7 @@ import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { useStore } from '#store';
 import {
   saveTempRegistrationPassword,
-  clearTempRegistrationPassword,
-} from '#/storage/keychain';
+  clearTempRegistrationPassword } from '#/storage/keychain';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -122,8 +120,7 @@ export const useAuthOperations = ({
   biometricSetup,
   navigation,
   authState,
-  shouldShowPostLoginBiometricPrompt,
-}: AuthOperationsProps): AuthOperationsReturn => {
+  shouldShowPostLoginBiometricPrompt }: AuthOperationsProps): AuthOperationsReturn => {
   // Local state for auth operations
   const [isLoading, setIsLoading] = useState(false);
   const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false);
@@ -136,31 +133,27 @@ export const useAuthOperations = ({
     shouldShowCredentialPrompt,
     clearRegistrationPreferences,
     trackCredentialPromptShown,
-    trackLogout,
-  } = useUserPreferences();
+    trackLogout } = useUserPreferences();
 
   // GraphQL mutations
   const [loginMutation] = useLoginMutation();
   const [registerMutation] = useRegisterMutation();
 
   // Auth flow handlers
-  const handleAuthSuccess = useCallback((message: string) => {
+  const handleAuthSuccess = (message: string) => {
     logger.info('Auth success:', message);
-  }, []);
+  };
 
-  const handleAuthError = useCallback(
-    (error: any, operation: string = 'Authentication') => {
+  const handleAuthError = (error: any, operation: string = 'Authentication') => {
       try {
         const { message, code, isAuthError } = handleApolloError(error, {
           operation,
-          logError: true,
-        });
+          logError: true });
 
         // Show user-friendly error message
         toast({
           message,
-          type: 'error',
-        });
+          type: 'error' });
 
         // Additional handling for specific auth errors
         if (
@@ -177,17 +170,13 @@ export const useAuthOperations = ({
         // Fallback error handling - show generic message
         toast({
           message: 'Something went wrong. Please try again.',
-          type: 'error',
-        });
+          type: 'error' });
 
         setIsLoading(false);
       }
-    },
-    [toast, handleApolloError, authState],
-  );
+    };
 
-  const handleLogin = useCallback(
-    async (
+  const handleLogin = async (
       loginResponse: any,
       shouldRemember?: boolean,
       loginCredentials?: LoginCredentials,
@@ -217,8 +206,7 @@ export const useAuthOperations = ({
       if (user.id) {
         authState.onSetUserNavigationState(user.id, {
           lastLoginTimestamp: Date.now(),
-          rememberMeChoice: shouldRemember,
-        });
+          rememberMeChoice: shouldRemember });
       }
 
       handleAuthSuccess('Login successful');
@@ -246,8 +234,7 @@ export const useAuthOperations = ({
         try {
           const result = await shouldShowPostLoginBiometricPrompt({
             id: user.id,
-            email: loginCredentials.email,
-          });
+            email: loginCredentials.email });
 
           if (result.shouldShow) {
             biometricSetup.onShowBiometricSetup(loginCredentials);
@@ -260,20 +247,9 @@ export const useAuthOperations = ({
 
       // Default: navigate to main app
       navigation.onNavigate('main_app');
-    },
-    [
-      authState,
-      handleAuthSuccess,
-      registerDeviceInBackground,
-      shouldShowPostLoginBiometricPrompt,
-      navigation,
-      biometricSetup,
-      isInRegistrationFlow,
-    ],
-  );
+    };
 
-  const handleRegistration = useCallback(
-    async (registerResponse: any, shouldRemember?: boolean) => {
+  const handleRegistration = async (registerResponse: any, shouldRemember?: boolean) => {
       if (!registerResponse?.user) return;
 
       const { user, accessToken, refreshToken } = registerResponse;
@@ -291,8 +267,7 @@ export const useAuthOperations = ({
         authState.onSetUserNavigationState(user.id, {
           lastLoginTimestamp: Date.now(),
           rememberMeChoice: shouldRemember,
-          isNewUser: true,
-        });
+          isNewUser: true });
       }
 
       handleAuthSuccess('Registration successful');
@@ -312,12 +287,10 @@ export const useAuthOperations = ({
 
       // If somehow user is already onboarded, go to main app
       navigation.onNavigate('main_app');
-    },
-    [authState, handleAuthSuccess, registerDeviceInBackground, navigation],
-  );
+    };
 
   // Auto-login functionality
-  const autoLogin = useCallback(async (): Promise<boolean> => {
+  const autoLogin = async (): Promise<boolean> => {
     try {
       // Check if we have stored credentials
       const hasStoredCreds = await credentialStorage.onCredentialCheck();
@@ -348,10 +321,7 @@ export const useAuthOperations = ({
         variables: {
           input: {
             email: credentials.email,
-            password: credentials.password,
-          },
-        },
-      });
+            password: credentials.password } } });
 
       if (result.data?.login) {
         await handleLogin(result.data.login, true);
@@ -383,11 +353,10 @@ export const useAuthOperations = ({
 
       return false;
     }
-  }, [credentialStorage, loginMutation, handleLogin, handleAuthError]);
+  };
 
   // Auth mutations
-  const login = useCallback(
-    async (input: LoginInput, showRememberPrompt = true): Promise<boolean> => {
+  const login = async (input: LoginInput, showRememberPrompt = true): Promise<boolean> => {
       try {
         setIsLoading(true);
         const result = await loginMutation({ variables: { input } });
@@ -395,8 +364,7 @@ export const useAuthOperations = ({
         if (result.data?.login) {
           const loginCredentials = {
             email: input.email,
-            password: input.password,
-          };
+            password: input.password };
 
           // Handle login success first
           await handleLogin(result.data.login, true, loginCredentials);
@@ -428,20 +396,9 @@ export const useAuthOperations = ({
       } finally {
         setIsLoading(false);
       }
-    },
-    [
-      loginMutation,
-      handleLogin,
-      handleAuthError,
-      credentialStorage,
-      shouldShowCredentialPrompt,
-      trackCredentialPromptShown,
-      rememberMe,
-    ],
-  );
+    };
 
-  const register = useCallback(
-    async (input: RegisterInput, shouldRemember = true): Promise<boolean> => {
+  const register = async (input: RegisterInput, shouldRemember = true): Promise<boolean> => {
       try {
         setIsLoading(true);
         setIsInRegistrationFlow(true); // Mark as registration flow to prevent biometric prompts
@@ -484,18 +441,9 @@ export const useAuthOperations = ({
         setIsLoading(false);
         setIsInRegistrationFlow(false); // Clear registration flow flag
       }
-    },
-    [
-      registerMutation,
-      handleRegistration,
-      handleAuthError,
-      clearRegistrationPreferences,
-      authState,
-    ],
-  );
+    };
 
-  const logout = useCallback(
-    async (user: any, clearAllCredentials = false) => {
+  const logout = async (user: any, clearAllCredentials = false) => {
       try {
         const currentUserEmail = user?.email;
         const currentUserId = user?.id;
@@ -533,13 +481,11 @@ export const useAuthOperations = ({
       } catch (error) {
         logger.error('Logout error:', error);
       }
-    },
-    [authState, credentialStorage, trackLogout, navigation],
-  );
+    };
 
-  const clearRegistrationPassword = useCallback(() => {
+  const clearRegistrationPassword = () => {
     authState.onClearRegistrationPassword();
-  }, [authState]);
+  };
 
   return {
     // State
@@ -558,6 +504,5 @@ export const useAuthOperations = ({
     handleAuthError,
 
     // Registration password management
-    clearRegistrationPassword,
-  };
+    clearRegistrationPassword };
 };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 
@@ -47,13 +47,13 @@ export const useTabBarAddButton = (
   });
 
   // Create stable wrapper that always calls the latest handler
-  const stableHandler = useCallback(() => {
+  const stableHandler = () => {
     if (handlerRef.current) {
       handlerRef.current();
     }
-  }, []);
+  };
 
-  useFocusEffect(useCallback(() => {
+  useFocusEffect(() => {
     if (!handlerRef.current) {
       setAddProps(undefined);
       return;
@@ -66,5 +66,5 @@ export const useTabBarAddButton = (
     return () => {
       setAddProps(undefined);
     };
-  }, [stableHandler, setAddProps]));
+  });
 };

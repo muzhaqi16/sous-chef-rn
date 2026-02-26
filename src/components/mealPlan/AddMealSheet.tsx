@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, ActivityIndicator, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,13 +37,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   onClose,
   initialMealType,
   onAddRecipe,
-  onAddCustomMeal,
-}) => {
+  onAddCustomMeal }) => {
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['80%'],
-  });
+    snapPoints: ['80%'] });
 
   const [selectedMealType, setSelectedMealType] = useState<MealType>(MealType.Dinner);
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,35 +117,30 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     };
   }, [searchQuery]);
 
-  const filteredRecipes = useMemo(() => {
+  const filteredRecipes = (() => {
     if (!searchQuery.trim()) return recipes;
     const query = searchQuery.toLowerCase();
     return recipes.filter(r => r.name?.toLowerCase().includes(query));
-  }, [recipes, searchQuery]);
+  })();
 
-  const handleSelectRecipe = useCallback(
-    (recipeId: string) => {
+  const handleSelectRecipe = (recipeId: string) => {
       onAddRecipe(recipeId, selectedMealType);
       ref.current?.dismiss();
-    },
-    [onAddRecipe, selectedMealType, ref],
-  );
+    };
 
-  const handleAddCustomMeal = useCallback(() => {
+  const handleAddCustomMeal = () => {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
     onAddCustomMeal(trimmed, selectedMealType);
     ref.current?.dismiss();
-  }, [searchQuery, onAddCustomMeal, selectedMealType, ref]);
+  };
 
-  const handleSelectSpoonacularRecipe = useCallback(
-    async (item: TransformedRecipeItem) => {
+  const handleSelectSpoonacularRecipe = async (item: TransformedRecipeItem) => {
       setLoadingItemId(item.spoonacularId);
 
       try {
         const fullRecipe = await spoonacularService.getRecipeInformation({
-          id: item.spoonacularId,
-        });
+          id: item.spoonacularId });
 
         const preloaded = await preloadRecipe(fullRecipe);
         if (preloaded) {
@@ -161,12 +154,9 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       } finally {
         setLoadingItemId(null);
       }
-    },
-    [preloadRecipe, onAddRecipe, selectedMealType, ref],
-  );
+    };
 
-  const handleScrollEndReached = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const handleScrollEndReached = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
       const paddingToBottom = 100;
       if (
@@ -177,9 +167,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           loadMore();
         }
       }
-    },
-    [hasNextPage, searchQuery, loadMore],
-  );
+    };
 
   const hasQuery = searchQuery.trim().length > 0;
 
@@ -318,45 +306,36 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    flex: 1,
-  },
+    flex: 1 },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
-  },
+    paddingBottom: theme.spacing.sm },
   headerTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   mealTypeScroll: {
     flexGrow: 0,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   mealTypeRow: {
     flexDirection: 'row',
     paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   mealTypeChip: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   mealTypeChipSelected: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
+    borderColor: theme.colors.primary },
   mealTypeText: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   mealTypeTextSelected: {
     color: theme.colors.white,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -367,89 +346,70 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   searchIcon: {
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   searchInput: {
     flex: 1,
     marginLeft: theme.spacing.sm,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
-    padding: 0,
-  },
+    padding: 0 },
   searchPlaceholder: {
-    color: theme.colors.textTertiary,
-  },
+    color: theme.colors.textTertiary },
   listContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   sectionHeader: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     paddingVertical: theme.spacing.sm,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   customMealRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   customMealText: {
     flex: 1,
     fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   recipeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   recipeImage: {
     width: 44,
     height: 44,
     borderRadius: theme.radii.sm,
-    marginRight: theme.spacing.sm,
-  },
+    marginRight: theme.spacing.sm },
   recipeInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   recipeName: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   recipeMeta: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
+    marginTop: 2 },
   addIcon: {
-    color: theme.colors.primary,
-  },
+    color: theme.colors.primary },
   loadingContainer: {
     paddingVertical: theme.spacing.md,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyState: {
     paddingVertical: theme.spacing.xl,
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   emptyText: {
     fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
-  },
-}));
+    color: theme.colors.textSecondary } }));

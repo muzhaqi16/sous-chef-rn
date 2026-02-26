@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Alert } from 'react-native';
 
 export interface ArrayManagerOptions<T> {
@@ -130,26 +130,21 @@ export function useArrayManager<T>({
   validate,
   equals = (a, b) => a === b,
   transform = (item) => item,
-  showAlerts = true,
-}: ArrayManagerOptions<T>): ArrayManagerResult<T> {
+  showAlerts = true }: ArrayManagerOptions<T>): ArrayManagerResult<T> {
   const [items, setItems] = useState<T[]>(initialValues);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = () => setError(null);
 
-  const showError = useCallback(
-    (message: string) => {
+  const showError = (message: string) => {
       setError(message);
       if (showAlerts) {
         Alert.alert('Error', message);
       }
-    },
-    [showAlerts],
-  );
+    };
 
-  const add = useCallback(
-    async (item: T): Promise<boolean> => {
+  const add = async (item: T): Promise<boolean> => {
       try {
         setLoading(true);
         setError(null);
@@ -189,12 +184,9 @@ export function useArrayManager<T>({
       } finally {
         setLoading(false);
       }
-    },
-    [items, onUpdate, validate, equals, transform, showError],
-  );
+    };
 
-  const remove = useCallback(
-    async (item: T): Promise<boolean> => {
+  const remove = async (item: T): Promise<boolean> => {
       try {
         setLoading(true);
         setError(null);
@@ -216,12 +208,9 @@ export function useArrayManager<T>({
       } finally {
         setLoading(false);
       }
-    },
-    [items, onUpdate, equals, showError],
-  );
+    };
 
-  const update = useCallback(
-    async (oldItem: T, newItem: T): Promise<boolean> => {
+  const update = async (oldItem: T, newItem: T): Promise<boolean> => {
       try {
         setLoading(true);
         setError(null);
@@ -264,11 +253,9 @@ export function useArrayManager<T>({
       } finally {
         setLoading(false);
       }
-    },
-    [items, onUpdate, validate, equals, transform, showError],
-  );
+    };
 
-  const clear = useCallback(async (): Promise<boolean> => {
+  const clear = async (): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
@@ -288,21 +275,15 @@ export function useArrayManager<T>({
     } finally {
       setLoading(false);
     }
-  }, [onUpdate, showError]);
+  };
 
-  const has = useCallback(
-    (item: T): boolean => {
+  const has = (item: T): boolean => {
       return items.some((existing) => equals(existing, item));
-    },
-    [items, equals],
-  );
+    };
 
-  const indexOf = useCallback(
-    (item: T): number => {
+  const indexOf = (item: T): number => {
       return items.findIndex((existing) => equals(existing, item));
-    },
-    [items, equals],
-  );
+    };
 
   return {
     items,
@@ -314,6 +295,5 @@ export function useArrayManager<T>({
     indexOf,
     loading,
     error,
-    clearError,
-  };
+    clearError };
 }

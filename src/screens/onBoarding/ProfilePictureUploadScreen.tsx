@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Pressable,
@@ -7,8 +7,7 @@ import {
   Alert,
   Dimensions,
   ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { Icon } from '#utils/iconUtils';
@@ -19,13 +18,11 @@ import {
   ImagePickerResponse,
   MediaType,
   CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
+  ImageLibraryOptions } from 'react-native-image-picker';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import {
   validateImageFile,
-  ImageValidationError,
-} from '#utils/imageValidation';
+  ImageValidationError } from '#utils/imageValidation';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -42,8 +39,7 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   includeBase64: false,
   maxHeight: 2000,
   maxWidth: 2000,
-  quality: 0.8,
-};
+  quality: 0.8 };
 
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
@@ -69,7 +65,7 @@ export const ProfilePictureUploadScreen = () => {
 
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(
-    useCallback(() => {
+    () => {
       try {
         const storedCroppedImage = storage.getString('temp_cropped_image');
         if (storedCroppedImage) {
@@ -85,7 +81,7 @@ export const ProfilePictureUploadScreen = () => {
         // Clean up potentially corrupted data
         storage.remove('temp_cropped_image');
       }
-    }, []),
+    },
   );
 
   // Clean up MMKV on unmount
@@ -102,7 +98,7 @@ export const ProfilePictureUploadScreen = () => {
     }
   }, [profile?.avatar, hasLocalImage]);
 
-  const handleImageResponse = useCallback((response: ImagePickerResponse) => {
+  const handleImageResponse = (response: ImagePickerResponse) => {
     if (response.didCancel || response.errorCode || !response.assets?.[0]) {
       return;
     }
@@ -112,8 +108,7 @@ export const ProfilePictureUploadScreen = () => {
       uri: asset.uri!,
       fileName: asset.fileName,
       fileSize: asset.fileSize,
-      type: asset.type,
-    };
+      type: asset.type };
 
     try {
       validateImageFile(imageFile, true);
@@ -123,9 +118,9 @@ export const ProfilePictureUploadScreen = () => {
       const validationError = error as ImageValidationError;
       Alert.alert('Invalid Image', validationError.message);
     }
-  }, []);
+  };
 
-  const handleTakePhoto = useCallback(async () => {
+  const handleTakePhoto = async () => {
     try {
       const result = await request(
         PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
@@ -141,21 +136,20 @@ export const ProfilePictureUploadScreen = () => {
     } catch {
       launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     }
-  }, [handleImageResponse]);
+  };
 
-  const handleSelectPhoto = useCallback(() => {
+  const handleSelectPhoto = () => {
     // Android Photo Picker doesn't require permissions
     // iOS also allows launching without explicit permission on modern versions
     launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-  }, [handleImageResponse]);
+  };
 
-  const handleCropImage = useCallback(() => {
+  const handleCropImage = () => {
     if (!selectedImage) return;
 
     navigateTo.imageCrop({
-      imageFile: selectedImage,
-    });
-  }, [selectedImage, navigateTo]);
+      imageFile: selectedImage });
+  };
 
   const handleUpload = async () => {
     const imageToUpload = croppedImage || selectedImage;
@@ -170,8 +164,7 @@ export const ProfilePictureUploadScreen = () => {
         {
           onError: (error: Error) => {
             Alert.alert('Upload Failed', error.message);
-          },
-        },
+          } },
       );
 
       if (imageUrl) {
@@ -439,24 +432,20 @@ export const ProfilePictureUploadScreen = () => {
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
-  },
+    flex: 1 },
   scrollContent: {
-    flexGrow: 1,
-  },
+    flexGrow: 1 },
   avatarPreview: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     position: 'relative',
-    alignSelf: 'center',
-  },
+    alignSelf: 'center' },
   avatarImage: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-  },
+    borderRadius: AVATAR_SIZE / 2 },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
@@ -466,38 +455,31 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center' },
   avatarRemove: {
     position: 'absolute',
     right: -4,
     top: -4,
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
-    padding: 0,
-  },
+    padding: 0 },
   cropContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
+    marginBottom: theme.spacing.xl },
   cropButton: {
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   cropButtonText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+    fontWeight: theme.fonts.weight.semibold },
   cropHint: {
     fontSize: theme.typography.fontSize.xs,
-    fontStyle: 'italic',
-  },
+    fontStyle: 'italic' },
   formAction: {
     marginVertical: theme.spacing.sm,
-    gap: theme.spacing['3'],
-  },
+    gap: theme.spacing['3'] },
   uploadOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -505,8 +487,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
     borderWidth: 2,
-    borderColor: theme.colors.border,
-  },
+    borderColor: theme.colors.border },
   uploadOptionIcon: {
     width: 40,
     height: 40,
@@ -514,22 +495,18 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing['3'],
-  },
+    marginRight: theme.spacing['3'] },
   uploadOptionContent: {
-    flex: 1,
-  },
+    flex: 1 },
   uploadOptionLabel: {
     fontSize: theme.typography.fontSize.base,
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.semibold,
-    marginBottom: theme.spacing.xs,
-  },
+    marginBottom: theme.spacing.xs },
   uploadOptionDescription: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    letterSpacing: 0.16,
-  },
+    letterSpacing: 0.16 },
   formFooter: {
     marginTop: 'auto',
     marginBottom: theme.spacing['2xl'],
@@ -537,20 +514,17 @@ const styles = StyleSheet.create(theme => ({
     lineHeight: theme.typography.lineHeight.normal,
     fontWeight: theme.fonts.weight.regular,
     textAlign: 'center',
-    alignItems: 'center',
-  },
+    alignItems: 'center' },
   formFooterText: {
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
-    textAlign: 'center',
-  },
+    textAlign: 'center' },
   formFooterLinks: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: theme.spacing.xs,
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   formFooterLink: {
     // Empty style for Pressable wrapper
   },
@@ -558,13 +532,9 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.sm - 1,
     lineHeight: theme.typography.lineHeight.tight,
     textDecorationLine: 'underline',
-    textDecorationStyle: 'solid',
-  },
+    textDecorationStyle: 'solid' },
   nextText: {
     fontSize: theme.typography.fontSize.md,
-    fontWeight: 'bold',
-  },
+    fontWeight: 'bold' },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));
+    opacity: theme.opacity.pressed } }));

@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useCanUseNetwork } from '#hooks/settings/useOfflineMode';
 
@@ -33,17 +32,16 @@ import { useCanUseNetwork } from '#hooks/settings/useOfflineMode';
 export function useOfflineDisabled(customMessage?: string) {
   const canUseNetwork = useCanUseNetwork();
 
-  const showOfflineMessage = useCallback(() => {
+  const showOfflineMessage = () => {
     Alert.alert(
       'Offline',
       customMessage ?? 'This feature requires an internet connection'
     );
-  }, [customMessage]);
+  };
 
   return {
     /** True if network operations are disabled (offline or offline mode enabled) */
     isDisabled: !canUseNetwork,
     /** Shows an alert explaining the feature requires network */
-    showOfflineMessage,
-  };
+    showOfflineMessage };
 }

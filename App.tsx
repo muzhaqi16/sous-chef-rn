@@ -129,6 +129,13 @@ const App = () => {
         Telemetry.histogram('app_startup_duration_ms', startupDuration, {
           type: 'js_to_hydrated',
         });
+
+        // Report content appeared timing (full time from native launch to content visible)
+        const contentAppearedDuration = Date.now() - global.__APP_START_TIMESTAMP;
+        Telemetry.histogram('app_content_appeared_ms', contentAppearedDuration, {
+          type: 'full',
+        });
+
         global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -28,8 +28,7 @@ function formatPurpose(purpose: string): string {
     GENERAL: 'General',
     GIFT: 'Gift',
     TRANSFER: 'Transfer',
-    WASTE: 'Waste',
-  };
+    WASTE: 'Waste' };
   return map[purpose] || purpose;
 }
 
@@ -38,8 +37,7 @@ function formatSource(source: string): string {
     MANUAL: 'Manual',
     COOKING_LOG: 'Cooking Log',
     MEAL_PLAN: 'Meal Plan',
-    RECIPE: 'Recipe',
-  };
+    RECIPE: 'Recipe' };
   return map[source] || source;
 }
 
@@ -52,8 +50,7 @@ function formatReason(reason: string): string {
     COOKING_FAIL: 'Cooking Fail',
     OVERSTOCK: 'Overstock',
     TASTE: 'Taste',
-    OTHER: 'Other',
-  };
+    OTHER: 'Other' };
   return map[reason] || reason;
 }
 
@@ -76,83 +73,62 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     setDateRange,
     ledgerGranularity,
     setLedgerGranularity,
-    refetch,
-  } = usePantryAnalytics({ pantryId });
+    refetch } = usePantryAnalytics({ pantryId });
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
-  }, [refetch]);
+  };
 
-  const routes: TabRoute[] = useMemo(
-    () => [
+  const routes: TabRoute[] = [
       { key: 'usage', title: 'Usage' },
       { key: 'waste', title: 'Waste' },
       { key: 'ledger', title: 'Ledger' },
-    ],
-    [],
-  );
+    ];
 
-  // Memoize transformed data grouped by data source
-  const { usagePurposeData, usageSourceData, topUsedItemsData } = useMemo(() => ({
-    usagePurposeData: usageData?.usageByPurpose?.map(item => ({
-      label: formatPurpose(item.purpose),
-      value: item.count,
-      percentage: item.percentage,
-    })) ?? [],
-    usageSourceData: usageData?.usageBySource?.map(item => ({
-      label: formatSource(item.source),
-      value: item.count,
-      percentage: item.percentage,
-    })) ?? [],
-    topUsedItemsData: usageData?.topUsedItems?.map(item => ({
-      label: item.itemName,
-      value: item.count,
-    })) ?? [],
-  }), [usageData]);
+  // Transformed data grouped by data source
+  const usagePurposeData = usageData?.usageByPurpose?.map(item => ({
+    label: formatPurpose(item.purpose),
+    value: item.count,
+    percentage: item.percentage })) ?? [];
+  const usageSourceData = usageData?.usageBySource?.map(item => ({
+    label: formatSource(item.source),
+    value: item.count,
+    percentage: item.percentage })) ?? [];
+  const topUsedItemsData = usageData?.topUsedItems?.map(item => ({
+    label: item.itemName,
+    value: item.count })) ?? [];
 
-  const { wasteReasonData, topWastedItemsData } = useMemo(() => ({
-    wasteReasonData: wasteData?.wasteByReason?.map(item => ({
-      label: formatReason(item.reason),
-      value: item.count,
-      percentage: item.percentage,
-    })) ?? [],
-    topWastedItemsData: wasteData?.topWastedItems?.map(item => ({
-      label: item.itemName,
-      value: item.count,
-      secondaryValue: item.estimatedValue ?? undefined,
-    })) ?? [],
-  }), [wasteData]);
+  const wasteReasonData = wasteData?.wasteByReason?.map(item => ({
+    label: formatReason(item.reason),
+    value: item.count,
+    percentage: item.percentage })) ?? [];
+  const topWastedItemsData = wasteData?.topWastedItems?.map(item => ({
+    label: item.itemName,
+    value: item.count,
+    secondaryValue: item.estimatedValue ?? undefined })) ?? [];
 
-  const { ledgerPeriodData, topRestockedItemsData } = useMemo(() => ({
-    ledgerPeriodData: ledgerData?.periodData?.map(period => ({
-      date: period.periodLabel || period.periodStart,
-      added: period.added,
-      consumed: period.consumed,
-      wasted: period.wasted,
-      net: period.net,
-    })) ?? [],
-    topRestockedItemsData: ledgerData?.topRestockedItems?.map(item => ({
-      label: item.itemName,
-      value: item.totalQuantity,
-    })) ?? [],
-  }), [ledgerData]);
+  const ledgerPeriodData = ledgerData?.periodData?.map(period => ({
+    date: period.periodLabel || period.periodStart,
+    added: period.added,
+    consumed: period.consumed,
+    wasted: period.wasted,
+    net: period.net })) ?? [];
+  const topRestockedItemsData = ledgerData?.topRestockedItems?.map(item => ({
+    label: item.itemName,
+    value: item.totalQuantity })) ?? [];
 
   // Granularity options for ledger
-  const granularityOptions = useMemo(
-    () => [
-      { value: PeriodGranularity.Daily, label: 'Daily' },
-      { value: PeriodGranularity.Weekly, label: 'Weekly' },
-      { value: PeriodGranularity.Monthly, label: 'Monthly' },
-    ],
-    [],
-  );
+  const granularityOptions = [
+    { value: PeriodGranularity.Daily, label: 'Daily' },
+    { value: PeriodGranularity.Weekly, label: 'Weekly' },
+    { value: PeriodGranularity.Monthly, label: 'Monthly' },
+  ];
 
-  const renderUsageTab = useCallback(
-    () => (
+  const renderUsageTab = () => (
       <ScrollView
         style={styles.tabContent}
         contentContainerStyle={styles.tabScrollContent}
@@ -230,22 +206,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <TopItemsBarChart data={topUsedItemsData} color={theme.colors.primary} />
         </ChartSection>
       </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      usageData,
-      usageLoading,
-      usageError,
-      usagePurposeData,
-      usageSourceData,
-      topUsedItemsData,
-    ],
-  );
+    );
 
-  const renderWasteTab = useCallback(
-    () => (
+  const renderWasteTab = () => (
       <ScrollView
         style={styles.tabContent}
         contentContainerStyle={styles.tabScrollContent}
@@ -336,24 +299,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           />
         </ChartSection>
       </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      theme.colors.error,
-      theme.colors.warning,
-      theme.colors.success,
-      wasteData,
-      wasteLoading,
-      wasteError,
-      wasteReasonData,
-      topWastedItemsData,
-    ],
-  );
+    );
 
-  const renderLedgerTab = useCallback(
-    () => (
+  const renderLedgerTab = () => (
       <ScrollView
         style={styles.tabContent}
         contentContainerStyle={styles.tabScrollContent}
@@ -564,27 +512,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
           <TopItemsBarChart data={topRestockedItemsData} color={theme.colors.success} />
         </ChartSection>
       </ScrollView>
-    ),
-    [
-      refreshing,
-      handleRefresh,
-      theme.colors.primary,
-      theme.colors.success,
-      theme.colors.error,
-      theme.colors.warning,
-      ledgerData,
-      ledgerLoading,
-      ledgerError,
-      ledgerPeriodData,
-      topRestockedItemsData,
-      ledgerGranularity,
-      setLedgerGranularity,
-      granularityOptions,
-    ],
-  );
+    );
 
-  const renderScene = useCallback(
-    ({ route: tabRoute }: { route: TabRoute }) => {
+  const renderScene = ({ route: tabRoute }: { route: TabRoute }) => {
       switch (tabRoute.key) {
         case 'usage':
           return renderUsageTab();
@@ -595,9 +525,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
         default:
           return null;
       }
-    },
-    [renderUsageTab, renderWasteTab, renderLedgerTab],
-  );
+    };
 
   return (
     <View style={commonStyles.container}>
@@ -614,120 +542,93 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
 const styles = StyleSheet.create(theme => ({
   tabContent: {
-    flex: 1,
-  },
+    flex: 1 },
   tabScrollContent: {
     padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-  },
+    paddingBottom: theme.spacing.xl },
   summaryRow: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
+    marginBottom: theme.spacing.md },
   granularityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   granularityLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   granularityButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   granularityButton: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   granularityButtonActive: {
-    backgroundColor: theme.colors.primary,
-  },
+    backgroundColor: theme.colors.primary },
   granularityButtonInactive: {
-    backgroundColor: theme.colors.surface,
-  },
+    backgroundColor: theme.colors.surface },
   granularityButtonText: {
     fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.medium,
-  },
+    fontWeight: theme.fonts.weight.medium },
   granularityButtonTextActive: {
-    color: theme.colors.white,
-  },
+    color: theme.colors.white },
   granularityButtonTextInactive: {
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   pressed: {
-    opacity: theme.opacity.pressed,
-  },
+    opacity: theme.opacity.pressed },
   periodLegend: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-  },
+    marginBottom: theme.spacing.sm },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
+    gap: theme.spacing.xs },
   legendDot: {
     width: 8,
     height: 8,
-    borderRadius: theme.radii.full,
-  },
+    borderRadius: theme.radii.full },
   legendText: {
     fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
-  },
+    color: theme.colors.textSecondary },
   periodDataList: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   periodRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   periodLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
-    flex: 1,
-  },
+    flex: 1 },
   periodValues: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
+    gap: theme.spacing.md },
   periodValue: {
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     minWidth: 40,
-    textAlign: 'right',
-  },
+    textAlign: 'right' },
   unitBreakdownList: {
-    gap: theme.spacing.sm,
-  },
+    gap: theme.spacing.sm },
   unitBreakdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: theme.spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
+    borderBottomColor: theme.colors.border },
   unitBreakdownQuantity: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
+    color: theme.colors.textPrimary },
   unitBreakdownCount: {
     fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-}));
+    color: theme.colors.textSecondary } }));

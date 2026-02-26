@@ -1,9 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
-  type DeviceInformation,
-} from '#/utils/deviceInfo';
+  type DeviceInformation } from '#/utils/deviceInfo';
 import { logger } from '#/utils/environment';
 import { useErrorService } from '#/services/errorService';
 import { useRegisterDeviceMutation, DeviceRegistrationInput } from '#generated';
@@ -18,8 +17,7 @@ export const useDeviceRegistration = () => {
   const [state, setState] = useState<DeviceRegistrationState>({
     isRegistering: false,
     lastRegisteredDevice: null,
-    registrationError: null,
-  });
+    registrationError: null });
 
   const { handleApolloError } = useErrorService();
   const [registerDeviceMutation] = useRegisterDeviceMutation();
@@ -27,13 +25,12 @@ export const useDeviceRegistration = () => {
   /**
    * Registers the current device with the backend
    */
-  const registerDevice = useCallback(async (): Promise<boolean> => {
+  const registerDevice = async (): Promise<boolean> => {
     try {
       setState(prev => ({
         ...prev,
         isRegistering: true,
-        registrationError: null,
-      }));
+        registrationError: null }));
 
       logger.info('Starting device registration...');
 
@@ -69,16 +66,14 @@ export const useDeviceRegistration = () => {
             userAgent: deviceInfo.userAgent,
             browserName: deviceInfo.browserName,
             browserVersion: deviceInfo.browserVersion,
-            screenResolution: deviceInfo.screenResolution,
-          },
+            screenResolution: deviceInfo.screenResolution },
 
           // Device characteristics
           characteristics: {
             hasNotch: deviceInfo.hasNotch,
             hasDynamicIsland: deviceInfo.hasDynamicIsland,
             isEmulator: deviceInfo.isEmulator,
-            isTablet: deviceInfo.isTablet,
-          },
+            isTablet: deviceInfo.isTablet },
 
           // Device identification
           identification: {
@@ -96,8 +91,7 @@ export const useDeviceRegistration = () => {
             systemVersion: deviceInfo.systemVersion,
             readableVersion: deviceInfo.readableVersion,
             buildNumber: deviceInfo.buildNumber,
-            bundleId: deviceInfo.bundleId,
-          },
+            bundleId: deviceInfo.bundleId },
 
           // Hardware specifications
           hardware: {
@@ -106,15 +100,13 @@ export const useDeviceRegistration = () => {
             maxMemory: deviceInfo.maxMemory,
             totalDiskCapacity: deviceInfo.totalDiskCapacity,
             freeDiskStorage: deviceInfo.freeDiskStorage,
-            supportedAbis: deviceInfo.supportedAbis,
-          },
+            supportedAbis: deviceInfo.supportedAbis },
 
           // Connectivity
           connectivity: {
             carrier: deviceInfo.carrier,
             isAirplaneMode: deviceInfo.isAirplaneMode,
-            isLocationEnabled: deviceInfo.isLocationEnabled,
-          },
+            isLocationEnabled: deviceInfo.isLocationEnabled },
 
           // Power status
           power: {
@@ -122,37 +114,30 @@ export const useDeviceRegistration = () => {
             isBatteryCharging: deviceInfo.isBatteryCharging,
             powerState: deviceInfo.powerState
               ? JSON.parse(deviceInfo.powerState)
-              : undefined,
-          },
+              : undefined },
 
           // Peripheral detection
           peripherals: {
             isHeadphonesConnected: deviceInfo.isHeadphonesConnected,
             isKeyboardConnected: deviceInfo.isKeyboardConnected,
-            isMouseConnected: deviceInfo.isMouseConnected,
-          },
+            isMouseConnected: deviceInfo.isMouseConnected },
 
           // Additional tracking
           availableLocationProviders: deviceInfo.availableLocationProviders,
           hostNames: deviceInfo.hostNames,
-          supportedMediaTypes: deviceInfo.supportedMediaTypes,
-        },
+          supportedMediaTypes: deviceInfo.supportedMediaTypes },
 
         // Network location
         location: {
           ipAddress: deviceInfo.deviceIpAddress,
           ipCountry: deviceInfo.country,
           timezone: deviceInfo.timezone,
-          language: deviceInfo.language,
-        },
-      };
+          language: deviceInfo.language } };
 
       // Register device with backend
       const result = await registerDeviceMutation({
         variables: {
-          input: deviceInput,
-        },
-      });
+          input: deviceInput } });
 
       if (!result.data?.registerDevice?.success) {
         throw new Error(result.data?.registerDevice?.message || 'Device registration failed');
@@ -160,15 +145,13 @@ export const useDeviceRegistration = () => {
       logger.info('Device registered successfully:', {
         deviceId: deviceInfo.deviceId,
         deviceType: deviceInfo.deviceType,
-        platform: deviceInfo.platform,
-      });
+        platform: deviceInfo.platform });
 
       setState(prev => ({
         ...prev,
         isRegistering: false,
         lastRegisteredDevice: deviceInfo.deviceId,
-        registrationError: null,
-      }));
+        registrationError: null }));
 
       return true;
     } catch (error: any) {
@@ -176,25 +159,22 @@ export const useDeviceRegistration = () => {
 
       const { message } = handleApolloError(error, {
         operation: 'Device Registration',
-        logError: true,
-      });
+        logError: true });
 
       setState(prev => ({
         ...prev,
         isRegistering: false,
-        registrationError: message,
-      }));
+        registrationError: message }));
 
       // Don't throw - device registration should not block auth flow
       return false;
     }
-  }, [handleApolloError, registerDeviceMutation]);
+  };
 
   /**
    * Registers device with retry logic
    */
-  const registerDeviceWithRetry = useCallback(
-    async (maxRetries: number = 2): Promise<boolean> => {
+  const registerDeviceWithRetry = async (maxRetries: number = 2): Promise<boolean> => {
       let attempts = 0;
 
       while (attempts < maxRetries) {
@@ -216,14 +196,12 @@ export const useDeviceRegistration = () => {
 
       logger.warn(`Device registration failed after ${maxRetries} attempts`);
       return false;
-    },
-    [registerDevice],
-  );
+    };
 
   /**
    * Silently registers device in background (non-blocking)
    */
-  const registerDeviceInBackground = useCallback((): void => {
+  const registerDeviceInBackground = (): void => {
     // Fire and forget - don't block the calling function
     // Properly handle promise to prevent unhandled rejection warnings
     registerDeviceWithRetry(3)
@@ -240,24 +218,23 @@ export const useDeviceRegistration = () => {
         // Log but don't throw - device registration is optional and shouldn't block auth
         logger.error('Background device registration error:', error);
       });
-  }, [registerDeviceWithRetry]);
+  };
 
   /**
    * Clears device registration state
    */
-  const clearDeviceRegistrationState = useCallback(() => {
+  const clearDeviceRegistrationState = () => {
     setState({
       isRegistering: false,
       lastRegisteredDevice: null,
-      registrationError: null,
-    });
-  }, []);
+      registrationError: null });
+  };
 
   /**
    * Gets collected device information without registering
    */
   const getDeviceInformation =
-    useCallback(async (): Promise<DeviceInformation | null> => {
+    async (): Promise<DeviceInformation | null> => {
       try {
         const deviceInfo = await collectDeviceInformation();
         return validateDeviceInformation(deviceInfo) ? deviceInfo : null;
@@ -265,7 +242,7 @@ export const useDeviceRegistration = () => {
         logger.error('Error getting device information:', error);
         return null;
       }
-    }, []);
+    };
 
   return {
     // State
@@ -278,6 +255,5 @@ export const useDeviceRegistration = () => {
     registerDeviceWithRetry,
     registerDeviceInBackground,
     clearDeviceRegistrationState,
-    getDeviceInformation,
-  };
+    getDeviceInformation };
 };
