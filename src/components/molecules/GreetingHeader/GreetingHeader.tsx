@@ -54,6 +54,25 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
   const displayInitial = avatarInitial || userName.charAt(0).toUpperCase();
   const isCompact = variant === 'compact';
 
+  const renderSearchRightAction = () => {
+    if (search && search.value.length > 0) {
+      return (
+        <Pressable onPress={handleClearSearch} hitSlop={8}>
+          <Icon name="close" size={20} color={theme.colors.textTertiary} />
+        </Pressable>
+      );
+    }
+    if (rightActions) return rightActions;
+    if (onSettingsPress) {
+      return (
+        <Pressable onPress={onSettingsPress} hitSlop={8} testID={`${testIDPrefix}-settings`}>
+          <Text style={styles.settingsIcon}>{settingsIcon}</Text>
+        </Pressable>
+      );
+    }
+    return null;
+  };
+
   return (
     <View
       style={[
@@ -90,7 +109,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
           testID={`${testIDPrefix}-avatar`}
         >
           {avatarUrl ? (
-            <CachedImage uri={avatarUrl} style={styles.avatarImage} />
+            <CachedImage uri={avatarUrl} style={styles.avatarImage} displaySize={48} />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{displayInitial}</Text>
@@ -118,21 +137,7 @@ export const GreetingHeader: React.FC<GreetingHeaderProps> = ({
             onChangeText={search.onChangeText}
             testID={`${testIDPrefix}-search`}
           />
-          {search.value.length > 0 ? (
-            <Pressable onPress={handleClearSearch} hitSlop={8}>
-              <Icon name="close" size={20} color={theme.colors.textTertiary} />
-            </Pressable>
-          ) : rightActions ? (
-            rightActions
-          ) : onSettingsPress ? (
-            <Pressable
-              onPress={onSettingsPress}
-              hitSlop={8}
-              testID={`${testIDPrefix}-settings`}
-            >
-              <Text style={styles.settingsIcon}>{settingsIcon}</Text>
-            </Pressable>
-          ) : null}
+          {renderSearchRightAction()}
         </View>
       )}
     </View>

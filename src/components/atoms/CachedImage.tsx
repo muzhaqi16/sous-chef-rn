@@ -27,12 +27,18 @@ export interface CachedImageProps
   cachePolicy?: CachePolicy;
   /** Style for the placeholder/fallback container */
   containerStyle?: StyleProp<ViewStyle>;
+  /**
+   * Display size in logical pixels (e.g. 48 for a 48x48 container).
+   * TurboImage will decode the image at 2x this size for Retina sharpness,
+   * dramatically reducing decoded bitmap memory for large source images.
+   */
+  displaySize?: number;
 }
 
 type ImageStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export const CachedImage = React.memo<CachedImageProps>(
-  ({ uri, style, cachePolicy = 'dataCache', resizeMode = 'cover', containerStyle, ...rest }) => {
+  ({ uri, style, cachePolicy = 'dataCache', resizeMode = 'cover', containerStyle, displaySize, ...rest }) => {
     const [status, setStatus] = useState<ImageStatus>(uri ? 'loading' : 'idle');
 
     const handleSuccess = useCallback(() => {
@@ -61,20 +67,24 @@ export const CachedImage = React.memo<CachedImageProps>(
     const innerRadius = borderRadius > 0
       ? Math.max(borderRadius - (flat?.borderWidth ?? 0), 0)
       : 0;
+    const radiusOverride = innerRadius > 0
+      ? { borderRadius: innerRadius, overflow: 'hidden' as const }
+      : undefined;
 
     return (
       <View style={[style as StyleProp<ViewStyle>, containerStyle]}>
         <TurboImage
           style={[styles.image, innerRadius > 0 && { borderRadius: innerRadius }]}
-          source={{ uri: uri! }}
+          source={{ uri }}
           cachePolicy={cachePolicy}
           resizeMode={resizeMode}
+          resize={displaySize ? displaySize * 2 : undefined}
           onSuccess={handleSuccess}
           onFailure={handleFailure}
           {...rest}
         />
         {status === 'loading' && (
-          <View style={[styles.overlay, innerRadius > 0 && { borderRadius: innerRadius, overflow: 'hidden' as const }]}>
+          <View style={[styles.overlay, radiusOverride]}>
             <SkeletonBase
               width="100%"
               height={9999}
@@ -84,7 +94,7 @@ export const CachedImage = React.memo<CachedImageProps>(
           </View>
         )}
         {status === 'error' && (
-          <View style={[styles.overlay, styles.errorOverlay, innerRadius > 0 && { borderRadius: innerRadius, overflow: 'hidden' as const }]}>
+          <View style={[styles.overlay, styles.errorOverlay, radiusOverride]}>
             <Icon
               name="image-outline"
               size={24}
@@ -133,7 +143,7 @@ overlay: {
  * Preload images into the disk cache.
  * Call before navigating to a screen to warm the cache.
  */
-export function preloadImages(uris: string[]) {
+export function preloadImages(uris: string[]): void {
   const sources: Source[] = uris
     .filter(Boolean)
     .map(uri => ({ uri }));

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   useGetPantryItemSuggestionsQuery,
   PantrySuggestionSource,
@@ -6,6 +6,8 @@ import {
 } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { preloadImages } from '#components/atoms/CachedImage';
+import type { ErrorLike } from '@apollo/client';
 
 type PantryItemSuggestion =
   NonNullable<GetPantryItemSuggestionsQuery['pantry']>['suggestions'][number];
@@ -24,11 +26,21 @@ interface GroupedSuggestions {
   popular: PantryItemSuggestion[];
 }
 
+export interface UsePantryItemSuggestionsReturn {
+  suggestions: (PantryItemSuggestion & { imageUrl: string | null })[];
+  grouped: GroupedSuggestions;
+  loading: boolean;
+  error: ErrorLike | undefined;
+  hasSuggestions: boolean;
+  refetch: () => Promise<unknown>;
+  isOffline: boolean;
+}
+
 export function usePantryItemSuggestions({
   pantryId,
   limit = 10,
   skip = false,
-}: UsePantryItemSuggestionsOptions) {
+}: UsePantryItemSuggestionsOptions): UsePantryItemSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
 
   const { data, loading, error, refetch } = useGetPantryItemSuggestionsQuery({
@@ -76,6 +88,18 @@ export function usePantryItemSuggestions({
     }
 
     return result;
+  }, [suggestions]);
+
+  // Preload suggestion images into disk cache for instant display
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      const urls = suggestions
+        .map(s => s.imageUrl)
+        .filter((url): url is string => !!url);
+      if (urls.length > 0) {
+        preloadImages(urls);
+      }
+    }
   }, [suggestions]);
 
   const hasSuggestions = !isOffline && suggestions.length > 0;

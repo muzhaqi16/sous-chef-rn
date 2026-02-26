@@ -253,6 +253,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               <CachedImage
                 uri={item.imageUrl}
                 style={styles.itemImage}
+                displaySize={56}
               />
             )}
             <View style={styles.headerText}>

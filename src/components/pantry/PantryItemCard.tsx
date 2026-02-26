@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Text, Dimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { BaseItemCard } from '../molecules/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '../molecules/BaseItemCard/CardLeftSlot';
 import { CardContent } from '../molecules/BaseItemCard/CardContent';
@@ -23,9 +23,9 @@ interface PantryItemCardProps {
   name: string;
   expirationText?: string | null;
   expirationVariant?: ExpirationVariant;
+  expirationColor?: string;
   quantity: string;
   location: string;
-  storageState?: string | null;
   variant?: ItemVariant;
   imageUrl?: string | null;
   isOutOfStock?: boolean;
@@ -34,57 +34,66 @@ interface PantryItemCardProps {
   quantityBreakdownText?: string | null;
 }
 
-
 /**
- * Expiration text component with color based on variant
+ * Expiration text — pure presentational, color precomputed by parent list.
+ * Eliminates per-item useUnistyles subscription.
  */
 const ExpirationText: React.FC<{
   text: string;
-  variant: ExpirationVariant;
-}> = ({ text, variant }) => {
-  const { theme } = useUnistyles();
+  color: string;
+  bold: boolean;
+}> = ({ text, color, bold }) => (
+  <Text
+    style={[styles.expiration, { color }, bold && styles.expirationBold]}
+    numberOfLines={1}
+  >
+    {text}
+  </Text>
+);
 
-  // Select variant for bold styling
-  styles.useVariants({ bold: variant !== 'normal' });
+/**
+ * PERFORMANCE: Isolates useSlideAnimation (3 shared values + useAnimatedStyle)
+ * into a separate component that only mounts when a delete action is available.
+ * Uses render prop to pass handleDelete to the card content.
+ */
+const SlideAnimatedWrapper: React.FC<{
+  itemId: string;
+  children: (handleDelete: () => void) => React.ReactNode;
+}> = ({ itemId, children }) => {
+  const { actions } = usePantryActions();
 
-  const getColor = () => {
-    switch (variant) {
-      case 'expired':
-      case 'critical':
-        return theme.colors.expiration.expiredText;
-      case 'warning':
-        return theme.colors.expiration.warningText;
-      default:
-        return theme.colors.textSecondary;
-    }
-  };
+  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
+    itemId,
+    slideDistance: SCREEN_WIDTH,
+    duration: SLIDE_PRESETS.exitWithFade.duration,
+    withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
+    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
+  });
+
+  const handleDelete = useCallback(() => {
+    triggerSlide(1, () => actions.onItemDelete!(itemId));
+  }, [actions, itemId, triggerSlide]);
 
   return (
-    <Text
-      style={[
-        styles.expiration,
-        { color: getColor() },
-      ]}
-      numberOfLines={1}
-    >
-      {text}
-    </Text>
+    <Animated.View style={animatedSlideStyle}>
+      {children(handleDelete)}
+    </Animated.View>
   );
 };
 
 /**
  * Pantry item card using BaseItemCard composition
  * Displays item with emoji/image, name, expiration status, quantity, and location
- * Includes slide animation for delete/consume/waste actions
+ * Slide animation deferred to SlideAnimatedWrapper (only when delete action exists)
  */
 const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
   id,
   name,
   expirationText,
   expirationVariant,
+  expirationColor,
   quantity,
   location,
-  storageState: _storageState,
   variant = 'normal',
   imageUrl,
   isOutOfStock,
@@ -94,99 +103,86 @@ const PantryItemCardComponent: React.FC<PantryItemCardProps> = ({
 }) => {
   const { actions, swipeable } = usePantryActions();
 
-  // Bind context actions to this item's id — always call useCallback (rules of hooks)
-  const onPress = useCallback(() => actions.onItemPress(id), [actions, id]);
-  const onEdit = useCallback(() => actions.onItemEdit?.(id), [actions, id]);
-  const onConsume = useCallback(() => actions.onItemConsume?.(id), [actions, id]);
-  const onWaste = useCallback(() => actions.onItemWaste?.(id), [actions, id]);
-  const onRestock = useCallback(() => actions.onItemRestock?.(id), [actions, id]);
-
-  // Slide animation for delete action
-  const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
-    itemId: id,
-    slideDistance: SCREEN_WIDTH,
-    duration: SLIDE_PRESETS.exitWithFade.duration,
-    withOpacity: SLIDE_PRESETS.exitWithFade.withOpacity,
-    opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
-  });
-
-  // Wrap delete action with slide animation (callback after animation completes)
-  const handleDelete = useCallback(() => {
-    if (actions.onItemDelete) {
-      triggerSlide(1, () => actions.onItemDelete!(id));
-    }
-  }, [actions, id, triggerSlide]);
-
+  // PERFORMANCE: Single useMemo replaces 5 useCallback allocations
+  const itemActions = useMemo(() => ({
+    onPress: () => actions.onItemPress(id),
+    onEdit: actions.onItemEdit ? () => actions.onItemEdit!(id) : undefined,
+    onConsume: actions.onItemConsume ? () => actions.onItemConsume!(id) : undefined,
+    onWaste: actions.onItemWaste ? () => actions.onItemWaste!(id) : undefined,
+    onRestock: actions.onItemRestock ? () => actions.onItemRestock!(id) : undefined,
+  }), [actions, id]);
 
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
   // Only show image if available, no placeholder
-  const renderLeftElement = () => {
-    if (imageUrl) {
-      return (
-        <CardLeftSlot
-          type="image"
-          imageUrl={imageUrl}
-          variant={cardVariant}
-        />
-      );
+  const leftElement = imageUrl ? (
+    <CardLeftSlot type="image" imageUrl={imageUrl} variant={cardVariant} />
+  ) : undefined;
+
+  const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
+
+  const getSubtitle = () => {
+    if (isOutOfStock) {
+      return <Text style={styles.outOfStock}>Out of stock</Text>;
     }
-    // No left element if no image - just show name directly
+    if (expirationText && expirationColor) {
+      return <ExpirationText text={expirationText} color={expirationColor} bold={expirationBold} />;
+    }
     return undefined;
   };
 
-  return (
-    <Animated.View style={animatedSlideStyle}>
-      <BaseItemCard
-        variant={cardVariant}
-        onPress={onPress}
-        onEdit={actions.onItemEdit ? onEdit : undefined}
-        onDelete={actions.onItemDelete ? handleDelete : undefined}
-        onConsume={actions.onItemConsume ? onConsume : undefined}
-        onWaste={actions.onItemWaste ? onWaste : undefined}
-        onRestock={actions.onItemRestock ? onRestock : undefined}
-        onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
-        leftThreshold={80}
-        rightThreshold={80}
-        testID={`pantry-item-${id}`}
-        leftElement={renderLeftElement()}
-        rightElement={
-          <CardRightSlot
-            type="meta"
-            primary={quantity}
-            secondary={quantityBreakdownText || packageBreakdownText || remainingNetWeightText || location}
-            tertiary={
-              (quantityBreakdownText || packageBreakdownText || remainingNetWeightText) ? location : undefined
-            }
-          />
-        }
-      >
-        <CardContent
-          title={name}
-          subtitle={
-            isOutOfStock ? (
-              <Text style={styles.outOfStock}>Out of stock</Text>
-            ) : expirationText ? (
-              <ExpirationText text={expirationText} variant={expirationVariant || 'normal'} />
-            ) : undefined
+  // Shared card content — used with or without slide animation wrapper
+  const renderCard = (onDelete?: () => void) => (
+    <BaseItemCard
+      variant={cardVariant}
+      onPress={itemActions.onPress}
+      onEdit={itemActions.onEdit}
+      onDelete={onDelete}
+      onConsume={itemActions.onConsume}
+      onWaste={itemActions.onWaste}
+      onRestock={itemActions.onRestock}
+      onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
+      leftThreshold={80}
+      rightThreshold={80}
+      testID={`pantry-item-${id}`}
+      leftElement={leftElement}
+      rightElement={
+        <CardRightSlot
+          type="meta"
+          primary={quantity}
+          secondary={quantityBreakdownText || packageBreakdownText || remainingNetWeightText || location}
+          tertiary={
+            (quantityBreakdownText || packageBreakdownText || remainingNetWeightText) ? location : undefined
           }
         />
-      </BaseItemCard>
-    </Animated.View>
+      }
+    >
+      <CardContent
+        title={name}
+        subtitle={getSubtitle()}
+      />
+    </BaseItemCard>
   );
+
+  // PERFORMANCE: Only mount SlideAnimatedWrapper (with 3 shared values) when delete action exists
+  if (actions.onItemDelete) {
+    return (
+      <SlideAnimatedWrapper itemId={id}>
+        {renderCard}
+      </SlideAnimatedWrapper>
+    );
+  }
+
+  return renderCard();
 };
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
     fontSize: theme.typography.fontSize.sm - 1,
-    variants: {
-      bold: {
-        true: {
-          fontWeight: theme.fonts.weight.medium,
-        },
-      },
-    },
+  },
+  expirationBold: {
+    fontWeight: theme.fonts.weight.medium,
   },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,
@@ -202,9 +198,9 @@ export const PantryItemCard = React.memo(PantryItemCardComponent, (prev, next) =
   prev.name === next.name &&
   prev.expirationText === next.expirationText &&
   prev.expirationVariant === next.expirationVariant &&
+  prev.expirationColor === next.expirationColor &&
   prev.quantity === next.quantity &&
   prev.location === next.location &&
-  prev.storageState === next.storageState &&
   prev.variant === next.variant &&
   prev.imageUrl === next.imageUrl &&
   prev.isOutOfStock === next.isOutOfStock &&

@@ -1,18 +1,11 @@
-import React, { useEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
-import { SortableShoppingList } from '../SortableShoppingList/SortableList';
+import React from 'react';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/base/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
-import {
-  StaggeredEntryProvider,
-  useStaggeredEntry,
-} from '#context/StaggeredEntryContext';
-import { staggeredEntryAnimation } from '#constants/animations';
+import { StaggeredEntryProvider } from '#context/StaggeredEntryContext';
+import { StaggeredTabContent } from './StaggeredTabContent';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -38,125 +31,7 @@ interface PurchasedTabProps {
   canMarkPurchased?: boolean;
   // Transition state for showing skeletons during list switches
   isTransitioning?: boolean;
-  // Batch move to pantry
-  onBatchMoveToPantry?: () => void;
-  batchMoveToPantryLoading?: boolean;
-  // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
-  ListHeaderComponent?: React.ReactElement | null;
 }
-
-// Batch move to pantry action bar
-const BatchMoveToPantryBar: React.FC<{
-  onPress: () => void;
-  loading: boolean;
-}> = ({ onPress, loading }) => {
-  const { theme } = useUnistyles();
-  return (
-    <View style={styles.batchMoveBar}>
-      <Pressable
-        onPress={onPress}
-        disabled={loading}
-        style={({ pressed }) => [
-          styles.batchMoveButton,
-          pressed && styles.batchMoveButtonPressed,
-        ]}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color={theme.colors.white} />
-        ) : (
-          <Icon
-            name="enter-outline"
-            size={18}
-            color={theme.colors.white}
-          />
-        )}
-        <Text style={styles.batchMoveText}>Move All to Pantry</Text>
-      </Pressable>
-    </View>
-  );
-};
-
-// Inner component that uses stagger context
-interface StaggeredPurchasedContentProps {
-  items: SortableShoppingListItem[];
-  onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
-  onMoveToPantry?: (id: string) => void;
-  onQuantityPress?: (id: string) => void;
-  onRefresh?: () => void | Promise<void>;
-  refreshing?: boolean;
-  disabled?: boolean;
-  onSwipeableWillOpen?: (ref: any) => void;
-  onSwipeableClose?: () => void;
-  onEndReached?: () => void;
-  canRemoveItems: boolean;
-  canEditItems: boolean;
-  canMarkPurchased: boolean;
-  ListHeaderComponent?: React.ReactElement | null;
-}
-
-const StaggeredPurchasedContent: React.FC<StaggeredPurchasedContentProps> = ({
-  items,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onTogglePurchase,
-  onMoveToPantry,
-  onQuantityPress,
-  onRefresh,
-  refreshing,
-  disabled,
-  onSwipeableWillOpen,
-  onSwipeableClose,
-  onEndReached,
-  canRemoveItems,
-  canEditItems,
-  canMarkPurchased,
-  ListHeaderComponent,
-}) => {
-  const staggerCtx = useStaggeredEntry();
-
-  // Mark initial render complete after stagger animation window
-  useEffect(() => {
-    const totalStaggerTime =
-      staggeredEntryAnimation.initialDelay +
-      staggeredEntryAnimation.maxItems * staggeredEntryAnimation.delayPerItem +
-      staggeredEntryAnimation.duration;
-
-    const timer = setTimeout(() => {
-      staggerCtx?.markInitialRenderComplete();
-    }, totalStaggerTime);
-
-    return () => clearTimeout(timer);
-  }, [staggerCtx]);
-
-  return (
-    <View style={styles.container}>
-      <SortableShoppingList
-        items={items}
-        onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
-        onTogglePurchase={onTogglePurchase}
-        onMoveToPantry={onMoveToPantry}
-        onQuantityPress={onQuantityPress}
-        disabled={disabled}
-        showsVerticalScrollIndicator={true}
-        onSwipeableWillOpen={onSwipeableWillOpen}
-        onSwipeableClose={onSwipeableClose}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        onEndReached={onEndReached}
-        canRemoveItems={canRemoveItems}
-        canEditItems={canEditItems}
-        canMarkPurchased={canMarkPurchased}
-        ListHeaderComponent={ListHeaderComponent}
-      />
-    </View>
-  );
-};
 
 const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   items,
@@ -168,7 +43,6 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   onQuantityPress,
   onRefresh,
   refreshing,
-  loading: _loading,
   disabled,
   onSwipeableWillOpen,
   onSwipeableClose,
@@ -177,9 +51,6 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   canEditItems = true,
   canMarkPurchased = true,
   isTransitioning = false,
-  onBatchMoveToPantry,
-  batchMoveToPantryLoading = false,
-  ListHeaderComponent,
 }) => {
   // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
   // This ensures smooth screen transitions by showing skeletons during navigation animation
@@ -203,13 +74,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
 
   return (
     <StaggeredEntryProvider>
-      {!!onBatchMoveToPantry && items.length > 0 && (
-        <BatchMoveToPantryBar
-          onPress={onBatchMoveToPantry}
-          loading={batchMoveToPantryLoading}
-        />
-      )}
-      <StaggeredPurchasedContent
+      <StaggeredTabContent
         items={items}
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
@@ -226,41 +91,12 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
         canRemoveItems={canRemoveItems}
         canEditItems={canEditItems}
         canMarkPurchased={canMarkPurchased}
-        ListHeaderComponent={ListHeaderComponent}
       />
     </StaggeredEntryProvider>
   );
 };
 
-export const MemoizedPurchasedTab = PurchasedTabComponent;
+export const MemoizedPurchasedTab = React.memo(PurchasedTabComponent);
 MemoizedPurchasedTab.displayName = 'PurchasedTab';
 
-// Also export non-memoized for backwards compatibility
 export const PurchasedTab = PurchasedTabComponent;
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-  },
-  batchMoveBar: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  batchMoveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.primary,
-  },
-  batchMoveButtonPressed: {
-    opacity: theme.opacity.pressed,
-  },
-  batchMoveText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.white,
-  },
-}));

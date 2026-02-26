@@ -5,7 +5,6 @@ import {
   TextInput,
   Pressable,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
@@ -13,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-import { IconButton } from '#components/atoms/IconButton';
+import { Header } from '#components/molecules/Header';
+import { LoadingInline } from '#components/base/Loading';
 import {
   useDeleteAccountMutation,
   useCanDeleteAccountQuery,
@@ -83,10 +83,7 @@ export const DeleteAccountScreen: React.FC = () => {
   };
 
   const renderLoadingState = () => (
-    <View style={styles.centerContainer}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={styles.loadingText}>Checking account status...</Text>
-    </View>
+    <LoadingInline message="Checking account status..." />
   );
 
   const renderErrorState = () => (
@@ -290,16 +287,7 @@ export const DeleteAccountScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          name="arrow-back"
-          onPress={goBack}
-          color={theme.colors.textPrimary}
-          accessibilityLabel="Go back"
-        />
-        <Text style={styles.headerTitle}>Delete Account</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Header title="Delete Account" onBack={goBack} centerTitle />
 
       {renderContent()}
     </SafeAreaView>
@@ -311,20 +299,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing['3'],
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   content: {
     flex: 1,
   },
@@ -332,17 +306,11 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     paddingBottom: 100,
   },
-  // Loading state styles
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: theme.spacing.lg,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textSecondary,
   },
   // Error state styles
   errorTitle: {

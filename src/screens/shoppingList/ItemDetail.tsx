@@ -82,7 +82,7 @@ export const ShoppingListItemDetail: React.FC<{
     );
   }
 
-  const imageUrl = resolveImageUrl(item);
+  const imageUrl = resolveImageUrl(item, 'large');
 
   const sections = [
     {

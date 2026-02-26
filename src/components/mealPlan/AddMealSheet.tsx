@@ -17,7 +17,6 @@ interface AddMealSheetProps {
   visible: boolean;
   onClose: () => void;
   initialMealType?: MealType;
-  selectedDate: Date;
   onAddRecipe: (recipeId: string, mealType: MealType) => void;
   onAddCustomMeal: (name: string, mealType: MealType) => void;
 }
@@ -37,7 +36,6 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   visible,
   onClose,
   initialMealType,
-  selectedDate: _selectedDate,
   onAddRecipe,
   onAddCustomMeal,
 }) => {
@@ -257,7 +255,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               onPress={() => handleSelectRecipe(recipe.recipeId)}
               style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
             >
-              {recipe.imageUrl ? <CachedImage uri={recipe.imageUrl} style={styles.recipeImage} /> : null}
+              {recipe.imageUrl ? <CachedImage uri={recipe.imageUrl} style={styles.recipeImage} displaySize={44} /> : null}
               <View style={styles.recipeInfo}>
                 <Text style={styles.recipeName} numberOfLines={1}>{recipe.name}</Text>
                 <Text style={styles.recipeMeta}>
@@ -285,7 +283,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                   disabled={loadingItemId === item.spoonacularId}
                   style={({ pressed }) => [styles.recipeItem, pressed && styles.pressed]}
                 >
-                  {item.imageUrl ? <CachedImage uri={item.imageUrl} style={styles.recipeImage} /> : null}
+                  {item.imageUrl ? <CachedImage uri={item.imageUrl} style={styles.recipeImage} displaySize={44} /> : null}
                   <View style={styles.recipeInfo}>
                     <Text style={styles.recipeName} numberOfLines={1}>{item.title}</Text>
                     <Text style={styles.recipeMeta}>{item.subtitle}</Text>
@@ -393,7 +391,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textSecondary,
     paddingVertical: theme.spacing.sm,
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   customMealRow: {

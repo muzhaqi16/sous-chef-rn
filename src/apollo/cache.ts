@@ -279,6 +279,12 @@ export function makeCache(): InMemoryCache {
           },
           itemsConnection: itemsConnectionFieldPolicy(),
           storageLocationsConnection: mergeConnectionByNodeId('after'),
+          suggestions: {
+            merge(existing = [], incoming) {
+              if (incoming == null) return existing;
+              return incoming;
+            },
+          },
         },
       },
       PantryItem: {
@@ -478,68 +484,60 @@ export function makeCache(): InMemoryCache {
     },
   });
 
-  // PERFORMANCE: Only monitor cache in development to avoid production overhead
-  // Cache monitoring uses sampling for size estimation to minimize JS thread blocking
-  if (__DEV__) {
-    const MAX_CACHE_SIZE_MB = 100;
-    const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
-    const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
+  const MAX_CACHE_SIZE_MB = 100;
+  const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
+  const SAMPLE_SIZE = 100; // Sample first 100 top-level keys for estimation
 
-    // Use module-level interval to prevent memory leaks during hot reload
+  // Optimized cache size estimator using sampling instead of full traversal
+  // Samples first 100 keys and extrapolates, reducing 50-150ms to <5ms
+  const estimateCacheSizeSampled = (obj: any): number => {
+    const allKeys = Object.keys(obj);
+    const totalKeys = allKeys.length;
 
-    // Optimized cache size estimator using sampling instead of full traversal
-    // Samples first 100 keys and extrapolates, reducing 50-150ms to <5ms
-    const estimateCacheSizeSampled = (obj: any): number => {
-      const allKeys = Object.keys(obj);
-      const totalKeys = allKeys.length;
+    if (totalKeys === 0) return 0;
 
-      if (totalKeys === 0) return 0;
+    // Sample first SAMPLE_SIZE keys to avoid full traversal
+    const sampleKeys = allKeys.slice(0, Math.min(SAMPLE_SIZE, totalKeys));
+    let sampleObjectCount = 0;
 
-      // Sample first SAMPLE_SIZE keys to avoid full traversal
-      const sampleKeys = allKeys.slice(0, Math.min(SAMPLE_SIZE, totalKeys));
-      let sampleObjectCount = 0;
-
-      for (const key of sampleKeys) {
-        const val = obj[key];
-        if (val && typeof val === 'object') {
-          // Count first-level objects only
-          sampleObjectCount += 1;
-          // Rough estimate of nested objects (without deep traversal)
-          if (Array.isArray(val)) {
-            sampleObjectCount += val.length;
-          } else {
-            sampleObjectCount += Object.keys(val).length;
-          }
+    for (const key of sampleKeys) {
+      const val = obj[key];
+      if (val && typeof val === 'object') {
+        sampleObjectCount += 1;
+        if (Array.isArray(val)) {
+          sampleObjectCount += val.length;
+        } else {
+          sampleObjectCount += Object.keys(val).length;
         }
       }
+    }
 
-      // Extrapolate from sample to estimate total
-      const avgObjectsPerKey = sampleObjectCount / sampleKeys.length;
-      const estimatedTotalObjects = avgObjectsPerKey * totalKeys;
+    const avgObjectsPerKey = sampleObjectCount / sampleKeys.length;
+    const estimatedTotalObjects = avgObjectsPerKey * totalKeys;
 
-      // Rough estimate: ~1KB per object on average
-      return estimatedTotalObjects * 1024;
-    };
+    // Rough estimate: ~1KB per object on average
+    return estimatedTotalObjects * 1024;
+  };
 
-    const monitorCacheSize = () => {
-      try {
-        const cacheData = cache.extract();
-        const estimatedSize = estimateCacheSizeSampled(cacheData);
-        const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
-        const usageRatio = estimatedSize / maxSizeBytes;
+  const runCacheGC = () => {
+    try {
+      const cacheData = cache.extract();
+      const estimatedSize = estimateCacheSizeSampled(cacheData);
+      const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
+      const usageRatio = estimatedSize / maxSizeBytes;
 
-        if (usageRatio > GC_THRESHOLD) {
+      if (usageRatio > GC_THRESHOLD) {
+        if (__DEV__) {
           console.warn(
             `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB). Running garbage collection...`
           );
+        }
 
-          // Run garbage collection with result cache reset
-          // This removes unreachable objects and orphaned data
-          const removedIds = cache.gc({ resetResultCache: true });
+        const removedIds = cache.gc({ resetResultCache: true });
 
+        if (__DEV__) {
           console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
 
-          // If still over threshold after GC, log warning
           const newSize = estimateCacheSizeSampled(cache.extract());
           const newRatio = newSize / maxSizeBytes;
 
@@ -548,22 +546,26 @@ export function makeCache(): InMemoryCache {
               `❌ Cache still at ${(newRatio * 100).toFixed(1)}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`
             );
           }
-        } else {
-          console.log(
-            `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
-          );
         }
-      } catch (error) {
-        console.error('Error monitoring cache size:', error);
+      } else if (__DEV__) {
+        console.log(
+          `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
+        );
       }
-    };
+    } catch (_error) {
+      if (__DEV__) {
+        console.error('Error monitoring cache size:', _error);
+      }
+    }
+  };
 
-    // Clear any existing interval before creating new one (prevents memory leak during hot reload)
-    stopCacheMonitoring();
+  // Clear any existing interval before creating new one (prevents memory leak during hot reload)
+  stopCacheMonitoring();
 
-    // Monitor cache every 5 minutes in development (reduced from 2 min to minimize overhead)
-    cacheMonitoringInterval = setInterval(monitorCacheSize, 5 * 60 * 1000);
-  }
+  // Dev: monitor every 5 minutes with logging
+  // Production: GC check every 10 minutes (sampling takes <5ms, safe for prod)
+  const interval = __DEV__ ? 5 * 60 * 1000 : 10 * 60 * 1000;
+  cacheMonitoringInterval = setInterval(runCacheGC, interval);
 
   return cache;
 }

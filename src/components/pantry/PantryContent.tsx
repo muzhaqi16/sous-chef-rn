@@ -167,6 +167,7 @@ interface ItemDisplayData {
   imageUrl: string | null;
   expirationText: string | null;
   expirationVariant?: ExpirationVariant;
+  expirationColor?: string;
   variant: ItemVariant;
   quantityDisplay: string;
   location: string;
@@ -175,6 +176,12 @@ interface ItemDisplayData {
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
 }
+
+const getItemVariant = (isExpired: boolean, isExpiringSoon: boolean): ItemVariant => {
+  if (isExpired) return 'expired';
+  if (isExpiringSoon) return 'warning';
+  return 'normal';
+};
 
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
@@ -219,8 +226,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
   onEndReached,
   refreshing = false,
   loading = false,
-  onSwipeableWillOpen: _onSwipeableWillOpen,
-  onSwipeableClose: _onSwipeableClose,
+  // onSwipeableWillOpen and onSwipeableClose are handled by PantryActionsContext
 }, ref) => {
   useRenderTime('PantryContent');
   const { theme } = useUnistyles();
@@ -324,6 +330,13 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
     return sorted.filter(item => item?.id);
   }, [items, sortItems]);
 
+  // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
+  const expirationColors = useMemo(() => ({
+    expired: theme.colors.expiration.expiredText,
+    warning: theme.colors.expiration.warningText,
+    normal: theme.colors.textSecondary,
+  }), [theme.colors.expiration.expiredText, theme.colors.expiration.warningText, theme.colors.textSecondary]);
+
   // Pre-compute ALL per-item display data once to avoid per-render Date allocations and string formatting
   const itemDisplayMap = useMemo(() => {
     const map = new Map<string, ItemDisplayData>();
@@ -336,8 +349,21 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       const expStatus = getExpirationStatus(expiresIn);
       const isExpired = expiresIn !== null && expiresIn < 0;
       const isExpiringSoon = expiresIn !== null && expiresIn >= 0 && expiresIn <= 3;
-      const variant: ItemVariant = isExpired ? 'expired' : isExpiringSoon ? 'warning' : 'normal';
+      const variant: ItemVariant = getItemVariant(isExpired, isExpiringSoon);
       const hasExpiry = item.expiresAt != null;
+
+      // Precompute expiration color to eliminate per-item useUnistyles
+      let expirationColor: string | undefined;
+      if (hasExpiry) {
+        const expType = expStatus.type;
+        if (expType === 'expired' || expType === 'critical') {
+          expirationColor = expirationColors.expired;
+        } else if (expType === 'warning') {
+          expirationColor = expirationColors.warning;
+        } else {
+          expirationColor = expirationColors.normal;
+        }
+      }
 
       const quantityDisplay = formatQuantityDisplay(item.quantity, item.unit?.symbol);
       const pkgBreakdownText = formatPackageBreakdown(item.packageBreakdown, item.quantityBreakdown?.totalContentUnits);
@@ -348,6 +374,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
         imageUrl: resolveImageUrl(item),
         expirationText: hasExpiry ? expStatus.text : null,
         expirationVariant: hasExpiry ? expStatus.type : undefined,
+        expirationColor,
         variant,
         quantityDisplay,
         location: getLocationString(item.storageState, item.storageLocation),
@@ -358,7 +385,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
       });
     }
     return map;
-  }, [sortedItems, getLocationString]);
+  }, [sortedItems, getLocationString, expirationColors]);
 
   // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
   const itemDisplayMapRef = useRef(itemDisplayMap);
@@ -396,9 +423,9 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
           name={item.itemName || 'Unknown Item'}
           expirationText={display.expirationText}
           expirationVariant={display.expirationVariant}
+          expirationColor={display.expirationColor}
           quantity={display.quantityDisplay}
           location={display.location}
-          storageState={item.storageState}
           variant={display.variant}
           imageUrl={display.imageUrl}
           isOutOfStock={display.isOutOfStock}
@@ -613,7 +640,7 @@ export const PantryContent = React.memo(React.forwardRef<PantryContentRef, Pantr
               getItemType={getItemType}
               onEndReached={onEndReached}
               onEndReachedThreshold={0.5}
-              drawDistance={400}
+              drawDistance={250}
             />
           </Animated.View>
 

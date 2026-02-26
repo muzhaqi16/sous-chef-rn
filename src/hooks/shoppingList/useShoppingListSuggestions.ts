@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   useGetShoppingListSuggestionsQuery,
   SuggestionSource,
   type GetShoppingListSuggestionsQuery,
 } from '#generated';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
+import { resolveImageUrl } from '#utils/imageUtils';
+import { preloadImages } from '#components/atoms/CachedImage';
+import type { ErrorLike } from '@apollo/client';
 
 /** Type for a single suggestion from the query result */
 export type ShoppingListSuggestionItem =
@@ -14,6 +17,16 @@ export interface GroupedSuggestions {
   recentlyDeleted: ShoppingListSuggestionItem[];
   frequentlyAdded: ShoppingListSuggestionItem[];
   popular: ShoppingListSuggestionItem[];
+}
+
+export interface UseShoppingListSuggestionsReturn {
+  suggestions: ShoppingListSuggestionItem[];
+  grouped: GroupedSuggestions;
+  hasSuggestions: boolean;
+  loading: boolean;
+  error: ErrorLike | undefined;
+  refetch: () => Promise<unknown>;
+  isOffline: boolean;
 }
 
 interface UseShoppingListSuggestionsOptions {
@@ -30,7 +43,7 @@ export function useShoppingListSuggestions({
   shoppingListId,
   limit = 15,
   skip = false,
-}: UseShoppingListSuggestionsOptions) {
+}: UseShoppingListSuggestionsOptions): UseShoppingListSuggestionsReturn {
   const isOffline = useIsEffectivelyOffline();
 
   const { data, loading, error, refetch } = useGetShoppingListSuggestionsQuery({
@@ -66,6 +79,18 @@ export function useShoppingListSuggestions({
     }
 
     return { recentlyDeleted, frequentlyAdded, popular };
+  }, [suggestions]);
+
+  // Preload suggestion images into disk cache for instant display
+  useEffect(() => {
+    if (suggestions && suggestions.length > 0) {
+      const urls = suggestions
+        .map(s => resolveImageUrl(s))
+        .filter((url): url is string => !!url);
+      if (urls.length > 0) {
+        preloadImages(urls);
+      }
+    }
   }, [suggestions]);
 
   const hasSuggestions =

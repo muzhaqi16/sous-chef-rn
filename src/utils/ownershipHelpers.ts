@@ -152,6 +152,7 @@ export function isShoppingListOwner(
 export function getShoppingListRole(
   list: ShoppingListWithOwnership,
   currentUserId?: string,
+  homeMyMembership?: { role: string } | null,
 ): string | null {
   if (!currentUserId) return null;
 
@@ -166,7 +167,8 @@ export function getShoppingListRole(
     c => c.collaboratorId === currentUserId,
   );
 
-  return collaboration?.role || null;
+  // Fall back to home membership role for home-linked lists
+  return collaboration?.role || homeMyMembership?.role || null;
 }
 
 /**

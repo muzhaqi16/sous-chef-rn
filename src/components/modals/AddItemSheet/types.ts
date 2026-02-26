@@ -25,7 +25,7 @@ export interface SuggestionGroupConfig {
   /** Display title (e.g., "LOW STOCK", "ADD AGAIN") */
   title: string;
   /** Function to extract items from grouped data */
-  accessor: (grouped: Record<string, any[]>) => BaseSuggestionItem[];
+  accessor: (grouped: Record<string, BaseSuggestionItem[]>) => BaseSuggestionItem[];
   /** Priority order for display (lower = higher priority) */
   priority: number;
 }
@@ -143,6 +143,8 @@ export interface AddItemSheetState {
   setSearchQuery: (query: string) => void;
   /** Whether data fetching should begin (after animation) */
   shouldFetch: boolean;
+  /** Whether suggestion sections should render (deferred until after sheet animation) */
+  shouldRenderSuggestions: boolean;
   /** Items currently in exit animation */
   exitingItems: Set<string>;
   /** Start exit animation for an item */

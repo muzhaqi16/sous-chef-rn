@@ -89,15 +89,15 @@ class ErrorService {
     AUTHZ_FORBIDDEN: "You don't have permission to perform this action",
     AUTHZ_INSUFFICIENT_PERMISSIONS: "You don't have sufficient permissions",
     AUTHZ_RESOURCE_ACCESS_DENIED: 'Access denied to this resource',
-    AUTHZ_ADMIN_REQUIRED: 'Administrator privileges required',
-    AUTHZ_MODERATOR_REQUIRED: 'Moderator privileges required',
+    AUTHZ_ADMIN_REQUIRED: "You don't have permission to perform this action.",
+    AUTHZ_MODERATOR_REQUIRED: "You don't have permission to perform this action.",
 
     // API Key Errors
-    API_KEY_MISSING: 'API key is missing. Please check your configuration',
-    API_KEY_INVALID: 'Invalid API key. Please check your configuration',
-    API_KEY_EXPIRED: 'API key has expired. Please contact support',
-    API_KEY_REVOKED: 'API key has been revoked. Please contact support',
-    API_KEY_RATE_LIMITED: 'API rate limit exceeded. Please try again later',
+    API_KEY_MISSING: 'Something went wrong. Please try again later.',
+    API_KEY_INVALID: 'Something went wrong. Please try again later.',
+    API_KEY_EXPIRED: 'Something went wrong. Please try again later.',
+    API_KEY_REVOKED: 'Something went wrong. Please try again later.',
+    API_KEY_RATE_LIMITED: 'Something went wrong. Please try again later.',
 
     // Validation Errors
     VALIDATION_FAILED: 'Please check your input and try again',
@@ -116,23 +116,32 @@ class ErrorService {
     RESOURCE_LOCKED: 'This item is currently locked and cannot be modified',
 
     // Business Logic Errors
-    BUSINESS_RULE_VIOLATION: 'This action violates business rules',
-    BUSINESS_STATE_INVALID: 'Invalid state for this operation',
-    BUSINESS_OPERATION_NOT_ALLOWED: 'This operation is not allowed',
+    BUSINESS_RULE_VIOLATION:
+      "This action couldn't be completed. Please try again.",
+    BUSINESS_STATE_INVALID:
+      "This action couldn't be completed right now. Please try again.",
+    BUSINESS_OPERATION_NOT_ALLOWED:
+      "This action isn't available right now.",
     BUSINESS_QUOTA_EXCEEDED: "You've exceeded your quota limit",
     BUSINESS_FEATURE_DISABLED: 'This feature is currently disabled',
 
     // Rate Limiting Errors
     RATE_LIMIT_EXCEEDED: 'Too many requests. Please try again later',
-    RATE_LIMIT_IP_BLOCKED: 'Your IP has been rate limited',
-    RATE_LIMIT_USER_BLOCKED: 'Your account has been rate limited',
-    RATE_LIMIT_API_KEY_BLOCKED: 'API key rate limit exceeded',
+    RATE_LIMIT_IP_BLOCKED:
+      'Too many requests. Please wait a moment and try again.',
+    RATE_LIMIT_USER_BLOCKED:
+      'Too many requests. Please wait a moment and try again.',
+    RATE_LIMIT_API_KEY_BLOCKED:
+      'Too many requests. Please wait a moment and try again.',
 
     // Service Errors
-    SERVICE_UNAVAILABLE: 'Service is temporarily unavailable',
+    SERVICE_UNAVAILABLE:
+      "We're experiencing issues. Please try again shortly.",
     SERVICE_TIMEOUT: 'Request timed out. Please try again',
-    SERVICE_MAINTENANCE: 'Service is under maintenance',
-    SERVICE_OVERLOADED: 'Service is overloaded. Please try again later',
+    SERVICE_MAINTENANCE:
+      "We're performing maintenance. Please try again shortly.",
+    SERVICE_OVERLOADED:
+      "We're experiencing high demand. Please try again shortly.",
 
     // Network/Offline Errors
     NETWORK_ERROR:
@@ -145,9 +154,8 @@ class ErrorService {
     EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
 
     // Query Complexity Errors
-    QUERY_TOO_COMPLEX: 'Query is too complex. Please simplify your request.',
-    PAGINATION_LIMIT_EXCEEDED:
-      'Too many items requested. Maximum is 100 items per request.',
+    QUERY_TOO_COMPLEX: 'Something went wrong. Please try again.',
+    PAGINATION_LIMIT_EXCEEDED: 'Something went wrong. Please try again.',
 
     // Version Control Errors
     VERSION_CONFLICT:
@@ -235,12 +243,14 @@ class ErrorService {
       logger.error(`[ErrorService] ${operation}:`, serialized);
     }
 
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : typeof error === 'string'
-          ? error
-          : 'Unknown error';
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else {
+      errorMessage = 'Unknown error';
+    }
 
     Telemetry.trackError(errorMessage, {
       operation,

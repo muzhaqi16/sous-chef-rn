@@ -58,6 +58,7 @@ export const Avatar: React.FC<AvatarProps> = ({
             height: size,
             borderRadius: size / 2,
           }}
+          displaySize={size}
         />
       </View>
     );

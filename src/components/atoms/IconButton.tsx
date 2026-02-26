@@ -28,6 +28,8 @@ export interface IconButtonProps {
   library?: IconLibrary;
   /** whether button is disabled */
   disabled?: boolean;
+  /** test ID for testing */
+  testID?: string;
 }
 
 export const IconButton: React.FC<IconButtonProps> = ({
@@ -41,6 +43,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   style,
   library,
   disabled = false,
+  testID,
 }) => {
   const handlePress = useCallback(() => {
     HapticService.selection();
@@ -60,7 +63,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{disabled}}>
+      accessibilityState={{disabled}}
+      testID={testID}>
       <UniIcon
         library={library}
         name={name}

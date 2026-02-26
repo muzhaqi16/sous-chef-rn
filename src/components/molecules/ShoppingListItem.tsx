@@ -74,6 +74,66 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
     setIsEditingQuantity(false);
   };
 
+  const renderQuantitySection = () => {
+    if (isEditingQuantity) {
+      return (
+        <View style={styles.editQuantityContainer}>
+          <Counter
+            count={localQuantity}
+            onIncrement={() => setLocalQuantity(q => q + 1)}
+            onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
+            disabled={isPurchased}
+          />
+          <Pressable
+            onPress={handleQuantityUpdate}
+            disabled={isPurchased}
+            accessibilityRole="button"
+            accessibilityLabel="Confirm quantity"
+            accessibilityHint={`Save new quantity of ${localQuantity}`}
+            style={({pressed}) => pressed && styles.pressed}
+          >
+            <Icon name="checkmark" size={20} color={theme.colors.primary} />
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (isPurchased) {
+      return (
+        <View style={styles.quantityContainer}>
+          <QuantityDisplay
+            quantity={quantity}
+            quantityInput={quantityInput}
+            displayFormat={displayFormat}
+            unitSymbol={unit}
+            displayAsFraction={displayAsFraction}
+            style={styles.quantityText}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <Pressable
+        style={({pressed}) => [styles.quantityContainer, pressed && styles.pressed]}
+        onPress={() => setIsEditingQuantity(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
+        accessibilityHint="Tap to change the quantity"
+      >
+        <QuantityDisplay
+          quantity={quantity}
+          quantityInput={quantityInput}
+          displayFormat={displayFormat}
+          unitSymbol={unit}
+          displayAsFraction={displayAsFraction}
+          style={styles.quantityText}
+        />
+        <Icon name="create-outline" size={14} color={theme.colors.textSecondary} />
+      </Pressable>
+    );
+  };
+
   return (
     <Animated.View style={animatedSlideStyle} testID={`shopping-item-${id}`}>
       <SwipeableItem onDelete={handleDelete} onEdit={() => onEdit(id)}>
@@ -92,62 +152,14 @@ export const ShoppingListItem = React.memo<ShoppingListItemProps>(({
           </View>
         </Pressable>
 
-        {!!imageUrl && <CachedImage uri={imageUrl} style={styles.itemImage} />}
+        {!!imageUrl && <CachedImage uri={imageUrl} style={styles.itemImage} displaySize={48} />}
 
         <View style={styles.contentContainer}>
           <Text style={styles.itemName}>
             {name}
           </Text>
 
-          {isEditingQuantity ? (
-            <View style={styles.editQuantityContainer}>
-              <Counter
-                count={localQuantity}
-                onIncrement={() => setLocalQuantity(q => q + 1)}
-                onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
-                disabled={isPurchased}
-              />
-              <Pressable
-                onPress={handleQuantityUpdate}
-                disabled={isPurchased}
-                accessibilityRole="button"
-                accessibilityLabel="Confirm quantity"
-                accessibilityHint={`Save new quantity of ${localQuantity}`}
-                style={({pressed}) => pressed && styles.pressed}
-              >
-                <Icon name="checkmark" size={20} color={theme.colors.primary} />
-              </Pressable>
-            </View>
-          ) : isPurchased ? (
-            <View style={styles.quantityContainer}>
-              <QuantityDisplay
-                quantity={quantity}
-                quantityInput={quantityInput}
-                displayFormat={displayFormat}
-                unitSymbol={unit}
-                displayAsFraction={displayAsFraction}
-                style={styles.quantityText}
-              />
-            </View>
-          ) : (
-            <Pressable
-              style={({pressed}) => [styles.quantityContainer, pressed && styles.pressed]}
-              onPress={() => setIsEditingQuantity(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
-              accessibilityHint="Tap to change the quantity"
-            >
-              <QuantityDisplay
-                quantity={quantity}
-                quantityInput={quantityInput}
-                displayFormat={displayFormat}
-                unitSymbol={unit}
-                displayAsFraction={displayAsFraction}
-                style={styles.quantityText}
-              />
-              <Icon name="create-outline" size={14} color={theme.colors.textSecondary} />
-            </Pressable>
-          )}
+          {renderQuantitySection()}
         </View>
         </View>
       </SwipeableItem>

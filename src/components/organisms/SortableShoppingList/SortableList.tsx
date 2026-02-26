@@ -113,6 +113,12 @@ const SortableShoppingListComponent = forwardRef<
       [],
     );
 
+    // Item type for better FlashList cell recycling — purchased/unpurchased have different styling
+    const getItemType = useCallback(
+      (item: SortableShoppingListItem) => (item.isPurchased ? 'purchased' : 'unpurchased'),
+      [],
+    );
+
     // Memoize actions for context
     const actions = useMemo<SortableListActions>(
       () => ({
@@ -213,7 +219,8 @@ const SortableShoppingListComponent = forwardRef<
               data={validItems}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              drawDistance={400}
+              getItemType={getItemType}
+              drawDistance={250}
               showsVerticalScrollIndicator={
                 flatListProps.showsVerticalScrollIndicator ?? true
               }

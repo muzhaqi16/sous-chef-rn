@@ -8,6 +8,7 @@
  */
 
 import { Alert } from 'react-native';
+import { gql } from '@apollo/client';
 import { useRemoveItemFromShoppingListMutation } from '#generated';
 import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
@@ -29,7 +30,11 @@ interface UseRemoveShoppingItemOptions {
  * await removeItem('item-123');
  * ```
  */
-export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItemOptions) {
+interface UseRemoveShoppingItemReturn {
+  removeItem: (itemId: string) => Promise<unknown>;
+}
+
+export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
   const { handleApolloError } = useErrorService();
   const { createRemoveOperation } = useCrudOperations();
 
@@ -49,7 +54,39 @@ export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItem
 
       try {
         const itemId = variables.id;
+
+        // Read isPurchased before eviction so we can update completedItems
+        const itemData = cache.readFragment<{ isPurchased: boolean }>({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+          fragment: gql`
+            fragment RemovedItemStatus on ShoppingListItem {
+              isPurchased
+            }
+          `,
+        });
+
         removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
+
+        // Update totalItems and conditionally completedItems
+        const parentCacheId = cache.identify({
+          __typename: 'ShoppingList',
+          id: listId,
+        });
+        if (parentCacheId) {
+          cache.modify({
+            id: parentCacheId,
+            fields: {
+              totalItems(existing: number = 0) {
+                return Math.max(0, existing - 1);
+              },
+              ...(itemData?.isPurchased && {
+                completedItems(existing: number = 0) {
+                  return Math.max(0, existing - 1);
+                },
+              }),
+            },
+          });
+        }
       } catch (error) {
         console.warn('Cache update failed for removeItem, will refetch:', error);
         refetch();

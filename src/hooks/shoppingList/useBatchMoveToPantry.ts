@@ -9,10 +9,15 @@ interface UseBatchMoveToPantryOptions {
   onSuccess?: () => void;
 }
 
+interface UseBatchMoveToPantryReturn {
+  batchMoveToPantry: () => Promise<void>;
+  loading: boolean;
+}
+
 export function useBatchMoveToPantry({
   currentListId,
   onSuccess,
-}: UseBatchMoveToPantryOptions) {
+}: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
   const [movePurchasedMutation, { loading }] =
     useMovePurchasedItemsToPantryMutation({
       update: (cache, { data }) => {
@@ -29,6 +34,28 @@ export function useBatchMoveToPantry({
           // Remove each moved item from the shopping list cache
           for (const item of result.movedItems) {
             removeFromList(cache, currentListId, item.shoppingListItemId);
+          }
+
+          // Update totalItems and completedItems counters
+          const movedCount = result.movedItems.length;
+          if (movedCount > 0) {
+            const parentCacheId = cache.identify({
+              __typename: 'ShoppingList',
+              id: currentListId,
+            });
+            if (parentCacheId) {
+              cache.modify({
+                id: parentCacheId,
+                fields: {
+                  totalItems(existing: number = 0) {
+                    return Math.max(0, existing - movedCount);
+                  },
+                  completedItems(existing: number = 0) {
+                    return Math.max(0, existing - movedCount);
+                  },
+                },
+              });
+            }
           }
         } catch (error) {
           console.warn('Cache update failed for batch move to pantry:', error);

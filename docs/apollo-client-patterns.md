@@ -14,6 +14,7 @@ This document defines the standardized patterns for using Apollo Client in this 
 6. [Query Data Preservation](#query-data-preservation)
 7. [Version Conflicts](#version-conflicts)
 8. [Decision Trees](#decision-trees)
+9. [Apollo Client 4.x Notes](#apollo-client-4x-notes)
 
 ---
 
@@ -113,6 +114,8 @@ const [updateItemMutation] = useUpdateItemMutation({
 - Mutation must return full fragment (not just `id` or `boolean`)
 - Fragment must include `__typename` and `id`
 - Object must already exist in cache
+
+> **AC 4.0 Note**: The `addTypename` option was removed from `InMemoryCache` in Apollo Client 4.0 — `__typename` is now **always** injected into outgoing queries automatically. This makes normalization more reliable since it can no longer be accidentally disabled. If mutation variables include `__typename` fields that your server rejects, add `RemoveTypenameFromVariablesLink` to your link chain.
 
 ---
 
@@ -321,24 +324,28 @@ await toggleMutation({
 
 ---
 
-### ❌ Anti-Pattern: refetchQueries
+### refetchQueries Guidance
 
-**DON'T USE** `refetchQueries` unless absolutely necessary!
+**Prefer cache updates** (`cache.modify()`, automatic normalization) over `refetchQueries` for offline-critical paths. Cache updates are instant, work offline, and avoid extra network requests.
 
-**Why**:
-- Extra network requests (bad for performance)
-- Doesn't work offline
-- Slower UX (wait for network)
-- Goes against offline-first principles
+However, `refetchQueries` is **acceptable** when:
+- The query is not on an offline-critical path (e.g., recipe search, analytics)
+- Manual cache updates would be disproportionately complex for the mutation's return shape
+- The mutation affects many queries and cache normalization alone isn't sufficient
 
-**Migration**:
+**Current usage**: 13 files use `refetchQueries` (recipe, mealPlan, profile, onBoarding screens). These are acceptable because they target non-offline-critical flows where the complexity of manual cache updates outweighs the benefit.
+
+**When to migrate away from refetchQueries**:
+- Shopping list or pantry paths (offline-first, performance-critical)
+- Frequently-triggered mutations where the extra network round-trip is noticeable
+
 ```typescript
-// ❌ BAD - Old refetchQueries pattern
+// ⚠️ AVOID on offline-critical paths
 const [updateMutation] = useUpdateMutation({
   refetchQueries: [{ query: GetItemsDocument }],
 });
 
-// ✅ GOOD - Use cache.modify or automatic normalization
+// ✅ PREFERRED - Use cache.modify or automatic normalization
 const [updateMutation] = useUpdateMutation({
   // Option 1: Let Apollo auto-merge (if mutation returns full fragment)
   // No update function needed!
@@ -500,9 +507,9 @@ const [deleteItemMutation] = useDeleteItemMutation({
 ### Standard Error Pattern
 
 ```typescript
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 
-const { handleApolloError } = useErrorHandler();
+const { handleApolloError } = useErrorService();
 
 const [mutation] = useMutation({
   errorPolicy: 'all', // Allow partial data and cache on errors
@@ -514,6 +521,23 @@ const [mutation] = useMutation({
   },
 });
 ```
+
+### `useErrorService` Full API
+
+The `useErrorService()` hook exposes the following methods:
+
+| Method | Description |
+|--------|-------------|
+| `handleApolloError(error, config)` | Parse Apollo error → flat `{ code, message, category, shouldRetry, isAuthError }` |
+| `parseApolloError(error, config)` | Parse Apollo error → structured `ErrorResult` with `success` flag |
+| `handleMutation(fn, config)` | Wrap an async mutation with try/catch, returns `ErrorResult<T>` |
+| `handleMutationWithVersionConflict(fn, config)` | Like `handleMutation` but adds `isVersionConflict` flag |
+| `getUserFriendlyMessage(errorCode)` | Map error code to user-facing string |
+| `getErrorCategory(errorCode)` | Map error code prefix to category (e.g., `AUTH_` → `"Authentication"`) |
+| `shouldRetry(errorCode)` | Whether the error is retryable (timeouts, rate limits, etc.) |
+| `isAuthError(errorCode)` | Whether the error is auth/authz related |
+| `reportError(error, context)` | Log a non-Apollo error to console + Telemetry |
+| `getErrorMessage(error)` | Extract a user-friendly message from any error |
 
 ### Version Conflict Handling
 
@@ -663,6 +687,8 @@ const defaultHome = homes?.find(h => h.isDefault); // undefined
 const pantryId = defaultHome?.pantries[0]?.id; // undefined
 // Result: entire screen becomes empty
 ```
+
+> **AC 4.0 Improvement**: In Apollo Client 4.0, network errors now respect `errorPolicy`. With `errorPolicy: 'ignore'`, network errors are **suppressed** (not thrown), which partially addresses the cascade failure described above. However, `usePreservedArrayData` remains valuable as a defensive fallback for the **initial-load-failure** case — where no cached data exists yet and the first network request fails, `data` is still `undefined` regardless of `errorPolicy`.
 
 ### Solution: usePreservedArrayData Hook
 
@@ -955,7 +981,7 @@ import {
 import { generateId } from '#/utils/generateId';
 
 // Error handling
-import { useErrorHandler } from '#/utils/errorHandling';
+import { useErrorService } from '#/services/errorService';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -973,8 +999,8 @@ import { useStandardSubscription } from '#/hooks/apollo/useStandardSubscription'
 ❌ **Don't**: Use `const items = data?.items ?? []` for query results
 ✅ **Do**: Use `const items = usePreservedArrayData(data?.items)` to prevent cascade failures
 
-❌ **Don't**: Use `refetchQueries`
-✅ **Do**: Use `cache.modify()` or automatic normalization
+❌ **Don't**: Default to `refetchQueries` for offline-critical paths
+✅ **Do**: Prefer `cache.modify()` or automatic normalization (see [refetchQueries guidance](#refetchqueries-guidance))
 
 ❌ **Don't**: Forget `cache.gc()` after `cache.evict()`
 ✅ **Do**: Always call `cache.gc()` after eviction
@@ -1241,6 +1267,29 @@ update: (cache, { data }) => {
 | `createOptimisticEntity(typename, tempId, fields)` | Create temp entity for add mutations |
 | `enhanceWithVersion(currentItem, updates)` | Add version/timestamp to update mutations |
 
+### Error Handler Composables (`src/utils/errorHandlers.ts`)
+
+Higher-order functions for wrapping mutations with consistent error handling. Used by `useCrudOperations.ts` and other management hooks.
+
+| Utility | Use Case |
+|---------|----------|
+| `withVersionConflictHandling(fn, config)` | Wrap mutation with version conflict detection + alert |
+| `withMutationErrorHandling(fn, config)` | Wrap mutation with Apollo error reporting + alert |
+| `withGenericErrorHandling(fn, msg)` | Wrap mutation with simple error alert |
+| `composeErrorHandlers(fn, handlers[])` | Chain multiple error handlers together |
+| `handleVersionConflictAlert(error, config)` | Inline version conflict check for try/catch blocks |
+| `handleMutationErrorAlert(error, config)` | Inline error alert for try/catch blocks |
+
+**Example**:
+```typescript
+import { withVersionConflictHandling, withMutationErrorHandling } from '#/utils/errorHandlers';
+
+const safeUpdate = withVersionConflictHandling(
+  withMutationErrorHandling(updateFn, { operation: 'Update Item' }),
+  { itemName: 'Item', onRefresh: refetch }
+);
+```
+
 ### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
 
 Provides standardized CRUD operation wrappers with built-in validation and error handling.
@@ -1253,15 +1302,105 @@ Provides standardized CRUD operation wrappers with built-in validation and error
 
 ---
 
+## Apollo Client 4.x Notes
+
+This project uses Apollo Client `^4.1.5`. AC 4.0 introduced several new hooks and APIs that are stable but **intentionally not adopted** in this codebase:
+
+| Hook / API | Purpose | Status |
+|------------|---------|--------|
+| `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** |
+| `useBackgroundQuery` | Trigger queries in parent, read in child via `useReadQuery` | Available, **not adopted** |
+| `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
+| `useFragment` | Subscribe to a specific fragment in cache without a query | Available, not adopted (safe to evaluate) |
+| `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
+
+#### AC 4.0 New Concepts
+
+- **`dataState` property**: AC 4.0 adds a `dataState` discriminated union to query results, allowing pattern matching on `dataState.status` for type-safe data access. Not adopted because the existing `data ?? previousData` pattern is simpler for this codebase's needs.
+- **`IGNORE` sentinel for optimistic responses**: AC 4.0 introduces an `IGNORE` value that can be returned from `optimisticResponse` to conditionally skip optimistic updates. Useful when a mutation should only optimistically update under certain conditions.
+- **React Native caveats for Suspense hooks**: Beyond the stability issues noted below, Suspense hooks in React Native have a known pull-to-refresh jank issue — triggering a refetch that suspends can cause the scroll position to reset or the pull-to-refresh indicator to get stuck. This is an additional reason to avoid `useSuspenseQuery` in this codebase.
+
+### Why These Are Intentionally Not Adopted
+
+#### `useSuspenseQuery` — Incompatible with Offline-First Architecture
+
+- **Throws errors as exceptions** instead of returning them. This breaks the `errorPolicy: 'all'` + `previousData` fallback pattern used throughout the app. Every network failure would suspend the component tree instead of gracefully degrading.
+- **No `previousData` support.** Users would see loading spinners instead of last-known data during refetches. The current pattern keeps the UI populated:
+  ```typescript
+  const { data, previousData, error } = useQuery({
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+  const items = data?.items ?? previousData?.items ?? [];
+  ```
+- **No `skip` option.** Many queries depend on conditional execution (`skip: !listId`, `skip: !user?.id`). `useSuspenseQuery` requires `skipToken` which changes the API surface significantly.
+- **React Native Suspense stability issues.** Known bug [facebook/react-native#49129](https://github.com/facebook/react-native/issues/49129): Suspense fallbacks can get stuck showing instead of resolved UI.
+- **Error Boundary requirement.** Would require wrapping every query-using component with Error Boundaries, fundamentally changing the error handling architecture from component-level to tree-level.
+
+#### `useBackgroundQuery` + `useReadQuery` — Breaks Optimistic Update Flow
+
+- **Defers data loading**, which conflicts with the synchronous cache-update-then-render pattern used by optimistic responses.
+- **Current wrapper hooks already achieve render separation.** Hooks like `useShoppingListScreen()` aggregate queries in a parent, and children receive data as props — providing the same re-render reduction that `useBackgroundQuery` targets.
+- **No React Native-specific guidance** from Apollo. Documentation focuses on web patterns with no known-issues coverage for RN.
+
+#### `useFragment` — Safe but Not Currently Needed
+
+- **No offline conflict.** Reads from cache only, never triggers network requests.
+- **No Suspense dependency.** Works independently of Suspense boundaries.
+- **Potential benefit for list items:** each item could subscribe to its own fragment, re-rendering only when its specific data changes.
+- **Current alternatives are sufficient.** FlashList v2 + memoized item components + `mergeArrayByIdIntelligent` cache merging already handle efficient list updates. Re-evaluate only if profiling reveals list re-render bottlenecks.
+
+### When to Re-evaluate
+
+- Apollo releases React Native-specific Suspense guidance with offline-first patterns
+- React Native resolves Suspense stability issues ([RN#49129](https://github.com/facebook/react-native/issues/49129))
+- Performance profiling shows list re-render bottlenecks — then consider `useFragment` first
+
+### Codegen Compatibility — ⚠️ OUTDATED PLUGIN
+
+The project uses `@graphql-codegen/typescript-react-apollo` (`^4.3.3`) to generate typed hooks. **This plugin is officially declared incompatible with Apollo Client 4.0 by The Guild.** Key issues:
+
+- Generated hook signatures do not align with AC 4.0's new types (`dataState`, new error classes)
+- The plugin generates `useSuspenseQuery` variants that don't match AC 4.0's actual API
+- The project currently works around this with `@ts-nocheck` on the generated file
+
+**Recommended migration path** (when prioritized):
+1. Replace `typescript-react-apollo` with: `typescript` + `typescript-operations` + `typed-document-node` plugins
+2. Use `useQuery(TypedDocument, options)` directly instead of generated `useXxxQuery()` hooks
+3. This produces `TypedDocumentNode` objects that provide full type inference without wrapper hooks
+4. Remove `@ts-nocheck` from the generated file once migrated
+
+### `storeFieldName` Pattern for Filtered Connections
+
+When a single connection field is queried with different argument variants (e.g., `itemsConnection(isPurchased: true)` vs `itemsConnection(isPurchased: false)`), Apollo stores them under the same field name with serialized `keyArgs`. Use `storeFieldName` inside `cache.modify` field functions to distinguish which variant you're updating:
+
+```typescript
+cache.modify({
+  id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+  fields: {
+    itemsConnection(existing, { storeFieldName }) {
+      const isPurchased = storeFieldName.includes('isPurchased":true');
+      // Handle each variant appropriately
+    },
+  },
+});
+```
+
+> **Note on `args` vs `storeFieldName`**: The `args` object is available in type policy `read`/`merge` functions but is **not** available in `cache.modify` field modifiers. For `cache.modify`, `storeFieldName` string parsing is the correct approach. The `keyArgs: ['filters']` config on `itemsConnection` ensures each filter variant gets a distinct `storeFieldName`, making `.includes()` checks reliable.
+
+See `src/apollo/utils/shoppingListCacheUpdaters.ts` for the full implementation.
+
+---
+
 ## Need Help?
 
 - **Questions about patterns**: Check examples in `src/hooks/shoppingList/useShoppingListItemMutations.ts` (reference implementation)
 - **Cache updater utilities**: See `src/apollo/utils/cacheUpdaters.ts`
 - **Subscription setup**: See `src/hooks/subscriptions/` and `src/services/subscriptions/SubscriptionService.ts`
 - **Fetch policies**: Use hardcoded `'cache-and-network'` with `nextFetchPolicy: 'cache-first'`
-- **Error handling**: See `src/utils/errorHandling.ts` and `src/utils/errors/versionConflict.ts`
+- **Error handling**: See `src/services/errorService.ts`, `src/utils/errorHandlers.ts`, and `src/utils/errors/versionConflict.ts`
 
 ---
 
-**Last Updated**: 2026-01-10
+**Last Updated**: 2026-02-25
 **Maintainers**: Development Team

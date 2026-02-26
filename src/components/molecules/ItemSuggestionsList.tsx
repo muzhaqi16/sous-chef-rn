@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -27,7 +27,58 @@ interface ItemSuggestionsListProps {
   showBrands?: boolean;
 }
 
-export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
+/** A single suggestion row — memoized to avoid re-renders when siblings change. */
+const SuggestionRow = React.memo<{
+  item: ItemSuggestion;
+  isLast: boolean;
+  onSelectSuggestion: (item: ItemSuggestion) => void;
+  quickAddDisabled: boolean;
+  placeholderIcon: 'cube-outline' | 'cart-outline';
+  primaryColor: string;
+  showBrands: boolean;
+}>(({ item, isLast, onSelectSuggestion, quickAddDisabled, placeholderIcon, primaryColor, showBrands }) => {
+  const imageUrl = resolveImageUrl(item);
+  const handlePress = useCallback(() => onSelectSuggestion(item), [onSelectSuggestion, item]);
+
+  return (
+    <View style={[styles.suggestionItem, !isLast && styles.itemBorder]}>
+      <View style={styles.imageContainer}>
+        {imageUrl ? (
+          <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Icon name={placeholderIcon} size={20} color={primaryColor} />
+          </View>
+        )}
+      </View>
+      <View style={styles.suggestionInfo}>
+        <Text style={styles.suggestionName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        {!!showBrands && !!item.brands && item.brands.length > 0 && (
+          <Text style={styles.suggestionBrands} numberOfLines={1}>
+            {item.brands[0].name}
+          </Text>
+        )}
+      </View>
+      <Pressable
+        style={({pressed}) => [
+          styles.quickAddButton,
+          quickAddDisabled && styles.quickAddButtonDisabled,
+          pressed && styles.pressed,
+        ]}
+        onPress={handlePress}
+        disabled={quickAddDisabled}
+      >
+        <Icon name="add" size={20} color={primaryColor} />
+      </Pressable>
+    </View>
+  );
+});
+
+SuggestionRow.displayName = 'SuggestionRow';
+
+export const ItemSuggestionsList = React.memo<ItemSuggestionsListProps>(({
   searchQuery,
   suggestions,
   addManuallyPosition,
@@ -61,56 +112,6 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
     </Pressable>
   );
 
-  // Render a single suggestion item
-  const renderSuggestion = (item: ItemSuggestion, isLast: boolean) => {
-    const imageUrl = resolveImageUrl(item);
-    return (
-      <View
-        key={item.id}
-        style={[styles.suggestionItem, !isLast && styles.itemBorder]}
-      >
-        <View style={styles.imageContainer}>
-          {imageUrl ? (
-            <CachedImage uri={imageUrl} style={styles.image} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Icon
-                name={placeholderIcon}
-                size={20}
-                color={theme.colors.primary}
-              />
-            </View>
-          )}
-        </View>
-        <View style={styles.suggestionInfo}>
-          <Text style={styles.suggestionName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {!!showBrands && !!item.brands && item.brands.length > 0 && (
-            <Text style={styles.suggestionBrands} numberOfLines={1}>
-              {item.brands[0].name}
-            </Text>
-          )}
-        </View>
-        <Pressable
-          style={({pressed}) => [
-            styles.quickAddButton,
-            quickAddDisabled && styles.quickAddButtonDisabled,
-            pressed && styles.pressed,
-          ]}
-          onPress={() => onSelectSuggestion(item)}
-          disabled={quickAddDisabled}
-        >
-          <Icon
-            name="add"
-            size={20}
-            color={theme.colors.primary}
-          />
-        </Pressable>
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       {addManuallyPosition === 'top' && renderAddManually(!hasResults)}
@@ -118,12 +119,25 @@ export const ItemSuggestionsList: React.FC<ItemSuggestionsListProps> = ({
         const isLastSuggestion = index === suggestions.length - 1;
         const isLast =
           addManuallyPosition === 'top' ? isLastSuggestion : false;
-        return renderSuggestion(item, isLast);
+        return (
+          <SuggestionRow
+            key={item.id}
+            item={item}
+            isLast={isLast}
+            onSelectSuggestion={onSelectSuggestion}
+            quickAddDisabled={quickAddDisabled}
+            placeholderIcon={placeholderIcon}
+            primaryColor={theme.colors.primary}
+            showBrands={showBrands}
+          />
+        );
       })}
       {addManuallyPosition === 'bottom' && renderAddManually(true)}
     </View>
   );
-};
+});
+
+ItemSuggestionsList.displayName = 'ItemSuggestionsList';
 
 const styles = StyleSheet.create(theme => ({
   container: {

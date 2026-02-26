@@ -1,8 +1,8 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#hooks/pantry/usePantryAnalytics';
 import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
@@ -96,70 +96,50 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     [],
   );
 
-  // Memoize transformed data at component level
-  const usagePurposeData = useMemo(() => {
-    if (!usageData?.usageByPurpose) return [];
-    return usageData.usageByPurpose.map(item => ({
+  // Memoize transformed data grouped by data source
+  const { usagePurposeData, usageSourceData, topUsedItemsData } = useMemo(() => ({
+    usagePurposeData: usageData?.usageByPurpose?.map(item => ({
       label: formatPurpose(item.purpose),
       value: item.count,
       percentage: item.percentage,
-    }));
-  }, [usageData?.usageByPurpose]);
-
-  const usageSourceData = useMemo(() => {
-    if (!usageData?.usageBySource) return [];
-    return usageData.usageBySource.map(item => ({
+    })) ?? [],
+    usageSourceData: usageData?.usageBySource?.map(item => ({
       label: formatSource(item.source),
       value: item.count,
       percentage: item.percentage,
-    }));
-  }, [usageData?.usageBySource]);
-
-  const topUsedItemsData = useMemo(() => {
-    if (!usageData?.topUsedItems) return [];
-    return usageData.topUsedItems.map(item => ({
+    })) ?? [],
+    topUsedItemsData: usageData?.topUsedItems?.map(item => ({
       label: item.itemName,
       value: item.count,
-    }));
-  }, [usageData?.topUsedItems]);
+    })) ?? [],
+  }), [usageData]);
 
-  const wasteReasonData = useMemo(() => {
-    if (!wasteData?.wasteByReason) return [];
-    return wasteData.wasteByReason.map(item => ({
+  const { wasteReasonData, topWastedItemsData } = useMemo(() => ({
+    wasteReasonData: wasteData?.wasteByReason?.map(item => ({
       label: formatReason(item.reason),
       value: item.count,
       percentage: item.percentage,
-    }));
-  }, [wasteData?.wasteByReason]);
-
-  const topWastedItemsData = useMemo(() => {
-    if (!wasteData?.topWastedItems) return [];
-    return wasteData.topWastedItems.map(item => ({
+    })) ?? [],
+    topWastedItemsData: wasteData?.topWastedItems?.map(item => ({
       label: item.itemName,
       value: item.count,
       secondaryValue: item.estimatedValue ?? undefined,
-    }));
-  }, [wasteData?.topWastedItems]);
+    })) ?? [],
+  }), [wasteData]);
 
-  // Ledger data transformations
-  const ledgerPeriodData = useMemo(() => {
-    if (!ledgerData?.periodData) return [];
-    return ledgerData.periodData.map(period => ({
+  const { ledgerPeriodData, topRestockedItemsData } = useMemo(() => ({
+    ledgerPeriodData: ledgerData?.periodData?.map(period => ({
       date: period.periodLabel || period.periodStart,
       added: period.added,
       consumed: period.consumed,
       wasted: period.wasted,
       net: period.net,
-    }));
-  }, [ledgerData?.periodData]);
-
-  const topRestockedItemsData = useMemo(() => {
-    if (!ledgerData?.topRestockedItems) return [];
-    return ledgerData.topRestockedItems.map(item => ({
+    })) ?? [],
+    topRestockedItemsData: ledgerData?.topRestockedItems?.map(item => ({
       label: item.itemName,
       value: item.totalQuantity,
-    }));
-  }, [ledgerData?.topRestockedItems]);
+    })) ?? [],
+  }), [ledgerData]);
 
   // Granularity options for ledger
   const granularityOptions = useMemo(
@@ -630,14 +610,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   return (
     <View style={commonStyles.container}>
-      {/* Header */}
-      <View style={[commonStyles.rowSpaceBetween, styles.header]}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[commonStyles.title, styles.headerTitle]}>Pantry Analytics</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <Header title="Pantry Analytics" onBack={goBack} centerTitle />
 
       {/* Date Range Filter */}
       <DateRangeFilter selected={dateRange} onSelect={setDateRange} />
@@ -649,21 +622,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  placeholder: {
-    width: 24,
-  },
   tabContent: {
     flex: 1,
   },

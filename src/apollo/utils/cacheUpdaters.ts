@@ -20,7 +20,7 @@ import { serializeError } from '#/utils/errorSerialization';
 interface CacheFieldHelpers {
   toReference: (object: any, mergeIntoStore?: boolean) => Reference | undefined;
   readField: (fieldName: string, ref: any) => any;
-  args?: Record<string, any>;
+  storeFieldName: string;
 }
 
 /**
@@ -157,10 +157,12 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
         fields: {
           [fieldName](
             existingItems: readonly Reference[] = [],
-            { toReference, readField, args }: CacheFieldHelpers,
+            { toReference, readField, storeFieldName }: CacheFieldHelpers,
           ) {
-            // Only update if args match current context
-            if (args?.[keyArgName] !== currentKeyValue) {
+            // Only update if storeFieldName contains the matching key value
+            // Apollo serializes keyArgs into storeFieldName, e.g.:
+            // "shoppingListItems:{\"shoppingListId\":\"abc123\"}"
+            if (!storeFieldName.includes(`${keyArgName}":"${currentKeyValue}"`)) {
               return existingItems;
             }
 

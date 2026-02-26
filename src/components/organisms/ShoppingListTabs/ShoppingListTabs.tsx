@@ -3,6 +3,7 @@ import { RefreshControl, Alert, useWindowDimensions, View, Platform } from 'reac
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
+import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
 import { MemoizedShoppingTab } from './ShoppingTab';
 import { MemoizedPurchasedTab } from './PurchasedTab';
 import { EmptyState } from '#components/base/EmptyState';
@@ -168,73 +169,59 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onSwipeableClose?.();
   }, [onSwipeableClose]);
 
-  // Handle clear all purchased with confirmation dialog
+  const confirmAction = useCallback(
+    (
+      title: string,
+      message: string,
+      confirmText: string,
+      onConfirm: () => void,
+      destructive = true,
+    ) => {
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: confirmText,
+          style: destructive ? 'destructive' : 'default',
+          onPress: onConfirm,
+        },
+      ]);
+    },
+    [],
+  );
+
   const handleClearAllWithConfirmation = useCallback(() => {
     if (purchasedItems.length === 0) return;
-
-    Alert.alert(
+    const count = purchasedItems.length;
+    confirmAction(
       'Clear All Purchased Items',
-      `Are you sure you want to remove ${purchasedItems.length === 1 ? '1 purchased item' : `all ${purchasedItems.length} purchased items`} from this list?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            await onClearAllPurchased?.();
-          },
-        },
-      ],
+      `Are you sure you want to remove ${count === 1 ? '1 purchased item' : `all ${count} purchased items`} from this list?`,
+      'Clear All',
+      () => { onClearAllPurchased?.(); },
     );
-  }, [purchasedItems.length, onClearAllPurchased]);
+  }, [purchasedItems.length, onClearAllPurchased, confirmAction]);
 
-  // Handle batch move purchased items to pantry with confirmation dialog
   const handleBatchMoveToPantryWithConfirmation = useCallback(() => {
     if (purchasedItems.length === 0 || !onBatchMoveToPantry) return;
-
-    Alert.alert(
+    const count = purchasedItems.length;
+    confirmAction(
       'Move All to Pantry',
-      `Move ${purchasedItems.length === 1 ? '1 purchased item' : `all ${purchasedItems.length} purchased items`} to your pantry?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Move All',
-          onPress: () => {
-            onBatchMoveToPantry();
-          },
-        },
-      ],
+      `Move ${count === 1 ? '1 purchased item' : `all ${count} purchased items`} to your pantry?`,
+      'Move All',
+      onBatchMoveToPantry,
+      false,
     );
-  }, [purchasedItems.length, onBatchMoveToPantry]);
+  }, [purchasedItems.length, onBatchMoveToPantry, confirmAction]);
 
-  // Handle clear all shopping (unpurchased) items with confirmation dialog
   const handleClearAllShoppingWithConfirmation = useCallback(() => {
     if (unpurchasedItems.length === 0) return;
-
-    Alert.alert(
+    const count = unpurchasedItems.length;
+    confirmAction(
       'Clear All Shopping Items',
-      `Are you sure you want to remove ${unpurchasedItems.length === 1 ? '1 item' : `all ${unpurchasedItems.length} items`} from your shopping list?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            await onClearAllShopping?.();
-          },
-        },
-      ],
+      `Are you sure you want to remove ${count === 1 ? '1 item' : `all ${count} items`} from your shopping list?`,
+      'Clear All',
+      () => { onClearAllShopping?.(); },
     );
-  }, [unpurchasedItems.length, onClearAllShopping]);
+  }, [unpurchasedItems.length, onClearAllShopping, confirmAction]);
 
   // Get the current clear handler based on active tab (by index)
   const currentClearHandler =
@@ -261,6 +248,31 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   }, [handleIndexChange]);
 
+  // Build action buttons array: pantry icon (purchased tab only) + clear
+  const actionButtons = useMemo(() => {
+    const buttons: FilterTabActionButton[] = [];
+
+    // Show pantry move icon on purchased tab when there are items and handler exists
+    if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
+      buttons.push({
+        icon: 'cube-outline',
+        onPress: handleBatchMoveToPantryWithConfirmation,
+        disabled: batchMoveToPantryLoading,
+        testID: 'shopping-list-batch-move-pantry',
+      });
+    }
+
+    if (showClear) {
+      buttons.push({
+        label: 'Clear',
+        onPress: currentClearHandler,
+        testID: 'shopping-list-clear-all',
+      });
+    }
+
+    return buttons;
+  }, [index, purchasedItems.length, onBatchMoveToPantry, handleBatchMoveToPantryWithConfirmation, batchMoveToPantryLoading, showClear, currentClearHandler]);
+
   // Render FilterTabBar as the TabView's tab bar so it's always visible,
   // even when a tab's FlashList is replaced by an empty state
   const renderTabBar = useCallback(
@@ -269,18 +281,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         navigationState={{ index, routes: ROUTES }}
         jumpTo={jumpTo}
         counts={counts}
-        actionButton={
-          showClear
-            ? {
-                label: 'Clear',
-                onPress: currentClearHandler,
-                testID: 'shopping-list-clear-all',
-              }
-            : undefined
-        }
+        actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
       />
     ),
-    [index, jumpTo, counts, showClear, currentClearHandler],
+    [index, jumpTo, counts, actionButtons],
   );
 
   // Render scene for TabView
@@ -311,7 +315,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canMarkPurchased={canMarkPurchased}
               canReorderItems={canReorderItems}
               isTransitioning={isTransitioning}
-              ListHeaderComponent={listHeaderComponent}
             />
           );
         case 'purchased':
@@ -337,9 +340,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               canEditItems={canEditItems}
               canMarkPurchased={canMarkPurchased}
               isTransitioning={isTransitioning}
-              onBatchMoveToPantry={onBatchMoveToPantry ? handleBatchMoveToPantryWithConfirmation : undefined}
-              batchMoveToPantryLoading={batchMoveToPantryLoading}
-              ListHeaderComponent={listHeaderComponent}
             />
           );
         default:
@@ -373,10 +373,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       canMarkPurchased,
       canReorderItems,
       isTransitioning,
-      onBatchMoveToPantry,
-      handleBatchMoveToPantryWithConfirmation,
-      batchMoveToPantryLoading,
-      listHeaderComponent,
     ],
   );
 
@@ -409,6 +405,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   return (
     <View style={{ flex: 1, ...(Platform.OS === 'android' && { elevation: 0 }) }}>
+      {listHeaderComponent}
       <TabView
         navigationState={{ index, routes: ROUTES }}
         renderScene={renderScene}

@@ -89,7 +89,7 @@ const getUrgentTimeInfo = (item: PantryItem): { text: string; color: string } | 
 };
 
 // Helper to format storage state for display
-const formatStorageState = (state?: string | null): string => {
+export const formatStorageState = (state?: string | null): string => {
   if (!state) return '';
   const mapping: Record<string, string> = {
     [StorageState.Refrigerated]: 'Fridge',
@@ -454,6 +454,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
               uri={imageUrl}
               style={commonStyles.listItemImage}
               resizeMode="contain"
+              displaySize={60}
             />
           </View>
         ) : undefined,

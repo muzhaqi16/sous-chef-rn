@@ -70,6 +70,47 @@ interface AuthOperationsProps {
   }) => Promise<{ shouldShow: boolean; reason?: string }>;
 }
 
+export interface AuthOperationsReturn {
+  isLoading: boolean;
+  login: (input: LoginInput, showRememberPrompt?: boolean) => Promise<boolean>;
+  register: (input: RegisterInput, shouldRemember?: boolean) => Promise<boolean>;
+  logout: (user: any, clearAllCredentials?: boolean) => Promise<void>;
+  autoLogin: () => Promise<boolean>;
+  handleLogin: (
+    loginResponse: any,
+    shouldRemember?: boolean,
+    loginCredentials?: LoginCredentials,
+  ) => Promise<void>;
+  handleRegistration: (registerResponse: any, shouldRemember?: boolean) => Promise<void>;
+  handleAuthSuccess: (message: string) => void;
+  handleAuthError: (error: any, operation?: string) => void;
+  clearRegistrationPassword: () => void;
+}
+
+/**
+ * Pre-populate Zustand store with bootstrap IDs from the auth response.
+ * Eliminates the GetHomes → GetPantry waterfall by letting
+ * pantry and shopping list queries fire immediately in parallel.
+ */
+const bootstrapUserStore = (user: any): void => {
+  const storeState = useStore.getState();
+  if (user.defaultHomeId) {
+    const pantries = user.defaultHome?.pantriesConnection?.edges;
+    const defaultPantry =
+      pantries?.find((e: any) => e.node.isDefault)?.node ??
+      pantries?.[0]?.node;
+    const pantryId = defaultPantry?.id ?? null;
+
+    storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
+    if (pantryId) {
+      storeState.setIsHomeSelectionReady(true);
+    }
+  }
+  if (user.defaultShoppingListId) {
+    storeState.setSelectedShoppingListId(user.defaultShoppingListId);
+  }
+};
+
 /**
  * Hook for managing authentication operations (login, register, logout).
  * This hook coordinates auth flows by emitting events to other hooks.
@@ -82,7 +123,7 @@ export const useAuthOperations = ({
   navigation,
   authState,
   shouldShowPostLoginBiometricPrompt,
-}: AuthOperationsProps) => {
+}: AuthOperationsProps): AuthOperationsReturn => {
   // Local state for auth operations
   const [isLoading, setIsLoading] = useState(false);
   const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false);
@@ -135,7 +176,7 @@ export const useAuthOperations = ({
       } catch {
         // Fallback error handling - show generic message
         toast({
-          message: 'Login failed. Please check your credentials and try again.',
+          message: 'Something went wrong. Please try again.',
           type: 'error',
         });
 
@@ -167,26 +208,7 @@ export const useAuthOperations = ({
       // This will clear the previous user's queue if it's a different user
       queueManager.onUserChange(user.id, previousUserId);
 
-      // Pre-populate Zustand store with bootstrap IDs from login response.
-      // This eliminates the GetHomes → GetPantry waterfall by letting
-      // pantry and shopping list queries fire immediately in parallel.
-      const storeState = useStore.getState();
-      if (user.defaultHomeId) {
-        // Derive default pantry ID from the defaultHome's pantries
-        const pantries = user.defaultHome?.pantriesConnection?.edges;
-        const defaultPantry =
-          pantries?.find((e: any) => e.node.isDefault)?.node ??
-          pantries?.[0]?.node;
-        const pantryId = defaultPantry?.id ?? null;
-
-        storeState.setHomeAndPantry(user.defaultHomeId, pantryId);
-        if (pantryId) {
-          storeState.setIsHomeSelectionReady(true);
-        }
-      }
-      if (user.defaultShoppingListId) {
-        storeState.setSelectedShoppingListId(user.defaultShoppingListId);
-      }
+      bootstrapUserStore(user);
 
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);
@@ -259,23 +281,7 @@ export const useAuthOperations = ({
       // Set auth state first
       authState.onSetAuth(user, accessToken, refreshToken);
 
-      // Pre-populate bootstrap IDs if available (same as handleLogin)
-      const regStoreState = useStore.getState();
-      if (user.defaultHomeId) {
-        const pantries = user.defaultHome?.pantriesConnection?.edges;
-        const defaultPantry =
-          pantries?.find((e: any) => e.node.isDefault)?.node ??
-          pantries?.[0]?.node;
-        const pantryId = defaultPantry?.id ?? null;
-
-        regStoreState.setHomeAndPantry(user.defaultHomeId, pantryId);
-        if (pantryId) {
-          regStoreState.setIsHomeSelectionReady(true);
-        }
-      }
-      if (user.defaultShoppingListId) {
-        regStoreState.setSelectedShoppingListId(user.defaultShoppingListId);
-      }
+      bootstrapUserStore(user);
 
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);

@@ -7,6 +7,7 @@ import {
   Alert,
 } from 'react-native';
 import { Icon } from '#utils/iconUtils';
+import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -17,7 +18,7 @@ import {
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
 } from '#generated';
-import { errorService } from '#/services/errorService';
+import { errorService, getErrorMessage } from '#/services/errorService';
 
 type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
@@ -75,16 +76,18 @@ export const AcceptInvite: React.FC = () => {
     }
   }, [shoppingListInvite, homeInvite, loading]);
 
-  const handleAccept = async () => {
-    // Token comes from route params (deep link) or we use invite ID
-    // Note: Tokens are no longer exposed in query responses for security reasons
-    let inviteToken: string | undefined;
-
+  const resolveInviteToken = (): string | undefined => {
     if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.id;
-    } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.id;
+      return token || shoppingListInvite.id;
     }
+    if (invitationType === 'home' && homeInvite) {
+      return token || homeInvite.id;
+    }
+    return undefined;
+  };
+
+  const handleAccept = async () => {
+    const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {
       Alert.alert('Error', 'Invalid invitation');
@@ -108,49 +111,14 @@ export const AcceptInvite: React.FC = () => {
       }
     } catch (error: any) {
       errorService.reportError(error, { operation: 'AcceptInvite.acceptInvitation' });
-
-      // PERFORMANCE: Specific error messages based on error type
-      let errorMessage = 'Failed to accept invitation. ';
-
-      if (error.networkError) {
-        errorMessage +=
-          'Network error - check your internet connection and try again.';
-      } else if (error.graphQLErrors?.length) {
-        const graphQLError = error.graphQLErrors[0];
-        if (graphQLError.extensions?.code === 'INVITATION_EXPIRED') {
-          errorMessage +=
-            'This invitation has expired. Please ask for a new one.';
-        } else if (
-          graphQLError.extensions?.code === 'INVITATION_ALREADY_ACCEPTED'
-        ) {
-          errorMessage += 'This invitation has already been accepted.';
-        } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
-          errorMessage += 'Session expired - please log in again.';
-        } else if (graphQLError.extensions?.code === 'NOT_FOUND') {
-          errorMessage += 'Invitation not found - it may have been revoked.';
-        } else {
-          errorMessage += graphQLError.message || 'Please try again.';
-        }
-      } else {
-        errorMessage += 'Please try again.';
-      }
-
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', getErrorMessage(error));
     } finally {
       setProcessing(false);
     }
   };
 
   const handleDecline = async () => {
-    // Token comes from route params (deep link) or we use invite ID
-    // Note: Tokens are no longer exposed in query responses for security reasons
-    let inviteToken: string | undefined;
-
-    if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.id;
-    } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.id;
-    }
+    const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {
       Alert.alert('Error', 'Invalid invitation');
@@ -216,11 +184,7 @@ export const AcceptInvite: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-      </View>
+      <Header onClose={() => navigation.goBack()} />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -319,14 +283,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   content: {
     flex: 1,

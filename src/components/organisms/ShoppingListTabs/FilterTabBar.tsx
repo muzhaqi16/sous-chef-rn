@@ -15,7 +15,7 @@ interface FilterTabBarProps {
   navigationState: NavigationState<FilterTabBarRoute>;
   jumpTo: (key: string) => void;
   counts?: Record<string, number>;
-  actionButton?: FilterTabActionButton;
+  actionButtons?: FilterTabActionButton[];
   testIDPrefix?: string;
 }
 
@@ -23,7 +23,7 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
   navigationState,
   jumpTo,
   counts,
-  actionButton,
+  actionButtons,
   testIDPrefix = 'filter-tab',
 }) => {
   const { theme } = useUnistyles();
@@ -55,28 +55,34 @@ const FilterTabBarComponent: React.FC<FilterTabBarProps> = ({
           />
         ))}
       </ScrollView>
-      {!!actionButton && (
-        <Pressable
-          onPress={actionButton.onPress}
-          testID={actionButton.testID || `${testIDPrefix}-action`}
-          style={[
-            actionButton.label ? styles.actionLabelButton : styles.actionButton,
-            !actionButton.label && styles.actionButtonWithBg,
-          ]}
-        >
-          {actionButton.label ? (
-            <Text style={styles.actionLabel}>
-              {actionButton.label}
-            </Text>
-          ) : actionButton.icon ? (
-            <Icon
-              name={actionButton.icon}
-              size={20}
-              color={theme.colors.primary}
-              library={actionButton.iconLibrary}
-            />
-          ) : null}
-        </Pressable>
+      {!!actionButtons?.length && (
+        <View style={styles.actionsRow}>
+          {actionButtons.map((btn, idx) => (
+            <Pressable
+              key={btn.testID || `${testIDPrefix}-action-${idx}`}
+              onPress={btn.disabled ? undefined : btn.onPress}
+              testID={btn.testID || `${testIDPrefix}-action-${idx}`}
+              style={[
+                btn.label ? styles.actionLabelButton : styles.actionButton,
+                !btn.label && styles.actionButtonWithBg,
+                btn.disabled && styles.actionDisabled,
+              ]}
+            >
+              {btn.label ? (
+                <Text style={styles.actionLabel}>
+                  {btn.label}
+                </Text>
+              ) : btn.icon ? (
+                <Icon
+                  name={btn.icon}
+                  size={20}
+                  color={theme.colors.primary}
+                  library={btn.iconLibrary}
+                />
+              ) : null}
+            </Pressable>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -114,6 +120,14 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  actionDisabled: {
+    opacity: 0.4,
   },
   actionLabel: {
     fontSize: theme.typography.fontSize.sm,

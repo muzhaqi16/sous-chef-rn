@@ -8,6 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { IconButton } from '../atoms/IconButton';
+import { BackButton } from '../atoms/BackButton';
 import { Icon } from '#/utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 
@@ -71,11 +72,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <Animated.View style={[styles.header, headerAnimatedStyle]}>
-      <IconButton
-        name="arrow-back"
+      <BackButton
         onPress={onBack}
         color={theme.colors.textPrimary}
-        accessibilityLabel="Go back"
       />
       <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
         {avatarUrl ? (
@@ -83,6 +82,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <CachedImage
               uri={avatarUrl}
               style={styles.avatarImage}
+              displaySize={80}
               onFailure={() =>
                 console.log('Avatar image failed to load:', avatarUrl)
               }

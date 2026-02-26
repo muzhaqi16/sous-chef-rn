@@ -11,6 +11,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
+import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useResetPasswordMutation } from '#generated';
@@ -141,11 +142,7 @@ export const ResetPasswordScreen: React.FC = () => {
   if (!isTokenValid) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
-            <Icon name="close" size={24} color={theme.colors.textPrimary} />
-          </Pressable>
-        </View>
+        <Header onClose={handleGoBack} />
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -169,11 +166,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
-          <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-      </View>
+      <Header onClose={handleGoBack} />
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -226,14 +219,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   content: {
     flex: 1,

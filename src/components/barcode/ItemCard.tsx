@@ -33,6 +33,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
         <CachedImage
           uri={item.imageUrl}
           style={styles.itemImage}
+          displaySize={200}
         />
       ) : (
         <View style={styles.placeholderImage}>

@@ -25,17 +25,19 @@ export const removeFromShoppingListItemsConnection = createRemoveFromParentConne
 );
 
 /**
- * Clear ALL purchased items from cache in a single atomic operation.
- * Used by "Clear All Purchased" button for instant UI feedback.
+ * Clear ALL items of a given purchase status from cache in a single atomic operation.
+ * Used by "Clear All" buttons for instant UI feedback.
  *
  * @param cache - Apollo cache instance
  * @param listId - Shopping list ID
  * @param itemIds - Array of item IDs being cleared
+ * @param isPurchased - Whether clearing purchased (true) or unpurchased (false) items
  */
-export function clearAllPurchasedItemsFromCache(
+function clearItemsFromCache(
   cache: ApolloCache,
   listId: string,
   itemIds: string[],
+  isPurchased: boolean,
 ): void {
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',
@@ -44,18 +46,26 @@ export function clearAllPurchasedItemsFromCache(
 
   if (!parentCacheId) return;
 
-  // Clear itemsConnection with isPurchased:true filter variant
+  const filterKey = `isPurchased":${isPurchased}`;
+
   cache.modify({
     id: parentCacheId,
     fields: {
       itemsConnection(existing: any, { storeFieldName }: any) {
-        const isPurchasedConnection = storeFieldName.includes('isPurchased":true');
-        if (!isPurchasedConnection || !existing) return existing;
+        if (!storeFieldName.includes(filterKey) || !existing) return existing;
         return {
           ...existing,
           edges: [],
           totalCount: 0,
         };
+      },
+      ...(isPurchased && {
+        completedItems() {
+          return 0;
+        },
+      }),
+      totalItems(existing: number = 0) {
+        return Math.max(0, existing - itemIds.length);
       },
     },
   });
@@ -70,50 +80,22 @@ export function clearAllPurchasedItemsFromCache(
   cache.gc();
 }
 
-/**
- * Clear ALL unpurchased items from cache in a single atomic operation.
- * Used by "Clear All Shopping" button for instant UI feedback.
- *
- * @param cache - Apollo cache instance
- * @param listId - Shopping list ID
- * @param itemIds - Array of item IDs being cleared
- */
+/** Clear ALL purchased items from cache. */
+export function clearAllPurchasedItemsFromCache(
+  cache: ApolloCache,
+  listId: string,
+  itemIds: string[],
+): void {
+  clearItemsFromCache(cache, listId, itemIds, true);
+}
+
+/** Clear ALL unpurchased items from cache. */
 export function clearAllUnpurchasedItemsFromCache(
   cache: ApolloCache,
   listId: string,
   itemIds: string[],
 ): void {
-  const parentCacheId = cache.identify({
-    __typename: 'ShoppingList',
-    id: listId,
-  });
-
-  if (!parentCacheId) return;
-
-  // Clear itemsConnection with isPurchased:false filter variant
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      itemsConnection(existing: any, { storeFieldName }: any) {
-        const isUnpurchasedConnection = storeFieldName.includes('isPurchased":false');
-        if (!isUnpurchasedConnection || !existing) return existing;
-        return {
-          ...existing,
-          edges: [],
-          totalCount: 0,
-        };
-      },
-    },
-  });
-
-  // Evict all deleted items from cache
-  itemIds.forEach(itemId => {
-    cache.evict({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-    });
-  });
-
-  cache.gc();
+  clearItemsFromCache(cache, listId, itemIds, false);
 }
 
 /**
@@ -204,6 +186,11 @@ function updateItemsConnectionForPurchaseStatusChange(
           }
 
           return existing;
+        },
+        completedItems(existing: number = 0) {
+          return movingToPurchased
+            ? existing + 1
+            : Math.max(0, existing - 1);
         },
       },
     });
@@ -296,6 +283,9 @@ export function addNewItemToShoppingListCache(
             ],
             totalCount: (existing.totalCount || 0) + 1,
           };
+        },
+        totalItems(existing: number = 0) {
+          return existing + 1;
         },
       },
     });

@@ -233,7 +233,7 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       [handleOpenSelector, theme.colors.textSecondary],
     );
 
-    // SearchBar rendered inside FlashList for correct RefreshControl position
+    // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
     const searchBarHeader = useMemo(
       () => (
         <View style={styles.searchBarContainer}>
@@ -248,71 +248,68 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
       [searchQuery, setSearchQuery],
     );
 
-    // Memoized customListProps
-    const customListProps = useMemo(
-      () => ({
-        loading: isLoadingInitial,
-        onTogglePurchase: handleTogglePurchase,
-        onMoveToPantry: moveToPantry.openForItem,
-        onQuantityPress: quantityEdit.openForItem,
-        onSortOrderUpdate: handleSortOrderUpdate,
-        onRefresh: handleRefresh,
-        refreshing,
-        disabled: !!searchQuery.trim(),
-        onClearAllPurchased: handleClearAllPurchased,
-        onClearAllShopping: handleClearAllShopping,
-        onSwipeableWillOpen: handleSwipeableWillOpen,
-        onSwipeableClose: handleSwipeableClose,
-        unpurchasedItems,
-        purchasedItems,
-        totalCountUnpurchased,
-        totalCountPurchased,
-        onEndReachedUnpurchased: loadMoreUnpurchased,
-        hasMoreUnpurchased,
-        isLoadingMoreUnpurchased,
-        onEndReachedPurchased: loadMorePurchased,
-        hasMorePurchased,
-        isLoadingMorePurchased,
-        canAddItems: permissions.canAddItems,
-        canRemoveItems: permissions.canRemoveItems,
-        canEditItems: permissions.canEditItems,
-        canMarkPurchased: permissions.canMarkPurchased,
-        canReorderItems: permissions.canEditItems,
-        isTransitioning,
-        onBatchMoveToPantry: batchMoveToPantry,
-        batchMoveToPantryLoading,
-        listHeaderComponent: searchBarHeader,
-      }),
-      [
-        isLoadingInitial,
-        searchQuery,
-        handleTogglePurchase,
-        moveToPantry.openForItem,
-        quantityEdit.openForItem,
-        handleSortOrderUpdate,
-        handleRefresh,
-        refreshing,
-        handleClearAllPurchased,
-        handleClearAllShopping,
-        handleSwipeableWillOpen,
-        handleSwipeableClose,
-        unpurchasedItems,
-        purchasedItems,
-        totalCountUnpurchased,
-        totalCountPurchased,
-        loadMoreUnpurchased,
-        hasMoreUnpurchased,
-        isLoadingMoreUnpurchased,
-        loadMorePurchased,
-        hasMorePurchased,
-        isLoadingMorePurchased,
-        permissions,
-        isTransitioning,
-        batchMoveToPantry,
-        batchMoveToPantryLoading,
-        searchBarHeader,
-      ],
-    );
+    // PERFORMANCE: Split customListProps into stable groups so each group is independently
+    // memoized. When only one group changes (e.g. refreshing), the others retain references.
+    const listActions = useMemo(() => ({
+      onTogglePurchase: handleTogglePurchase,
+      onMoveToPantry: moveToPantry.openForItem,
+      onQuantityPress: quantityEdit.openForItem,
+      onSortOrderUpdate: handleSortOrderUpdate,
+      onRefresh: handleRefresh,
+      onClearAllPurchased: handleClearAllPurchased,
+      onClearAllShopping: handleClearAllShopping,
+      onSwipeableWillOpen: handleSwipeableWillOpen,
+      onSwipeableClose: handleSwipeableClose,
+      onBatchMoveToPantry: batchMoveToPantry,
+    }), [
+      handleTogglePurchase, moveToPantry.openForItem, quantityEdit.openForItem,
+      handleSortOrderUpdate, handleRefresh, handleClearAllPurchased, handleClearAllShopping,
+      handleSwipeableWillOpen, handleSwipeableClose, batchMoveToPantry,
+    ]);
+
+    const listState = useMemo(() => ({
+      loading: isLoadingInitial,
+      refreshing,
+      disabled: !!searchQuery.trim(),
+      isTransitioning,
+      batchMoveToPantryLoading,
+    }), [isLoadingInitial, refreshing, searchQuery, isTransitioning, batchMoveToPantryLoading]);
+
+    const listData = useMemo(() => ({
+      unpurchasedItems,
+      purchasedItems,
+      totalCountUnpurchased,
+      totalCountPurchased,
+    }), [unpurchasedItems, purchasedItems, totalCountUnpurchased, totalCountPurchased]);
+
+    const paginationState = useMemo(() => ({
+      onEndReachedUnpurchased: loadMoreUnpurchased,
+      hasMoreUnpurchased,
+      isLoadingMoreUnpurchased,
+      onEndReachedPurchased: loadMorePurchased,
+      hasMorePurchased,
+      isLoadingMorePurchased,
+    }), [
+      loadMoreUnpurchased, hasMoreUnpurchased, isLoadingMoreUnpurchased,
+      loadMorePurchased, hasMorePurchased, isLoadingMorePurchased,
+    ]);
+
+    const permissionsState = useMemo(() => ({
+      canAddItems: permissions.canAddItems,
+      canRemoveItems: permissions.canRemoveItems,
+      canEditItems: permissions.canEditItems,
+      canMarkPurchased: permissions.canMarkPurchased,
+      canReorderItems: permissions.canEditItems,
+    }), [permissions]);
+
+    const customListProps = useMemo(() => ({
+      ...listActions,
+      ...listState,
+      ...listData,
+      ...paginationState,
+      ...permissionsState,
+      listHeaderComponent: searchBarHeader,
+    }), [listActions, listState, listData, paginationState, permissionsState, searchBarHeader]);
 
     // Track screen view once on mount (avoid re-firing on every item/list change)
     useScreenTelemetry('ShoppingListMain', () => ({

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { Header } from '#components/molecules/Header';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';
@@ -31,118 +32,71 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const [verificationResult, setVerificationResult] = useState<'success' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  useEffect(() => {
-    const performVerification = async () => {
-      if (!token) {
-        setVerificationResult('error');
-        setErrorMessage('Invalid verification token');
-        setIsVerifying(false);
-        return;
-      }
-
-      try {
-        logger.info('Attempting email verification', {
-          tokenPrefix: token.substring(0, 8) + '...',
-          userId: user?.id
-        });
-
-        const result = await verifyEmail({
-          variables: { code: token }
-        });
-
-        if (result.data?.verifyEmail?.success) {
-          logger.info('Email verification successful');
-
-          // Update user state to mark email as verified
-          if (user) {
-            updateUser({ ...user, emailVerified: true });
-          }
-
-          setVerificationResult('success');
-
-          toast({
-            message: 'Email verified successfully!',
-            type: 'success',
-          });
-
-          // Navigation will be handled automatically by the navigation state machine
-          // when user.emailVerified changes to true
-
-        } else {
-          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
-        }
-      } catch (error: any) {
-        logger.error('Email verification failed', { error });
-
-        const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
-        setErrorMessage(errorMsg);
-        setVerificationResult('error');
-
-        toast({
-          message: errorMsg,
-          type: 'error',
-        });
-      } finally {
-        setIsVerifying(false);
-      }
-    };
-
-    performVerification();
-  }, [token, verifyEmail, user, updateUser, toast]);
-
-  const handleGoBack = () => {
-    navigation.goBack();
-  };
-
-  const handleRetry = () => {
-    if (!token) return;
+  const performVerification = useCallback(async () => {
+    if (!token) {
+      setVerificationResult('error');
+      setErrorMessage('Invalid verification token');
+      setIsVerifying(false);
+      return;
+    }
 
     setIsVerifying(true);
     setVerificationResult(null);
     setErrorMessage('');
 
-    // Retry verification
-    const performVerification = async () => {
-      try {
-        const result = await verifyEmail({
-          variables: { code: token }
-        });
+    try {
+      logger.info('Attempting email verification', {
+        tokenPrefix: token.substring(0, 8) + '...',
+        userId: user?.id,
+      });
 
-        if (result.data?.verifyEmail?.success) {
-          if (user) {
-            updateUser({ ...user, emailVerified: true });
-          }
-          setVerificationResult('success');
-          toast({
-            message: 'Email verified successfully!',
-            type: 'success',
-          });
-        } else {
-          throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
+      const result = await verifyEmail({
+        variables: { code: token },
+      });
+
+      if (result.data?.verifyEmail?.success) {
+        logger.info('Email verification successful');
+
+        if (user) {
+          updateUser({ ...user, emailVerified: true });
         }
-      } catch (error: any) {
-        const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
-        setErrorMessage(errorMsg);
-        setVerificationResult('error');
-        toast({
-          message: errorMsg,
-          type: 'error',
-        });
-      } finally {
-        setIsVerifying(false);
-      }
-    };
 
+        setVerificationResult('success');
+
+        toast({
+          message: 'Email verified successfully!',
+          type: 'success',
+        });
+      } else {
+        throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
+      }
+    } catch (error: any) {
+      logger.error('Email verification failed', { error });
+
+      const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
+      setErrorMessage(errorMsg);
+      setVerificationResult('error');
+
+      toast({
+        message: errorMsg,
+        type: 'error',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [token, verifyEmail, user, updateUser, toast]);
+
+  useEffect(() => {
     performVerification();
+  }, [performVerification]);
+
+  const handleGoBack = () => {
+    navigation.goBack();
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable style={({pressed}) => pressed && styles.pressed} onPress={handleGoBack}>
-          <Icon name="close" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-      </View>
+      <Header onClose={handleGoBack} />
 
       <View style={styles.content}>
         {!!isVerifying && <>
@@ -178,7 +132,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
             <View style={styles.actions}>
               <Pressable
                 style={({pressed}) => [styles.button, styles.retryButton, pressed && styles.pressed]}
-                onPress={handleRetry}>
+                onPress={performVerification}>
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </Pressable>
             </View>
@@ -193,14 +147,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   content: {
     flex: 1,

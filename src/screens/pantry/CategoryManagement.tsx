@@ -3,6 +3,7 @@ import {View, Text, Pressable} from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import {Icon} from '#utils/iconUtils';
 import {useNavigation} from '@react-navigation/native';
+import {Header} from '#components/molecules/Header';
 import {usePantryManagement} from '#hooks/home/pantry/usePantryManagement';
 import {useCurrentPantry} from '#hooks/pantry/useCurrentPantry';
 import {commonStyles} from '#/styles/commonStyles';
@@ -58,13 +59,7 @@ export const CategoryManagement: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-        <Text style={[commonStyles.title, styles.headerTitle]}>Categories</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <Header title="Categories" onBack={() => navigation.goBack()} centerTitle />
 
       <FlashList
         style={styles.scrollView}
@@ -78,21 +73,6 @@ export const CategoryManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
-  },
   scrollView: {
     flex: 1,
   },

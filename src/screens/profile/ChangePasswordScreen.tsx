@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PasswordInput } from '#components/atoms/PasswordInput';
-import { IconButton } from '#components/atoms/IconButton';
+import { Header } from '#components/molecules/Header';
 import { useChangePasswordMutation } from '#generated';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -80,17 +80,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          name="arrow-back"
-          onPress={goBack}
-          color={theme.colors.textPrimary}
-          accessibilityLabel="Go back"
-          disabled={isSubmitting}
-        />
-        <Text style={styles.headerTitle}>Change Password</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      <Header title="Change Password" onBack={goBack} centerTitle />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -174,24 +164,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: 0,
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  headerPlaceholder: {
-    width: 40,
   },
   content: {
     flex: 1,

@@ -123,7 +123,7 @@ export const RecipeSearch: React.FC = () => {
       ...item,
       leftElement: item.imageUrl ? (
         <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} />
+          <CachedImage uri={item.imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
         </View>
       ) : undefined,
     }));

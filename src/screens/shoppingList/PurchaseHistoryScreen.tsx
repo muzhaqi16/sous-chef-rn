@@ -1,9 +1,10 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
+import { BackButton } from '#components/atoms/BackButton';
 import { commonStyles } from '#/styles/commonStyles';
 
 type RouteParams = {
@@ -126,9 +127,7 @@ export const PurchaseHistoryScreen: React.FC<{
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
+        <BackButton onPress={goBack} color={theme.colors.textPrimary} style={styles.backButton} />
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Purchase History</Text>
           <Text style={styles.headerSubtitle}>{itemName}</Text>

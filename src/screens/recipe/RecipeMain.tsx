@@ -236,7 +236,7 @@ export const RecipeMain: React.FC = () => {
         badge: showRandomRecipes ? { text: 'Suggested' } : undefined,
         leftElement: imageUrl ? (
           <View style={commonStyles.listItemImageContainerCompact}>
-            <CachedImage uri={imageUrl} style={commonStyles.listItemImageCompact} />
+            <CachedImage uri={imageUrl} style={commonStyles.listItemImageCompact} displaySize={48} />
           </View>
         ) : undefined,
       };

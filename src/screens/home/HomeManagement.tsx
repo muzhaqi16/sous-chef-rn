@@ -5,8 +5,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
+  ScrollView,
 } from 'react-native';
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import Animated, {
   LinearTransition,
   FadeInDown,
@@ -151,13 +151,6 @@ export const HomeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteHome = useCallback(
-    async (homeId: string, name: string) => {
-      await deleteHome(homeId, name);
-    },
-    [deleteHome],
-  );
-
   const handleSetDefault = useCallback(
     async (homeId: string) => {
       // Clear any existing highlight timeout
@@ -176,13 +169,6 @@ export const HomeManagement: React.FC = () => {
       }, 2000);
     },
     [setDefaultHome],
-  );
-
-  const handleInviteMember = useCallback(
-    (homeId: string) => {
-      inviteUserPrompt(homeId);
-    },
-    [inviteUserPrompt],
   );
 
   const handleViewHomeDetail = useCallback(
@@ -212,49 +198,6 @@ export const HomeManagement: React.FC = () => {
       return 0;
     });
   }, [homes, defaultHomeId]);
-
-  // Render individual home item
-  const renderHomeItem: ListRenderItem<(typeof sortedHomes)[0]> = useCallback(
-    ({ item: home, index }) => {
-      const membership = findUserMembership(home.members, user?.id);
-      const userCanInvite = membership
-        ? canInviteToHome(membership.role)
-        : false;
-      const userCanDelete = home.myMembership?.canManageHome ?? false;
-
-      return (
-        <Animated.View
-          entering={FadeInDown.delay(index * 50).springify()}
-          layout={LinearTransition.duration(600)
-            .springify()
-            .damping(30)
-            .stiffness(180)
-            .mass(1.5)}
-        >
-          <HomeCard
-            home={home as PartialHome}
-            isDefault={home.id === defaultHomeId}
-            isHighlighted={home.id === highlightedHomeId}
-            canInvite={userCanInvite}
-            canDelete={userCanDelete}
-            onPress={handleViewHomeDetail}
-            onSetDefault={handleSetDefault}
-            onInvite={handleInviteMember}
-            onDelete={handleDeleteHome}
-          />
-        </Animated.View>
-      );
-    },
-    [
-      defaultHomeId,
-      highlightedHomeId,
-      user,
-      handleViewHomeDetail,
-      handleSetDefault,
-      handleInviteMember,
-      handleDeleteHome,
-    ],
-  );
 
   // Only show loading screen on initial load (no cached data)
   // Once we have data, show it immediately even if refetching
@@ -404,17 +347,15 @@ export const HomeManagement: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Homes List - Virtualized */}
+        {/* Homes List */}
         <Animated.View
           layout={LinearTransition.duration(300)}
           style={[styles.scrollView, { paddingBottom: insets.bottom }]}
         >
-          <FlashList
-            data={sortedHomes}
-            keyExtractor={item => item.id}
-            renderItem={renderHomeItem}
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -423,8 +364,39 @@ export const HomeManagement: React.FC = () => {
                 colors={[theme.colors.primary]}
               />
             }
-            contentContainerStyle={{ flexGrow: 1 }}
-          />
+          >
+            {sortedHomes.map((home, index) => {
+              const membership = findUserMembership(home.members, user?.id);
+              const userCanInvite = membership
+                ? canInviteToHome(membership.role)
+                : false;
+              const userCanDelete = home.myMembership?.canManageHome ?? false;
+
+              return (
+                <Animated.View
+                  key={home.id}
+                  entering={FadeInDown.delay(index * 50).springify()}
+                  layout={LinearTransition.duration(600)
+                    .springify()
+                    .damping(30)
+                    .stiffness(180)
+                    .mass(1.5)}
+                >
+                  <HomeCard
+                    home={home as PartialHome}
+                    isDefault={home.id === defaultHomeId}
+                    isHighlighted={home.id === highlightedHomeId}
+                    canInvite={userCanInvite}
+                    canDelete={userCanDelete}
+                    onPress={handleViewHomeDetail}
+                    onSetDefault={handleSetDefault}
+                    onInvite={inviteUserPrompt}
+                    onDelete={deleteHome}
+                  />
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
         </Animated.View>
       </View>
       {InviteModalComponent}

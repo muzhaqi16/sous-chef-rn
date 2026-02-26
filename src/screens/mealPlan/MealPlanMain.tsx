@@ -530,7 +530,6 @@ export const MealPlanMain: React.FC = () => {
         visible={addMealVisible}
         onClose={() => setAddMealVisible(false)}
         initialMealType={addMealType}
-        selectedDate={calendar.selectedDate}
         onAddRecipe={handleAddRecipe}
         onAddCustomMeal={handleAddCustomMeal}
       />

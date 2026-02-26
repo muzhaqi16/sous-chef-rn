@@ -17,6 +17,7 @@ import Animated, {
 import TurboImage from 'react-native-turbo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { BackButton } from '#components/atoms/BackButton';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
@@ -317,9 +318,7 @@ const RecipeDetailScreen: React.FC = () => {
               style={[styles.recipeImage, imageAnimatedStyle]}
               sharedTransitionTag={externalId ? `recipe-image-${externalId}` : undefined}
             />
-            <Pressable onPress={goBack} style={({pressed}) => [styles.backButton, pressed && styles.pressed]}>
-              <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-            </Pressable>
+            <BackButton onPress={goBack} color={theme.colors.textPrimary} style={styles.backButton} />
             {/* Right side buttons container */}
             <View style={styles.rightButtons}>
               {/* Meal plan button - shown when recipe exists in backend */}

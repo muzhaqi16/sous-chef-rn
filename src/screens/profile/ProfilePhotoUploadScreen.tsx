@@ -6,11 +6,13 @@ import {
   Alert,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, CommonActions } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks/navigation/useSafeNavigation';
 import { Icon } from '#utils/iconUtils';
+import { BackButton } from '#components/atoms/BackButton';
 import {
   launchCamera,
   launchImageLibrary,
@@ -106,7 +108,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleTakePhoto = useCallback(async () => {
     try {
       const result = await request(
-        PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
+        Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA,
       );
       if (result === RESULTS.GRANTED) {
         launchCamera(DEFAULT_OPTIONS, handleImageResponse);
@@ -193,17 +195,12 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Pressable
+          <BackButton
             onPress={goBack}
-            style={({pressed}) => [styles.headerBack, pressed && styles.pressed]}
+            style={styles.headerBack}
+            color={theme.colors.textPrimary}
             disabled={isUploading}
-          >
-            <Icon
-              color={theme.colors.textPrimary}
-              name="chevron-back"
-              size={30}
-            />
-          </Pressable>
+          />
           <Text style={styles.title}>Upload Your Photo</Text>
         </View>
 

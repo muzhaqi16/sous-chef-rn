@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
@@ -122,6 +122,12 @@ export function AddItemSheet({
     [onQuickAddSearchSuggestion, setSearchQuery, resetAutocomplete],
   );
 
+  // Stable theme colors reference for SuggestionListItem (avoids per-item useUnistyles)
+  const themeColors = useMemo(
+    () => ({ primary: theme.colors.primary, textTertiary: theme.colors.textTertiary }),
+    [theme.colors.primary, theme.colors.textTertiary],
+  );
+
   // Render a suggestion item with exit animation support
   const renderSuggestionItem = useCallback(
     (item: BaseSuggestionItem) => {
@@ -139,6 +145,7 @@ export function AddItemSheet({
           quickAddDisabled={isMutating || isExiting}
           isExiting={isExiting}
           onExitComplete={onExitComplete ? () => onExitComplete(itemId) : undefined}
+          themeColors={themeColors}
         />
       );
     },
@@ -148,15 +155,14 @@ export function AddItemSheet({
       isMutating,
       onExitComplete,
       onQuickAddSuggestion,
+      themeColors,
     ],
   );
 
   // Render a section of suggestions
   const renderSuggestionSection = useCallback(
     (groupConfig: SuggestionGroupConfig) => {
-      const items = groupConfig.accessor(
-        suggestions.grouped as Record<string, any[]>,
-      );
+      const items = groupConfig.accessor(suggestions.grouped);
       if (items.length === 0) return null;
 
       return (
@@ -259,8 +265,8 @@ export function AddItemSheet({
               </View>
             )}
 
-            {/* Suggestions Sections - shown when search is empty */}
-            {!!showSuggestions && <>
+            {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
+            {!!showSuggestions && !!state.shouldRenderSuggestions && <>
                 {suggestions.loading && !suggestions.hasSuggestions ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator

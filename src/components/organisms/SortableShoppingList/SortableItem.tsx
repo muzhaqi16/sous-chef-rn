@@ -142,12 +142,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         <View
           style={[
             commonStyles.listItemImageContainerCompact,
-            config.isPurchased && { opacity: 0.5 },
+            config.isPurchased && styles.dimmed,
           ]}
         >
           <CachedImage
             uri={config.url}
             style={commonStyles.listItemImageCompact}
+            displaySize={48}
           />
         </View>
       );
@@ -246,6 +247,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  dimmed: {
+    opacity: 0.5,
   },
   pressed: {
     opacity: theme.opacity.pressed,

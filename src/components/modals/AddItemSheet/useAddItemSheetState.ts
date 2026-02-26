@@ -12,12 +12,16 @@ interface UseAddItemSheetStateOptions {
   deferDelayMs?: number;
 }
 
+/** Delay before rendering suggestions (ms). Gives the sheet animation time to finish. */
+const RENDER_SUGGESTIONS_DELAY_MS = 300;
+
 /**
  * Shared state management hook for AddItemSheet.
  *
  * Manages:
  * - Search query state
  * - Deferred fetch state (for smooth animations)
+ * - Deferred suggestion rendering (avoids jank during sheet open)
  * - Exit animation tracking
  * - Search/suggestion display logic
  */
@@ -36,23 +40,34 @@ export function useAddItemSheetState({
   // Track items currently animating out
   const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
 
+  // Deferred rendering — waits for sheet animation to finish before rendering suggestions
+  const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(false);
+
   // Control deferred fetch based on visibility
   useEffect(() => {
     if (visible && contextId) {
       // Reset state on open
       setSearchQuery('');
       setExitingItems(new Set());
+      setShouldRenderSuggestions(false);
 
       if (deferFetch) {
         // Defer fetch until after sheet animation
-        const timer = setTimeout(() => setShouldFetch(true), deferDelayMs);
-        return () => clearTimeout(timer);
+        const fetchTimer = setTimeout(() => setShouldFetch(true), deferDelayMs);
+        // Defer suggestion rendering until sheet animation settles
+        const renderTimer = setTimeout(() => setShouldRenderSuggestions(true), RENDER_SUGGESTIONS_DELAY_MS);
+        return () => {
+          clearTimeout(fetchTimer);
+          clearTimeout(renderTimer);
+        };
       } else {
         setShouldFetch(true);
+        setShouldRenderSuggestions(true);
       }
     } else {
       // Reset on close
       setShouldFetch(false);
+      setShouldRenderSuggestions(false);
     }
   }, [visible, contextId, deferFetch, deferDelayMs]);
 
@@ -78,6 +93,7 @@ export function useAddItemSheetState({
     searchQuery,
     setSearchQuery,
     shouldFetch,
+    shouldRenderSuggestions,
     exitingItems,
     startExitAnimation,
     completeExitAnimation,

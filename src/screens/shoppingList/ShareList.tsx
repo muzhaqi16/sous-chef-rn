@@ -10,6 +10,8 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation } from '@react-navigation/native';
+import { Header } from '#components/molecules/Header';
+import { LoadingInline } from '#components/base/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -26,19 +28,19 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string, colors: { success: string; warning: string; error: string; textTertiary: string }): string => {
   switch (status?.toUpperCase()) {
     case 'ACCEPTED':
     case 'ACTIVE':
-      return '#4CAF50'; // Green
+      return colors.success;
     case 'PENDING':
-      return '#FFA500'; // Orange
+      return colors.warning;
     case 'DECLINED':
-      return '#F44336'; // Red
+      return colors.error;
     case 'EXPIRED':
-      return '#9E9E9E'; // Gray
+      return colors.textTertiary;
     default:
-      return '#9E9E9E';
+      return colors.textTertiary;
   }
 };
 
@@ -193,7 +195,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   // PERFORMANCE: Memoized renderItem to avoid recreating on every render
   const renderMemberItem = useCallback(
     ({ item: member }: { item: any }) => {
-      const statusColor = getStatusColor(member.status);
+      const statusColor = getStatusColor(member.status, theme.colors);
       const statusText = formatStatus(member.status);
 
       return (
@@ -246,26 +248,16 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
         </Pressable>
       );
     },
-    [handleRemoveMember, theme.colors.error],
+    [handleRemoveMember, theme.colors],
   );
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+    return <LoadingInline />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={({pressed}) => pressed && styles.pressed}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.title}>Share List</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <Header title="Share List" onBack={() => navigation.goBack()} centerTitle />
 
       <OfflineGate
         message="Sharing not available offline"
@@ -339,30 +331,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
   },
   inviteSection: {
     padding: theme.spacing.md,

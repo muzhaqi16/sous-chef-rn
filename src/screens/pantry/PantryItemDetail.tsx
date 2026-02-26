@@ -13,7 +13,6 @@ import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  StorageState,
   UsagePurpose,
 } from '#generated';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
@@ -22,7 +21,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
-import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown } from '#hooks/pantry/usePantryItemTransformation';
+import { formatPackageBreakdownFull, formatNetWeightDisplay, formatQuantityBreakdown, formatStorageState } from '#hooks/pantry/usePantryItemTransformation';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { ImageGalleryTabs } from '#components/molecules/ImageGalleryTabs';
@@ -82,15 +81,12 @@ const getDaysInPantry = (createdAt: string | null | undefined) => {
   );
 };
 
-// Format storage state for display
-const formatStorageState = (state?: string | null): string => {
-  if (!state) return '';
-  const mapping: Record<string, string> = {
-    [StorageState.Refrigerated]: 'Fridge',
-    [StorageState.Frozen]: 'Freezer',
-    [StorageState.Ambient]: 'Dry Pantry',
-  };
-  return mapping[state] || state;
+// Format days in pantry for display
+const formatDaysInPantry = (days: number | null): string => {
+  if (days === null) return '-';
+  if (days === 0) return 'Today';
+  if (days === 1) return '1 day';
+  return `${days} days`;
 };
 
 // Format condition enum for display
@@ -113,6 +109,26 @@ const formatCurrency = (amount?: number | null): string | null => {
   if (amount == null || amount <= 0) return null;
   return `$${amount.toFixed(2)}`;
 };
+
+// Reusable info row component for icon + label + value pattern
+const PantryInfoRow: React.FC<{
+  label: string;
+  value: string | null | undefined;
+  icon: string;
+  iconColor?: string;
+  valueStyle?: any;
+  children?: React.ReactNode;
+}> = ({ label, value, icon, iconColor, valueStyle, children }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <View style={styles.infoValueContainer}>
+      <View style={styles.infoIcon}>
+        <Icon name={icon} size={16} color={iconColor ?? styles.infoIconColor.color} />
+      </View>
+      {children ?? <Text style={[styles.infoValue, valueStyle]}>{value}</Text>}
+    </View>
+  </View>
+);
 
 export const PantryItemDetail: React.FC<StaticScreenProps<{
   itemId: string;
@@ -241,7 +257,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               variables: { id: itemId },
             });
             goBack();
-          } catch {
+          } catch (error) {
+            errorService.reportError(error, { operation: 'PantryItemDetail.deleteItem' });
             Alert.alert('Error', 'Failed to delete item');
           }
         },
@@ -345,7 +362,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   );
 
   // Computed values
-  const imageUrl = resolveImageUrl(item);
+  const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState);
@@ -480,13 +497,7 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           <View style={styles.infoColumn}>
             <Text style={styles.infoColumnLabel}>In the pantry</Text>
             <Text style={styles.infoColumnValue}>
-              {daysInPantry !== null
-                ? daysInPantry === 0
-                  ? 'Today'
-                  : daysInPantry === 1
-                  ? '1 day'
-                  : `${daysInPantry} days`
-                : '-'}
+              {formatDaysInPantry(daysInPantry)}
             </Text>
           </View>
           <View style={styles.infoColumn}>
@@ -528,338 +539,121 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
         )}
 
         {/* Quantity Row */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Quantity</Text>
-          <View style={styles.infoValueContainer}>
-            <View style={styles.infoIcon}>
-              <Icon
-                name="apps-outline"
-                size={16}
-                color={theme.colors.textSecondary}
-  
-              />
-            </View>
-            <Text style={styles.infoValue}>
-              {item.quantity} {item.unit?.name}
-            </Text>
-          </View>
-        </View>
+        <PantryInfoRow
+          label="Quantity"
+          value={`${item.quantity} ${item.unit?.name ?? ''}`}
+          icon="apps-outline"
+        />
 
         {/* Net Weight Row */}
         {!!netWeightText && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Net Weight</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="scale-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{netWeightText}</Text>
-              {!!item.lastUsedAt && (
-                <Pressable
-                  onPress={() => setCorrectWeightVisible(true)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={({pressed}) => [styles.correctWeightButton, pressed && styles.pressed]}
-                >
-                  <Icon
-                    name="create-outline"
-                    size={16}
-                    color={theme.colors.primary}
-      
-                  />
-                </Pressable>
-              )}
-            </View>
-          </View>
+          <PantryInfoRow label="Net Weight" value={netWeightText} icon="scale-outline">
+            <Text style={styles.infoValue}>{netWeightText}</Text>
+            {!!item.lastUsedAt && (
+              <Pressable
+                onPress={() => setCorrectWeightVisible(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={({pressed}) => [styles.correctWeightButton, pressed && styles.pressed]}
+              >
+                <Icon name="create-outline" size={16} color={theme.colors.primary} />
+              </Pressable>
+            )}
+          </PantryInfoRow>
         )}
 
         {/* Remaining Weight Row - only show for dual-tracked items */}
         {!!remainingNetWeightText && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Remaining Weight</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="scale-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{remainingNetWeightText}</Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Remaining Weight" value={remainingNetWeightText} icon="scale-outline" />
         )}
 
-        {/* Inventory Breakdown Row - live remaining decomposition */}
+        {/* Inventory Breakdown Row */}
         {!!quantityBreakdownText && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Inventory</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="layers-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{quantityBreakdownText}</Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Inventory" value={quantityBreakdownText} icon="layers-outline" />
         )}
 
-        {/* Package Details Row - only show if breakdown is available */}
+        {/* Package Details Row */}
         {!!packageBreakdownText && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Package</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="layers-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{packageBreakdownText}</Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Package" value={packageBreakdownText} icon="layers-outline" />
         )}
 
-        {/* Brand Row - only show if brand is set */}
+        {/* Brand Row */}
         {!!brandName && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Brand</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="pricetag-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{brandName}</Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Brand" value={brandName} icon="pricetag-outline" />
         )}
 
         {/* Storage Location */}
         {!!item.storageLocation && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Storage</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="cube-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {typeof item.storageLocation === 'string'
-                  ? item.storageLocation
-                  : item.storageLocation.name}
-              </Text>
-            </View>
-          </View>
+          <PantryInfoRow
+            label="Storage"
+            value={typeof item.storageLocation === 'string' ? item.storageLocation : item.storageLocation.name}
+            icon="cube-outline"
+          />
         )}
 
         {/* Store Row */}
         {!!item.store?.name && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Store</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="storefront-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>{item.store.name}</Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Store" value={item.store.name} icon="storefront-outline" />
         )}
 
         {/* Condition Row - only show if not GOOD */}
-        {formatCondition(item.condition) && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Condition</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="fitness-outline"
-                  size={16}
-                  color={
-                    item.condition === 'SPOILED' || item.condition === 'EXPIRED'
-                      ? theme.colors.error
-                      : theme.colors.warning
-                  }
-    
-                />
-              </View>
-              <Text
-                style={[
-                  styles.infoValue,
-                  (item.condition === 'SPOILED' || item.condition === 'EXPIRED') && styles.infoValueError,
-                  item.condition === 'FAIR' && styles.infoValueWarning,
-                ]}
-              >
-                {formatCondition(item.condition)}
-              </Text>
-            </View>
-          </View>
+        {!!formatCondition(item.condition) && (
+          <PantryInfoRow
+            label="Condition"
+            value={formatCondition(item.condition)}
+            icon="fitness-outline"
+            iconColor={
+              item.condition === 'SPOILED' || item.condition === 'EXPIRED'
+                ? theme.colors.error
+                : theme.colors.warning
+            }
+            valueStyle={[
+              (item.condition === 'SPOILED' || item.condition === 'EXPIRED') && styles.infoValueError,
+              item.condition === 'FAIR' && styles.infoValueWarning,
+            ]}
+          />
         )}
 
         {/* Acquired Via Row */}
-        {formatAcquisitionMethod(item.acquisitionMethod) && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Acquired</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="bag-handle-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {formatAcquisitionMethod(item.acquisitionMethod)}
-              </Text>
-            </View>
-          </View>
+        {!!formatAcquisitionMethod(item.acquisitionMethod) && (
+          <PantryInfoRow label="Acquired" value={formatAcquisitionMethod(item.acquisitionMethod)} icon="bag-handle-outline" />
         )}
 
         {/* Cost Per Unit Row */}
-        {formatCurrency(item.costPerUnit) && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Cost/Unit</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="cash-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {formatCurrency(item.costPerUnit)}
-              </Text>
-            </View>
-          </View>
+        {!!formatCurrency(item.costPerUnit) && (
+          <PantryInfoRow label="Cost/Unit" value={formatCurrency(item.costPerUnit)} icon="cash-outline" />
         )}
 
         {/* Total Cost Row */}
-        {formatCurrency(item.totalCost) && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Total Cost</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="wallet-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {formatCurrency(item.totalCost)}
-              </Text>
-            </View>
-          </View>
+        {!!formatCurrency(item.totalCost) && (
+          <PantryInfoRow label="Total Cost" value={formatCurrency(item.totalCost)} icon="wallet-outline" />
         )}
 
         {/* Min Stock Row */}
         {item.minQuantity != null && item.minQuantity > 0 && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Min Stock</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="alert-circle-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {item.minQuantity} {item.unit?.name}
-              </Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Min Stock" value={`${item.minQuantity} ${item.unit?.name ?? ''}`} icon="alert-circle-outline" />
         )}
 
         {/* Restock At Row */}
         {item.restockQuantity != null && item.restockQuantity > 0 && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Restock At</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="refresh-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {item.restockQuantity} {item.unit?.name}
-              </Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Restock At" value={`${item.restockQuantity} ${item.unit?.name ?? ''}`} icon="refresh-outline" />
         )}
 
         {/* Purchase Date Row */}
         {!!item.purchase?.purchaseDate && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Purchased</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="receipt-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {formatDate(item.purchase.purchaseDate)}
-                {item.purchase.unitPrice != null &&
-                  item.purchase.unitPrice > 0 &&
-                  ` @ ${formatCurrency(item.purchase.unitPrice)}`}
-              </Text>
-            </View>
-          </View>
+          <PantryInfoRow
+            label="Purchased"
+            value={`${formatDate(item.purchase.purchaseDate)}${
+              item.purchase.unitPrice != null && item.purchase.unitPrice > 0
+                ? ` @ ${formatCurrency(item.purchase.unitPrice)}`
+                : ''
+            }`}
+            icon="receipt-outline"
+          />
         )}
 
-        {/* Usage Info Row - show last used date if available */}
+        {/* Usage Info Row */}
         {!!item.lastUsedAt && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Last Used</Text>
-            <View style={styles.infoValueContainer}>
-              <View style={styles.infoIcon}>
-                <Icon
-                  name="time-outline"
-                  size={16}
-                  color={theme.colors.textSecondary}
-    
-                />
-              </View>
-              <Text style={styles.infoValue}>
-                {formatDate(item.lastUsedAt)}
-              </Text>
-            </View>
-          </View>
+          <PantryInfoRow label="Last Used" value={formatDate(item.lastUsedAt)} icon="time-outline" />
         )}
 
         {/* Notes Section */}
@@ -892,21 +686,8 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
           </View>
         )}
 
-        {/* Added Info - simplified purchase history */}
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Added</Text>
-          <View style={styles.infoValueContainer}>
-            <View style={styles.infoIcon}>
-              <Icon
-                name="calendar-outline"
-                size={16}
-                color={theme.colors.textSecondary}
-  
-              />
-            </View>
-            <Text style={styles.infoValue}>{formatDate(item.createdAt)}</Text>
-          </View>
-        </View>
+        {/* Added Info */}
+        <PantryInfoRow label="Added" value={formatDate(item.createdAt)} icon="calendar-outline" />
 
         {/* Usage Records Section - only show if there are usage records */}
         {!!item.usageRecords && item.usageRecords.edges.length > 0 && <>
@@ -1044,10 +825,6 @@ const styles = StyleSheet.create(theme => ({
   imageSection: {
     marginBottom: theme.spacing.md,
   },
-  heroImage: {
-    width: 200,
-    height: 200,
-  },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1066,19 +843,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
-  },
-  expiryText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-  },
-  expiryUrgent: {
-    color: theme.colors.warning,
-  },
-  expiryExpired: {
-    color: theme.colors.error,
   },
   categoryBadge: {
     flexDirection: 'row',
@@ -1154,14 +918,13 @@ const styles = StyleSheet.create(theme => ({
   infoIcon: {
     marginRight: theme.spacing.xs,
   },
+  infoIconColor: {
+    color: theme.colors.textSecondary,
+  },
   infoValue: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-  },
-  infoValueMuted: {
-    color: theme.colors.textTertiary,
-    fontStyle: 'italic',
   },
   correctWeightButton: {
     marginLeft: theme.spacing.sm,

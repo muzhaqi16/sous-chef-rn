@@ -56,6 +56,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
         <CachedImage
           uri={imageUrl}
           style={commonStyles.listItemImageCompact}
+          displaySize={48}
         />
       </View>
     );
@@ -65,7 +66,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
     return (
       <View
         style={[
-          styles.iconContainer,
+          styles.slotContainer,
           { backgroundColor: getBackgroundColor() },
           dimmed && styles.dimmed,
         ]}
@@ -84,7 +85,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
   return (
     <View
       style={[
-        styles.emojiContainer,
+        styles.slotContainer,
         { backgroundColor: getBackgroundColor() },
         dimmed && styles.dimmed,
       ]}
@@ -99,15 +100,7 @@ const styles = StyleSheet.create(theme => ({
   imageContainer: {
     overflow: 'hidden',
   },
-  iconContainer: {
-    width: theme.sizes.avatar.md,
-    height: theme.sizes.avatar.md,
-    borderRadius: theme.radii.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing['3'],
-  },
-  emojiContainer: {
+  slotContainer: {
     width: theme.sizes.avatar.md,
     height: theme.sizes.avatar.md,
     borderRadius: theme.radii.md,
