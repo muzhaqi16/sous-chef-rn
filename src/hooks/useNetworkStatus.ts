@@ -36,7 +36,7 @@ export function useNetworkStatus() {
         unsubscribe();
       };
     },
-    [],
+    [setNetworkStatus],
   );
 }
 

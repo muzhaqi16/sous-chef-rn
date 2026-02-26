@@ -8,11 +8,6 @@ import {
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');
 
-  const checkPermission = async () => {
-    const result = await PermissionService.check(permission);
-    setStatus(result);
-  };
-
   const requestPermission = async () => {
     const result = await PermissionService.request(permission);
     setStatus(result);
@@ -25,18 +20,26 @@ export function usePermission(permission: AppPermission) {
 
   // Check on mount
   useEffect(() => {
-    checkPermission();
-  }, [checkPermission]);
+    const check = async () => {
+      const result = await PermissionService.check(permission);
+      setStatus(result);
+    };
+    check();
+  }, [permission]);
 
   // Re-check when returning from settings
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') {
-        checkPermission();
+        const check = async () => {
+          const result = await PermissionService.check(permission);
+          setStatus(result);
+        };
+        check();
       }
     });
     return () => subscription.remove();
-  }, [checkPermission]);
+  }, [permission]);
 
   return {
     status,

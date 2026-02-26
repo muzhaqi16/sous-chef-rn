@@ -14,16 +14,16 @@ export function useBottomSheetBackHandler(
   ref: React.RefObject<BottomSheetModal | null>,
   enabled: boolean = true,
 ) {
-  const handleBackPress = () => {
-    if (enabled && ref.current) {
-      ref.current.dismiss();
-      return true; // Prevent default (exit app)
-    }
-    return false; // Allow default behavior
-  };
-
   useEffect(() => {
     if (!enabled) return;
+
+    const handleBackPress = () => {
+      if (enabled && ref.current) {
+        ref.current.dismiss();
+        return true; // Prevent default (exit app)
+      }
+      return false; // Allow default behavior
+    };
 
     const subscription = BackHandler.addEventListener(
       'hardwareBackPress',
@@ -31,5 +31,5 @@ export function useBottomSheetBackHandler(
     );
 
     return () => subscription.remove();
-  }, [enabled, handleBackPress]);
+  }, [enabled, ref]);
 }

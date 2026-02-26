@@ -46,19 +46,28 @@ export const CookingPreferencesSheet: React.FC<CookingPreferencesSheetProps> = (
   const [budget, setBudget] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
+  // Reset form when modal opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
+  if (visible !== prevVisible || initialValues !== prevInitialValues) {
+    setPrevVisible(visible);
+    setPrevInitialValues(initialValues);
     if (visible) {
-      bottomSheetRef.current?.present();
-      // Reset form when modal opens
       setSkillLevel(initialValues?.cookingSkillLevel || '');
       setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() || '');
       setCookTime(initialValues?.maxCookTimeMinutes?.toString() || '');
       setBudget(initialValues?.budgetPerMeal?.toString() || '');
+    }
+  }
+
+  // Control bottom sheet visibility based on visible prop
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, initialValues]);
+  }, [visible]);
 
   const handleSave = async () => {
     const updates: {

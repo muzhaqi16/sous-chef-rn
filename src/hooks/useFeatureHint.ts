@@ -84,19 +84,18 @@ export const useFeatureHint = ({
     () => storage.getBoolean(storageKey) ?? false,
   );
 
-  const [isVisible, setIsVisible] = useState(false);
+  // Initialize visibility: show immediately if showOnMount with no delay
+  const [isVisible, setIsVisible] = useState(
+    () => showOnMount && !hasBeenShown && tutorialsEnabled && delay === 0,
+  );
 
-  // Show hint on mount if configured, not shown before, and tutorials are enabled globally
+  // Show hint with delay if configured, not shown before, and tutorials are enabled globally
   useEffect(() => {
-    if (showOnMount && !hasBeenShown && tutorialsEnabled) {
-      if (delay > 0) {
-        const timer = setTimeout(() => {
-          setIsVisible(true);
-        }, delay);
-        return () => clearTimeout(timer);
-      } else {
+    if (showOnMount && !hasBeenShown && tutorialsEnabled && delay > 0) {
+      const timer = setTimeout(() => {
         setIsVisible(true);
-      }
+      }, delay);
+      return () => clearTimeout(timer);
     }
   }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 

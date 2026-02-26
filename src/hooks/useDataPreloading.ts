@@ -57,6 +57,7 @@ export function useDataPreloading() {
       console.log('📦 [useDataPreloading] GetPantry settled — fetching GetCommonUnits');
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag before async fetch is intentional
     setUnitsLoading(true);
     fetchCommonUnits()
       .catch(err => {

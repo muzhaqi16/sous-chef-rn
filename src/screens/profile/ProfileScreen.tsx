@@ -27,7 +27,7 @@ export const ProfileScreen = () => {
   const isAdminUser = useAppStore(selectIsAdminUser);
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal, biometricLoading } =
+  const { sections, BiometricModal } =
     useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { theme } = useUnistyles();
@@ -84,8 +84,9 @@ export const ProfileScreen = () => {
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
-  // Only show loading state if we have NO data at all OR biometric data is still loading
-  if ((loading && !profile) || biometricLoading) {
+  // Only show loading state if we have NO data at all
+  // Biometric loading is handled inline (toggle disabled while loading)
+  if (loading && !profile) {
     return <ProfileSkeleton />;
   }
   return (

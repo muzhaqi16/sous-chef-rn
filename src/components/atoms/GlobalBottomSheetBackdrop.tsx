@@ -30,7 +30,9 @@ export const GlobalBottomSheetBackdrop: React.FC<GlobalBottomSheetBackdropProps>
 
   // Store onClose in a ref to avoid stale closures in worklet callbacks
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Track whether this instance has an active backdrop request to prevent double show/hide
   const isActiveRef = useRef(false);

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Text, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -67,7 +67,6 @@ const SlideAnimatedWrapper: React.FC<{
   children: (handleDelete: () => void) => React.ReactNode;
 }> = ({ itemId, children }) => {
   const { actions } = usePantryActions();
-  const prevItemIdRef = useRef(itemId);
 
   const translateX = useSharedValue(0);
   const slideOpacity = useSharedValue(1);
@@ -77,15 +76,16 @@ const SlideAnimatedWrapper: React.FC<{
     transform: [{ translateX: translateX.value }],
     opacity: slideOpacity.value }));
 
-  // Reset on FlashList cell recycling (synchronous — no useEffect needed)
-  if (prevItemIdRef.current !== itemId) {
+  // Reset on FlashList cell recycling — runs synchronously on layout commit.
+  // Shared values are stable refs and omitted from deps intentionally.
+  useEffect(() => {
     cancelAnimation(translateX);
     cancelAnimation(slideOpacity);
-    translateX.value = 0;
-    slideOpacity.value = 1;
-    isAnimating.value = false;
-    prevItemIdRef.current = itemId;
-  }
+    translateX.set(0);
+    slideOpacity.set(1);
+    isAnimating.set(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemId]);
 
   // Stable callback for scheduleOnRN — captures actions/itemId via closure
   const doDelete = () => {
@@ -100,17 +100,17 @@ const SlideAnimatedWrapper: React.FC<{
       duration: SLIDE_PRESETS.exitWithFade.duration,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1) };
 
-    slideOpacity.value = withTiming(
+    slideOpacity.set(withTiming(
       SLIDE_PRESETS.exitWithFade.opacityTarget,
       config,
-    );
-    translateX.value = withTiming(SCREEN_WIDTH, config, finished => {
+    ));
+    translateX.set(withTiming(SCREEN_WIDTH, config, finished => {
       'worklet';
       isAnimating.value = false;
       if (finished) {
         scheduleOnRN(doDelete);
       }
-    });
+    }));
   };
 
   return (

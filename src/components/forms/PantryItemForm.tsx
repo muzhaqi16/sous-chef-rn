@@ -243,7 +243,29 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // Reset form when switching modes or loading existing data
   useEffect(() => {
     if (mode === 'edit' && existingItemData?.pantryItem) {
-      reset(getInitialValues());
+      const getValues = (): PantryItemFormData => {
+        const item = existingItemData.pantryItem!;
+        const trackingUnitSymbol = item.unit?.symbol || '';
+        return {
+          itemName: item.itemName || '',
+          quantityInput: item.quantity?.toString() || '1',
+          unit: trackingUnitSymbol,
+          minQuantity: item.minQuantity?.toString() || '',
+          restockQuantity: item.restockQuantity?.toString() || '',
+          brand: item.brand?.name || '',
+          netWeight: item.netWeight?.toString() || '',
+          netWeightUnitId: item.netWeightUnit?.id || '',
+          storageState: item.storageState || StorageState.Ambient,
+          location:
+            typeof item.storageLocation === 'string'
+              ? item.storageLocation
+              : item.storageLocation?.name || '',
+          expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
+          notes: item.storageNotes || '',
+          category: item.item?.categories?.[0]?.category?.name || '',
+          tags: item.tags || [] };
+      };
+      reset(getValues());
       // Initialize unit state from existing item
       const item = existingItemData.pantryItem;
       // Tracking unit state
@@ -262,7 +284,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         );
       }
     }
-  }, [mode, existingItemData, reset, getInitialValues]);
+  }, [mode, existingItemData, reset]);
 
   // Handlers for item selection (add mode only)
   const handleItemSelect = (item: ItemSuggestion) => {

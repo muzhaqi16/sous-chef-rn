@@ -116,7 +116,9 @@ const ExitAnimationWrapper: React.FC<{
   const opacity = useSharedValue(1);
 
   const onExitCompleteRef = useRef(onExitComplete);
-  onExitCompleteRef.current = onExitComplete;
+  useEffect(() => {
+    onExitCompleteRef.current = onExitComplete;
+  }, [onExitComplete]);
 
   useEffect(() => {
     translateX.set(withTiming(100, { duration: EXIT_ANIMATION_DURATION }));

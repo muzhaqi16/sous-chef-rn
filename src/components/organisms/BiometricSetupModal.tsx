@@ -45,32 +45,31 @@ export const BiometricSetupModal = ({
     (mode === 'onboarding' && !userPassword) ||
     (mode === 'settings' && !hasExistingCredentials);
 
-  const loadBiometricInfo = async () => {
-    try {
-      const [info, credentialsExist] = await Promise.all([
-        getBiometricInfo(),
-        mode === 'settings'
-          ? checkStoredCredentials(userEmail)
-          : Promise.resolve(false),
-      ]);
-
-      setBiometricInfo(info);
-      setHasExistingCredentials(credentialsExist);
-      setHasCheckedBiometric(true);
-
-      // No additional setup needed since we removed authentication steps
-    } catch (error) {
-      console.error('Error loading biometric info:', error);
-      setHasCheckedBiometric(true); // Set to true even on error
-    }
-  };
-
   useEffect(() => {
     if (visible) {
       setHasCheckedBiometric(false); // Reset check state
+      const loadBiometricInfo = async () => {
+        try {
+          const [info, credentialsExist] = await Promise.all([
+            getBiometricInfo(),
+            mode === 'settings'
+              ? checkStoredCredentials(userEmail)
+              : Promise.resolve(false),
+          ]);
+
+          setBiometricInfo(info);
+          setHasExistingCredentials(credentialsExist);
+          setHasCheckedBiometric(true);
+
+          // No additional setup needed since we removed authentication steps
+        } catch (error) {
+          console.error('Error loading biometric info:', error);
+          setHasCheckedBiometric(true); // Set to true even on error
+        }
+      };
       loadBiometricInfo();
     }
-  }, [visible, loadBiometricInfo]);
+  }, [visible, getBiometricInfo, checkStoredCredentials, mode, userEmail]);
 
   // Handle biometric unavailable case after checking
   useEffect(() => {

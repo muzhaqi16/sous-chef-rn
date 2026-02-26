@@ -63,11 +63,15 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const [actualPriceInput, setActualPriceInput] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
+  // Reset form when modal opens with new item (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevShoppingListItem, setPrevShoppingListItem] = useState(shoppingListItem);
+  const [prevSelectedPantryId, setPrevSelectedPantryId] = useState(selectedPantryId);
+  if (visible !== prevVisible || shoppingListItem !== prevShoppingListItem || selectedPantryId !== prevSelectedPantryId) {
+    setPrevVisible(visible);
+    setPrevShoppingListItem(shoppingListItem);
+    setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      ref.current?.present();
-      // Reset form when modal opens with new item
       setQuantityInput(shoppingListItem.quantity?.toString() || '1');
       setUnitValue(
         shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
@@ -80,10 +84,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setRemoveFromList(true);
       setActualPriceInput('');
       setNotes('');
+    }
+  }
+
+  // Control bottom sheet visibility
+  useEffect(() => {
+    if (visible && shoppingListItem) {
+      ref.current?.present();
     } else {
       ref.current?.dismiss();
     }
-  }, [visible, shoppingListItem, selectedPantryId, ref]);
+  }, [visible, shoppingListItem, ref]);
 
   const handleConfirm = () => {
     if (!shoppingListItem) return;

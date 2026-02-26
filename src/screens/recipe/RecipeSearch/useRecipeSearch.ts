@@ -162,33 +162,6 @@ export function useRecipeSearch() {
     }
   };
 
-  // Pantry-based search (auto-search on mount)
-  const handlePantrySearch = async (ingredients: string) => {
-    setLoading(true);
-    setSearchPerformed(true);
-
-    try {
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients,
-        number: 10,
-        ranking: 1, // Maximize used ingredients
-        ignorePantry: true });
-
-      setSearchResults(results);
-    } catch (error: any) {
-      console.error('Pantry search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Auto-trigger search on mount
   useEffect(() => {
     if (hasAutoSearchedRef.current) return;
@@ -207,10 +180,32 @@ export function useRecipeSearch() {
 
       if (ingredientNames) {
         hasAutoSearchedRef.current = true;
-        handlePantrySearch(ingredientNames);
+        // Inline pantry search to avoid dependency on handlePantrySearch
+        setLoading(true);
+        setSearchPerformed(true);
+
+        spoonacularService.searchRecipesByIngredients({
+          ingredients: ingredientNames,
+          number: 10,
+          ranking: 1,
+          ignorePantry: true }).then(results => {
+          setSearchResults(results);
+        }).catch((error: any) => {
+          console.error('Pantry search error:', error);
+          if (error.isQuotaExceeded) {
+            Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+          } else if (error.isRateLimitError) {
+            Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+          } else {
+            Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+          }
+        }).finally(() => {
+          setLoading(false);
+        });
       }
     }
-  }, [initialQuery, pantryItems, handleTextSearch, handlePantrySearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery, pantryItems]);
 
   // Ingredient-based search
   const handleIngredientSearch = async () => {

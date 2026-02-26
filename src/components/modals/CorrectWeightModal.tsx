@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -32,7 +32,12 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
+  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+    setPrevVisible(visible);
+    setPrevPantryItem(pantryItem);
     if (visible && pantryItem) {
       setWeightInput(pantryItem.netWeight?.toString() || '');
       setUnitDisplay(
@@ -41,7 +46,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
       setSelectedUnitId(pantryItem.netWeightUnit?.id || null);
       setReason('');
     }
-  }, [visible, pantryItem]);
+  }
 
   const handleUnitSelected = (unitId: string | null, unitName: string | null) => {
       setSelectedUnitId(unitId);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, type ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useEffect, type ReactNode } from 'react';
 
 /**
  * Actions available for list items.
@@ -75,13 +75,17 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
   permissions,
   children,
 }) => {
-  // Store latest actions in ref - updated on every render but doesn't trigger re-renders
+  // Store latest actions in ref - updated via effect but doesn't trigger re-renders
   const actionsRef = useRef(actions);
-  actionsRef.current = actions;
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
 
   // Store latest permissions in ref - consumers can read current values via ref
   const permissionsRef = useRef(permissions);
-  permissionsRef.current = permissions;
+  useEffect(() => {
+    permissionsRef.current = permissions;
+  });
 
   // Create stable callbacks that delegate to ref
   // Empty dependency array = these never change = no consumer re-renders
@@ -101,7 +105,7 @@ export const SortableListActionsProvider: React.FC<SortableListActionsProviderPr
   // Context value - permissionsRef allows consumers to read latest permissions without context changes
   const contextValue: SortableListActionsContextValue = {
     actions: stableActions,
-    permissions: permissionsRef.current, // Snapshot for initial render
+    permissions, // Snapshot for current render
     permissionsRef, // Ref for latest values - always current
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Switch } from 'react-native';
 import {
   BottomSheetModal,
@@ -43,15 +43,19 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   const [useGranularDeduction, setUseGranularDeduction] = useState(true);
   const [notes, setNotes] = useState('');
 
-  // Reset form when modal opens
-  useEffect(() => {
+  // Reset form when modal opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevDefaultServings, setPrevDefaultServings] = useState(defaultServings);
+  if (visible !== prevVisible || defaultServings !== prevDefaultServings) {
+    setPrevVisible(visible);
+    setPrevDefaultServings(defaultServings);
     if (visible) {
       setServingsInput(defaultServings?.toString() || '1');
       setDeductFromPantry(true);
       setUseGranularDeduction(true);
       setNotes('');
     }
-  }, [visible, defaultServings]);
+  }
 
   const handleConfirm = () => {
     const servingsValue = parseFractionalInput(servingsInput);

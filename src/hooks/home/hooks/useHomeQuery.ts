@@ -7,7 +7,7 @@
  * - Compute statistics
  */
 
-import { useRef } from 'react';
+import { useState } from 'react';
 import { useGetHomesQuery } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo/usePreservedQueryData';
 import { normalizeHomes, extractNodes } from '#/utils/connectionUtils';
@@ -41,7 +41,7 @@ export function useHomeQuery() {
   const remoteDefaultHomeId = preservedHomes?.find((h: any) => h.isDefault)?.id ?? null;
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
-  const lastKnownPantriesCount = useRef<number>(0);
+  const [lastKnownPantriesCount, setLastKnownPantriesCount] = useState<number>(0);
 
   // Statistics and computed values
   const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
@@ -59,11 +59,13 @@ export function useHomeQuery() {
       const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
       return acc + count;
     }, 0);
-    // Update our last known count
-    lastKnownPantriesCount.current = totalPantries;
+    // Update our last known count (only if changed to avoid extra re-renders)
+    if (totalPantries !== lastKnownPantriesCount) {
+      setLastKnownPantriesCount(totalPantries);
+    }
   } else {
     // Some data is still loading, use the last known count to prevent flickering
-    totalPantries = lastKnownPantriesCount.current;
+    totalPantries = lastKnownPantriesCount;
   }
 
   const stats = {

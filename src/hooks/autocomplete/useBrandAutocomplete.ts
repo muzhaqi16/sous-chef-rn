@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { useAutocompleteSearch } from '#hooks/ui/useAutocompleteSearch';
 
@@ -20,10 +20,10 @@ interface UseBrandAutocompleteOptions {
 export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) {
   const { suggestedBrands = [] } = options;
   const [searchBrands, { data: brandsData, loading }] = useSearchBrandsLazyQuery();
-  const lastSearchedTermRef = useRef('');
+  const [lastSearchedTerm, setLastSearchedTerm] = useState('');
 
   const search = (term: string) => {
-    lastSearchedTermRef.current = term;
+    setLastSearchedTerm(term);
     searchBrands({ variables: { search: term, limit: 20 } });
   };
 
@@ -61,7 +61,7 @@ export function useBrandAutocomplete(options: UseBrandAutocompleteOptions = {}) 
   const resultsAreRelevant =
     shouldSearch &&
     searchedBrands.length > 0 &&
-    searchTerm.toLowerCase().startsWith(lastSearchedTermRef.current.toLowerCase());
+    searchTerm.toLowerCase().startsWith(lastSearchedTerm.toLowerCase());
 
   let displayItems: BrandItem[];
   if (resultsAreRelevant) {

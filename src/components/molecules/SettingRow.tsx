@@ -41,7 +41,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         ref.current?.dismiss();
       }
     }
-  }, [modalVisible, item.type]);
+  }, [modalVisible, item.type, ref]);
 
   // Get field metadata
   const inputLabel = getInputLabelForField(item.key);

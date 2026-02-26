@@ -130,9 +130,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       return a.symbol.localeCompare(b.symbol);
     }) || [];
 
-  // Initialize state only when sheet opens or item ID changes
+  // Initialize state only when sheet opens or item ID changes (render-time state update)
   // NOT when item properties change (to prevent flash-back during save)
-  useEffect(() => {
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevItemId, setPrevItemId] = useState(item?.id);
+  if (visible !== prevVisible || item?.id !== prevItemId) {
+    setPrevVisible(visible);
+    setPrevItemId(item?.id);
     if (visible && item) {
       // Initialize from quantityInput (user's original input) or fall back to formatted quantity
       const initialInput = item.quantityInput || formatQuantity(item.quantity ?? 0);
@@ -160,14 +164,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         setUnitName(storedUnit ? storedUnit.toLowerCase() : null);
         setUnitId(item.unitId ?? null);
       }
-    }
-  }, [visible, item?.id]);
-
-  useEffect(() => {
-    if (!visible || !item) {
+    } else {
       setIsEditing(false);
     }
-  }, [visible, item]);
+  }
 
   // Handle quantity changes (with hybrid mode support)
   const handleIncrement = () => {

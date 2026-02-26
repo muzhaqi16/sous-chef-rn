@@ -51,13 +51,14 @@ export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = ({
     // Use ref to avoid recreating callback when isActivated changes
     const isActivatedRef = useRef(isPreActivated);
 
-    // Activate when isPreActivated becomes true (item scrolls into view)
-    useEffect(() => {
-      if (isPreActivated && !isActivatedRef.current) {
-        isActivatedRef.current = true;
+    // Render-time activation: detect when isPreActivated becomes true
+    const [prevIsPreActivated, setPrevIsPreActivated] = useState(isPreActivated);
+    if (isPreActivated !== prevIsPreActivated) {
+      setPrevIsPreActivated(isPreActivated);
+      if (isPreActivated && !isActivated) {
         setIsActivated(true);
       }
-    }, [isPreActivated]);
+    }
 
     // Track timeout for cleanup on unmount
     const activationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

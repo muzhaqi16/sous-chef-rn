@@ -59,7 +59,7 @@ export function useAutocompleteSearch<TItem>(
 
   const [searchTerm, setSearchTerm] = useState('');
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastResultsRef = useRef<TItem[]>([]);
+  const [lastResults, setLastResults] = useState<TItem[]>([]);
 
   const isOnline = useAppStore(state => state.isOnline);
   const shouldSearch = searchTerm.length >= minChars && (!requiresNetwork || isOnline);
@@ -97,14 +97,19 @@ export function useAutocompleteSearch<TItem>(
   // Get current results
   const results = getResults();
 
-  // Anti-flicker: track last results
-  useEffect(() => {
+  // Anti-flicker: track last results using render-time conditional state update
+  // (React-recommended pattern for syncing derived state with render values)
+  const [prevResults, setPrevResults] = useState(results);
+  const [prevLoading, setPrevLoading] = useState(loading);
+  if (results !== prevResults || loading !== prevLoading) {
+    setPrevResults(results);
+    setPrevLoading(loading);
     if (results.length > 0) {
-      lastResultsRef.current = results;
+      setLastResults(results);
     } else if (!loading) {
-      lastResultsRef.current = [];
+      setLastResults([]);
     }
-  }, [results, loading]);
+  }
 
   // Compute display items
   const displayItems = (() => {
@@ -122,8 +127,8 @@ export function useAutocompleteSearch<TItem>(
     }
 
     // Anti-flicker: show last results while loading
-    if (loading && lastResultsRef.current.length > 0) {
-      return lastResultsRef.current.slice(0, maxResults);
+    if (loading && lastResults.length > 0) {
+      return lastResults.slice(0, maxResults);
     }
 
     return [];
@@ -135,7 +140,7 @@ export function useAutocompleteSearch<TItem>(
 
   const reset = () => {
     setSearchTerm('');
-    lastResultsRef.current = [];
+    setLastResults([]);
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;

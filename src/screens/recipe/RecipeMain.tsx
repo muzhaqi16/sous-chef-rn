@@ -97,7 +97,7 @@ export const RecipeMain: React.FC = () => {
     fetchRandomRecipes();
 
     return () => controller.abort();
-  }, [recipes.length, loading]); // Intentionally exclude loadingRandom to prevent infinite loop
+  }, [recipes.length, loading, loadingRandom]);
 
   // Clear random recipes when user saves their first recipe
   useEffect(() => {

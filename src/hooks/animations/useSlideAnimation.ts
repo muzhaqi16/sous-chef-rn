@@ -113,7 +113,7 @@ export function useSlideAnimation({
       // Guard: prevent double-tap / re-entry while animating
       if (isAnimatingShared.value) return;
 
-      isAnimatingShared.value = true;
+      isAnimatingShared.set(true);
 
       // Store callback before animation starts
       if (onComplete) {
@@ -125,10 +125,10 @@ export function useSlideAnimation({
 
       // Animate opacity if enabled
       if (withOpacity) {
-        opacity.value = withTiming(opacityTarget, timingConfig);
+        opacity.set(withTiming(opacityTarget, timingConfig));
       }
 
-      translateX.value = withTiming(
+      translateX.set(withTiming(
         direction * slideDistance,
         timingConfig,
         finished => {
@@ -137,17 +137,17 @@ export function useSlideAnimation({
             scheduleOnRN(executeOnComplete);
           }
         },
-      );
+      ));
     };
 
   const resetSlide = () => {
     cancelAnimation(translateX);
     cancelAnimation(opacity);
-    translateX.value = withTiming(0, { duration: duration / 2, easing: defaultEasing });
+    translateX.set(withTiming(0, { duration: duration / 2, easing: defaultEasing }));
     if (withOpacity) {
-      opacity.value = withTiming(1, { duration: duration / 2, easing: defaultEasing });
+      opacity.set(withTiming(1, { duration: duration / 2, easing: defaultEasing }));
     }
-    isAnimatingShared.value = false;
+    isAnimatingShared.set(false);
   };
 
   return { animatedSlideStyle, triggerSlide, resetSlide, isAnimating: isAnimatingShared };

@@ -112,13 +112,17 @@ export function BottomSheetAutocompleteInput<T>({
   // Check online status to prevent autocomplete when offline
   const isOnline = useAppStore(state => state.isOnline);
 
-  // Sync searchTerm with external value changes only when modal is closed
+  // Sync searchTerm with external value changes only when modal is closed (render-time state update)
   // When modal is open, searchTerm is the source of truth to avoid cursor jumping
-  useEffect(() => {
+  const [prevValue, setPrevValue] = useState(value);
+  const [prevShowAutocomplete, setPrevShowAutocomplete] = useState(showAutocomplete);
+  if (value !== prevValue || showAutocomplete !== prevShowAutocomplete) {
+    setPrevValue(value);
+    setPrevShowAutocomplete(showAutocomplete);
     if (!showAutocomplete && value !== searchTerm) {
       setSearchTerm(value || '');
     }
-  }, [value, showAutocomplete]);
+  }
 
   // Show modal only when we have results (search-first pattern)
   // Don't re-open if user explicitly dismissed (via selection or backdrop tap)
@@ -132,6 +136,7 @@ export function BottomSheetAutocompleteInput<T>({
       !userDismissedRef.current &&
       hasInteractedRef.current
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- must sync state with imperative present() and ref guards
       setShowAutocomplete(true);
       bottomSheetRef.current?.present();
       onModalOpen?.();

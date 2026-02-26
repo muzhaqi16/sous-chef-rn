@@ -389,19 +389,19 @@ export function useRecipeDetail() {
     return () => controller.abort();
   }, [externalSource, externalId, recipeId, backendLoading, preloadRecipe]);
 
-  // Normalize recipes data
-  const normalizedRecipes = normalizeRecipes(myRecipesData?.recipes);
-  const savedRecipes = normalizedRecipes?.recipes || [];
-
   // Check if current external recipe is already saved
   useEffect(() => {
-    if (!externalSource || !externalId || savedRecipes.length === 0) {
+    // Normalize recipes data inside the effect to avoid the unstable reference issue
+    const normalizedRecipes = normalizeRecipes(myRecipesData?.recipes);
+    const savedRecipesList = normalizedRecipes?.recipes || [];
+
+    if (!externalSource || !externalId || savedRecipesList.length === 0) {
       setRecipeSaved(false);
       setSavedFolderLocal(null); // Reset local folder when recipe is not saved
       return;
     }
 
-    const savedRecipe = savedRecipes.find(
+    const savedRecipe = savedRecipesList.find(
       (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
@@ -415,7 +415,7 @@ export function useRecipeDetail() {
       setRecipeSaved(false);
       setSavedFolderLocal(null);
     }
-  }, [externalSource, externalId, savedRecipes]);
+  }, [externalSource, externalId, myRecipesData?.recipes]);
 
   const isBackendRecipe = !!recipeId && !!backendRecipe;
 

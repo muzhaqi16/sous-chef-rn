@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -36,15 +36,23 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sync visible prop with bottom sheet ref (complex: resets search query)
+  // Reset search query when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) {
+      setSearchQuery('');
+    }
+  }
+
+  // Sync visible prop with bottom sheet ref
   useEffect(() => {
     if (visible) {
       ref.current?.present();
-      setSearchQuery('');
     } else {
       ref.current?.dismiss();
     }
-  }, [visible]);
+  }, [visible, ref]);
 
   const filteredTags = (() => {
     if (!searchQuery.trim()) return tags;

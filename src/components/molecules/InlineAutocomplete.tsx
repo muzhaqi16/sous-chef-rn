@@ -91,12 +91,15 @@ export function InlineAutocomplete<T>({
     };
   }, []);
 
-  // Sync local state when value prop changes externally (e.g., after selection)
+  // Sync local state when value prop changes externally (render-time state update)
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setSearchTerm(value);
+  }
+
+  // Keep ref in sync with value prop
   useEffect(() => {
-    // If no debounce is pending, this is an external change — sync local state
-    if (!debounceTimerRef.current) {
-      setSearchTerm(value);
-    }
     inputValueRef.current = value;
   }, [value]);
 

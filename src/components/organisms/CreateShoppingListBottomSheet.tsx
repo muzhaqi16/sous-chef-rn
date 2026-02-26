@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
@@ -29,13 +29,15 @@ export const CreateShoppingListBottomSheet: React.FC<
 
   const [createShoppingList, { loading }] = useCreateShoppingListMutation();
 
-  // Reset form when modal opens
-  useEffect(() => {
+  // Reset form when modal opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setListName('');
       setError(null);
     }
-  }, [visible]);
+  }
 
   const handleCreateList = async () => {
     if (!listName.trim()) {

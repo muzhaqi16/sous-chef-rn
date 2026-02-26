@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  extends: '@react-native',
+  extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
   plugins: ['no-barrel-files'],
   ignorePatterns: ['e2e/**/*'],
   env: {
@@ -49,8 +49,8 @@ module.exports = {
     ],
 
     'react-hooks/rules-of-hooks': 'error',
-    // Disabled — React Compiler tracks dependencies automatically
-    'react-hooks/exhaustive-deps': 'off',
+    // Warn level — React Compiler handles memoization deps, but this catches stale closures in useEffect
+    'react-hooks/exhaustive-deps': 'warn',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': 'warn',

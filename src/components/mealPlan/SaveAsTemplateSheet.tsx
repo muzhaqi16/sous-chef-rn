@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
@@ -57,14 +57,19 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   const [category, setCategory] = useState<TemplateCategory>(TemplateCategory.Weekly);
   const [tagsInput, setTagsInput] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevMealPlanName, setPrevMealPlanName] = useState(mealPlanName);
+  if (visible !== prevVisible || mealPlanName !== prevMealPlanName) {
+    setPrevVisible(visible);
+    setPrevMealPlanName(mealPlanName);
     if (visible) {
       setName(mealPlanName ? `${mealPlanName} Template` : '');
       setDescription('');
       setCategory(TemplateCategory.Weekly);
       setTagsInput('');
     }
-  }, [visible, mealPlanName]);
+  }
 
   const handleSave = () => {
     if (!mealPlanId || !name.trim()) return;

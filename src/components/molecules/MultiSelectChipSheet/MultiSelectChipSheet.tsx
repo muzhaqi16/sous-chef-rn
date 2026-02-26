@@ -45,15 +45,23 @@ export function MultiSelectChipSheet<T extends string = string>({
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sync visible prop with bottom sheet ref (complex: resets search query)
+  // Reset search query when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) {
+      setSearchQuery('');
+    }
+  }
+
+  // Sync visible prop with bottom sheet ref
   useEffect(() => {
     if (visible) {
       ref.current?.present();
-      setSearchQuery('');
     } else {
       ref.current?.dismiss();
     }
-  }, [visible]);
+  }, [visible, ref]);
 
   const filteredItems = (() => {
     if (!searchQuery.trim()) return items;

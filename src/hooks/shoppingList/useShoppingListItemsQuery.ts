@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useGetShoppingListQuery, GetShoppingListQuery } from '#generated';
 import type { ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -44,12 +44,12 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   // Track previous listId to detect list switches
   // When switching lists, we should NOT fall back to previousData (it's from old list)
-  const previousListIdRef = useRef<string | null | undefined>(listId);
-  const listIdChanged = previousListIdRef.current !== listId;
+  const [previousListId, setPreviousListId] = useState<string | null | undefined>(listId);
+  const listIdChanged = previousListId !== listId;
 
-  // Update ref after comparison (in effect to avoid changing during render)
+  // Update state after comparison
   useEffect(() => {
-    previousListIdRef.current = listId;
+    setPreviousListId(listId);
   }, [listId]);
 
   // OPTIMIZATION: Extract items from itemsConnection edges and sort by sortOrder

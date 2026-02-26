@@ -2,6 +2,7 @@ import React, {  useDeferredValue,
   useEffect,
   useRef,
   useState,
+  startTransition,
 } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -168,16 +169,16 @@ const PantryMainScreen: React.FC = () => {
   const pantryItems = useDeferredValue(rawPantryItems);
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
   // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
-  // Uses a ref latch instead of state to avoid an extra re-render
-  const storageLocationsReadyRef = useRef(false);
-  if (!loading && isReady) {
-    storageLocationsReadyRef.current = true;
+  // Uses render-time conditional state update (latch: once true, stays true)
+  const [storageLocationsReady, setStorageLocationsReady] = useState(false);
+  if (!storageLocationsReady && !loading && isReady) {
+    setStorageLocationsReady(true);
   }
   const {
     locations: storageLocations,
     createLocation,
     creating: creatingLocation,
-  } = useStorageLocationManagement(storageLocationsReadyRef.current ? selectedHomeId ?? undefined : undefined);
+  } = useStorageLocationManagement(storageLocationsReady ? selectedHomeId ?? undefined : undefined);
   // Stable navigateTo wrapper for usePantryItemActions
   const stableNavigateTo = ({ pantryItem: (params: { itemId: string }) => navigateTo.pantryItem(params) });
   // Extract item actions (modal state + mutations + handlers) to separate hook
@@ -240,7 +241,9 @@ const PantryMainScreen: React.FC = () => {
     })();
   // Handle location filter change
   const handleLocationFilterChange = (filter: LocationFilter) => {
-    setLocationFilter(filter);
+    startTransition(() => {
+      setLocationFilter(filter);
+    });
   };
   // Build combined tabs: default temperature tabs + custom storage locations
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [

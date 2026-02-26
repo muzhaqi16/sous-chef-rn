@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -32,13 +32,18 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   const [reason, setReason] = useState('');
   const [remainingWeightInput, setRemainingWeightInput] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItem, setPrevPantryItem] = useState(pantryItem);
+  if (visible !== prevVisible || pantryItem !== prevPantryItem) {
+    setPrevVisible(visible);
+    setPrevPantryItem(pantryItem);
     if (visible && pantryItem) {
       setQuantityInput(pantryItem.quantity.toString());
       setReason('');
       setRemainingWeightInput('');
     }
-  }, [visible, pantryItem]);
+  }
 
   const handleConfirm = () => {
     if (!pantryItem) return;

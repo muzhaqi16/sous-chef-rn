@@ -71,7 +71,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   });
 
   // Get actions and permissions from context (stable references)
-  const { actions, permissionsRef } = useSortableListActions();
+  const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
     onItemEdit,
@@ -83,12 +83,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     onSwipeableClose,
   } = actions;
 
-  // Read permissions from ref to always get latest values
+  // Read permissions from context snapshot
   const {
     canRemoveItems = true,
     canEditItems = true,
     canMarkPurchased = true,
-  } = permissionsRef.current;
+  } = permissions;
 
   // === ELEMENT CREATION ===
 

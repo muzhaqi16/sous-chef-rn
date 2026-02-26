@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { errorService } from '#/services/errorService';
 
 /**
@@ -81,10 +81,12 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const fetchMoreVariablesRef = useRef(fetchMoreVariables);
   const serialized = JSON.stringify(fetchMoreVariables);
   const prevSerializedRef = useRef(serialized);
-  if (prevSerializedRef.current !== serialized) {
-    prevSerializedRef.current = serialized;
-    fetchMoreVariablesRef.current = fetchMoreVariables;
-  }
+  useEffect(() => {
+    if (prevSerializedRef.current !== serialized) {
+      prevSerializedRef.current = serialized;
+      fetchMoreVariablesRef.current = fetchMoreVariables;
+    }
+  });
 
   const loadMore = async () => {
     // Don't load if:

@@ -42,15 +42,20 @@ export const AddStorageLocationSheet: React.FC<
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Control visibility
-  useEffect(() => {
-    if (visible) {
-      // Focus input after a short delay for animation
-      setTimeout(() => inputRef.current?.focus(), 100);
-    } else {
-      // Reset state when closing
+  // Reset state when sheet closes (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (!visible) {
       setName('');
       setError(null);
+    }
+  }
+
+  // Focus input after animation when opening
+  useEffect(() => {
+    if (visible) {
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [visible]);
 

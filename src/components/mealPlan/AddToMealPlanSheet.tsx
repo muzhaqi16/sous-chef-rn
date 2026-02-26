@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -41,6 +41,18 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
     initialMealType ?? MealType.Dinner,
   );
 
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevInitialMealType, setPrevInitialMealType] = useState(initialMealType);
+  if (visible !== prevVisible || initialMealType !== prevInitialMealType) {
+    setPrevVisible(visible);
+    setPrevInitialMealType(initialMealType);
+    if (visible) {
+      setSelectedPlanId(null);
+      setSelectedMealType(initialMealType ?? MealType.Dinner);
+    }
+  }
+
   const { addRecipeToMealPlan, adding, hasPlan, mealPlans, activePlanId } =
     useAddRecipeToMealPlan({ planId: selectedPlanId });
 
@@ -50,14 +62,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   const maxDate = (activePlan ? startOfDay(parseISO(activePlan.endDate)) : undefined);
 
   const calendar = useMealPlanCalendar({ minDate, maxDate });
-
-  // Reset state when sheet opens
-  useEffect(() => {
-    if (visible) {
-      setSelectedPlanId(null);
-      setSelectedMealType(initialMealType ?? MealType.Dinner);
-    }
-  }, [visible, initialMealType]);
 
   const handleConfirm = async () => {
     const success = await addRecipeToMealPlan({

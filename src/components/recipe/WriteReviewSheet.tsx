@@ -31,16 +31,26 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
 
-  // Reset / populate form when sheet opens (complex: resets form state)
+  // Reset / populate form when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevExistingReview, setPrevExistingReview] = useState(existingReview);
+  if (visible !== prevVisible || existingReview !== prevExistingReview) {
+    setPrevVisible(visible);
+    setPrevExistingReview(existingReview);
+    if (visible) {
+      setRating(existingReview?.rating ?? 0);
+      setComment(existingReview?.comment ?? '');
+    }
+  }
+
+  // Present/dismiss bottom sheet
   useEffect(() => {
     if (visible) {
       ref.current?.present();
-      setRating(existingReview?.rating ?? 0);
-      setComment(existingReview?.comment ?? '');
     } else {
       ref.current?.dismiss();
     }
-  }, [visible, existingReview]);
+  }, [visible, ref]);
 
   const handleSubmit = async () => {
     if (submitting || rating === 0) return;

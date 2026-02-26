@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import {
   BottomSheetModal,
@@ -39,6 +39,18 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   const [name, setName] = useState('');
   const [startDateOffset, setStartDateOffset] = useState(0);
 
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevMealPlan, setPrevMealPlan] = useState(mealPlan);
+  if (visible !== prevVisible || mealPlan !== prevMealPlan) {
+    setPrevVisible(visible);
+    setPrevMealPlan(mealPlan);
+    if (visible && mealPlan) {
+      setName(`${mealPlan.name} (Copy)`);
+      setStartDateOffset(0);
+    }
+  }
+
   const duration = (() => {
     if (!mealPlan?.startDate || !mealPlan?.endDate) return 7;
     return differenceInDays(parseISO(mealPlan.endDate), parseISO(mealPlan.startDate));
@@ -52,13 +64,6 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   const newEndDate = (() => {
     return addDays(newStartDate, duration);
   })();
-
-  useEffect(() => {
-    if (visible && mealPlan) {
-      setName(`${mealPlan.name} (Copy)`);
-      setStartDateOffset(0);
-    }
-  }, [visible, mealPlan]);
 
   const handleDuplicate = () => {
     if (!mealPlan || !name.trim()) return;

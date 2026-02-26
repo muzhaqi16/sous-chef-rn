@@ -33,8 +33,6 @@ export function useSearchableList<T>(
         setDebouncedQuery(query);
       }, debounceMs);
       return () => clearTimeout(timer);
-    } else {
-      setDebouncedQuery(query);
     }
   }, [query, debounceMs]);
 

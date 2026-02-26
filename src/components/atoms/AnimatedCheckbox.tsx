@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Animated, {
@@ -33,25 +33,29 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   // Local state for pending visual state (shows immediately on press)
   const [pendingChecked, setPendingChecked] = useState<boolean | null>(null);
 
-  // Reset animation state when view is recycled (itemId changes)
+  // Render-time reset: track itemId to detect FlashList view recycling
   // This is required for FlashList compatibility per:
   // https://shopify.github.io/flash-list/docs/guides/reanimated
-  useEffect(() => {
+  const [prevItemId, setPrevItemId] = useState(itemId);
+  if (itemId !== prevItemId) {
+    setPrevItemId(itemId);
     if (itemId) {
       isPressed.set(false);
       setPendingChecked(null);
     }
-  }, [itemId, isPressed]);
+  }
 
   // Determine visual checked state: pending takes priority, otherwise actual
   const visuallyChecked = pendingChecked !== null ? pendingChecked : checked;
 
-  // Clear pending state when actual checked prop syncs
-  useEffect(() => {
+  // Clear pending state when actual checked prop syncs (render-time pattern)
+  const [prevChecked, setPrevChecked] = useState(checked);
+  if (checked !== prevChecked) {
+    setPrevChecked(checked);
     if (pendingChecked !== null && checked === pendingChecked) {
       setPendingChecked(null);
     }
-  }, [checked, pendingChecked]);
+  }
 
   // Color animation — only re-evaluates when visuallyChecked changes
   const animatedColorStyle = useAnimatedStyle(() => ({

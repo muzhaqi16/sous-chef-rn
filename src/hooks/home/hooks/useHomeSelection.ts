@@ -138,6 +138,8 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
     homes?.length, // Use primitive to prevent re-runs when array reference changes
     setDefaultHomeMutation,
     setSelectedHomeId,
+    handleApolloError,
+    homes,
   ]);
 
   const setDefaultHome = async (homeId: string) => {

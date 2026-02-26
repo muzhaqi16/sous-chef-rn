@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
@@ -48,14 +48,24 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Once content has been shown, latch the module-level flag so skeletons
-  // never reappear on remounts (only resets on app restart).
-  if (isReady && !isTransitioning && items.length > 0) {
-    hasPurchasedTabShownContent = true;
+  // Track the module-level flag in state so we can read it during render.
+  // Uses React's "adjusting state during render" pattern to stay in sync.
+  const [hasShownContent, setHasShownContent] = useState(hasPurchasedTabShownContent);
+
+  // Once content has been shown, latch state so skeletons never reappear.
+  if (!hasShownContent && isReady && !isTransitioning && items.length > 0) {
+    setHasShownContent(true);
   }
 
+  // Sync the module-level flag so it persists across unmount/remount (side effect).
+  useEffect(() => {
+    if (hasShownContent) {
+      hasPurchasedTabShownContent = true;
+    }
+  }, [hasShownContent]);
+
   // Show skeletons only on the very first data load
-  const showSkeletons = !hasPurchasedTabShownContent && (!isReady || isTransitioning);
+  const showSkeletons = !hasShownContent && (!isReady || isTransitioning);
   if (showSkeletons) {
     return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
   }

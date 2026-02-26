@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import type { ErrorLike } from '@apollo/client';
 import { useErrorService } from '#/services/errorService';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
@@ -96,9 +96,11 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
   // Store callbacks in refs to always read the latest version inside handlers,
   // preventing stale closure bugs when callers don't memoize their callbacks
   const customOnDataRef = useRef(customOnData);
-  customOnDataRef.current = customOnData;
   const customOnErrorRef = useRef(customOnError);
-  customOnErrorRef.current = customOnError;
+  useEffect(() => {
+    customOnDataRef.current = customOnData;
+    customOnErrorRef.current = customOnError;
+  });
 
   // Set up deduplication filter if userId provided
   const shouldProcessUpdate = useSubscriptionDeduplication(userId);

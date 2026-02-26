@@ -44,12 +44,22 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevTemplate, setPrevTemplate] = useState(template);
+  if (visible !== prevVisible || template !== prevTemplate) {
+    setPrevVisible(visible);
+    setPrevTemplate(template);
     if (visible && template) {
-      bottomSheetRef.current?.present();
       setNameOverride('');
       setStartDate(new Date());
       setServings(template.defaultServings.toString());
+    }
+  }
+
+  useEffect(() => {
+    if (visible && template) {
+      bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }

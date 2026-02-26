@@ -81,16 +81,6 @@ export const BottomSheetSearchBar = forwardRef<
     // Track if we have text (for showing clear button)
     const [hasText, setHasText] = React.useState(false);
 
-    // Helper to set input value programmatically
-    const setInputValue = (value: string) => {
-      inputValueRef.current = value;
-      setHasText(value.length > 0);
-      // Use setNativeProps for uncontrolled input
-      if (inputRef.current) {
-        inputRef.current.setNativeProps?.({ text: value });
-      }
-    };
-
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
       clear: () => {
@@ -106,16 +96,34 @@ export const BottomSheetSearchBar = forwardRef<
         inputRef.current?.blur();
       },
       getValue: () => inputValueRef.current,
-      setValue: setInputValue }), [setInputValue, onClear]);
+      setValue: (value: string) => {
+        inputValueRef.current = value;
+        setHasText(value.length > 0);
+        if (inputRef.current) {
+          inputRef.current.setNativeProps?.({ text: value });
+        }
+      } }), [onClear]);
 
-    // Set initial value when provided
+    // Set hasText when initialValue changes (render-time state update)
+    const [prevInitialValue, setPrevInitialValue] = React.useState(initialValue);
+    if (initialValue !== prevInitialValue) {
+      setPrevInitialValue(initialValue);
+      if (initialValue !== undefined) {
+        setHasText(initialValue.length > 0);
+      }
+    }
+
+    // Apply native props, sync ref, and notify parent when initialValue changes
     useEffect(() => {
       if (initialValue !== undefined && initialValue !== inputValueRef.current) {
-        setInputValue(initialValue);
+        inputValueRef.current = initialValue;
+        if (inputRef.current) {
+          inputRef.current.setNativeProps?.({ text: initialValue });
+        }
         // Notify parent of initial value (without debounce)
         onChangeText(initialValue);
       }
-    }, [initialValue, setInputValue, onChangeText]);
+    }, [initialValue, onChangeText]);
 
     // Cleanup debounce timer on unmount
     useEffect(() => {

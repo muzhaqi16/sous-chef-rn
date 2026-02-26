@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   startOfWeek,
   endOfWeek,
@@ -30,21 +30,31 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
   const [referenceDate, setReferenceDate] = useState(new Date());
 
   // Clamp selected/reference dates when boundaries change (plan loads)
-  useEffect(() => {
-    if (!minDate && !maxDate) return;
+  const minTime = minDate?.getTime();
+  const maxTime = maxDate?.getTime();
 
-    const today = new Date();
-    const todayStart = startOfDay(today);
+  // Render-time conditional state update: track boundary changes
+  const [prevMinTime, setPrevMinTime] = useState(minTime);
+  const [prevMaxTime, setPrevMaxTime] = useState(maxTime);
 
-    const withinBounds =
-      (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
-      (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
+  if (minTime !== prevMinTime || maxTime !== prevMaxTime) {
+    setPrevMinTime(minTime);
+    setPrevMaxTime(maxTime);
 
-    const clampedDate = withinBounds ? today : minDate ?? today;
+    if (minDate || maxDate) {
+      const today = new Date();
+      const todayStart = startOfDay(today);
 
-    setSelectedDate(clampedDate);
-    setReferenceDate(clampedDate);
-  }, [minDate, maxDate]);
+      const withinBounds =
+        (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
+        (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
+
+      const clampedDate = withinBounds ? today : minDate ?? today;
+
+      setSelectedDate(clampedDate);
+      setReferenceDate(clampedDate);
+    }
+  }
 
   // Week days for the current week view
   const weekDays = (() => {

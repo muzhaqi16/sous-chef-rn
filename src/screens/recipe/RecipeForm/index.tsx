@@ -37,7 +37,7 @@ export const RecipeFormScreen: React.FC<StaticScreenProps<{ recipeId?: string } 
     if (recipeData?.recipe) {
       form.populateFromRecipe(recipeData.recipe);
     }
-  }, [recipeData?.recipe]);
+  }, [recipeData?.recipe, form]);
 
   const [createRecipeMutation, { loading: creating }] = useCreateRecipeMutation();
   const [updateRecipeMutation, { loading: updating }] = useUpdateRecipeMutation();

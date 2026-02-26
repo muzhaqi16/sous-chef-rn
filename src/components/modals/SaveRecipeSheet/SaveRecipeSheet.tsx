@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -44,8 +44,10 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   const [newFolderName, setNewFolderName] = useState('');
   const [localFolders, setLocalFolders] = useState<string[]>([]); // Track newly created folders
 
-  // Reset form when sheet opens
-  useEffect(() => {
+  // Reset form when sheet opens (render-time state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setSelectedFolder('Favorites');
       setTags([]);
@@ -54,7 +56,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       setNewFolderName('');
       setLocalFolders([]);
     }
-  }, [visible]);
+  }
 
   const handleSave = async () => {
     if (saving) return;

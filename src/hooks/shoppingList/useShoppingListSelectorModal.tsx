@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -73,9 +73,11 @@ export function useShoppingListSelectorModal({
 
   // Refs mirroring volatile state — allows renderListItem to stay stable
   const isDeleteModeRef = useRef(isDeleteMode);
-  isDeleteModeRef.current = isDeleteMode;
   const selectedForDeletionRef = useRef(selectedForDeletion);
-  selectedForDeletionRef.current = selectedForDeletion;
+  useEffect(() => {
+    isDeleteModeRef.current = isDeleteMode;
+    selectedForDeletionRef.current = selectedForDeletion;
+  });
   const longPressItemRef = useRef<string | null>(null);
   const { handleApolloError } = useErrorService();
 

@@ -7,6 +7,7 @@
  * - Error handling with user feedback
  */
 
+import { useRef } from 'react';
 import { Alert } from 'react-native';
 import {
   useAddItemToShoppingListMutation,
@@ -39,7 +40,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
   // Track the most recently generated temp ID for cleanup in update()
   // A ref is necessary here because optimisticResponse and update are separate
   // callbacks configured at hook level that need to share per-mutation state
-  let lastTempId: string | null = null;
+  const lastTempIdRef = useRef<string | null>(null);
 
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
@@ -47,7 +48,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
     // but the spread properties include all fields required by ShoppingListItemDisplayFragment
     optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
-      lastTempId = tempId;
+      lastTempIdRef.current = tempId;
       return {
         __typename: 'Mutation',
         addItemToShoppingList: {
@@ -101,12 +102,12 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       // Evict temp-ID entity when the real server response arrives
       // update() runs twice: once for the optimistic response (item.id starts with "temp-"),
       // once for the server response (real ID). On the server response, evict the stale temp entity.
-      if (lastTempId && !item.id.startsWith('temp-')) {
+      if (lastTempIdRef.current && !item.id.startsWith('temp-')) {
         cache.evict({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempId }),
+          id: cache.identify({ __typename: 'ShoppingListItem', id: lastTempIdRef.current }),
         });
         cache.gc();
-        lastTempId = null;
+        lastTempIdRef.current = null;
       }
 
       try {
@@ -117,7 +118,7 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
       }
     },
     onError: error => {
-      lastTempId = null;
+      lastTempIdRef.current = null;
       const { message } = handleApolloError(error, {
         operation: 'Add Shopping List Item',
       });

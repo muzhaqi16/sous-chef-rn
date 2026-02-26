@@ -33,21 +33,20 @@ export const BiometricSetupScreen = () => {
   const [isEnabling, setIsEnabling] = useState(false);
   const [hasCheckedBiometric, setHasCheckedBiometric] = useState(false);
 
-  const loadBiometricInfo = async () => {
-    try {
-      const info = await getBiometricInfo();
-      setBiometricInfo(info);
-      setHasCheckedBiometric(true);
-    } catch (error) {
-      console.error('Error loading biometric info:', error);
-      setBiometricInfo({ isAvailable: false, biometryType: null });
-      setHasCheckedBiometric(true);
-    }
-  };
-
   useEffect(() => {
+    const loadBiometricInfo = async () => {
+      try {
+        const info = await getBiometricInfo();
+        setBiometricInfo(info);
+        setHasCheckedBiometric(true);
+      } catch (error) {
+        console.error('Error loading biometric info:', error);
+        setBiometricInfo({ isAvailable: false, biometryType: null });
+        setHasCheckedBiometric(true);
+      }
+    };
     loadBiometricInfo();
-  }, [loadBiometricInfo]);
+  }, [getBiometricInfo]);
 
   // Handle completion
   const handleComplete = (biometricEnabled: boolean) => {
@@ -79,9 +78,21 @@ export const BiometricSetupScreen = () => {
   // Auto-skip if biometric is not available
   useEffect(() => {
     if (hasCheckedBiometric && !biometricInfo.isAvailable) {
-      handleComplete(false);
+      // Inline handleComplete logic to avoid dependency on function that changes every render
+      clearRegistrationPassword();
+      clearTempRegistrationPassword();
+      markBiometricDeclined();
+      if (user?.id) {
+        setUserNavigationState(user.id, {
+          hasCompletedOnboarding: true,
+          onboardingCompletedAt: Date.now(),
+          biometricSetupOffered: true,
+          isNewUser: false,
+        });
+      }
+      navigateToNextStep('BiometricSetup');
     }
-  }, [hasCheckedBiometric, biometricInfo.isAvailable, handleComplete]);
+  }, [hasCheckedBiometric, biometricInfo.isAvailable, clearRegistrationPassword, markBiometricDeclined, user?.id, setUserNavigationState, navigateToNextStep]);
 
   const enableBiometricWithPassword = async (email: string, password: string) => {
     try {

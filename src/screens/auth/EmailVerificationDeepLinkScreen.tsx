@@ -83,7 +83,8 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
 
   useEffect(() => {
     performVerification();
-  }, [performVerification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, verifyEmail, user, updateUser, toast]);
 
   const handleGoBack = () => {
     navigation.goBack();

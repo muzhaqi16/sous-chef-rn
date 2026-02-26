@@ -15,7 +15,7 @@ module.exports = api => {
   ],
   plugins: [
     // React Compiler for automatic memoization (must be first)
-    ['babel-plugin-react-compiler', { target: '19' }],
+    'babel-plugin-react-compiler',
     [
       'module-resolver',
       {

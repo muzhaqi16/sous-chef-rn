@@ -149,44 +149,53 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [minQuantity, setMinQuantity] = useState('');
   const [restockQuantity, setRestockQuantity] = useState('');
 
-  // Reset form for adding another item
-  const resetForm = () => {
-    setItemName('');
-    setQuantityInput('1');
-    setUnit('');
-    setUnitId(null);
-    setStorageState(StorageState.Ambient);
-    setShowPackageDetails(false);
-    setPackageSize('');
-    setContentUnit('');
-    setContentUnitId(null);
-    setItemNetWeight('');
-    setWeightUnit('');
-    setWeightUnitId(null);
-    setPantryNetWeight('');
-    setPantryNetWeightUnit('');
-    setPantryNetWeightUnitId(null);
-    setExpirationDate(null);
-    setStorageLocation('');
-    setSelectedStorageLocationId(null);
-    setStorageNotes('');
-    setTags('');
-    setBrand('');
-    setSelectedBrandId(null);
-    setSuggestedBrands([]);
-    setMinQuantity('');
-    setRestockQuantity('');
-  };
+  // Render-time form reset: detect when sheet opens and reset all fields
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryId, setPrevPantryId] = useState(pantryId);
+  const [prevPrefilledItemName, setPrevPrefilledItemName] = useState(prefilledItemName);
 
-  // Reset form when visible
+  if (visible !== prevVisible || pantryId !== prevPantryId || prefilledItemName !== prevPrefilledItemName) {
+    setPrevVisible(visible);
+    setPrevPantryId(pantryId);
+    setPrevPrefilledItemName(prefilledItemName);
+
+    if (visible && pantryId) {
+      // Reset all form state inline
+      setItemName(prefilledItemName);
+      setQuantityInput('1');
+      setUnit('');
+      setUnitId(null);
+      setStorageState(StorageState.Ambient);
+      setShowPackageDetails(false);
+      setPackageSize('');
+      setContentUnit('');
+      setContentUnitId(null);
+      setItemNetWeight('');
+      setWeightUnit('');
+      setWeightUnitId(null);
+      setPantryNetWeight('');
+      setPantryNetWeightUnit('');
+      setPantryNetWeightUnitId(null);
+      setExpirationDate(null);
+      setStorageLocation('');
+      setSelectedStorageLocationId(null);
+      setStorageNotes('');
+      setTags('');
+      setBrand('');
+      setSelectedBrandId(null);
+      setSuggestedBrands([]);
+      setMinQuantity('');
+      setRestockQuantity('');
+      setCurrentPage(0);
+    }
+  }
+
+  // Reset pager position when sheet opens (imperative ref call needs useEffect)
   useEffect(() => {
     if (visible && pantryId) {
-      resetForm();
-      setItemName(prefilledItemName);
-      setCurrentPage(0);
       pagerRef.current?.setPage(0);
     }
-  }, [visible, pantryId, prefilledItemName, resetForm]);
+  }, [visible, pantryId]);
 
   // Handle unit selection
   const handleUnitSelected = (id: string | null, name: string | null) => {

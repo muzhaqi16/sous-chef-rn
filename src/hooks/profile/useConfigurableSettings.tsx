@@ -318,9 +318,11 @@ export const useConfigurableSettings = (profile: any) => {
             const wasDeclined = navState?.biometricDeclinedPermanently;
 
             baseItem.value = biometricEnabled;
-            baseItem.disabled = !biometricAvailable;
+            baseItem.disabled = biometricLoading || !biometricAvailable;
 
-            if (!biometricAvailable) {
+            if (biometricLoading) {
+              baseItem.subtitle = 'Checking availability...';
+            } else if (!biometricAvailable) {
               baseItem.subtitle = 'Not available on this device';
             } else if (wasDeclined && !biometricEnabled) {
               baseItem.subtitle = `Tap to enable ${

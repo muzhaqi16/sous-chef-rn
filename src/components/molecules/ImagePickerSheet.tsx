@@ -1,17 +1,9 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useRef, useImperativeHandle } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, IconLibrary } from '#utils/iconUtils';
+import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
-
-interface ImagePickerOption {
-  key: string;
-  label: string;
-  icon: string;
-  library?: IconLibrary;
-  onPress: () => void;
-}
 
 interface ImagePickerSheetProps {
   onCamera: () => void;
@@ -20,10 +12,11 @@ interface ImagePickerSheetProps {
 
 export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetProps>(
   ({ onCamera, onLibrary }, ref) => {
+    const localRef = useRef<BottomSheetModal>(null);
+    useImperativeHandle(ref, () => localRef.current!, []);
+
     const handleDismiss = () => {
-      if (ref && 'current' in ref) {
-        ref.current?.dismiss();
-      }
+      localRef.current?.dismiss();
     };
 
     const { modalProps, contentContainerStyle, theme } = useStandardBottomSheet({
@@ -31,29 +24,20 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
       snapPoints: [],
       enableDynamicSizing: true });
 
-    const options: ImagePickerOption[] = [
-        {
-          key: 'camera',
-          label: 'Take Photo',
-          icon: 'camera',
-          onPress: () => {
-            handleDismiss();
-            // Small delay to allow sheet to close before launching camera
-            setTimeout(onCamera, 100);
-          } },
-        {
-          key: 'library',
-          label: 'Choose from Library',
-          icon: 'image',
-          onPress: () => {
-            handleDismiss();
-            setTimeout(onLibrary, 100);
-          } },
-      ];
+    const handleCamera = () => {
+      handleDismiss();
+      // Small delay to allow sheet to close before launching camera
+      setTimeout(onCamera, 100);
+    };
+
+    const handleLibrary = () => {
+      handleDismiss();
+      setTimeout(onLibrary, 100);
+    };
 
     return (
       <BottomSheetModal
-        ref={ref}
+        ref={localRef}
         {...modalProps}
         handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
         stackBehavior="push"
@@ -61,23 +45,32 @@ export const ImagePickerSheet = forwardRef<BottomSheetModal, ImagePickerSheetPro
         <BottomSheetView style={[styles.container, contentContainerStyle]}>
           <Text style={styles.title}>Add Photo</Text>
           <View style={styles.optionsContainer}>
-            {options.map(option => (
-              <Pressable
-                key={option.key}
-                style={({pressed}) => [styles.option, pressed && styles.pressed]}
-                onPress={option.onPress}
-              >
-                <View style={styles.iconContainer}>
-                  <Icon
-                    name={option.icon}
-                    size={24}
-                    library={option.library}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <Text style={styles.optionLabel}>{option.label}</Text>
-              </Pressable>
-            ))}
+            <Pressable
+              style={({pressed}) => [styles.option, pressed && styles.pressed]}
+              onPress={handleCamera}
+            >
+              <View style={styles.iconContainer}>
+                <Icon
+                  name="camera"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={styles.optionLabel}>Take Photo</Text>
+            </Pressable>
+            <Pressable
+              style={({pressed}) => [styles.option, pressed && styles.pressed]}
+              onPress={handleLibrary}
+            >
+              <View style={styles.iconContainer}>
+                <Icon
+                  name="image"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={styles.optionLabel}>Choose from Library</Text>
+            </Pressable>
           </View>
           <Pressable
             style={({pressed}) => [styles.cancelButton, pressed && styles.pressed]}

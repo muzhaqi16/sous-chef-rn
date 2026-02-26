@@ -204,14 +204,52 @@ export const useDeepLinkRouter = () => {
     // Process the pending action
     logger.info('Processing pending deep link action', {
       action: pendingDeepLinkAction });
-    routeDeepLink(pendingDeepLinkAction);
+
+    // Route deep link inline to avoid dependency on handler functions
+    const { type, token } = pendingDeepLinkAction;
+    const routeAction = (actionToken: string, actionType: string) => {
+      const validation = validateDeepLinkToken(
+        actionToken,
+        actionType === 'email_verification' ? 'email_verification'
+          : actionType === 'password_reset' ? 'password_reset'
+          : 'invitation',
+      );
+      if (!validation.valid) {
+        logger.error(`Invalid ${actionType} token:`, validation.error);
+        toastService.error(`Invalid or expired link: ${validation.error}`);
+        return;
+      }
+
+      if (actionType === 'email_verification') {
+        if (!isAuthenticated) {
+          setPendingDeepLinkAction({ type: 'email_verification', token: actionToken, timestamp: Date.now() });
+          navigation.dispatch(CommonActions.navigate('Auth'));
+        } else {
+          navigation.dispatch(CommonActions.navigate('EmailVerification', { token: actionToken }));
+        }
+      } else if (actionType === 'password_reset') {
+        navigation.dispatch(CommonActions.navigate('ResetPassword', { token: actionToken }));
+      } else if (actionType === 'accept_invitation') {
+        if (!isAuthenticated) {
+          setPendingDeepLinkAction({ type: 'accept_invitation', token: actionToken, timestamp: Date.now() });
+          navigation.dispatch(CommonActions.navigate('Auth'));
+        } else {
+          navigation.dispatch(CommonActions.navigate('AcceptInvitation', { token: actionToken }));
+        }
+      } else {
+        logger.warn('Unknown deep link action type', { type: actionType });
+      }
+    };
+
+    routeAction(token, type);
     clearPendingDeepLinkAction();
   }, [
     isHydrated,
     pendingDeepLinkAction,
     isAuthenticated,
-    routeDeepLink,
     clearPendingDeepLinkAction,
+    navigation,
+    setPendingDeepLinkAction,
   ]);
 
   // Public API for triggering deep link actions

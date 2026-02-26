@@ -45,19 +45,28 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   const [fat, setFat] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Control bottom sheet visibility based on visible prop
-  useEffect(() => {
+  // Reset form when modal opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
+  if (visible !== prevVisible || initialValues !== prevInitialValues) {
+    setPrevVisible(visible);
+    setPrevInitialValues(initialValues);
     if (visible) {
-      bottomSheetRef.current?.present();
-      // Reset form when modal opens
       setCalories(initialValues?.calorieTarget?.toString() || '');
       setProtein(initialValues?.proteinTarget?.toString() || '');
       setCarbs(initialValues?.carbsTarget?.toString() || '');
       setFat(initialValues?.fatTarget?.toString() || '');
+    }
+  }
+
+  // Control bottom sheet visibility based on visible prop
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [visible, initialValues]);
+  }, [visible]);
 
   const handleSave = async () => {
     const updates: {

@@ -39,7 +39,9 @@ export function useScreenTelemetry(
 ) {
   const firedRef = useRef(false);
   const getPropertiesRef = useRef(getProperties);
-  getPropertiesRef.current = getProperties;
+  useEffect(() => {
+    getPropertiesRef.current = getProperties;
+  });
 
   useEffect(() => {
     if (!isReady || firedRef.current) return;

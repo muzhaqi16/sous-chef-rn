@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ViewStyle,
@@ -51,11 +51,13 @@ export const ImageGalleryTabs: React.FC<ImageGalleryTabsProps> = ({
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
 
-  // Reset loading/error states when selected tab changes
-  useEffect(() => {
+  // Render-time reset: clear loading/error states when selected tab changes
+  const [prevSelectedTab, setPrevSelectedTab] = useState(selectedTab);
+  if (selectedTab !== prevSelectedTab) {
+    setPrevSelectedTab(selectedTab);
     setImageLoading(false);
     setImageError(false);
-  });
+  }
 
   // Get current image URL
   const currentImageUrl = (() => {

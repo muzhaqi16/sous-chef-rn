@@ -38,30 +38,20 @@ export interface CachedImageProps
 type ImageStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode = 'cover', containerStyle, displaySize, ...rest }: CachedImageProps) => {
-    // PERF: Use refs instead of useState for loading status to avoid React
-    // re-renders when images load. With 22+ images loading simultaneously,
-    // this eliminates ~65 unnecessary commits.
-    const statusRef = useRef<ImageStatus>(uri ? 'loading' : 'idle');
+    // Derive initial visibility from URI. Success/error transitions are handled
+    // imperatively via setNativeProps to avoid re-renders when many images load.
+    const initialStatus: ImageStatus = uri ? 'loading' : 'idle';
     const loadingRef = useRef<View>(null);
     const errorRef = useRef<View>(null);
-
-    // Reset status when URI changes (during parent re-render)
-    const prevUriRef = useRef(uri);
-    if (uri !== prevUriRef.current) {
-      prevUriRef.current = uri;
-      statusRef.current = uri ? 'loading' : 'idle';
-    }
 
     // PERF: Memoize source object so TurboImage's internal memo isn't defeated
     const source = ({ uri: uri! });
 
     const handleSuccess = () => {
-      statusRef.current = 'success';
       loadingRef.current?.setNativeProps({ style: { display: 'none' } });
     };
 
     const handleFailure = () => {
-      statusRef.current = 'error';
       loadingRef.current?.setNativeProps({ style: { display: 'none' } });
       errorRef.current?.setNativeProps({ style: { display: 'flex' } });
     };
@@ -103,7 +93,7 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
         {/* Loading overlay — starts visible, hidden via ref on success/error */}
         <View
           ref={loadingRef}
-          style={[styles.overlay, radiusOverride, statusRef.current !== 'loading' && styles.hidden]}
+          style={[styles.overlay, radiusOverride, initialStatus !== 'loading' && styles.hidden]}
         >
           <SkeletonBase
             width="100%"
@@ -115,7 +105,7 @@ export const CachedImage = ({ uri, style, cachePolicy = 'dataCache', resizeMode 
         {/* Error overlay — starts hidden, shown via ref on error */}
         <View
           ref={errorRef}
-          style={[styles.overlay, styles.errorOverlay, radiusOverride, statusRef.current !== 'error' && styles.hidden]}
+          style={[styles.overlay, styles.errorOverlay, radiusOverride, styles.hidden]}
         >
           <Icon
             name="image-outline"

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   type CreateRecipeInput,
   type UpdateRecipeInput,
@@ -82,7 +82,7 @@ export function useRecipeForm() {
     steps: [],
     notes: '' });
 
-  const initialState = useRef<RecipeFormState | null>(null);
+  const [initialState, setInitialState] = useState<RecipeFormState | null>(null);
 
   // Field updaters
   const updateField = <K extends keyof RecipeFormState>(field: K, value: RecipeFormState[K]) => {
@@ -284,12 +284,12 @@ export function useRecipeForm() {
         : [],
       notes: recipe.notes ?? '' };
     setState(formState);
-    initialState.current = formState;
+    setInitialState(formState);
   };
 
   const hasDirtyFields = (() => {
-    if (!initialState.current) return state.name.trim().length > 0;
-    return JSON.stringify(state) !== JSON.stringify(initialState.current);
+    if (!initialState) return state.name.trim().length > 0;
+    return JSON.stringify(state) !== JSON.stringify(initialState);
   })();
 
   return {

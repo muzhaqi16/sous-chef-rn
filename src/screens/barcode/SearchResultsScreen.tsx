@@ -66,7 +66,7 @@ export const SearchResultsScreen: React.FC<StaticScreenProps<{
     } else {
       bottomSheetRef.current?.dismiss();
     }
-  }, [scannerSheetVisible]);
+  }, [scannerSheetVisible, bottomSheetRef]);
 
   const handleScanAnother = () => {
     clearSearch();

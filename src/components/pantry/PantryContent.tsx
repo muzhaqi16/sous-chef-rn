@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, useDeferredValue, useState } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -226,6 +226,49 @@ function computeItemDisplay(
     quantityBreakdownText: formatQuantityBreakdown(item.quantityBreakdown, item.unit?.symbol) };
 }
 
+// Get location string from storage state (pure function — no component state dependency)
+const getLocationString = (storageState?: string | null, storageLocation?: { name: string } | null): string => {
+  if (storageLocation?.name) return storageLocation.name;
+  switch (storageState) {
+    case StorageState.Refrigerated:
+      return 'Fridge';
+    case StorageState.Frozen:
+      return 'Freezer';
+    default:
+      return 'Pantry';
+  }
+};
+
+/**
+ * Compute display data for all items, reusing cached entries when possible.
+ * Calls Date.now() internally for expiration calculations.
+ */
+function computeDisplayCache(
+  items: PantryItem[],
+  prevCache: Map<string, { item: PantryItem; data: ItemDisplayData }>,
+  expirationColors: { expired: string; warning: string; normal: string },
+) {
+  const now = Date.now();
+  const map = new Map<string, ItemDisplayData>();
+  const nextCache = new Map<string, { item: PantryItem; data: ItemDisplayData }>();
+
+  for (const item of items) {
+    const cached = prevCache.get(item.id);
+
+    if (cached && cached.item === item) {
+      // Same object reference — Apollo hasn't updated this pantry item
+      map.set(item.id, cached.data);
+      nextCache.set(item.id, cached);
+    } else {
+      const data = computeItemDisplay(item, now, expirationColors, getLocationString);
+      map.set(item.id, data);
+      nextCache.set(item.id, { item, data });
+    }
+  }
+
+  return { map, nextCache };
+}
+
 // Default filter tabs for pantry (fallback if none provided)
 const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
   { id: 'all', label: 'All' },
@@ -283,14 +326,24 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   // PERFORMANCE: Defer heavy list render until after navigation animation
   const isReady = useDeferredRender(500);
 
-  // Once content has been shown, latch the module-level flag so skeletons
-  // never reappear on remounts or stack navigation (only resets on app restart).
-  if (!loading && isReady && items.length > 0) {
-    hasEverShownContent = true;
+  // Track the module-level flag in state so we can read it during render.
+  // Uses React's "adjusting state during render" pattern to stay in sync.
+  const [hasShownContent, setHasShownContent] = useState(hasEverShownContent);
+
+  // Once content has been shown, latch state so skeletons never reappear.
+  if (!hasShownContent && !loading && isReady && items.length > 0) {
+    setHasShownContent(true);
   }
 
+  // Sync the module-level flag so it persists across unmount/remount (side effect).
+  useEffect(() => {
+    if (hasShownContent) {
+      hasEverShownContent = true;
+    }
+  }, [hasShownContent]);
+
   // Show skeletons only on the very first data load
-  const showSkeletons = !hasEverShownContent && (!isReady || loading);
+  const showSkeletons = !hasShownContent && (!isReady || loading);
 
   // Crossfade animation - opacity-based transition to avoid gap
   const skeletonOpacity = useSharedValue(1);
@@ -336,24 +389,14 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     onItemRestock,
   };
 
-  // Get location string from storage state
-  const getLocationString = (storageState?: string | null, storageLocation?: { name: string } | null): string => {
-      if (storageLocation?.name) return storageLocation.name;
-      switch (storageState) {
-        case StorageState.Refrigerated:
-          return 'Fridge';
-        case StorageState.Frozen:
-          return 'Freezer';
-        default:
-          return 'Pantry';
-      }
-    };
-
   // Sorted items - filter out any null/undefined items to prevent FlashList layout crashes
   const sortedItems = (() => {
     const sorted = sortItems(items);
     return sorted.filter(item => item?.id);
   })();
+
+  // Defer sorted items so FlashList keeps showing old content during transitions
+  const deferredSortedItems = useDeferredValue(sortedItems);
 
   // Precomputed expiration colors — avoids per-item useUnistyles in ExpirationText
   const expirationColors = ({
@@ -364,35 +407,29 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   // PERFORMANCE: Reference-equality cache. Apollo Client's normalized cache gives
   // updated items new object references while unchanged items keep the same reference.
   // So `cached.item === item` is a perfect O(1) staleness check with zero allocations.
-  const displayCacheRef = useRef<Map<string, { item: PantryItem; data: ItemDisplayData }>>(new Map());
+  const [displayCache, setDisplayCache] = useState<{
+    cache: Map<string, { item: PantryItem; data: ItemDisplayData }>;
+    displayMap: Map<string, ItemDisplayData>;
+    // Track inputs to know when to recompute
+    items: PantryItem[];
+  }>(() => {
+    const result = computeDisplayCache(deferredSortedItems, new Map(), expirationColors);
+    return { cache: result.nextCache, displayMap: result.map, items: deferredSortedItems };
+  });
 
-  const itemDisplayMap = (() => {
-    const map = new Map<string, ItemDisplayData>();
-    const now = Date.now();
-    const prevCache = displayCacheRef.current;
-    const nextCache = new Map<string, { item: PantryItem; data: ItemDisplayData }>();
-
-    for (const item of sortedItems) {
-      const cached = prevCache.get(item.id);
-
-      if (cached && cached.item === item) {
-        // Same object reference — Apollo hasn't updated this pantry item
-        map.set(item.id, cached.data);
-        nextCache.set(item.id, cached);
-      } else {
-        const data = computeItemDisplay(item, now, expirationColors, getLocationString);
-        map.set(item.id, data);
-        nextCache.set(item.id, { item, data });
-      }
-    }
-
-    displayCacheRef.current = nextCache;
-    return map;
-  })();
+  // Recompute cache when items change (state-based pattern for render-time derivation)
+  let itemDisplayMap = displayCache.displayMap;
+  if (displayCache.items !== deferredSortedItems) {
+    const result = computeDisplayCache(deferredSortedItems, displayCache.cache, expirationColors);
+    itemDisplayMap = result.map;
+    setDisplayCache({ cache: result.nextCache, displayMap: result.map, items: deferredSortedItems });
+  }
 
   // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
   const itemDisplayMapRef = useRef(itemDisplayMap);
-  itemDisplayMapRef.current = itemDisplayMap;
+  useEffect(() => {
+    itemDisplayMapRef.current = itemDisplayMap;
+  });
 
   // Scroll to top when filter or sort changes — FlashList v2's
   // maintainVisibleContentPosition causes layout corruption on data reorder
@@ -471,7 +508,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   // Memoize extraData to avoid new array reference every render
   const extraData = [sortOption, sortDirection, locationFilter];
 
-  const isEmpty = !showSkeletons && sortedItems.length === 0;
+  const isEmpty = !showSkeletons && deferredSortedItems.length === 0;
 
   // Use flexGrow when empty so ListEmptyComponent can center properly;
   // drop the large paddingBottom that creates excess space below the empty state
@@ -596,7 +633,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
             <FlashList<PantryItem>
               ref={flashListRef}
               testID="pantry-list"
-              data={showSkeletons ? EMPTY_ARRAY : sortedItems}
+              data={showSkeletons ? EMPTY_ARRAY : deferredSortedItems}
               renderItem={renderItem}
               keyExtractor={keyExtractor}
               extraData={extraData}

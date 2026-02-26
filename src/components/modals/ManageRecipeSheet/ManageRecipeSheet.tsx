@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -63,8 +63,24 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const [newFolderName, setNewFolderName] = useState('');
   const [localFolders, setLocalFolders] = useState<string[]>([]);
 
-  // Sync local state when props change
-  useEffect(() => {
+  // Sync local state when props change (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevCurrentFolder, setPrevCurrentFolder] = useState(currentFolder);
+  const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
+  const [prevCurrentNotes, setPrevCurrentNotes] = useState(currentNotes);
+  const [prevCurrentRating, setPrevCurrentRating] = useState(currentRating);
+  if (
+    visible !== prevVisible ||
+    currentFolder !== prevCurrentFolder ||
+    currentTags !== prevCurrentTags ||
+    currentNotes !== prevCurrentNotes ||
+    currentRating !== prevCurrentRating
+  ) {
+    setPrevVisible(visible);
+    setPrevCurrentFolder(currentFolder);
+    setPrevCurrentTags(currentTags);
+    setPrevCurrentNotes(currentNotes);
+    setPrevCurrentRating(currentRating);
     if (visible) {
       setSelectedFolder(currentFolder ?? null);
       setTags(currentTags);
@@ -74,7 +90,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setNewFolderName('');
       setLocalFolders([]);
     }
-  }, [visible, currentFolder, currentTags, currentNotes, currentRating]);
+  }
 
   const handleSelectFolder = async (folder: string | null) => {
       setSelectedFolder(folder);

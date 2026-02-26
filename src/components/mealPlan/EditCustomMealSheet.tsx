@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
@@ -30,12 +30,17 @@ export const EditCustomMealSheet: React.FC<EditCustomMealSheetProps> = ({
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
 
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevItem, setPrevItem] = useState(item);
+  if (visible !== prevVisible || item !== prevItem) {
+    setPrevVisible(visible);
+    setPrevItem(item);
     if (visible && item) {
       setName(item.customMealName ?? '');
       setNotes(item.notes ?? '');
     }
-  }, [visible, item]);
+  }
 
   const handleSave = () => {
     if (!item) return;

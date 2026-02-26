@@ -63,8 +63,10 @@ export function useFilterTransition<T>(
 
   // Auto-apply filter when items or filterFn changes
   useEffect(() => {
-    applyFilter();
-  }, [applyFilter]);
+    startTransition(() => {
+      setFilteredItems(items.filter(filterFn));
+    });
+  }, [items, filterFn]);
 
   return {
     filteredItems,
@@ -106,8 +108,10 @@ export function useFilterTransitionWithDeps<T>(
 
   // Auto-apply filter when dependencies change
   useEffect(() => {
-    applyFilter();
-  }, [applyFilter]);
+    startTransition(() => {
+      setFilteredItems(items.filter(filterFn));
+    });
+  }, [items, filterFn]);
 
   return {
     filteredItems,

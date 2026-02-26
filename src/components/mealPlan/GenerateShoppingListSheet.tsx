@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import {
   BottomSheetModal,
@@ -41,20 +41,23 @@ export const GenerateShoppingListSheet: React.FC<GenerateShoppingListSheetProps>
   const [customName, setCustomName] = useState('');
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
-  const { data: listsData } = useGetShoppingListsLiteQuery({
-    variables: { first: 20 },
-    skip: !visible });
-
-  const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
-
-  useEffect(() => {
+  // Reset state when sheet opens (render-time conditional state update)
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setCheckPantry(true);
       setMode('new');
       setCustomName('');
       setSelectedListId(null);
     }
-  }, [visible]);
+  }
+
+  const { data: listsData } = useGetShoppingListsLiteQuery({
+    variables: { first: 20 },
+    skip: !visible });
+
+  const shoppingLists = listsData?.shoppingLists?.edges?.map(e => e.node) ?? [];
 
   const handleGenerate = () => {
     onGenerate({

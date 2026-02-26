@@ -148,6 +148,7 @@ export const useDefaultHome = () => {
       console.warn(
         '[HomeSelector] Selected home no longer exists, clearing selection',
       );
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- coordinating with cache eviction side effect
       setIsClearingStaleIds(true);
 
       // Evict stale Home and Pantry entities from Apollo cache
@@ -190,6 +191,7 @@ export const useDefaultHome = () => {
   // Reset clearing flag after state updates propagate
   useEffect(() => {
     if (isClearingStaleIds && !selectedHomeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting flag after cache eviction propagates
       setIsClearingStaleIds(false);
     }
   }, [isClearingStaleIds, selectedHomeId]);

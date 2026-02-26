@@ -42,24 +42,20 @@ export function useAddItemSheetState({
   // Deferred rendering — waits for sheet animation to finish before rendering suggestions
   const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(false);
 
-  // Control deferred fetch based on visibility
-  useEffect(() => {
+  // Render-time state reset: track previous visibility to detect open/close transitions
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevContextId, setPrevContextId] = useState(contextId);
+
+  if (visible !== prevVisible || contextId !== prevContextId) {
+    setPrevVisible(visible);
+    setPrevContextId(contextId);
+
     if (visible && contextId) {
       // Reset state on open
       setSearchQuery('');
       setExitingItems(new Set());
       setShouldRenderSuggestions(false);
-
-      if (deferFetch) {
-        // Defer fetch until after sheet animation
-        const fetchTimer = setTimeout(() => setShouldFetch(true), deferDelayMs);
-        // Defer suggestion rendering until sheet animation settles
-        const renderTimer = setTimeout(() => setShouldRenderSuggestions(true), RENDER_SUGGESTIONS_DELAY_MS);
-        return () => {
-          clearTimeout(fetchTimer);
-          clearTimeout(renderTimer);
-        };
-      } else {
+      if (!deferFetch) {
         setShouldFetch(true);
         setShouldRenderSuggestions(true);
       }
@@ -67,6 +63,20 @@ export function useAddItemSheetState({
       // Reset on close
       setShouldFetch(false);
       setShouldRenderSuggestions(false);
+    }
+  }
+
+  // Control deferred fetch based on visibility (timers still need useEffect)
+  useEffect(() => {
+    if (visible && contextId && deferFetch) {
+      // Defer fetch until after sheet animation
+      const fetchTimer = setTimeout(() => setShouldFetch(true), deferDelayMs);
+      // Defer suggestion rendering until sheet animation settles
+      const renderTimer = setTimeout(() => setShouldRenderSuggestions(true), RENDER_SUGGESTIONS_DELAY_MS);
+      return () => {
+        clearTimeout(fetchTimer);
+        clearTimeout(renderTimer);
+      };
     }
   }, [visible, contextId, deferFetch, deferDelayMs]);
 

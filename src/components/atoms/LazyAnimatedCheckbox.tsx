@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Pressable, Animated as RNAnimated } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -40,7 +40,7 @@ export const LazyAnimatedCheckbox: React.FC<LazyAnimatedCheckboxProps> =
 
     // PERFORMANCE: Use RN Animated for lightweight micro-animation
     // Reanimated would add overhead for this simple bounce effect
-    const scaleAnim = useRef(new RNAnimated.Value(1)).current;
+    const [scaleAnim] = useState(() => new RNAnimated.Value(1));
     const prevCheckedRef = useRef(checked);
 
     // Trigger micro-animation when checked state changes

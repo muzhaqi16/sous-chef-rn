@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -63,19 +63,22 @@ export const CollapsiblePurchasedSection: React.FC<
     };
 
   // Preserve expansion state and only auto-expand when completing all shopping
-  // OPTIMIZATION: Use ref to detect threshold crossing, prevent effect on every count change
-  const prevUnpurchasedRef = useRef(unpurchasedCount);
-  useEffect(() => {
-    // Only auto-expand when crossing the zero threshold (items remaining -> all done)
-    // Don't trigger on every purchase, only when last item is marked purchased
+  // Render-time state update: detect zero threshold crossing
+  const [prevUnpurchasedCount, setPrevUnpurchasedCount] = useState(unpurchasedCount);
+  if (unpurchasedCount !== prevUnpurchasedCount) {
     const crossedZeroThreshold =
-      prevUnpurchasedRef.current > 0 && unpurchasedCount === 0;
+      prevUnpurchasedCount > 0 && unpurchasedCount === 0;
+    setPrevUnpurchasedCount(unpurchasedCount);
     if (crossedZeroThreshold && purchasedItems.length > 0 && !expanded) {
-      setExpanded(true);
+      if (isControlled) {
+        onExpandedChange?.(true);
+      } else {
+        setInternalExpanded(true);
+        onExpandedChange?.(true);
+      }
     }
-    prevUnpurchasedRef.current = unpurchasedCount;
     // Don't auto-collapse - preserve user's manual choice
-  }, [unpurchasedCount, purchasedItems.length, expanded, setExpanded]);
+  }
 
   // Animated values for chevron rotation
   const chevronRotation = useSharedValue(expanded ? 180 : 0);
