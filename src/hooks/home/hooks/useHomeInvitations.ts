@@ -17,6 +17,13 @@ import {
 import { useErrorService } from '#/services/errorService';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { executeCacheUpdate, executeMutation, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+
+const addInviteToHomeCache = createAddToParentConnectionUpdater(
+  'Home',
+  'invitesConnection',
+  'HomeInvite',
+);
 
 interface UseHomeInvitationsOptions {
   homes: any[] | null;
@@ -45,29 +52,12 @@ export function useHomeInvitations({
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
     errorPolicy: 'all',
-    // Note: No cache update or optimistic response needed
-    // The cache update returns existingMembers unchanged because:
-    // 1. Invites don't immediately add members (requires acceptance)
-    // 2. Real-time subscription handles all updates when invite is sent/accepted
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome?.homeInvite || !variables) return;
 
       executeCacheUpdate(
         () => {
-          const homeId = variables.input.homeId;
-
-          // Empty cache.modify - subscription handles the actual update
-          if (data.inviteToHome!.homeInvite) {
-            cache.modify({
-              id: cache.identify({ __typename: 'Home', id: homeId }),
-              fields: {
-                members(existingMembers = []) {
-                  // Return unchanged - subscription will handle the update when invite is accepted
-                  return existingMembers;
-                },
-              },
-            });
-          }
+          addInviteToHomeCache(cache, variables.input.homeId, data.inviteToHome!.homeInvite!, { position: 'end' });
         },
         'Cache update failed for inviteUser:',
       );

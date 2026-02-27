@@ -27,6 +27,8 @@ import CollaboratorPermissionsBottomSheet, {
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
+import { AlertBanner } from '#components/molecules/AlertBanner';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -76,6 +78,7 @@ const formatStatus = (status: string) => {
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ route }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
+  const { navigateTo } = useAppNavigation();
   const { listId } = route.params;
 
   const [email, setEmail] = useState('');
@@ -88,11 +91,14 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
   const currentUser = useAppStore(selectUser);
 
   const {
+    shoppingList,
     loading,
     isRefetching,
     collaborators,
     name: listName,
     refetch } = useShoppingListDetails(listId);
+
+  const isHomeLinked = !!shoppingList?.homeId;
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -225,30 +231,47 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
           }
         >
-          <View style={styles.inviteSection}>
-            <Text style={styles.sectionTitle}>Invite Members</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
+          {isHomeLinked ? (
+            <View style={styles.homeLinkedSection}>
+              <AlertBanner
+                title={`This list belongs to the home "${shoppingList?.home?.name ?? 'Unknown'}". Members are managed through home settings.`}
+                icon="home-outline"
+                iconLibrary="Ionicons"
+                variant="warning"
               />
-              <Pressable
-                style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
-                onPress={handleShare}
-                disabled={sharing}
-              >
-                {sharing ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Icon name="send" size={20} color="white" />
-                )}
-              </Pressable>
+              <Button
+                title="Manage Home"
+                onPress={() => navigateTo.homeManagement({ homeId: shoppingList?.homeId ?? undefined })}
+                variant="secondary"
+                icon="people-outline"
+              />
             </View>
-          </View>
+          ) : (
+            <View style={styles.inviteSection}>
+              <Text style={styles.sectionTitle}>Invite Members</Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Enter email address"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <Pressable
+                  style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
+                  onPress={handleShare}
+                  disabled={sharing}
+                >
+                  {sharing ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Icon name="send" size={20} color="white" />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {activeCollaborators.length > 0 && (
             <View style={styles.membersSection}>
@@ -292,25 +315,27 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
                         </View>
                       </View>
                     </View>
-                    <Pressable
-                      onPress={e => {
-                        e?.stopPropagation?.();
-                        if (member.id) {
-                          handleRemoveMember(member.id);
-                        }
-                      }}
-                      style={({pressed}) => pressed && styles.pressed}
-                    >
-                      <Icon name="close" size={20} color={theme.colors.error} />
-                    </Pressable>
+                    {!isHomeLinked && (
+                      <Pressable
+                        onPress={e => {
+                          e?.stopPropagation?.();
+                          if (member.id) {
+                            handleRemoveMember(member.id);
+                          }
+                        }}
+                        style={({pressed}) => pressed && styles.pressed}
+                      >
+                        <Icon name="close" size={20} color={theme.colors.error} />
+                      </Pressable>
+                    )}
                   </Pressable>
                 );
               })}
             </View>
           )}
 
-          {/* Leave List section - only show for non-owners who are collaborators */}
-          {!!currentUserCollaborator && !isOwner && (
+          {/* Leave List section - only show for non-owners who are collaborators on non-home-linked lists */}
+          {!!currentUserCollaborator && !isOwner && !isHomeLinked && (
             <View style={styles.leaveSection}>
               <Text style={styles.sectionTitle}>Danger Zone</Text>
               <Text style={styles.leaveDescription}>
@@ -342,6 +367,11 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background },
   scrollContent: {
     flexGrow: 1 },
+  homeLinkedSection: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border },
   inviteSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,
