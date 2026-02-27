@@ -9,6 +9,7 @@ import {
   PantryItemFragment } from '#generated';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { Telemetry } from '#services/telemetry';
+import { executeMutationWithErrorHandler, executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UsePantryItemActionsOptions {
   pantryItems: PantryItemFragment[];
@@ -104,24 +105,28 @@ export function usePantryItemActions({
       const originalQty = item.quantity;
       optimisticUpdateQuantity(item.id, originalQty - quantityUsed);
 
-      try {
-        await createPantryItemUsage({
+      const consumeNotes = notes || undefined;
+      const consumeResult = await executeMutationWithErrorHandler(
+        () => createPantryItemUsage({
           variables: {
             input: {
               pantryItemId: item.id,
               quantityUsed,
               purpose,
-              notes: notes || undefined,
-              usageUnitId } } });
+              notes: consumeNotes,
+              usageUnitId } } }),
+        (error: any) => {
+          revertQuantity(item.id, originalQty);
+          if (!isNetworkError(error)) {
+            const errorMessage = error.message || 'Failed to record item usage. Please try again.';
+            console.error('Error consuming pantry item:', error);
+            Alert.alert('Error', errorMessage);
+          }
+        },
+      );
+      if (!consumeResult) return;
 
-        closeModal();
-      } catch (error: any) {
-        revertQuantity(item.id, originalQty);
-        if (!isNetworkError(error)) {
-          console.error('Error consuming pantry item:', error);
-          Alert.alert('Error', error.message || 'Failed to record item usage. Please try again.');
-        }
-      }
+      closeModal();
     };
 
   // Handler to confirm waste recording (uses createPantryItemUsage with purpose: WASTE)
@@ -140,27 +145,31 @@ export function usePantryItemActions({
       const originalQty = item.quantity;
       optimisticUpdateQuantity(item.id, originalQty - wasteAmount);
 
-      try {
-        await createPantryItemUsage({
+      const wasteNotes = notes || undefined;
+      const wasteResult = await executeMutationWithErrorHandler(
+        () => createPantryItemUsage({
           variables: {
             input: {
               pantryItemId: item.id,
               quantityUsed: wasteAmount,
               purpose: UsagePurpose.Waste,
-              notes: notes || undefined,
+              notes: wasteNotes,
               usageUnitId: wasteUnitId,
               wasteReason,
               isComposted,
-              isRecycled } } });
+              isRecycled } } }),
+        (error: any) => {
+          revertQuantity(item.id, originalQty);
+          if (!isNetworkError(error)) {
+            const errorMessage = error.message || 'Failed to record item waste. Please try again.';
+            console.error('Error recording pantry item waste:', error);
+            Alert.alert('Error', errorMessage);
+          }
+        },
+      );
+      if (!wasteResult) return;
 
-        closeModal();
-      } catch (error: any) {
-        revertQuantity(item.id, originalQty);
-        if (!isNetworkError(error)) {
-          console.error('Error recording pantry item waste:', error);
-          Alert.alert('Error', error.message || 'Failed to record item waste. Please try again.');
-        }
-      }
+      closeModal();
     };
 
   // Handler to confirm restock
@@ -180,26 +189,31 @@ export function usePantryItemActions({
       const originalQty = item.quantity;
       optimisticUpdateQuantity(item.id, originalQty + quantity);
 
-      try {
-        await restockPantryItem({
+      const restockNotes = notes || undefined;
+      const expiresAtValue = expiresAt ? expiresAt.toISOString() : null;
+      const restockResult = await executeMutationWithErrorHandler(
+        () => restockPantryItem({
           variables: {
             id: item.id,
             input: {
               quantity,
               unitId,
-              notes: notes || undefined,
+              notes: restockNotes,
               costPerUnit,
               totalCost,
-              expiresAt: expiresAt ? expiresAt.toISOString() : null } } });
+              expiresAt: expiresAtValue } } }),
+        (error: any) => {
+          revertQuantity(item.id, originalQty);
+          if (!isNetworkError(error)) {
+            const errorMessage = error.message || 'Failed to restock item. Please try again.';
+            console.error('Error restocking pantry item:', error);
+            Alert.alert('Error', errorMessage);
+          }
+        },
+      );
+      if (!restockResult) return;
 
-        closeModal();
-      } catch (error: any) {
-        revertQuantity(item.id, originalQty);
-        if (!isNetworkError(error)) {
-          console.error('Error restocking pantry item:', error);
-          Alert.alert('Error', error.message || 'Failed to restock item. Please try again.');
-        }
-      }
+      closeModal();
     };
 
   // Handler to open consume modal (for swipe action)
@@ -233,12 +247,15 @@ export function usePantryItemActions({
 
   // Handler to delete item (for swipe action)
   const handleDeleteItem = async (itemId: string) => {
-      try {
-        await removeItem(itemId);
-        Telemetry.trackEvent('delete_pantry_item_success', { item_id: itemId });
-      } catch (error) {
-        console.error('Error deleting pantry item:', error);
-      }
+      const deleteResult = await executeMutation(
+        async () => {
+          await removeItem(itemId);
+          Telemetry.trackEvent('delete_pantry_item_success', { item_id: itemId });
+          return true;
+        },
+        'Error deleting pantry item:',
+      );
+      if (!deleteResult) return;
     };
 
   // Derive modal states from the single activeModal for backward compatibility

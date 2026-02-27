@@ -100,25 +100,32 @@ export const CreateMealPlanScreen: React.FC = () => {
       return;
     }
 
+    const endDate = computeEndDate(startDate, planType);
+    const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
+    const descriptionValue = description.trim() || undefined;
+    const servingsValue = parseInt(servings) || 2;
+
+    let result;
     try {
-      const endDate = computeEndDate(startDate, planType);
-      const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
-      const result = await createMealPlan({
+      result = await createMealPlan({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: descriptionValue,
         planType,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        servings: parseInt(servings) || 2,
+        servings: servingsValue,
         homeId });
-
-      if (result?.success) {
-        goBack();
-      } else {
-        Alert.alert('Error', result?.message ?? 'Failed to create meal plan.');
-      }
     } catch (error: any) {
-      Alert.alert('Error', error.message ?? 'Failed to create meal plan.');
+      const errorMessage = error.message ?? 'Failed to create meal plan.';
+      Alert.alert('Error', errorMessage);
+      return;
+    }
+
+    if (result?.success) {
+      goBack();
+    } else {
+      const message = result?.message ?? 'Failed to create meal plan.';
+      Alert.alert('Error', message);
     }
   };
 

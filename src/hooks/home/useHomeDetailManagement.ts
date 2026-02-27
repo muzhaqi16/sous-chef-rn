@@ -15,6 +15,7 @@ import { MESSAGES } from '#/constants/messages';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
   handleVersionConflict,
@@ -89,16 +90,17 @@ export function useHomeDetailManagement(homeId: string) {
     update(cache, { data }, { variables }) {
       if (!data?.removeMember?.success || !variables) return;
 
-      try {
-        const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
-          'Home',
-          'membersConnection',
-          'Membership',
-        );
-        removeFromMembersCache(cache, homeId, variables.id, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for removeMember:', error);
-      }
+      executeCacheUpdate(
+        () => {
+          const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
+            'Home',
+            'membersConnection',
+            'Membership',
+          );
+          removeFromMembersCache(cache, homeId, variables.id, { evictItem: true });
+        },
+        'Cache update failed for removeMember:',
+      );
     },
     onError: error => {
       // PERFORMANCE: Handle version conflict errors with user-friendly message
@@ -118,16 +120,17 @@ export function useHomeDetailManagement(homeId: string) {
     update(cache, { data }, { variables }) {
       if (!data?.revokeHomeInvite?.success || !variables) return;
 
-      try {
-        const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
-          'Home',
-          'invitesConnection',
-          'HomeInvite',
-        );
-        removeFromInvitesCache(cache, homeId, variables.id, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for revokeInvite:', error);
-      }
+      executeCacheUpdate(
+        () => {
+          const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
+            'Home',
+            'invitesConnection',
+            'HomeInvite',
+          );
+          removeFromInvitesCache(cache, homeId, variables.id, { evictItem: true });
+        },
+        'Cache update failed for revokeInvite:',
+      );
     },
     onError: error => {
       // PERFORMANCE: Handle version conflict errors with user-friendly message
@@ -150,14 +153,14 @@ export function useHomeDetailManagement(homeId: string) {
       update(cache, { data }) {
         if (!data?.leaveHome?.success) return;
 
-        try {
-          // Evict the home from cache after leaving
-          cache.evict({
-            id: cache.identify({ __typename: 'Home', id: homeId }) });
-          cache.gc();
-        } catch (error) {
-          console.warn('Cache update failed for leaveHome:', error);
-        }
+        executeCacheUpdate(
+          () => {
+            cache.evict({
+              id: cache.identify({ __typename: 'Home', id: homeId }) });
+            cache.gc();
+          },
+          'Cache update failed for leaveHome:',
+        );
       },
       onCompleted: data => {
         if (data?.leaveHome?.success && homeId === selectedHomeId) {
@@ -274,13 +277,11 @@ export function useHomeDetailManagement(homeId: string) {
               text: 'Leave',
               style: 'destructive',
               onPress: async () => {
-                try {
-                  const result = await leaveHomeMutation({
-                    variables: { homeId } });
-                  resolve(!!result.data?.leaveHome?.success);
-                } catch {
-                  resolve(false);
-                }
+                const result = await executeMutation(
+                  () => leaveHomeMutation({ variables: { homeId } }),
+                  'Failed to leave home',
+                );
+                resolve(result ? !!result.data?.leaveHome?.success : false);
               } },
           ],
         );

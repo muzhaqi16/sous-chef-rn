@@ -12,38 +12,36 @@ import { useAuth } from '#hooks/auth/useAuth';
 import { useVerifyEmailMutation } from '#generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface EmailVerificationRouteParams {
   token: string;
 }
 
-export const EmailVerificationDeepLinkScreen: React.FC = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { theme } = useUnistyles();
-  const { user, updateUser } = useAuth();
-  const toast = useToast();
+/** Module-level try-catch extraction for React Compiler compatibility */
+async function performVerificationImpl(
+  token: string | undefined,
+  verifyEmail: ReturnType<typeof useVerifyEmailMutation>[0],
+  user: ReturnType<typeof useAuth>['user'],
+  updateUser: ReturnType<typeof useAuth>['updateUser'],
+  toast: ReturnType<typeof useToast>,
+  setVerificationResult: (v: 'success' | 'error' | null) => void,
+  setErrorMessage: (v: string) => void,
+  setIsVerifying: (v: boolean) => void,
+): Promise<void> {
+  if (!token) {
+    setVerificationResult('error');
+    setErrorMessage('Invalid verification token');
+    setIsVerifying(false);
+    return;
+  }
 
-  const { token } = (route.params ?? {}) as Partial<EmailVerificationRouteParams>;
+  setIsVerifying(true);
+  setVerificationResult(null);
+  setErrorMessage('');
 
-  const [verifyEmail] = useVerifyEmailMutation();
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [verificationResult, setVerificationResult] = useState<'success' | 'error' | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-
-  const performVerification = async () => {
-    if (!token) {
-      setVerificationResult('error');
-      setErrorMessage('Invalid verification token');
-      setIsVerifying(false);
-      return;
-    }
-
-    setIsVerifying(true);
-    setVerificationResult(null);
-    setErrorMessage('');
-
-    try {
+  await executeMutationWithErrorHandler(
+    async () => {
       logger.info('Attempting email verification', {
         tokenPrefix: token.substring(0, 8) + '...',
         userId: user?.id });
@@ -66,24 +64,45 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
       } else {
         throw new Error(result.data?.verifyEmail?.message || 'Verification failed');
       }
-    } catch (error: any) {
+      return result;
+    },
+    (error: unknown) => {
+      const err = error as Error;
       logger.error('Email verification failed', { error });
 
-      const errorMsg = error.message || 'Verification failed. The link may be expired or invalid.';
+      const errorMsg = err.message || 'Verification failed. The link may be expired or invalid.';
       setErrorMessage(errorMsg);
       setVerificationResult('error');
 
       toast({
         message: errorMsg,
         type: 'error' });
-    } finally {
-      setIsVerifying(false);
-    }
+    },
+  );
+
+  setIsVerifying(false);
+}
+
+export const EmailVerificationDeepLinkScreen: React.FC = () => {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { theme } = useUnistyles();
+  const { user, updateUser } = useAuth();
+  const toast = useToast();
+
+  const { token } = (route.params ?? {}) as Partial<EmailVerificationRouteParams>;
+
+  const [verifyEmail] = useVerifyEmailMutation();
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [verificationResult, setVerificationResult] = useState<'success' | 'error' | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const performVerification = () => {
+    performVerificationImpl(token, verifyEmail, user, updateUser, toast, setVerificationResult, setErrorMessage, setIsVerifying);
   };
 
   useEffect(() => {
-    performVerification();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    performVerificationImpl(token, verifyEmail, user, updateUser, toast, setVerificationResult, setErrorMessage, setIsVerifying);
   }, [token, verifyEmail, user, updateUser, toast]);
 
   const handleGoBack = () => {

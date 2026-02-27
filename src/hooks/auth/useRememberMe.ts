@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '#/hooks/useToast';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 
 export interface RememberMeCredentials {
@@ -28,15 +29,18 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
   const handleRememberMeAccept = async () => {
     if (pendingCredentials) {
-      try {
-        await onAccept(pendingCredentials);
-        console.log('Credentials accepted by user');
-      } catch (error) {
-        console.error('Failed to process credential acceptance:', error);
-        toast({
-          message: 'Failed to save login information',
-          type: 'error' });
-      }
+      await executeMutationWithErrorHandler(
+        async () => {
+          await onAccept(pendingCredentials);
+          console.log('Credentials accepted by user');
+        },
+        (error) => {
+          console.error('Failed to process credential acceptance:', error);
+          toast({
+            message: 'Failed to save login information',
+            type: 'error' });
+        },
+      );
     }
     setShowRememberMeModal(false);
     setPendingCredentials(null);

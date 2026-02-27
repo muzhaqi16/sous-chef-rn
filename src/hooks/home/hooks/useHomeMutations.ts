@@ -30,6 +30,7 @@ import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
+import { executeCacheUpdate, executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseHomeMutationsOptions {
   homes: any[] | null;
@@ -69,12 +70,11 @@ export function useHomeMutations({
       update: (cache, { data }) => {
         if (!data?.createHome?.home) return;
 
-        try {
-          addToHomesCache(cache, data.createHome.home, { position: 'end' });
-        } catch (error) {
-          console.warn('Cache update failed for createHome:', error);
-          refetch();
-        }
+        executeCacheUpdate(
+          () => addToHomesCache(cache, data.createHome!.home!, { position: 'end' }),
+          'Cache update failed for createHome:',
+          refetch,
+        );
       },
       onCompleted: async data => {
         if (data?.createHome?.home) {
@@ -157,13 +157,11 @@ export function useHomeMutations({
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteHome?.success || !variables) return;
 
-        try {
-          const deletedHomeId = variables.id;
-          removeFromHomesCache(cache, deletedHomeId, { evictItem: true });
-        } catch (error) {
-          console.warn('Cache update failed for deleteHome:', error);
-          refetch();
-        }
+        executeCacheUpdate(
+          () => removeFromHomesCache(cache, variables.id, { evictItem: true }),
+          'Cache update failed for deleteHome:',
+          refetch,
+        );
       },
       onCompleted: async data => {
         if (data?.deleteHome?.success) {
@@ -243,28 +241,32 @@ export function useHomeMutations({
     homeId: string,
     updates: { name?: string; isDefault?: boolean },
   ) => {
-    try {
-      // Handle default home update separately if needed
-      if (updates.isDefault !== undefined && updates.isDefault) {
-        await setDefaultHome(homeId);
-        delete updates.isDefault; // Remove from updates since we handle it separately
-      }
+    // Handle default home update separately if needed
+    if (updates.isDefault !== undefined && updates.isDefault) {
+      const defaultResult = await executeMutation(
+        () => setDefaultHome(homeId),
+        'Set default home error:',
+      );
+      if (defaultResult === false) return false;
+      delete updates.isDefault; // Remove from updates since we handle it separately
+    }
 
-      if (Object.keys(updates).length > 0) {
-        const result = await updateHomeMutation({
+    if (Object.keys(updates).length > 0) {
+      const result = await executeMutation(
+        () => updateHomeMutation({
           variables: {
             id: homeId,
             input: updates,
           },
-        });
+        }),
+        'Update home error:',
+      );
+      if (!result) return false;
 
-        return result.data?.updateHome?.home || false;
-      }
-
-      return true;
-    } catch {
-      return false;
+      return result.data?.updateHome?.home || false;
     }
+
+    return true;
   };
 
   const deleteHome = (homeId: string, homeName: string) => {

@@ -1,4 +1,5 @@
-import React, {  useDeferredValue,
+import React, {
+  useDeferredValue,
   useEffect,
   useRef,
   useState,
@@ -89,16 +90,23 @@ const PantryMainScreen: React.FC = () => {
     };
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
+  const pendingPantryScrollToTopRef = useRef(pendingPantryScrollToTop);
   const handleItemAdded = () => {
     pantryContentRef.current?.scrollToTop();
   };
-  // Scroll to top when returning from barcode scanner after adding an item
-  useFocusEffect(() => {
-    if (pendingPantryScrollToTop) {
+  useEffect(() => {
+    pendingPantryScrollToTopRef.current = pendingPantryScrollToTop;
+  }, [pendingPantryScrollToTop]);
+
+  const [onPantryFocus] = useState(() => () => {
+    if (pendingPantryScrollToTopRef.current) {
       pantryContentRef.current?.scrollToTop();
       setPendingPantryScrollToTop(false);
     }
   });
+
+  // Scroll to top when returning from barcode scanner after adding an item
+  useFocusEffect(onPantryFocus);
   // Location filter for redesigned tabs
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   // Add to pantry sheet state
@@ -169,11 +177,7 @@ const PantryMainScreen: React.FC = () => {
   const pantryItems = useDeferredValue(rawPantryItems);
   // PERF: Defer storage locations until pantry data has loaded (data-driven)
   // Default tabs (All/Fridge/Freezer/Pantry) show immediately; custom tabs appear after pantry loads
-  // Uses render-time conditional state update (latch: once true, stays true)
-  const [storageLocationsReady, setStorageLocationsReady] = useState(false);
-  if (!storageLocationsReady && !loading && isReady) {
-    setStorageLocationsReady(true);
-  }
+  const storageLocationsReady = !loading && isReady;
   const {
     locations: storageLocations,
     createLocation,

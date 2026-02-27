@@ -18,6 +18,7 @@ import { ThemePreference } from '#store/slices/preferencesSlice';
 import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
+import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
@@ -67,33 +68,34 @@ export const useConfigurableSettings = (profile: any) => {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);
-  const [biometricLoading, setBiometricLoading] = useState(true);
+  const [biometricLoading, setBiometricLoading] = useState(!!user?.email);
 
   // Load biometric info on mount
   useEffect(() => {
+    if (!user?.email) return;
+
     const loadBiometricInfo = async () => {
       setBiometricLoading(true);
-      try {
-        const [biometricInfo, hasCredentials] = await Promise.all([
+
+      const result = await executeQuery(
+        () => Promise.all([
           getBiometricInfo(),
           checkStoredCredentials(user?.email),
-        ]);
+        ]),
+        'Error loading biometric info',
+      );
 
+      if (result) {
+        const [biometricInfo, hasCredentials] = result;
         setBiometricAvailable(biometricInfo.isAvailable);
         setBiometricType(biometricInfo.biometryType);
         setBiometricEnabled(hasCredentials && biometricInfo.isAvailable);
-      } catch (error) {
-        console.error('Error loading biometric info:', error);
-      } finally {
-        setBiometricLoading(false);
       }
+
+      setBiometricLoading(false);
     };
 
-    if (user?.email) {
-      loadBiometricInfo();
-    } else {
-      setBiometricLoading(false);
-    }
+    loadBiometricInfo();
   }, [user?.email, getBiometricInfo, checkStoredCredentials]);
 
   // BiometricSetupModal state
@@ -115,16 +117,10 @@ export const useConfigurableSettings = (profile: any) => {
     };
 
   const updateProfile = async (input: Partial<Record<any, any>>) => {
-      try {
-        // Mutation uses automatic normalization + optimistic response
-        // No manual cache update needed (Pattern 2)
-        await updateProfileMutation({
-          variables: {
-            input } });
-      } catch (error) {
-        // Error handled by onError handler in mutation options
-        console.error('Failed to update profile:', error);
-      }
+      await executeMutation(
+        () => updateProfileMutation({ variables: { input } }),
+        'Failed to update profile',
+      );
     };
 
   const updateUserPreferences = (input: any) => {
@@ -337,41 +333,36 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.onPress = async () => {
               if (!biometricAvailable) return;
 
-              try {
-                if (!biometricEnabled) {
-                  // Show BiometricSetupModal for enabling authentication
-                  setShowBiometricModal(true);
-                } else {
-                  // Disable biometric authentication
-                  Alert.alert(
-                    'Disable Biometric Authentication',
-                    'This will remove your saved credentials. You can re-enable it later.',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Disable',
-                        style: 'destructive',
-                        onPress: async () => {
-                          try {
+              if (!biometricEnabled) {
+                setShowBiometricModal(true);
+              } else {
+                Alert.alert(
+                  'Disable Biometric Authentication',
+                  'This will remove your saved credentials. You can re-enable it later.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Disable',
+                      style: 'destructive',
+                      onPress: async () => {
+                        const result = await executeMutation(
+                          async () => {
                             if (user?.email) {
                               await removeCredentials(user.email);
                               setBiometricEnabled(false);
                             }
-                          } catch {
-                            Alert.alert(
-                              'Error',
-                              'Failed to disable biometric authentication.',
-                            );
-                          }
-                        } },
-                    ],
-                  );
-                }
-              } catch (error) {
-                if (error instanceof Error && error.message !== 'Cancelled') {
-                  console.error('Biometric setting error:', error);
-                  Alert.alert('Error', 'Failed to update biometric settings.');
-                }
+                          },
+                          'Failed to disable biometric authentication',
+                        );
+                        if (result === false) {
+                          Alert.alert(
+                            'Error',
+                            'Failed to disable biometric authentication.',
+                          );
+                        }
+                      } },
+                  ],
+                );
               }
             };
           }

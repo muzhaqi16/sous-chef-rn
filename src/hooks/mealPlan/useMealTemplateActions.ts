@@ -9,6 +9,7 @@ import {
   type CreateTemplateFromMealPlanInput } from '#generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useMealTemplateActions() {
   const [createFromTemplateMutation, { loading: creatingFromTemplate }] =
@@ -40,63 +41,59 @@ export function useMealTemplateActions() {
       } });
 
   const createPlanFromTemplate = async (input: CreateMealPlanFromTemplateInput) => {
-      try {
-        const result = await createFromTemplateMutation({
-          variables: { input } });
-        const data = result.data?.createMealPlanFromTemplate;
-        if (data?.success) {
-          toastService.success('Meal plan created from template!');
-          Telemetry.trackEvent('meal_plan_created_from_template', {
-            template_id: input.templateId });
-        }
-        return data ?? null;
-      } catch {
-        return null;
+      const result = await executeMutation(
+        () => createFromTemplateMutation({ variables: { input } }),
+        'Create meal plan from template error:',
+      );
+      if (!result) return null;
+      const data = result.data?.createMealPlanFromTemplate;
+      if (data?.success) {
+        toastService.success('Meal plan created from template!');
+        Telemetry.trackEvent('meal_plan_created_from_template', {
+          template_id: input.templateId });
       }
+      return data ?? null;
     };
 
   const createTemplateFromPlan = async (input: CreateTemplateFromMealPlanInput) => {
-      try {
-        const result = await createTemplateMutation({
-          variables: { input } });
-        const data = result.data?.createTemplateFromMealPlan;
-        if (data?.success) {
-          toastService.success('Meal plan saved as template!');
-          Telemetry.trackEvent('template_created_from_meal_plan', {
-            meal_plan_id: input.mealPlanId });
-        }
-        return data ?? null;
-      } catch {
-        return null;
+      const result = await executeMutation(
+        () => createTemplateMutation({ variables: { input } }),
+        'Create template from meal plan error:',
+      );
+      if (!result) return null;
+      const data = result.data?.createTemplateFromMealPlan;
+      if (data?.success) {
+        toastService.success('Meal plan saved as template!');
+        Telemetry.trackEvent('template_created_from_meal_plan', {
+          meal_plan_id: input.mealPlanId });
       }
+      return data ?? null;
     };
 
   const deleteTemplate = async (id: string) => {
-      try {
-        const result = await deleteTemplateMutation({
-          variables: { id } });
-        const success = result.data?.deleteMealTemplate?.success ?? false;
-        if (success) {
-          toastService.success('Template deleted');
-        }
-        return success;
-      } catch {
-        return false;
+      const result = await executeMutation(
+        () => deleteTemplateMutation({ variables: { id } }),
+        'Delete meal template error:',
+      );
+      if (!result) return false;
+      const success = result.data?.deleteMealTemplate?.success ?? false;
+      if (success) {
+        toastService.success('Template deleted');
       }
+      return success;
     };
 
   const duplicateTemplate = async (id: string, newName: string) => {
-      try {
-        const result = await duplicateTemplateMutation({
-          variables: { id, newName } });
-        const data = result.data?.duplicateTemplate;
-        if (data?.success) {
-          toastService.success('Template duplicated!');
-        }
-        return data ?? null;
-      } catch {
-        return null;
+      const result = await executeMutation(
+        () => duplicateTemplateMutation({ variables: { id, newName } }),
+        'Duplicate template error:',
+      );
+      if (!result) return null;
+      const data = result.data?.duplicateTemplate;
+      if (data?.success) {
+        toastService.success('Template duplicated!');
       }
+      return data ?? null;
     };
 
   return {

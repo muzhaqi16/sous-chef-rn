@@ -19,6 +19,34 @@ import { useSearchableList } from '../../useSearchableList';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { useAppStore, selectIsHomeSelectionReady, selectSetIsPantryQueryComplete } from '#store/useAppStore';
 
+// Module-level helpers — outside hook body so React Compiler doesn't bail out on try-catch
+async function executePantryRefetch(
+  refetchFn: () => Promise<unknown>,
+  setIsRefreshing: (v: boolean) => void,
+) {
+  setIsRefreshing(true);
+  try {
+    await refetchFn();
+  } catch (error) {
+    throw error;
+  } finally {
+    setIsRefreshing(false);
+  }
+}
+
+async function executeAutoRefetch(
+  refetchFn: () => Promise<unknown>,
+  guard: React.RefObject<boolean>,
+) {
+  try {
+    await refetchFn();
+  } catch (error) {
+    console.warn('[usePantryQuery] Auto-refetch failed:', error);
+  } finally {
+    guard.current = false;
+  }
+}
+
 /**
  * Hook for fetching and managing pantry query with pagination
  *
@@ -82,14 +110,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     cursorVariableName: 'itemsCursor' });
 
   // Wrap refetch to track pull-to-refresh state
-  const memoizedRefetch = async () => {
-    setIsRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  const memoizedRefetch = () => executePantryRefetch(refetch, setIsRefreshing);
 
   // Guard to prevent multiple auto-refetches when edges are depleted
   const isAutoRefetchingRef = useRef(false);
@@ -122,15 +143,7 @@ export function usePantryQuery(pantryId: string | undefined) {
     if (totalCount > 0 && pantryItems.length === 0) {
       isAutoRefetchingRef.current = true;
 
-      const timeoutId = setTimeout(async () => {
-        try {
-          await refetch();
-        } catch (error) {
-          console.warn('[usePantryQuery] Auto-refetch failed:', error);
-        } finally {
-          isAutoRefetchingRef.current = false;
-        }
-      }, 100);
+      const timeoutId = setTimeout(() => executeAutoRefetch(refetch, isAutoRefetchingRef), 100);
 
       return () => {
         clearTimeout(timeoutId);

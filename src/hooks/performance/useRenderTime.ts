@@ -3,6 +3,8 @@ import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
 
+/* eslint-disable react-compiler/react-compiler, react-hooks/purity -- Render-time measurement is inherently impure (performance.now, Math.random during render). Compiler optimization is not applicable. */
+
 /**
  * Hook to track component render time and count
  *
@@ -36,7 +38,6 @@ export function useRenderTime(
   const totalRenderTime = useRef<number>(0);
 
   if (__DEV__) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- __DEV__ is a compile-time constant
     renderStartTime.current = performance.now();
   }
 
@@ -45,7 +46,6 @@ export function useRenderTime(
   const slowThreshold = options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
   if (__DEV__) {
-    // Increment render count
     renderCount.current += 1;
   }
 

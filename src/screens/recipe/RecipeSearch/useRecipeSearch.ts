@@ -11,6 +11,7 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useGetHomeQuery, ReligiousDiet } from '#generated';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 
 export interface RecipeFilters {
@@ -18,6 +19,114 @@ export interface RecipeFilters {
   intolerances: string[];
   mealType: string | null;
   maxReadyTime: number | null;
+}
+
+/** Handles API error alerts — extracted for reuse across search functions */
+function handleSearchError(error: unknown, label: string): void {
+  const err = error as { isQuotaExceeded?: boolean; isRateLimitError?: boolean };
+  console.error(`${label}:`, error);
+  if (err.isQuotaExceeded) {
+    Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+  } else if (err.isRateLimitError) {
+    Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+  } else {
+    Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+  }
+}
+
+/** Module-level pantry ingredient search — extracted for React Compiler compatibility */
+async function executePantrySearch(
+  ingredientNames: string,
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const results = await spoonacularService.searchRecipesByIngredients({
+        ingredients: ingredientNames,
+        number: 10,
+        ranking: 1,
+        ignorePantry: true });
+      setSearchResults(results);
+      return results;
+    },
+    (error) => handleSearchError(error, 'Pantry search error'),
+  );
+
+  setLoading(false);
+}
+
+/** Module-level text search — extracted for React Compiler compatibility */
+async function executeTextSearch(
+  query: string,
+  activeFilters: RecipeFilters,
+  excludedIngredients: string[],
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const data = await spoonacularService.searchRecipes({
+        query,
+        number: 10,
+        addRecipeInformation: true,
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(',') }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(',') }) });
+
+      setSearchResults(data.results || []);
+      return data;
+    },
+    (error) => handleSearchError(error, 'Search error'),
+  );
+
+  setLoading(false);
+}
+
+/** Module-level ingredient search — extracted for React Compiler compatibility */
+async function executeIngredientSearch(
+  ingredientString: string,
+  activeFilters: RecipeFilters,
+  excludedIngredients: string[],
+  setLoading: (v: boolean) => void,
+  setSearchPerformed: (v: boolean) => void,
+  setSearchResults: (v: (SearchRecipesResult | RecipeSearchResult)[]) => void,
+): Promise<void> {
+  setLoading(true);
+  setSearchPerformed(true);
+
+  await executeMutationWithErrorHandler(
+    async () => {
+      const results = await spoonacularService.searchRecipesByIngredients({
+        ingredients: ingredientString,
+        number: 10,
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(',') }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(',') }) });
+
+      setSearchResults(results);
+      return results;
+    },
+    (error) => handleSearchError(error, 'Ingredient search error'),
+  );
+
+  setLoading(false);
 }
 
 export function useRecipeSearch() {
@@ -102,28 +211,7 @@ export function useRecipeSearch() {
           .join(',');
 
         if (ingredientNames) {
-          setLoading(true);
-          setSearchPerformed(true);
-
-          try {
-            const results = await spoonacularService.searchRecipesByIngredients({
-              ingredients: ingredientNames,
-              number: 10,
-              ranking: 1,
-              ignorePantry: true });
-            setSearchResults(results);
-          } catch (error: any) {
-            console.error('Pantry search error:', error);
-            if (error.isQuotaExceeded) {
-              Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-            } else if (error.isRateLimitError) {
-              Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-            } else {
-              Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-            }
-          } finally {
-            setLoading(false);
-          }
+          await executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
           return;
         }
       }
@@ -131,35 +219,7 @@ export function useRecipeSearch() {
       return;
     }
 
-    setLoading(true);
-    setSearchPerformed(true);
-
-    try {
-      const data = await spoonacularService.searchRecipes({
-        query: searchQuery,
-        number: 10,
-        addRecipeInformation: true,
-        ...(activeFilters.diet && { diet: activeFilters.diet }),
-        ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(',') }),
-        ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
-        ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(',') }) });
-
-      setSearchResults(data.results || []);
-    } catch (error: any) {
-      console.error('Search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
+    await executeTextSearch(searchQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
   };
 
   // Auto-trigger search on mount
@@ -169,7 +229,7 @@ export function useRecipeSearch() {
     if (initialQuery && initialQuery.trim()) {
       // Text search from navigation params
       hasAutoSearchedRef.current = true;
-      handleTextSearch();
+      executeTextSearch(initialQuery, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
     } else if (pantryItems?.length) {
       // Auto-search with pantry ingredients
       const ingredientNames = pantryItems
@@ -180,32 +240,10 @@ export function useRecipeSearch() {
 
       if (ingredientNames) {
         hasAutoSearchedRef.current = true;
-        // Inline pantry search to avoid dependency on handlePantrySearch
-        setLoading(true);
-        setSearchPerformed(true);
-
-        spoonacularService.searchRecipesByIngredients({
-          ingredients: ingredientNames,
-          number: 10,
-          ranking: 1,
-          ignorePantry: true }).then(results => {
-          setSearchResults(results);
-        }).catch((error: any) => {
-          console.error('Pantry search error:', error);
-          if (error.isQuotaExceeded) {
-            Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-          } else if (error.isRateLimitError) {
-            Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-          } else {
-            Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-          }
-        }).finally(() => {
-          setLoading(false);
-        });
+        executePantrySearch(ingredientNames, setLoading, setSearchPerformed, setSearchResults);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialQuery, pantryItems]);
+  }, [initialQuery, pantryItems, activeFilters, excludedIngredients]);
 
   // Ingredient-based search
   const handleIngredientSearch = async () => {
@@ -215,36 +253,9 @@ export function useRecipeSearch() {
     }
 
     const ingredientString = Array.from(selectedIngredients).join(',');
-
-    setLoading(true);
-    setSearchPerformed(true);
     ingredientSheetRef.current?.close();
 
-    try {
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients: ingredientString,
-        number: 10,
-        ...(activeFilters.diet && { diet: activeFilters.diet }),
-        ...(activeFilters.intolerances.length > 0 && {
-          intolerances: activeFilters.intolerances.join(',') }),
-        ...(activeFilters.mealType && { type: activeFilters.mealType }),
-        ...(activeFilters.maxReadyTime && { maxReadyTime: activeFilters.maxReadyTime }),
-        ...(excludedIngredients.length > 0 && {
-          excludeIngredients: excludedIngredients.join(',') }) });
-
-      setSearchResults(results);
-    } catch (error: any) {
-      console.error('Ingredient search error:', error);
-      if (error.isQuotaExceeded) {
-        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
-      } else if (error.isRateLimitError) {
-        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
-      } else {
-        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
+    await executeIngredientSearch(ingredientString, activeFilters, excludedIngredients, setLoading, setSearchPerformed, setSearchResults);
   };
 
   const openIngredientSelector = () => {

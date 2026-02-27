@@ -298,13 +298,15 @@ export const MealPlanMain: React.FC = () => {
     };
 
   const handleDeletePlan = async (id: string) => {
+      let result;
       try {
-        const result = await deletePlanMutation({ variables: { id } });
-        if (result.data?.deleteMealPlan?.success) {
-          toastService.success('Meal plan deleted');
-        }
+        result = await deletePlanMutation({ variables: { id } });
       } catch {
         // Error handled by onError callback
+        return;
+      }
+      if (result.data?.deleteMealPlan?.success) {
+        toastService.success('Meal plan deleted');
       }
     };
 

@@ -18,6 +18,7 @@ import {
   selectSetHomeAndPantry,
   selectSetIsHomeSelectionReady } from '#store/useAppStore';
 import { useErrorService } from '#/services/errorService';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface UseHomeSelectionOptions {
   homes: any[] | null;
@@ -179,32 +180,33 @@ export function useHomeSelection({ homes, remoteDefaultHomeId, loading }: UseHom
       // This clears old pantry data to avoid showing wrong home's items
       setHomeAndPantry(homeId, localDefaultPantry?.id ?? null);
 
-      try {
-        const result = await setDefaultHomeMutation({
-          variables: { homeId } });
-
-        if (result.data?.setDefaultHome?.success) {
-          // Update pantry from server response (server is source of truth)
-          const serverPantry = result.data.setDefaultHome.defaultPantry;
-          if (serverPantry?.id) {
-            setSelectedPantryId(serverPantry.id);
-          }
-          // 3. Re-enable queries now that we have valid pantryId
+      const result = await executeMutationWithErrorHandler(
+        () => setDefaultHomeMutation({
+          variables: { homeId } }),
+        () => {
+          // Rollback on error and re-enable queries
+          setHomeAndPantry(previousHomeId, previousPantryId);
           setIsHomeSelectionReady(true);
-          return true;
-        }
+          Alert.alert('Error', 'Failed to set default home');
+        },
+      );
+      if (!result) return false;
 
-        // Mutation returned no data - rollback and re-enable queries
-        setHomeAndPantry(previousHomeId, previousPantryId);
+      if (result.data?.setDefaultHome?.success) {
+        // Update pantry from server response (server is source of truth)
+        const serverPantry = result.data.setDefaultHome.defaultPantry;
+        if (serverPantry?.id) {
+          setSelectedPantryId(serverPantry.id);
+        }
+        // 3. Re-enable queries now that we have valid pantryId
         setIsHomeSelectionReady(true);
-        return false;
-      } catch {
-        // Rollback on error and re-enable queries
-        setHomeAndPantry(previousHomeId, previousPantryId);
-        setIsHomeSelectionReady(true);
-        Alert.alert('Error', 'Failed to set default home');
-        return false;
+        return true;
       }
+
+      // Mutation returned no data - rollback and re-enable queries
+      setHomeAndPantry(previousHomeId, previousPantryId);
+      setIsHomeSelectionReady(true);
+      return false;
     };
 
   // Computed value for current default home

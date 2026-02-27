@@ -16,6 +16,7 @@ import {
   moveShoppingListItemToUnpurchased } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -127,20 +128,19 @@ export function useToggleShoppingItem({ listId, items, refetch }: UseToggleShopp
   const toggleItem = async (itemId: string) => {
       if (!listId) return false;
 
-      try {
-        const item = items?.find(i => i.id === itemId);
-        if (!item) return false;
+      const item = items?.find(i => i.id === itemId);
+      if (!item) return false;
 
-        const newStatus = !item.purchaseInfo?.isPurchased;
+      const newStatus = !item.purchaseInfo?.isPurchased;
 
-        const result = await togglePurchasedMutation({
-          variables: { input: { id: itemId, purchased: newStatus } } });
+      const result = await executeMutation(
+        () => togglePurchasedMutation({
+          variables: { input: { id: itemId, purchased: newStatus } } }),
+        'Toggle shopping list item purchased error:',
+      );
+      if (!result) return false;
 
-        return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;
-      } catch (error) {
-        console.error('Toggle shopping list item purchased error:', error);
-        return false;
-      }
+      return result.data?.toggleShoppingListItemPurchased?.shoppingListItem ?? false;
     };
 
   return { toggleItem };

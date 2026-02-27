@@ -4,6 +4,7 @@ import BottomSheet, { BottomSheetBackdropProps, BottomSheetScrollView } from '@g
 import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBackdrop';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { Header } from '#components/molecules/Header';
+import { generateId } from '#/utils/generateId';
 import type { StepFormState } from '../useRecipeForm';
 
 export interface RecipeStepEditorRef {
@@ -14,8 +15,6 @@ export interface RecipeStepEditorRef {
 interface RecipeStepEditorProps {
   onSave: (step: StepFormState) => void;
 }
-
-let stepTempIdCounter = 100;
 
 export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditorProps>(
   ({ onSave }, ref) => {
@@ -39,7 +38,7 @@ export const RecipeStepEditor = forwardRef<RecipeStepEditorRef, RecipeStepEditor
     const handleSave = () => {
       if (!instruction.trim()) return;
       onSave({
-        id: editingId ?? `temp-step-${stepTempIdCounter++}`,
+        id: editingId ?? `temp-step-${generateId()}`,
         instruction: instruction.trim(),
         sortOrder: 0 });
       bottomSheetRef.current?.close();

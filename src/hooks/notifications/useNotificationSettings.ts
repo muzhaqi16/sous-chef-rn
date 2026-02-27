@@ -6,6 +6,7 @@ import {
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
   type UpdateNotificationPreferencesInput } from '#generated';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
@@ -188,39 +189,29 @@ export const useNotificationSettings = () => {
       key: keyof NotificationSettings,
       value: boolean | string | number | ExpirationFrequency,
     ) => {
-      try {
-        const result = await updatePreferences({
-          variables: {
-            input: toNestedInput({ [key]: value }) } });
-
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+      const result = await executeMutation(
+        () => updatePreferences({
+          variables: { input: toNestedInput({ [key]: value }) } }),
+        'Failed to update notification setting',
+      );
+      return result ? !!result.data : false;
     };
 
   const updateMultipleSettings = async (updates: Partial<NotificationSettings>) => {
-      try {
-        // Convert null to undefined for GraphQL input
-        const cleanedUpdates = Object.fromEntries(
-          Object.entries(updates).map(([key, value]) => [
-            key,
-            value === null ? undefined : value,
-          ]),
-        );
+      // Convert null to undefined for GraphQL input
+      const cleanedUpdates = Object.fromEntries(
+        Object.entries(updates).map(([key, value]) => [
+          key,
+          value === null ? undefined : value,
+        ]),
+      );
 
-        const result = await updatePreferences({
-          variables: {
-            input: toNestedInput(cleanedUpdates) } });
-
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+      const result = await executeMutation(
+        () => updatePreferences({
+          variables: { input: toNestedInput(cleanedUpdates) } }),
+        'Failed to update notification settings',
+      );
+      return result ? !!result.data : false;
     };
 
   const resetToDefaults = async () => {

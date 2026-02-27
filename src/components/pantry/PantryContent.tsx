@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useImperativeHandle, useDeferredValue, useState } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, useDeferredValue } from 'react';
 import { View, Pressable, RefreshControl } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -326,16 +326,11 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   // PERFORMANCE: Defer heavy list render until after navigation animation
   const isReady = useDeferredRender(500);
 
-  // Track the module-level flag in state so we can read it during render.
-  // Uses React's "adjusting state during render" pattern to stay in sync.
-  const [hasShownContent, setHasShownContent] = useState(hasEverShownContent);
+  // Derive latch from module-level flag + current conditions — no setState needed.
+  // Once true, hasEverShownContent persists across unmount/remount (module scope).
+  const hasShownContent = hasEverShownContent || (!loading && isReady && items.length > 0);
 
-  // Once content has been shown, latch state so skeletons never reappear.
-  if (!hasShownContent && !loading && isReady && items.length > 0) {
-    setHasShownContent(true);
-  }
-
-  // Sync the module-level flag so it persists across unmount/remount (side effect).
+  // Sync the module-level flag so it persists across unmount/remount.
   useEffect(() => {
     if (hasShownContent) {
       hasEverShownContent = true;
@@ -404,26 +399,9 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
     warning: theme.colors.expiration.warningText,
     normal: theme.colors.textSecondary });
 
-  // PERFORMANCE: Reference-equality cache. Apollo Client's normalized cache gives
-  // updated items new object references while unchanged items keep the same reference.
-  // So `cached.item === item` is a perfect O(1) staleness check with zero allocations.
-  const [displayCache, setDisplayCache] = useState<{
-    cache: Map<string, { item: PantryItem; data: ItemDisplayData }>;
-    displayMap: Map<string, ItemDisplayData>;
-    // Track inputs to know when to recompute
-    items: PantryItem[];
-  }>(() => {
-    const result = computeDisplayCache(deferredSortedItems, new Map(), expirationColors);
-    return { cache: result.nextCache, displayMap: result.map, items: deferredSortedItems };
-  });
-
-  // Recompute cache when items change (state-based pattern for render-time derivation)
-  let itemDisplayMap = displayCache.displayMap;
-  if (displayCache.items !== deferredSortedItems) {
-    const result = computeDisplayCache(deferredSortedItems, displayCache.cache, expirationColors);
-    itemDisplayMap = result.map;
-    setDisplayCache({ cache: result.nextCache, displayMap: result.map, items: deferredSortedItems });
-  }
+  // PERFORMANCE: Compute display data for all items. The React Compiler auto-memoizes
+  // this expression — recomputation only happens when deferredSortedItems changes.
+  const itemDisplayMap = computeDisplayCache(deferredSortedItems, new Map(), expirationColors).map;
 
   // Stable ref for callbacks — avoids FlashList re-rendering all visible items on data changes
   const itemDisplayMapRef = useRef(itemDisplayMap);
@@ -505,8 +483,8 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
       return display?.variant ?? 'normal';
     };
 
-  // Memoize extraData to avoid new array reference every render
-  const extraData = [sortOption, sortDirection, locationFilter];
+  // Stable extraData — string avoids new array reference every render
+  const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
 
   const isEmpty = !showSkeletons && deferredSortedItems.length === 0;
 

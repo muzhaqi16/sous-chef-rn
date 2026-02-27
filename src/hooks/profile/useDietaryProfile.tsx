@@ -12,6 +12,7 @@ import {
   HealthGoal,
   RestrictionSeverity } from '#generated';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useErrorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
@@ -229,25 +230,19 @@ export const useDietaryProfile = () => {
       maxCookTimeMinutes?: number | null;
       budgetPerMeal?: number | null;
     }) => {
-      try {
-        // Convert null to undefined for GraphQL input
-        const cleanedUpdates = Object.fromEntries(
-          Object.entries(updates).map(([key, value]) => [
-            key,
-            value === null ? undefined : value,
-          ]),
-        );
+      // Convert null to undefined for GraphQL input
+      const cleanedUpdates = Object.fromEntries(
+        Object.entries(updates).map(([key, value]) => [
+          key,
+          value === null ? undefined : value,
+        ]),
+      );
 
-        const result = await updateProfile({
-          variables: {
-            input: cleanedUpdates } });
-
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+      const result = await executeMutation(
+        () => updateProfile({ variables: { input: cleanedUpdates } }),
+        'Failed to update dietary profile',
+      );
+      return result ? !!result.data : false;
     };
 
   const addDietaryRestriction = async (
@@ -260,21 +255,13 @@ export const useDietaryProfile = () => {
       notes?: string,
       appliesToHomeId?: string,
     ) => {
-      try {
-        const result = await addRestriction({
+      const result = await executeMutation(
+        () => addRestriction({
           variables: {
-            input: {
-              ...restriction,
-              severity,
-              notes,
-              appliesToHomeId } } });
-
-        // No refetch needed - cache.modify() + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+            input: { ...restriction, severity, notes, appliesToHomeId } } }),
+        'Failed to add dietary restriction',
+      );
+      return result ? !!result.data : false;
     };
 
   const updateDietaryRestriction = async (
@@ -284,34 +271,21 @@ export const useDietaryProfile = () => {
         notes?: string;
       },
     ) => {
-      try {
-        const result = await updateRestriction({
-          variables: {
-            input: {
-              id,
-              ...updates } } });
-
-        // No refetch needed - automatic normalization + optimistic response handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+      const result = await executeMutation(
+        () => updateRestriction({
+          variables: { input: { id, ...updates } } }),
+        'Failed to update dietary restriction',
+      );
+      return result ? !!result.data : false;
     };
 
   const removeDietaryRestriction = async (id: string) => {
-      try {
-        const result = await removeRestriction({
-          variables: {
-            input: {
-              id } } });
-
-        // No refetch needed - cache.modify() + cache.evict() + cache.gc() handle UI updates
-        return !!result.data;
-      } catch {
-        // Error handled by onError handler
-        return false;
-      }
+      const result = await executeMutation(
+        () => removeRestriction({
+          variables: { input: { id } } }),
+        'Failed to remove dietary restriction',
+      );
+      return result ? !!result.data : false;
     };
 
   return {

@@ -4,6 +4,7 @@ import {
   type DuplicateMealPlanInput } from '#generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useDuplicateMealPlan() {
   const [duplicateMutation, { loading }] = useDuplicateMealPlanMutation({
@@ -13,19 +14,18 @@ export function useDuplicateMealPlan() {
     } });
 
   const duplicatePlan = async (input: DuplicateMealPlanInput) => {
-      try {
-        const result = await duplicateMutation({
-          variables: { input } });
-        const data = result.data?.duplicateMealPlan;
-        if (data?.success) {
-          toastService.success('Meal plan duplicated!');
-          Telemetry.trackEvent('meal_plan_duplicated', {
-            meal_plan_id: input.mealPlanId });
-        }
-        return data ?? null;
-      } catch {
-        return null;
+      const result = await executeMutation(
+        () => duplicateMutation({ variables: { input } }),
+        'Duplicate meal plan error:',
+      );
+      if (!result) return null;
+      const data = result.data?.duplicateMealPlan;
+      if (data?.success) {
+        toastService.success('Meal plan duplicated!');
+        Telemetry.trackEvent('meal_plan_duplicated', {
+          meal_plan_id: input.mealPlanId });
       }
+      return data ?? null;
     };
 
   return {

@@ -5,6 +5,7 @@ import {
   useUpdateUserPreferencesMutation,
   AppTheme,
   UnitSystem } from '#generated';
+import {executeMutation} from '#/utils/compilerSafeWrappers';
 import {storage} from '#/storage/mmkv';
 
 export interface AppSettings {
@@ -39,29 +40,19 @@ export const useAppSettings = () => {
   };
 
   const updateAppSetting = async (key: keyof AppSettings, value: any) => {
-      try {
-        await updateSettings({
-          variables: {
-            input: {[key]: value} } });
-
-        return true;
-      } catch (error) {
-        console.error('Failed to update app setting:', error);
-        return false;
-      }
+      const result = await executeMutation(
+        () => updateSettings({ variables: { input: {[key]: value} } }),
+        'Failed to update app setting',
+      );
+      return result !== false;
     };
 
   const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
-      try {
-        await updateSettings({
-          variables: {
-            input: updates } });
-
-        return true;
-      } catch (error) {
-        console.error('Failed to update app settings:', error);
-        return false;
-      }
+      const result = await executeMutation(
+        () => updateSettings({ variables: { input: updates } }),
+        'Failed to update app settings',
+      );
+      return result !== false;
     };
 
   const resetToDefaults = async () => {

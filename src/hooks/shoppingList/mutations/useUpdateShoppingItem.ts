@@ -17,6 +17,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import type { ShoppingListItemUpdate } from './types';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
@@ -53,56 +54,64 @@ export function useUpdateShoppingItem({ listId, items, refetch }: UseUpdateShopp
   const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
     if (!listId) return false;
 
-    try {
-      // Use items array (already in memory) instead of cache read
-      const item = items.find(i => i.id === itemId);
+    // Use items array (already in memory) instead of cache read
+    const item = items.find(i => i.id === itemId);
 
-      if (!item) {
-        console.warn('Item not found, cannot update:', itemId);
-        return false;
-      }
+    if (!item) {
+      console.warn('Item not found, cannot update:', itemId);
+      return false;
+    }
 
-      const result = await updateItemMutation({
+    // Pre-compute optimistic values outside try/catch (React Compiler cannot handle ?? inside try)
+    const optimisticItemName = updates.itemName ?? item.itemName;
+    const optimisticQuantity = updates.quantity ?? item.quantity;
+    const optimisticCategory = updates.category ?? item.category;
+    const optimisticUnitName = updates.unitName ?? item.unitName;
+    const optimisticResponse = buildOptimisticMutationResponse(
+      'updateShoppingListItem',
+      'ShoppingListItemPayload',
+      'shoppingListItem',
+      {
+        __typename: 'ShoppingListItem' as const,
+        id: item.id,
+        itemName: optimisticItemName,
+        quantity: optimisticQuantity,
+        quantityInput: item.quantityInput,
+        purchaseInfo: item.purchaseInfo,
+        version: item.version,
+        updatedAt: new Date().toISOString(),
+        category: optimisticCategory,
+        unitName: optimisticUnitName,
+        unit: item.unit,
+        sortOrder: item.sortOrder,
+        item: item.item,
+      },
+    );
+
+    const result = await executeMutationWithErrorHandler(
+      () => updateItemMutation({
         variables: {
           id: itemId,
           input: { ...updates, version: item.version },
         },
         // Simple optimistic response - Apollo merges by __typename + id
         // Only include fields from ShoppingListItemDisplayFragment
-        optimisticResponse: buildOptimisticMutationResponse(
-          'updateShoppingListItem',
-          'ShoppingListItemPayload',
-          'shoppingListItem',
-          {
-            __typename: 'ShoppingListItem' as const,
-            id: item.id,
-            itemName: updates.itemName ?? item.itemName,
-            quantity: updates.quantity ?? item.quantity,
-            quantityInput: item.quantityInput,
-            purchaseInfo: item.purchaseInfo,
-            version: item.version,
-            updatedAt: new Date().toISOString(),
-            category: updates.category ?? item.category,
-            unitName: updates.unitName ?? item.unitName,
-            unit: item.unit,
-            sortOrder: item.sortOrder,
-            item: item.item,
-          },
-        ),
-      });
+        optimisticResponse,
+      }),
+      (error: any) => {
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetch() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+        console.error('Update shopping list item error:', error);
+      },
+    );
+    if (!result) return false;
 
-      return result.data?.updateShoppingListItem?.success ?? false;
-    } catch (error: any) {
-      if (handleVersionConflict(error)) {
-        Alert.alert('Item Updated', getVersionConflictMessage(error), [
-          { text: 'Refresh', onPress: () => refetch() },
-          { text: 'Cancel', style: 'cancel' },
-        ]);
-        return false;
-      }
-      console.error('Update shopping list item error:', error);
-      return false;
-    }
+    return result.data?.updateShoppingListItem?.success ?? false;
   };
 
   return { updateItem };

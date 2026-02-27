@@ -170,8 +170,7 @@ const App = () => {
       // Cleanup AppState token refresh listener
       cleanupAppStateTokenRefresh();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHydrated]);
+  }, [isHydrated, theme, setHasStoredCredentials, getTelemetryConfig]);
 
   // Track theme changes separately
   const prevThemeRef = useRef(theme);

@@ -77,15 +77,13 @@ const SlideAnimatedWrapper: React.FC<{
     opacity: slideOpacity.value }));
 
   // Reset on FlashList cell recycling — runs synchronously on layout commit.
-  // Shared values are stable refs and omitted from deps intentionally.
   useEffect(() => {
     cancelAnimation(translateX);
     cancelAnimation(slideOpacity);
     translateX.set(0);
     slideOpacity.set(1);
     isAnimating.set(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId]);
+  }, [itemId, translateX, slideOpacity, isAnimating]);
 
   // Stable callback for scheduleOnRN — captures actions/itemId via closure
   const doDelete = () => {
@@ -93,8 +91,8 @@ const SlideAnimatedWrapper: React.FC<{
   };
 
   const handleDelete = () => {
-    if (isAnimating.value) return;
-    isAnimating.value = true;
+    if (isAnimating.get()) return;
+    isAnimating.set(true);
 
     const config = {
       duration: SLIDE_PRESETS.exitWithFade.duration,

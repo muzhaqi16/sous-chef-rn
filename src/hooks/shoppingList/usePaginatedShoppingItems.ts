@@ -1,10 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   useGetShoppingListItemsPaginatedQuery,
   ShoppingListItemDisplayFragment } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { PAGINATION } from '#/constants/shoppingList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { executeRefetch, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 interface UsePaginatedShoppingItemsOptions {
   listId: string | null | undefined;
@@ -56,13 +57,10 @@ export function usePaginatedShoppingItems({
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
 
-  // Track previous listId to detect list switches
-  const previousListIdRef = useRef<string | null | undefined>(listId);
-  const listIdChanged = previousListIdRef.current !== listId;
-
-  useEffect(() => {
-    previousListIdRef.current = listId;
-  }, [listId]);
+  // Track previous listId to detect list switches (compiler-safe pattern)
+  const [previousListId, setPreviousListId] = useState<string | null | undefined>(listId);
+  const listIdChanged = previousListId !== listId;
+  if (listIdChanged) { setPreviousListId(listId); }
 
   // Single query fetches BOTH unpurchased and purchased items
   const { data, previousData, loading, error, fetchMore, refetch } =
@@ -156,12 +154,14 @@ export function usePaginatedShoppingItems({
     }
 
     isLoadingMoreUnpurchasedRef.current = true;
-
-    try {
-      await fetchMore({
-        variables: {
-          unpurchasedAfter: unpurchasedEndCursor } });
-    } finally {
+    const result = await executeMutationWithErrorHandler(
+      () => fetchMore({ variables: { unpurchasedAfter: unpurchasedEndCursor } }),
+      (error) => {
+        isLoadingMoreUnpurchasedRef.current = false;
+        throw error;
+      },
+    );
+    if (result !== false) {
       isLoadingMoreUnpurchasedRef.current = false;
     }
   };
@@ -177,26 +177,21 @@ export function usePaginatedShoppingItems({
     }
 
     isLoadingMorePurchasedRef.current = true;
-
-    try {
-      await fetchMore({
-        variables: {
-          purchasedAfter: purchasedEndCursor } });
-    } finally {
+    const result = await executeMutationWithErrorHandler(
+      () => fetchMore({ variables: { purchasedAfter: purchasedEndCursor } }),
+      (error) => {
+        isLoadingMorePurchasedRef.current = false;
+        throw error;
+      },
+    );
+    if (result !== false) {
       isLoadingMorePurchasedRef.current = false;
     }
   };
 
   // Wrap refetch with error handling to ensure promise always resolves
   // This prevents the refresh spinner from getting stuck if refetch fails
-  const handleRefetch = async () => {
-    try {
-      await refetch();
-    } catch (error) {
-      // Log error but don't rethrow - let finally block run in caller
-      console.warn('[usePaginatedShoppingItems] Refetch failed:', error);
-    }
-  };
+  const handleRefetch = () => executeRefetch(refetch, '[usePaginatedShoppingItems] Refetch failed:');
 
   // Auto-refetch when edges are depleted but totalCount indicates items remain
   // This handles the case where all visible items are toggled but server has more
@@ -217,14 +212,9 @@ export function usePaginatedShoppingItems({
       isAutoRefetchingRef.current = true;
 
       // Use setTimeout to avoid state update during render
-      const timeoutId = setTimeout(async () => {
-        try {
-          await refetch();
-        } catch (error) {
-          console.warn('[usePaginatedShoppingItems] Auto-refetch failed:', error);
-        } finally {
-          isAutoRefetchingRef.current = false;
-        }
+      const timeoutId = setTimeout(() => {
+        executeRefetch(refetch, '[usePaginatedShoppingItems] Auto-refetch failed:')
+          .finally(() => { isAutoRefetchingRef.current = false; });
       }, 100);
 
       return () => {

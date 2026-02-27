@@ -7,6 +7,7 @@ import {
 import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
@@ -56,30 +57,30 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         return false;
       }
 
-      try {
-        const result = await loadMatchesQuery({
-          variables: { recipeId, pantryId, servings } });
+      const result = await executeMutation(
+        () => loadMatchesQuery({
+          variables: { recipeId, pantryId, servings } }),
+        'Load recipe matches error:',
+      );
+      if (!result) return false;
 
-        const matches = result.data?.matchRecipeIngredientsToPantry;
-        if (!matches || matches.length === 0) {
-          toastService.info('No ingredients to match');
-          return false;
-        }
-
-        const editable: EditableMatch[] = matches.map(match => ({
-          match,
-          adjustedQuantity: match.suggestedQuantity,
-          adjustedUnitId: match.suggestedUnit?.id ?? match.ingredient?.unit?.id ?? null,
-          isIncluded:
-            !match.ingredient.isOptional &&
-            !!match.matchedPantryItem }));
-
-        setEditableMatches(editable);
-        setIsSheetVisible(true);
-        return true;
-      } catch {
+      const matches = result.data?.matchRecipeIngredientsToPantry;
+      if (!matches || matches.length === 0) {
+        toastService.info('No ingredients to match');
         return false;
       }
+
+      const editable: EditableMatch[] = matches.map(match => ({
+        match,
+        adjustedQuantity: match.suggestedQuantity,
+        adjustedUnitId: match.suggestedUnit?.id ?? match.ingredient?.unit?.id ?? null,
+        isIncluded:
+          !match.ingredient.isOptional &&
+          !!match.matchedPantryItem }));
+
+      setEditableMatches(editable);
+      setIsSheetVisible(true);
+      return true;
     };
 
   const updateMatch = (index: number, updates: Partial<Pick<EditableMatch, 'adjustedQuantity' | 'adjustedUnitId' | 'isIncluded'>>) => {
@@ -126,31 +127,31 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return;
     }
 
-    try {
-      const result = await confirmMutation({
-        variables: { input: { recipeId, pantryId, consumptions } } });
+    const result = await executeMutation(
+      () => confirmMutation({
+        variables: { input: { recipeId, pantryId, consumptions } } }),
+      'Confirm recipe consumption error:',
+    );
+    if (!result) return;
 
-      const data = result.data?.confirmRecipeConsumption;
-      if (data?.success) {
-        const failedText = data.totalFailed > 0
-          ? ` (${data.totalFailed} failed)`
-          : '';
-        toastService.success(
-          `Deducted ${data.totalConsumed} ingredient${data.totalConsumed !== 1 ? 's' : ''} from pantry${failedText}`,
-        );
-      }
-
-      Telemetry.trackEvent('recipe_consumption_confirmed', {
-        recipe_id: recipeId,
-        pantry_id: pantryId,
-        consumed_count: data?.totalConsumed ?? 0,
-        failed_count: data?.totalFailed ?? 0 });
-
-      setIsSheetVisible(false);
-      setEditableMatches([]);
-    } catch {
-      // Error handled by mutation onError
+    const data = result.data?.confirmRecipeConsumption;
+    if (data?.success) {
+      const failedText = data.totalFailed > 0
+        ? ` (${data.totalFailed} failed)`
+        : '';
+      toastService.success(
+        `Deducted ${data.totalConsumed} ingredient${data.totalConsumed !== 1 ? 's' : ''} from pantry${failedText}`,
+      );
     }
+
+    Telemetry.trackEvent('recipe_consumption_confirmed', {
+      recipe_id: recipeId,
+      pantry_id: pantryId,
+      consumed_count: data?.totalConsumed ?? 0,
+      failed_count: data?.totalFailed ?? 0 });
+
+    setIsSheetVisible(false);
+    setEditableMatches([]);
   };
 
   const closeSheet = () => {

@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
+/**
+ * Module-level try-catch wrapper for array manager operations.
+ * Keeps try-catch out of the hook body for React Compiler compatibility.
+ */
+async function executeArrayOperation<T>(
+  operationFn: () => Promise<T>,
+  onError: (message: string) => void,
+): Promise<T | false> {
+  try {
+    return await operationFn();
+  } catch (err: any) {
+    onError(err.message || 'An error occurred');
+    return false;
+  }
+}
+
 export interface ArrayManagerOptions<T> {
   /**
    * Initial array values
@@ -145,10 +161,10 @@ export function useArrayManager<T>({
     };
 
   const add = async (item: T): Promise<boolean> => {
-      try {
-        setLoading(true);
-        setError(null);
+      setLoading(true);
+      setError(null);
 
+      const result = await executeArrayOperation(async () => {
         // Transform item (e.g., trim strings)
         const transformedItem = transform(item);
 
@@ -178,19 +194,17 @@ export function useArrayManager<T>({
           showError('Failed to add item');
           return false;
         }
-      } catch (err: any) {
-        showError(err.message || 'An error occurred');
-        return false;
-      } finally {
-        setLoading(false);
-      }
+      }, showError);
+
+      setLoading(false);
+      return result === false ? false : result;
     };
 
   const remove = async (item: T): Promise<boolean> => {
-      try {
-        setLoading(true);
-        setError(null);
+      setLoading(true);
+      setError(null);
 
+      const result = await executeArrayOperation(async () => {
         const newItems = items.filter((existing) => !equals(existing, item));
 
         const success = await onUpdate(newItems);
@@ -202,19 +216,17 @@ export function useArrayManager<T>({
           showError('Failed to remove item');
           return false;
         }
-      } catch (err: any) {
-        showError(err.message || 'An error occurred');
-        return false;
-      } finally {
-        setLoading(false);
-      }
+      }, showError);
+
+      setLoading(false);
+      return result === false ? false : result;
     };
 
   const update = async (oldItem: T, newItem: T): Promise<boolean> => {
-      try {
-        setLoading(true);
-        setError(null);
+      setLoading(true);
+      setError(null);
 
+      const result = await executeArrayOperation(async () => {
         // Transform new item
         const transformedItem = transform(newItem);
 
@@ -247,19 +259,17 @@ export function useArrayManager<T>({
           showError('Failed to update item');
           return false;
         }
-      } catch (err: any) {
-        showError(err.message || 'An error occurred');
-        return false;
-      } finally {
-        setLoading(false);
-      }
+      }, showError);
+
+      setLoading(false);
+      return result === false ? false : result;
     };
 
   const clear = async (): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
+    const result = await executeArrayOperation(async () => {
       const success = await onUpdate([]);
 
       if (success) {
@@ -269,12 +279,10 @@ export function useArrayManager<T>({
         showError('Failed to clear items');
         return false;
       }
-    } catch (err: any) {
-      showError(err.message || 'An error occurred');
-      return false;
-    } finally {
-      setLoading(false);
-    }
+    }, showError);
+
+    setLoading(false);
+    return result === false ? false : result;
   };
 
   const has = (item: T): boolean => {

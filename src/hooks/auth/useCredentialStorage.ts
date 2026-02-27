@@ -8,6 +8,7 @@ import {
   clearCredentials,
   getStoredAccounts,
   getBiometricCapability } from '#/storage/keychain';
+import { executeQuery } from '#/utils/compilerSafeWrappers';
 import { logger } from '#/utils/environment';
 
 export interface Credentials {
@@ -77,28 +78,25 @@ export const useCredentialStorage = () => {
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
 
   const loadStoredCredentials = async (email?: string): Promise<Credentials | null> => {
-    try {
-      setIsLoadingCredentials(true);
+    setIsLoadingCredentials(true);
 
-      let credentials;
-      if (email) {
-        credentials = await loadCredentialsForAccount(email);
-      } else {
-        credentials = await loadCredentials();
-      }
+    const credentials = await executeQuery(
+      async () => {
+        if (email) {
+          return loadCredentialsForAccount(email);
+        }
+        return loadCredentials();
+      },
+      'Error loading credentials',
+    );
 
-      return credentials
-        ? {
-            email: credentials.username,
-            password: credentials.password }
-        : null;
-    } catch (error) {
-      console.error('Error loading credentials:', error);
-      logger.error('Error loading credentials:', error);
-      return null;
-    } finally {
-      setIsLoadingCredentials(false);
-    }
+    setIsLoadingCredentials(false);
+
+    return credentials
+      ? {
+          email: credentials.username,
+          password: credentials.password }
+      : null;
   };
 
   return {

@@ -4,6 +4,7 @@ import {
   useUpdateShoppingListItemQuantityMutation,
   ShoppingListItemDisplayFragment } from '#generated';
 import { Telemetry } from '#/services/telemetry';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -148,25 +149,29 @@ export function useQuantityEditModal(
       if (!selectedItemRaw) return;
 
       setIsLoading(true);
-      try {
-        await updateQuantity({
-          variables: {
-            itemId: selectedItemRaw.id,
-            quantity,
-            unitId,
-            version: selectedItemRaw.version } });
 
-        Telemetry.trackEvent('shopping_item_quantity_updated', {
-          item_id: selectedItemRaw.id,
-          quantity });
+      await executeMutationWithErrorHandler(
+        async () => {
+          await updateQuantity({
+            variables: {
+              itemId: selectedItemRaw.id,
+              quantity,
+              unitId,
+              version: selectedItemRaw.version } });
 
-        setVisible(false);
-        setSelectedItemRaw(null);
-      } catch {
-        // Error handled by mutation onError
-      } finally {
-        setIsLoading(false);
-      }
+          Telemetry.trackEvent('shopping_item_quantity_updated', {
+            item_id: selectedItemRaw.id,
+            quantity });
+
+          setVisible(false);
+          setSelectedItemRaw(null);
+        },
+        () => {
+          // Error handled by mutation onError
+        },
+      );
+
+      setIsLoading(false);
     };
 
   return { visible, selectedItem, isLoading, openForItem, close, save };

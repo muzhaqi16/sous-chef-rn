@@ -17,6 +17,7 @@ import { useErrorService } from '#/services/errorService';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import type { ShoppingListItemInput } from './types';
 
@@ -110,12 +111,11 @@ export function useAddShoppingItem({ listId, refetch }: UseAddShoppingItemOption
         lastTempIdRef.current = null;
       }
 
-      try {
-        addNewItemToShoppingListCache(cache, listId, item);
-      } catch (error) {
-        console.warn('Cache update failed for addItem, will refetch:', error);
-        refetch();
-      }
+      executeCacheUpdate(
+        () => addNewItemToShoppingListCache(cache, listId, item),
+        'Cache update failed for addItem, will refetch:',
+        refetch,
+      );
     },
     onError: error => {
       lastTempIdRef.current = null;

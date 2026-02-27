@@ -13,6 +13,7 @@ import { createRemoveFromQueryConnectionUpdater } from '#/apollo/utils/cacheUpda
 import { useErrorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { executeCacheUpdate, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import type {
   SelectorConfig,
   ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -91,15 +92,16 @@ export function useShoppingListSelectorModal({
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteShoppingList?.shoppingList || !variables) return;
 
-      try {
-        const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
-          'shoppingLists',
-          'ShoppingList',
-        );
-        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
-      } catch (error) {
-        console.warn('Cache update failed for deleteList:', error);
-      }
+      executeCacheUpdate(
+        () => {
+          const removeFromShoppingListsCache = createRemoveFromQueryConnectionUpdater(
+            'shoppingLists',
+            'ShoppingList',
+          );
+          removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+        },
+        'Cache update failed for deleteList:',
+      );
     } });
 
   // --- Delete mode handlers ---
@@ -150,29 +152,32 @@ export function useShoppingListSelectorModal({
             // Register parent deletions to prevent subscription race conditions
             idsToDelete.forEach(id => subscriptionService.registerParentDeletion(id));
 
-            try {
-              await Promise.all(
+            const result = await executeMutationWithErrorHandler(
+              () => Promise.all(
                 idsToDelete.map(id => deleteList({ variables: { id } })),
-              );
+              ),
+              () => {
+                // Deletion failed — unregister immediately
+                idsToDelete.forEach(id => subscriptionService.unregisterParentDeletion(id));
+                toastService.error('Failed to delete lists');
+              },
+            );
 
-              // If current list was deleted, fall back to another list
-              if (currentListId && idsToDelete.includes(currentListId)) {
-                const remaining = listDataWithOwnership.filter(
-                  l => !idsToDelete.includes(l.id),
-                );
-                const defaultList = remaining.find(l => l.isDefault);
-                useStore.getState().setSelectedShoppingListId(defaultList?.id || null);
-              }
+            if (!result) return;
 
-              toastService.success(
-                `Deleted ${count} list${count > 1 ? 's' : ''}`,
+            // If current list was deleted, fall back to another list
+            if (currentListId && idsToDelete.includes(currentListId)) {
+              const remaining = listDataWithOwnership.filter(
+                l => !idsToDelete.includes(l.id),
               );
-              exitDeleteMode();
-            } catch {
-              // Deletion failed — unregister immediately
-              idsToDelete.forEach(id => subscriptionService.unregisterParentDeletion(id));
-              toastService.error('Failed to delete lists');
+              const defaultList = remaining.find(l => l.isDefault);
+              useStore.getState().setSelectedShoppingListId(defaultList?.id || null);
             }
+
+            toastService.success(
+              `Deleted ${count} list${count > 1 ? 's' : ''}`,
+            );
+            exitDeleteMode();
           } },
       ],
     );

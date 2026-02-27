@@ -14,6 +14,7 @@ import { useErrorService } from '#/services/errorService';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { buildOptimisticDeleteResponse } from '#/apollo/utils/optimisticTypes';
 import { removeFromShoppingListItemsCache } from './utils';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -52,45 +53,47 @@ export function useRemoveShoppingItem({ listId, refetch }: UseRemoveShoppingItem
     update(cache, { data }, { variables }) {
       if (!data?.removeItemFromShoppingList || !listId || !variables) return;
 
-      try {
-        const itemId = variables.id;
+      executeCacheUpdate(
+        () => {
+          const itemId = variables.id;
 
-        // Read isPurchased before eviction so we can update completedItems
-        const itemData = cache.readFragment<{ isPurchased: boolean }>({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-          fragment: gql`
-            fragment RemovedItemStatus on ShoppingListItem {
-              isPurchased
-            }
-          `,
-        });
+          // Read isPurchased before eviction so we can update completedItems
+          const itemData = cache.readFragment<{ isPurchased: boolean }>({
+            id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+            fragment: gql`
+              fragment RemovedItemStatus on ShoppingListItem {
+                isPurchased
+              }
+            `,
+          });
+          const wasPurchased = itemData ? itemData.isPurchased : false;
 
-        removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
+          removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
 
-        // Update totalItems and conditionally completedItems
-        const parentCacheId = cache.identify({
-          __typename: 'ShoppingList',
-          id: listId,
-        });
-        if (parentCacheId) {
-          cache.modify({
-            id: parentCacheId,
-            fields: {
-              totalItems(existing: number = 0) {
-                return Math.max(0, existing - 1);
-              },
-              ...(itemData?.isPurchased && {
-                completedItems(existing: number = 0) {
+          // Update totalItems and conditionally completedItems
+          const parentCacheId = cache.identify({
+            __typename: 'ShoppingList',
+            id: listId,
+          });
+          if (parentCacheId) {
+            cache.modify({
+              id: parentCacheId,
+              fields: {
+                totalItems(existing: number = 0) {
                   return Math.max(0, existing - 1);
                 },
-              }),
-            },
-          });
-        }
-      } catch (error) {
-        console.warn('Cache update failed for removeItem, will refetch:', error);
-        refetch();
-      }
+                ...(wasPurchased && {
+                  completedItems(existing: number = 0) {
+                    return Math.max(0, existing - 1);
+                  },
+                }),
+              },
+            });
+          }
+        },
+        'Cache update failed for removeItem, will refetch:',
+        refetch,
+      );
     },
     onError: error => {
       const { message } = handleApolloError(error, {

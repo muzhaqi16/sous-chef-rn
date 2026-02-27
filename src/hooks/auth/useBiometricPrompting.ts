@@ -1,5 +1,6 @@
 import { useAppStore } from '#store/useAppStore';
 import { hasCredentialsForAccount, getBiometricCapability } from '#/storage/keychain';
+import { executeQuery } from '#/utils/compilerSafeWrappers';
 
 interface BiometricPromptDecision {
   shouldShow: boolean;
@@ -17,35 +18,37 @@ export const useBiometricPrompting = () => {
       return { shouldShow: false, reason: 'No user found' };
     }
 
-    try {
-      // Check if user is new and hasn't completed onboarding yet
-      const navState = getUserNavigationState(checkUser.id);
-      if (navState?.isNewUser && !navState?.hasCompletedOnboarding) {
-        return { shouldShow: false, reason: 'New user - biometric setup handled during onboarding' };
-      }
-
-      // Check if biometric is available on device
-      const biometricInfo = await getBiometricCapability();
-      if (!biometricInfo.isAvailable) {
-        return { shouldShow: false, reason: 'Biometric not available' };
-      }
-
-      // Check if user already has credentials saved
-      const hasCredentials = await hasCredentialsForAccount(checkUser.email);
-      if (hasCredentials) {
-        return { shouldShow: false, reason: 'Already has biometric setup' };
-      }
-
-      // Check if user permanently declined biometric authentication
-      if (navState?.biometricDeclinedPermanently) {
-        return { shouldShow: false, reason: 'User permanently declined biometric authentication' };
-      }
-
-      return { shouldShow: true };
-    } catch (error) {
-      console.error('Error checking biometric prompt eligibility:', error);
-      return { shouldShow: false, reason: 'Error checking eligibility' };
+    // Check if user is new and hasn't completed onboarding yet
+    const navState = getUserNavigationState(checkUser.id);
+    if (navState?.isNewUser && !navState?.hasCompletedOnboarding) {
+      return { shouldShow: false, reason: 'New user - biometric setup handled during onboarding' };
     }
+
+    const result = await executeQuery(
+      async () => {
+        // Check if biometric is available on device
+        const biometricInfo = await getBiometricCapability();
+        if (!biometricInfo.isAvailable) {
+          return { shouldShow: false as const, reason: 'Biometric not available' };
+        }
+
+        // Check if user already has credentials saved
+        const hasCreds = await hasCredentialsForAccount(checkUser.email);
+        if (hasCreds) {
+          return { shouldShow: false as const, reason: 'Already has biometric setup' };
+        }
+
+        // Check if user permanently declined biometric authentication
+        if (navState?.biometricDeclinedPermanently) {
+          return { shouldShow: false as const, reason: 'User permanently declined biometric authentication' };
+        }
+
+        return { shouldShow: true as const };
+      },
+      'Error checking biometric prompt eligibility',
+    );
+
+    return result ?? { shouldShow: false, reason: 'Error checking eligibility' };
   };
 
   const recordBiometricPromptResponse = (enabled: boolean, declinedPermanently = false) => {

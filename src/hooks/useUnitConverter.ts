@@ -7,6 +7,24 @@ import {
   useGetItemConversionsLazyQuery,
   useUpsertItemUnitConversionMutation,
   DisplayFormat } from '#/graphql/generated';
+import { executeQuery } from '#/utils/compilerSafeWrappers';
+
+/**
+ * Module-level try-catch wrapper for converter operations with loading/error state.
+ * Keeps try-catch out of the hook body for React Compiler compatibility.
+ */
+async function executeConverterOperation<T>(
+  operationFn: () => Promise<T>,
+  onError: (message: string) => void,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await operationFn();
+  } catch (err: any) {
+    onError(err.message || 'Operation failed');
+    return fallback;
+  }
+}
 
 export interface ConversionResult {
   value: number;
@@ -43,7 +61,7 @@ export interface QuantityParsed {
  * - Suggesting display formats
  * - Managing custom conversions
  */
-export const useUnitConverter = () => {
+export function useUnitConverter() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +87,7 @@ export const useUnitConverter = () => {
       setLoading(true);
       setError(null);
 
-      try {
+      const result = await executeConverterOperation(async () => {
         const {data} = await convertQuantityQuery({
           variables: params });
 
@@ -84,12 +102,10 @@ export const useUnitConverter = () => {
         }
 
         return null;
-      } catch (err: any) {
-        setError(err.message || 'Failed to convert quantity');
-        return null;
-      } finally {
-        setLoading(false);
-      }
+      }, (msg) => setError(msg || 'Failed to convert quantity'), null);
+
+      setLoading(false);
+      return result;
     };
 
   /**
@@ -103,7 +119,7 @@ export const useUnitConverter = () => {
       setLoading(true);
       setError(null);
 
-      try {
+      const result = await executeConverterOperation(async () => {
         const {data} = await canConvertQuery({
           variables: params });
 
@@ -117,12 +133,10 @@ export const useUnitConverter = () => {
         }
 
         return null;
-      } catch (err: any) {
-        setError(err.message || 'Failed to check conversion availability');
-        return null;
-      } finally {
-        setLoading(false);
-      }
+      }, (msg) => setError(msg || 'Failed to check conversion availability'), null);
+
+      setLoading(false);
+      return result;
     };
 
   /**
@@ -135,7 +149,7 @@ export const useUnitConverter = () => {
       setLoading(true);
       setError(null);
 
-      try {
+      const result = await executeConverterOperation(async () => {
         const {data} = await parseQuantityQuery({
           variables: params });
 
@@ -148,12 +162,10 @@ export const useUnitConverter = () => {
         }
 
         return null;
-      } catch (err: any) {
-        setError(err.message || 'Failed to parse quantity input');
-        return null;
-      } finally {
-        setLoading(false);
-      }
+      }, (msg) => setError(msg || 'Failed to parse quantity input'), null);
+
+      setLoading(false);
+      return result;
     };
 
   /**
@@ -164,15 +176,14 @@ export const useUnitConverter = () => {
       unitId: string;
       userId?: string;
     }): Promise<DisplayFormat | null> => {
-      try {
+      const result = await executeQuery(async () => {
         const {data} = await suggestDisplayFormatQuery({
           variables: params });
 
         return data?.suggestDisplayFormat?.display as DisplayFormat || null;
-      } catch (err: any) {
-        console.error('Failed to suggest display format:', err);
-        return null;
-      }
+      }, 'Failed to suggest display format');
+
+      return result;
     };
 
   /**
@@ -185,17 +196,15 @@ export const useUnitConverter = () => {
       setLoading(true);
       setError(null);
 
-      try {
+      const result = await executeConverterOperation(async () => {
         const {data} = await getItemConversionsQuery({
           variables: params });
 
         return data?.itemConversions || [];
-      } catch (err: any) {
-        setError(err.message || 'Failed to get item conversions');
-        return [];
-      } finally {
-        setLoading(false);
-      }
+      }, (msg) => setError(msg || 'Failed to get item conversions'), [] as any[]);
+
+      setLoading(false);
+      return result;
     };
 
   /**
@@ -211,17 +220,15 @@ export const useUnitConverter = () => {
       setLoading(true);
       setError(null);
 
-      try {
+      const result = await executeConverterOperation(async () => {
         const {data} = await upsertConversion({
           variables: { input: params } });
 
         return data?.upsertItemUnitConversion || null;
-      } catch (err: any) {
-        setError(err.message || 'Failed to add custom conversion');
-        return null;
-      } finally {
-        setLoading(false);
-      }
+      }, (msg) => setError(msg || 'Failed to add custom conversion'), null);
+
+      setLoading(false);
+      return result;
     };
 
   return {
@@ -233,4 +240,4 @@ export const useUnitConverter = () => {
     addCustomConversion,
     loading,
     error };
-};
+}

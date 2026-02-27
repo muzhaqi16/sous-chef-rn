@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
 import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useAppStore } from '#store/useAppStore';
@@ -99,31 +99,42 @@ export const useFeatureHint = ({
     }
   }, [showOnMount, hasBeenShown, delay, tutorialsEnabled]);
 
-  const show = () => {
-    // Only show if tutorials are enabled globally and hint hasn't been dismissed
-    if (tutorialsEnabled && !(storage.getBoolean(storageKey) ?? false)) {
-      setIsVisible(true);
-    }
-  };
+  // Refs for values used by actions — synced via effect so the compiler
+  // sees actions as depending only on stable refs + setState, producing
+  // a stable object reference automatically.
+  const storageKeyRef = useRef(storageKey);
+  const tutorialsEnabledRef = useRef(tutorialsEnabled);
 
-  const hide = () => {
-    setIsVisible(false);
-  };
+  useEffect(() => {
+    storageKeyRef.current = storageKey;
+  }, [storageKey]);
 
-  const dismiss = () => {
-    setIsVisible(false);
-    setHasBeenShown(true);
-    storage.set(storageKey, true);
-  };
+  useEffect(() => {
+    tutorialsEnabledRef.current = tutorialsEnabled;
+  }, [tutorialsEnabled]);
 
-  const reset = () => {
-    storage.remove(storageKey);
-    setHasBeenShown(false);
-    setIsVisible(false);
+  // Actions object — compiler memoizes this automatically since it only
+  // depends on refs (stable identity) and setState fns (stable identity)
+  const actions: UseFeatureHintActions = {
+    show() {
+      if (tutorialsEnabledRef.current && !(storage.getBoolean(storageKeyRef.current) ?? false)) {
+        setIsVisible(true);
+      }
+    },
+    hide() {
+      setIsVisible(false);
+    },
+    dismiss() {
+      setIsVisible(false);
+      setHasBeenShown(true);
+      storage.set(storageKeyRef.current, true);
+    },
+    reset() {
+      storage.remove(storageKeyRef.current);
+      setHasBeenShown(false);
+      setIsVisible(false);
+    },
   };
-
-  // Actions object
-  const actions: UseFeatureHintActions = { show, dismiss, hide, reset };
 
   return { isVisible, hasBeenShown, actions };
 };

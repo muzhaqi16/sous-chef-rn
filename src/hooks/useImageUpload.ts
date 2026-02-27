@@ -10,6 +10,7 @@ import {
   ImageUploadPurpose } from '#generated';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { useStore } from '#store';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 export interface ImageFile {
   uri: string;
@@ -143,59 +144,67 @@ export const useImageUpload = () => {
         return null;
       }
 
-      try {
-        setUploading(true);
-        setProgress(0);
+      setUploading(true);
+      setProgress(0);
 
-        // For profile images, handle missing file size gracefully
-        let fileToUpload = { ...file };
-        if (isProfileImage && !fileToUpload.fileSize) {
-          console.warn('File size missing, attempting to determine it...');
-          console.warn('Proceeding without file size - server will validate');
-        }
+      const result = await executeMutationWithErrorHandler(
+        async () => {
+          // For profile images, handle missing file size gracefully
+          let fileToUpload = { ...file };
+          if (isProfileImage && !fileToUpload.fileSize) {
+            console.warn('File size missing, attempting to determine it...');
+            console.warn('Proceeding without file size - server will validate');
+          }
 
-        // Validate the image file
-        validateImageFile(fileToUpload, isProfileImage);
+          // Validate the image file
+          validateImageFile(fileToUpload, isProfileImage);
 
-        onProgress?.(10);
+          onProgress?.(10);
 
-        // Step 1: Get presigned URL
-        const mimeType =
-          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri);
-        const { data: uploadData } = await createUploadUrl({
-          variables: {
-            mime: mimeType,
-            purpose: purpose,
-            itemId: itemId } });
+          // Step 1: Get presigned URL
+          const mimeType =
+            fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri);
+          const { data: uploadData } = await createUploadUrl({
+            variables: {
+              mime: mimeType,
+              purpose: purpose,
+              itemId: itemId } });
 
-        const uploadResult = uploadData?.createImageUploadUrl;
-        if (!uploadResult) {
-          throw new Error('Failed to get upload URL');
-        }
+          const uploadResult = uploadData?.createImageUploadUrl;
+          if (!uploadResult) {
+            throw new Error('Failed to get upload URL');
+          }
 
-        onProgress?.(30);
+          onProgress?.(30);
 
-        // Step 2: Upload to MinIO
-        await uploadToMinIO(fileToUpload, uploadResult, uploadProgress => {
-          onProgress?.(30 + uploadProgress * 0.5);
-        });
+          // Step 2: Upload to MinIO
+          await uploadToMinIO(fileToUpload, uploadResult, uploadProgress => {
+            onProgress?.(30 + uploadProgress * 0.5);
+          });
 
-        onProgress?.(80);
+          onProgress?.(80);
 
-        // Step 3: Confirm upload
-        const finalImageUrl = await confirmUploadFn(uploadResult.key);
-        if (!finalImageUrl) {
-          throw new Error('Failed to confirm upload');
-        }
+          // Step 3: Confirm upload
+          const finalImageUrl = await confirmUploadFn(uploadResult.key);
+          if (!finalImageUrl) {
+            throw new Error('Failed to confirm upload');
+          }
 
-        onProgress?.(100);
-        onSuccess?.(finalImageUrl);
+          onProgress?.(100);
+          onSuccess?.(finalImageUrl);
 
-        return finalImageUrl;
-      } finally {
-        setUploading(false);
-        setProgress(0);
-      }
+          setUploading(false);
+          setProgress(0);
+          return finalImageUrl;
+        },
+        (error) => {
+          setUploading(false);
+          setProgress(0);
+          throw error;
+        },
+      );
+
+      return result || null;
     };
 
   const uploadProfileImage = async (
@@ -203,8 +212,8 @@ export const useImageUpload = () => {
       purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      try {
-        return await uploadImage(
+      const result = await executeMutationWithErrorHandler(
+        () => uploadImage(
           file,
           purpose,
           true,
@@ -215,27 +224,28 @@ export const useImageUpload = () => {
             return data?.confirmProfileImageUpload?.url || null;
           },
           options,
-        );
-      } catch (error) {
-        console.error('Profile image upload failed:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Upload failed';
+        ),
+        (error) => {
+          console.error('Profile image upload failed:', error);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Upload failed';
 
-        // Provide more specific error messages for profile images
-        let userErrorMessage = errorMessage;
-        if (errorMessage.includes('file size')) {
-          userErrorMessage =
-            'The image file is too large or corrupted. Please try a different image.';
-        } else if (errorMessage.includes('INVALID_TYPE')) {
-          userErrorMessage = 'Please select a JPEG, PNG, or WebP image file.';
-        } else if (errorMessage.includes('FILE_TOO_LARGE')) {
-          userErrorMessage = `The image is too large. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB.`;
-        }
+          // Provide more specific error messages for profile images
+          let userErrorMessage = errorMessage;
+          if (errorMessage.includes('file size')) {
+            userErrorMessage =
+              'The image file is too large or corrupted. Please try a different image.';
+          } else if (errorMessage.includes('INVALID_TYPE')) {
+            userErrorMessage = 'Please select a JPEG, PNG, or WebP image file.';
+          } else if (errorMessage.includes('FILE_TOO_LARGE')) {
+            userErrorMessage = `The image is too large. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB.`;
+          }
 
-        options.onError?.(new Error(userErrorMessage));
-        Alert.alert('Upload Failed', userErrorMessage);
-        return null;
-      }
+          options.onError?.(new Error(userErrorMessage));
+          Alert.alert('Upload Failed', userErrorMessage);
+        },
+      );
+      return result || null;
     };
 
   const uploadItemImage = async (
@@ -243,8 +253,8 @@ export const useImageUpload = () => {
       itemId: string,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      try {
-        return await uploadImage(
+      const result = await executeMutationWithErrorHandler(
+        () => uploadImage(
           file,
           ImageUploadPurpose.ItemImage,
           false,
@@ -255,15 +265,16 @@ export const useImageUpload = () => {
             return data?.confirmItemImageUpload?.url || null;
           },
           options,
-        );
-      } catch (error) {
-        console.error('Item image upload failed:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Upload failed';
-        options.onError?.(new Error(errorMessage));
-        Alert.alert('Upload Failed', errorMessage);
-        return null;
-      }
+        ),
+        (error) => {
+          console.error('Item image upload failed:', error);
+          const errorMessage =
+            error instanceof Error ? error.message : 'Upload failed';
+          options.onError?.(new Error(errorMessage));
+          Alert.alert('Upload Failed', errorMessage);
+        },
+      );
+      return result || null;
     };
 
   const uploadItemImages = async (
@@ -284,40 +295,42 @@ export const useImageUpload = () => {
     };
 
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
-      try {
-        const { data } = await updateProfile({
-          variables: { input: { avatar: avatarUrl } } });
-        return data?.updateProfile?.userProfile || null;
-      } catch (error) {
-        console.error('Update profile avatar failed:', error);
-        Alert.alert('Update Failed', 'Failed to update profile avatar');
-        return null;
-      }
+      const result = await executeMutationWithErrorHandler(
+        () => updateProfile({
+          variables: { input: { avatar: avatarUrl } } }),
+        (error) => {
+          console.error('Update profile avatar failed:', error);
+          Alert.alert('Update Failed', 'Failed to update profile avatar');
+        },
+      );
+      if (!result) return null;
+      return result.data?.updateProfile?.userProfile || null;
     };
 
   const updateProfileCoverUrl = async (coverImageUrl: string) => {
-      try {
-        const { data } = await updateProfile({
-          variables: { input: { coverImage: coverImageUrl } } });
-        return data?.updateProfile?.userProfile || null;
-      } catch (error) {
-        console.error('Update profile cover failed:', error);
-        Alert.alert('Update Failed', 'Failed to update profile cover');
-        return null;
-      }
+      const result = await executeMutationWithErrorHandler(
+        () => updateProfile({
+          variables: { input: { coverImage: coverImageUrl } } }),
+        (error) => {
+          console.error('Update profile cover failed:', error);
+          Alert.alert('Update Failed', 'Failed to update profile cover');
+        },
+      );
+      if (!result) return null;
+      return result.data?.updateProfile?.userProfile || null;
     };
 
   const updateItemImageUrl = async (id: string, imageUrl: string) => {
-      try {
-        const { data } = await updateItemImage({
-          variables: { id, imageUrl } });
-        const result = data?.updateItem;
-        return result || null;
-      } catch (error) {
-        console.error('Update item image failed:', error);
-        Alert.alert('Update Failed', 'Failed to update item image');
-        return null;
-      }
+      const result = await executeMutationWithErrorHandler(
+        () => updateItemImage({
+          variables: { id, imageUrl } }),
+        (error) => {
+          console.error('Update item image failed:', error);
+          Alert.alert('Update Failed', 'Failed to update item image');
+        },
+      );
+      if (!result) return null;
+      return result.data?.updateItem || null;
     };
 
   return {

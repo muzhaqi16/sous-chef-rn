@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { errorService } from '#/services/errorService';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 
 /**
  * Configuration for pagination from normalized data
@@ -97,15 +98,13 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
       return;
     }
 
-    try {
-      await fetchMore({
+    await executeMutationWithErrorHandler(
+      () => fetchMore({
         variables: {
           ...fetchMoreVariablesRef.current,
-          [cursorVariableName]: endCursor } });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Pagination.loadMore' });
-      // Fail silently - user can try scrolling again
-    }
+          [cursorVariableName]: endCursor } }),
+      (error) => errorService.reportError(error, { operation: 'Pagination.loadMore' }),
+    );
   };
 
   // Loading more = loading but already have items (not initial load)

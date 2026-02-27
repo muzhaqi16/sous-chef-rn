@@ -6,6 +6,7 @@ import { GlobalBottomSheetBackdrop } from '#components/atoms/GlobalBottomSheetBa
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { Header } from '#components/molecules/Header';
+import { generateId } from '#/utils/generateId';
 import type { IngredientFormState } from '../useRecipeForm';
 
 export interface RecipeIngredientEditorRef {
@@ -16,8 +17,6 @@ export interface RecipeIngredientEditorRef {
 interface RecipeIngredientEditorProps {
   onSave: (ingredient: IngredientFormState) => void;
 }
-
-let tempIdCounter = 100;
 
 export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, RecipeIngredientEditorProps>(
   ({ onSave }, ref) => {
@@ -56,7 +55,7 @@ export const RecipeIngredientEditor = forwardRef<RecipeIngredientEditorRef, Reci
     const handleSave = () => {
       if (!name.trim()) return;
       onSave({
-        id: editingId ?? `temp-ing-${tempIdCounter++}`,
+        id: editingId ?? `temp-ing-${generateId()}`,
         name: name.trim(),
         quantity: parseFloat(quantity) || 1,
         preparation: preparation.trim(),

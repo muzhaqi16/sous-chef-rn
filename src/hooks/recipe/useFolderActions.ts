@@ -3,6 +3,7 @@ import {
   useDeleteRecipeFolderMutation,
   SavedRecipeFoldersDocument,
   SavedRecipeFoldersQuery } from '#generated';
+import { executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 
 /**
@@ -28,8 +29,9 @@ export function useFolderActions() {
       if (!oldName || !newName || oldName === newName) return false;
 
       setLoading(true);
-      try {
-        const result = await deleteRecipeFolderMutation({
+
+      const result = await executeMutationWithErrorHandler(
+        () => deleteRecipeFolderMutation({
           variables: { input: { folder: oldName, moveTo: newName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
@@ -43,21 +45,24 @@ export function useFolderActions() {
                     f === oldName ? newName : f,
                   ) } });
             }
-          } });
-        const payload = result.data?.deleteRecipeFolder;
-        if (payload?.success) {
-          toastService.success(`Renamed "${oldName}" to "${newName}"${payload.message ? ` - ${payload.message}` : ''}`);
-          return true;
-        }
-        toastService.error(payload?.message || 'Failed to rename folder.');
-        return false;
-      } catch (error) {
-        console.error('Failed to rename folder:', error);
-        toastService.error('Failed to rename folder. Please try again.');
-        return false;
-      } finally {
-        setLoading(false);
+          } }),
+        (error) => {
+          console.error('Failed to rename folder:', error);
+          toastService.error('Failed to rename folder. Please try again.');
+        },
+      );
+
+      setLoading(false);
+
+      if (!result) return false;
+
+      const payload = result.data?.deleteRecipeFolder;
+      if (payload?.success) {
+        toastService.success(`Renamed "${oldName}" to "${newName}"${payload.message ? ` - ${payload.message}` : ''}`);
+        return true;
       }
+      toastService.error(payload?.message || 'Failed to rename folder.');
+      return false;
     };
 
   /**
@@ -68,8 +73,9 @@ export function useFolderActions() {
       if (!folderName) return false;
 
       setLoading(true);
-      try {
-        const result = await deleteRecipeFolderMutation({
+
+      const result = await executeMutationWithErrorHandler(
+        () => deleteRecipeFolderMutation({
           variables: { input: { folder: folderName } },
           update(cache) {
             const existing = cache.readQuery<SavedRecipeFoldersQuery>({
@@ -83,23 +89,26 @@ export function useFolderActions() {
                     f => f !== folderName,
                   ) } });
             }
-          } });
-        const payload = result.data?.deleteRecipeFolder;
-        if (payload?.success) {
-          toastService.success(
-            `Deleted "${folderName}"${payload.message ? ` - ${payload.message}` : ''}`,
-          );
-        } else {
-          toastService.success(`Deleted "${folderName}"`);
-        }
-        return true;
-      } catch (error) {
-        console.error('Failed to delete folder:', error);
-        toastService.error('Failed to delete folder. Please try again.');
-        return false;
-      } finally {
-        setLoading(false);
+          } }),
+        (error) => {
+          console.error('Failed to delete folder:', error);
+          toastService.error('Failed to delete folder. Please try again.');
+        },
+      );
+
+      setLoading(false);
+
+      if (!result) return false;
+
+      const payload = result.data?.deleteRecipeFolder;
+      if (payload?.success) {
+        toastService.success(
+          `Deleted "${folderName}"${payload.message ? ` - ${payload.message}` : ''}`,
+        );
+      } else {
+        toastService.success(`Deleted "${folderName}"`);
       }
+      return true;
     };
 
   return {

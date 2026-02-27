@@ -27,6 +27,41 @@ import {
   clearAllPurchasedItemsFromCache,
   addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+
+/** Re-sort shopping list edges by sortOrder after a subscription update */
+function resortEdges(cache: ApolloCache, shoppingListId: string): void {
+  executeCacheUpdate(
+    () => {
+      const queryResult = cache.readQuery({
+        query: GetShoppingListDocument,
+        variables: { id: shoppingListId },
+      }) as GetShoppingListQuery | null;
+
+      if (queryResult?.shoppingList?.itemsConnection?.edges) {
+        const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
+          (a, b) =>
+            (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
+        );
+
+        cache.writeQuery({
+          query: GetShoppingListDocument,
+          variables: { id: shoppingListId },
+          data: {
+            shoppingList: {
+              ...queryResult.shoppingList,
+              itemsConnection: {
+                ...queryResult.shoppingList.itemsConnection,
+                edges: sortedEdges,
+              },
+            },
+          },
+        });
+      }
+    },
+    'Failed to re-sort edges after subscription update:',
+  );
+}
 
 /**
  * Animation scheduler function type for coordinating exit animations
@@ -156,40 +191,6 @@ export function useShoppingListSubscriptions(
               });
             }
 
-            // Helper: re-sort edges after sortOrder changes
-            const resortEdges = (cache: typeof client.cache) => {
-              if (!sortOrderChanged) return;
-              try {
-                const queryResult = cache.readQuery({
-                  query: GetShoppingListDocument,
-                  variables: { id: selectedShoppingListId },
-                }) as GetShoppingListQuery | null;
-
-                if (queryResult?.shoppingList?.itemsConnection?.edges) {
-                  const sortedEdges = [...queryResult.shoppingList.itemsConnection.edges].sort(
-                    (a, b) =>
-                      (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
-                  );
-
-                  cache.writeQuery({
-                    query: GetShoppingListDocument,
-                    variables: { id: selectedShoppingListId },
-                    data: {
-                      shoppingList: {
-                        ...queryResult.shoppingList,
-                        itemsConnection: {
-                          ...queryResult.shoppingList.itemsConnection,
-                          edges: sortedEdges,
-                        },
-                      },
-                    },
-                  });
-                }
-              } catch (error) {
-                console.warn('Failed to re-sort edges after subscription update:', error);
-              }
-            };
-
             if (scheduleAnimation && (isCompletedMutation || isUncompletedMutation)) {
               // Animated path: write fragment immediately for visual feedback,
               // then batch the move + sort in the animation callback
@@ -210,7 +211,9 @@ export function useShoppingListSubscriptions(
                 client.cache.batch({
                   update(cache: ApolloCache) {
                     moveOp(cache, selectedShoppingListId, item);
-                    resortEdges(cache);
+                    if (sortOrderChanged) {
+                      resortEdges(cache, selectedShoppingListId);
+                    }
                   },
                 });
                 scheduleEntryAnimation?.(item.id, direction);
@@ -234,7 +237,9 @@ export function useShoppingListSubscriptions(
                     moveShoppingListItemToUnpurchased(cache, selectedShoppingListId, item);
                   }
 
-                  resortEdges(cache);
+                  if (sortOrderChanged) {
+                    resortEdges(cache, selectedShoppingListId);
+                  }
                 },
               });
             }

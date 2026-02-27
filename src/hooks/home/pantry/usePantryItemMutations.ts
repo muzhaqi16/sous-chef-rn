@@ -30,6 +30,7 @@ import {
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
+import { executeCacheUpdate, executeMutationWithErrorHandler } from '#/utils/compilerSafeWrappers';
 import type { PantryItemInput, PantryItemUpdate } from './types';
 import type { PantryItemDisplayFragment } from '#generated';
 
@@ -102,12 +103,11 @@ export function usePantryItemMutations({
       const pantryItem = data?.createPantryItem?.pantryItem;
       if (!pantryItem || !pantryId) return;
 
-      try {
-        addToPantryItemsCache(cache, pantryId, pantryItem);
-      } catch (error) {
-        console.warn('Cache update failed for addItem, will refetch:', error);
-        refetch();
-      }
+      executeCacheUpdate(
+        () => addToPantryItemsCache(cache, pantryId, pantryItem),
+        'Cache update failed for addItem, will refetch:',
+        refetch,
+      );
     },
   });
 
@@ -245,12 +245,16 @@ export function usePantryItemMutations({
       'itemsConnection',
     );
 
-    try {
-      // Await the mutation to ensure cache update completes and UI reflects changes immediately
-      await removeItemMutation({
+    const result = await executeMutationWithErrorHandler(
+      () => removeItemMutation({
         variables: { id: itemId },
-      });
-    } finally {
+      }),
+      (error) => {
+        subscriptionService.unregisterPendingDelete(itemId);
+        throw error;
+      },
+    );
+    if (result) {
       subscriptionService.unregisterPendingDelete(itemId);
     }
   };

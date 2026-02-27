@@ -250,5 +250,8 @@ export const useStore = create<RootState>()(
   ),
 );
 
+// Vanilla store API reference (non-hook name) for useStoreWithEqualityFn
+export const storeApi = useStore;
+
 // Standalone stores are exported directly from their own files:
 // import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
