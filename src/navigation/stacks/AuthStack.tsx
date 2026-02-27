@@ -6,10 +6,13 @@ import { ForgotPasswordScreen } from '#screens/auth/ForgotPasswordScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 
 export const AuthStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
-  },
+    animationDuration: 250,
+    fullScreenGestureEnabled: true,
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     LandingAuth: {
       screen: LandingAuthScreen,

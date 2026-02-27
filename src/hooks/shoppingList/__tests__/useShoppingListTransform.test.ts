@@ -124,6 +124,7 @@ describe('useShoppingListTransform', () => {
   });
 
   it('filters out items without id', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
     const items = [
       createDisplayItem({ id: null }),
       createDisplayItem({ id: '2' }),
@@ -132,9 +133,11 @@ describe('useShoppingListTransform', () => {
 
     expect(result.current.sortableItems).toHaveLength(1);
     expect(result.current.sortableItems[0].id).toBe('2');
+    spy.mockRestore();
   });
 
   it('filters out items without itemName', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
     const items = [
       createDisplayItem({ itemName: null }),
       createDisplayItem({ id: '2', itemName: 'Valid' }),
@@ -143,6 +146,7 @@ describe('useShoppingListTransform', () => {
 
     expect(result.current.sortableItems).toHaveLength(1);
     expect(result.current.sortableItems[0].title).toBe('Valid');
+    spy.mockRestore();
   });
 
   it('uses "zzz" as default sortOrder when missing', () => {
@@ -169,11 +173,7 @@ describe('useShoppingListTransform', () => {
 });
 
 describe('useShoppingListTransformMulti', () => {
-  it('transforms all three source arrays', () => {
-    const allItems = [
-      createDisplayItem({ id: '1' }),
-      createDisplayItem({ id: '2', purchaseInfo: { isPurchased: true } }),
-    ];
+  it('transforms unpurchased and purchased source arrays', () => {
     const unpurchased = [createDisplayItem({ id: '1' })];
     const purchased = [
       createDisplayItem({ id: '2', purchaseInfo: { isPurchased: true } }),
@@ -181,13 +181,11 @@ describe('useShoppingListTransformMulti', () => {
 
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
-        items: allItems,
         rawUnpurchasedItems: unpurchased,
         rawPurchasedItems: purchased,
       }),
     );
 
-    expect(result.current.sortableItems).toHaveLength(2);
     expect(result.current.unpurchasedItems).toHaveLength(1);
     expect(result.current.purchasedItems).toHaveLength(1);
   });
@@ -199,7 +197,6 @@ describe('useShoppingListTransformMulti', () => {
 
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
-        items: [],
         rawUnpurchasedItems: unpurchased,
         rawPurchasedItems: [],
       }),
@@ -216,7 +213,6 @@ describe('useShoppingListTransformMulti', () => {
 
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
-        items: [],
         rawUnpurchasedItems: [],
         rawPurchasedItems: purchased,
       }),

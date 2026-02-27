@@ -21,7 +21,7 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { useGetHomeQuery, GetStorageLocationsQuery, StorageState } from '#generated';
+import { GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
@@ -144,17 +144,6 @@ const PantryMainScreen: React.FC = () => {
     setSelectedPantryId,
     isReady,
   } = useCurrentPantry();
-  // Keep query for pull-to-refresh
-  // Gate query with isReady to prevent firing before home selection is complete
-  // freezeOnBlur handles suppressing updates when screen is not focused
-  const shouldFetchHome =
-    isInteractive && isReady && !!selectedHomeId && !currentHome;
-  const { refetch: refetchHome } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId! },
-    skip: !shouldFetchHome,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
   // Set up scanner button (deferred — scanner not needed during initial render)
   useScannerSetup({
     enabled: isInteractive,
@@ -335,7 +324,7 @@ const PantryMainScreen: React.FC = () => {
     };
   const handleLowStockNavigate = () => navigate('LowStockItems');
   const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchHome()]);
+    await refetch();
   };
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner

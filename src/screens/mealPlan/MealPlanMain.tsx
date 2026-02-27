@@ -45,6 +45,20 @@ import {
   type MealTemplateDisplayFragment } from '#generated';
 import { toastService } from '#/services/toastService';
 
+async function executeMealPlanRefresh(
+  refetchFn: () => Promise<unknown>,
+  setRefreshing: (v: boolean) => void,
+) {
+  setRefreshing(true);
+  try {
+    await refetchFn();
+  } catch {
+    // Silently handle — Apollo will surface errors via its error state
+  } finally {
+    setRefreshing(false);
+  }
+}
+
 export const MealPlanMain: React.FC = () => {
   const { theme } = useUnistyles();
   const { navigate } = useAppNavigation();
@@ -94,7 +108,11 @@ export const MealPlanMain: React.FC = () => {
   const activePlanId = selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // Fetch the active plan with items
-  const { mealPlan: activeMealPlan, items, nutritionSummary } = useMealPlan(activePlanId);
+  const { mealPlan: activeMealPlan, items, nutritionSummary, refetch } = useMealPlan(activePlanId);
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = () => executeMealPlanRefresh(refetch, setRefreshing);
 
   // Permissions for the active plan
   const permissions = useMealPlanPermissions(activeMealPlan);
@@ -459,6 +477,8 @@ export const MealPlanMain: React.FC = () => {
         onItemPress={handleItemPress}
         onDeleteItem={handleDeleteItem}
         onAddMeal={handleOpenAddMeal}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         listHeader={
           nutritionSummary ? (
             <View style={styles.nutritionContainer}>

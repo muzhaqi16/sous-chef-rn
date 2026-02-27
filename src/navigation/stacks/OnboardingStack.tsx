@@ -9,10 +9,13 @@ import { BiometricSetupScreen } from '#screens/onBoarding/BiometricSetupScreen';
 import { ImageCropScreen } from '#screens/profile/ImageCropScreen';
 
 export const OnboardingStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
-  },
+    animationDuration: 250,
+    fullScreenGestureEnabled: true,
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     CreateHome: {
       screen: CreateHomeScreen,

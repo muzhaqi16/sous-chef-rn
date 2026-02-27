@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, RefreshControl } from 'react-native';
 import Animated, { type useAnimatedScrollHandler } from 'react-native-reanimated';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { format } from 'date-fns';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
@@ -20,6 +20,8 @@ interface DayMealListProps {
   onAddMeal?: (mealType?: MealType) => void;
   onScroll?: ReturnType<typeof useAnimatedScrollHandler>;
   listHeader?: React.ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export const DayMealList: React.FC<DayMealListProps> = ({
@@ -33,13 +35,27 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   onAddMeal,
   onScroll,
   listHeader,
+  refreshing = false,
+  onRefresh,
 }) => {
+  const { theme } = useUnistyles();
+
   return (
     <Animated.ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, isEmpty && styles.contentEmpty]}
       onScroll={onScroll}
       scrollEventThrottle={16}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        ) : undefined
+      }
     >
       {!!listHeader && listHeader}
 

@@ -8,10 +8,11 @@ const BarcodeScannerScreen = React.lazy(
 );
 
 export const BarcodeStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     presentation: 'modal',
-  },
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     BarcodeScanner: {
       screen: BarcodeScannerScreen,

@@ -1,7 +1,9 @@
-import React from 'react';
-import {Modal, View, Text, Pressable, ScrollView} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {Text, Pressable, ScrollView} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#/utils/iconUtils';
+import {ActionTray} from '#components/templates/ActionTray/ActionTray';
+import type {ActionTrayRef} from '#components/templates/ActionTray/types';
 
 export interface ModalPickerProps {
   label: string;
@@ -21,69 +23,41 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onCancel,
 }) => {
   const {theme} = useUnistyles();
+  const trayRef = useRef<ActionTrayRef>(null);
+
+  // Bridge declarative `visible` prop → imperative ActionTray ref
+  useEffect(() => {
+    if (visible) {
+      trayRef.current?.open();
+    } else {
+      trayRef.current?.close();
+    }
+  }, [visible]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{label}</Text>
-            <Pressable onPress={onCancel} style={({pressed}) => pressed && styles.pressed}>
+    <ActionTray ref={trayRef} title={label} onClose={onCancel}>
+      <ScrollView>
+        {options.map(opt => (
+          <Pressable
+            key={opt.value}
+            style={({pressed}) => [styles.option, pressed && styles.pressed]}
+            onPress={() => onSelect(opt.value)}>
+            <Text style={styles.optionText}>{opt.label}</Text>
+            {selected === opt.value && (
               <Icon
-                name="close"
-                size={24}
-                color={theme.colors.textPrimary}
+                name="checkmark"
+                size={20}
+                color={theme.colors.primary}
               />
-            </Pressable>
-          </View>
-          <ScrollView>
-            {options.map(opt => (
-              <Pressable
-                key={opt.value}
-                style={({pressed}) => [styles.option, pressed && styles.pressed]}
-                onPress={() => onSelect(opt.value)}>
-                <Text style={styles.optionText}>{opt.label}</Text>
-                {selected === opt.value && (
-                  <Icon
-                    name="checkmark"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                )}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+            )}
+          </Pressable>
+        ))}
+      </ScrollView>
+    </ActionTray>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: theme.colors.background,
-    borderTopLeftRadius: theme.radii.lg,
-    borderTopRightRadius: theme.radii.lg,
-    padding: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
-    maxHeight: '50%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  title: {
-    fontSize: theme.typography.fontSize.lg,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
   option: {
     flexDirection: 'row',
     alignItems: 'center',

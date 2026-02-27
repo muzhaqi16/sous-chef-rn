@@ -361,7 +361,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           onIndexChange={handleIndexChange}
           initialLayout={{ width: layout.width }}
           swipeEnabled={true}
-          lazy={false}
+          lazy={true}
           overScrollMode="never"
         />
       </View>

@@ -3,10 +3,11 @@ import {
   View,
   Text,
   TextInput,
+  ScrollView,
+  RefreshControl,
   Pressable,
   Alert,
   ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
@@ -17,12 +18,27 @@ import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
   CollaboratorRole } from '#generated';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useShoppingListDetails } from '#hooks/shoppingList/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useAppStore, selectUser } from '#store/useAppStore';
 import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
+
+const addCollaboratorToCache = createAddToParentConnectionUpdater(
+  'ShoppingList',
+  'collaboratorsConnection',
+  'ShoppingListCollaborator',
+);
+
+const removeCollaboratorFromCache = createRemoveFromParentConnectionUpdater(
+  'ShoppingList',
+  'collaboratorsConnection',
+  'ShoppingListCollaborator',
+);
 
 // PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
 const getStatusColor = (status: string, colors: { success: string; warning: string; error: string; textTertiary: string }): string => {
@@ -105,7 +121,13 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             shoppingListId: listId,
             email: email.trim(),
             role: CollaboratorRole.Contributor, // Assuming a role is required
-          } } });
+          } },
+        update(cache, { data }) {
+          const collaborator = data?.inviteToShoppingList?.collaborator;
+          if (collaborator) {
+            addCollaboratorToCache(cache, listId, collaborator, { position: 'end' });
+          }
+        } });
       setEmail('');
       refetch();
     } catch {
@@ -127,7 +149,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             onPress: async () => {
               try {
                 await removeMember({
-                  variables: { id: memberId } });
+                  variables: { id: memberId },
+                  update(cache) {
+                    removeCollaboratorFromCache(cache, listId, memberId, { evictItem: true });
+                  } });
                 refetch();
               } catch {
                 Alert.alert('Error', 'Failed to remove member');
@@ -167,7 +192,10 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
             setLeaving(true);
             try {
               await removeMember({
-                variables: { id: currentUserCollaborator.id } });
+                variables: { id: currentUserCollaborator.id },
+                update(cache) {
+                  removeCollaboratorFromCache(cache, listId, currentUserCollaborator.id, { evictItem: true });
+                } });
               navigation.goBack();
             } catch {
               Alert.alert('Error', 'Failed to leave list');
@@ -178,61 +206,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
       ],
     );
   };
-
-  // PERFORMANCE: Memoized renderItem to avoid recreating on every render
-  const renderMemberItem = ({ item: member }: { item: any }) => {
-      const statusColor = getStatusColor(member.status, theme.colors);
-      const statusText = formatStatus(member.status);
-
-      return (
-        <Pressable
-          style={({pressed}) => [styles.memberCard, pressed && styles.pressed]}
-          onPress={() => permissionsBottomSheetRef.current?.open(member)}
-        >
-          <View style={styles.memberInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {member.email?.[0]?.toUpperCase() || '?'}
-              </Text>
-            </View>
-            <View style={styles.memberDetails}>
-              <Text style={styles.memberName}>{member.email || 'Unknown'}</Text>
-              <Text style={styles.memberEmail}>{member.email || ''}</Text>
-              <View style={styles.statusContainer}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: statusColor + '20',
-                      borderColor: statusColor },
-                  ]}
-                >
-                  <Text style={[styles.statusText, { color: statusColor }]}>
-                    {statusText}
-                  </Text>
-                </View>
-                {!!member.invitedAt && (
-                  <Text style={styles.invitedText}>
-                    Invited {new Date(member.invitedAt).toLocaleDateString()}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-          <Pressable
-            onPress={e => {
-              e?.stopPropagation?.();
-              if (member.id) {
-                handleRemoveMember(member.id);
-              }
-            }}
-            style={({pressed}) => pressed && styles.pressed}
-          >
-            <Icon name="close" size={20} color={theme.colors.error} />
-          </Pressable>
-        </Pressable>
-      );
-    };
 
   if (loading) {
     return <LoadingInline />;
@@ -246,60 +219,113 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({ rou
         message="Sharing not available offline"
         description="Connect to the internet to invite members or manage list sharing."
       >
-        <View style={styles.inviteSection}>
-          <Text style={styles.sectionTitle}>Invite Members</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter email address"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Pressable
-              style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
-              onPress={handleShare}
-              disabled={sharing}
-            >
-              {sharing ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Icon name="send" size={20} color="white" />
-              )}
-            </Pressable>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
+        >
+          <View style={styles.inviteSection}>
+            <Text style={styles.sectionTitle}>Invite Members</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <Pressable
+                style={({pressed}) => [styles.sendButton, pressed && styles.pressed]}
+                onPress={handleShare}
+                disabled={sharing}
+              >
+                {sharing ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Icon name="send" size={20} color="white" />
+                )}
+              </Pressable>
+            </View>
           </View>
-        </View>
-        {/* Only show if there are any members */}
-        {activeCollaborators.length > 0 && (
-          <View style={styles.membersSection}>
-            <Text style={styles.sectionTitle}>Current Members</Text>
-            <FlashList
-              data={activeCollaborators}
-              keyExtractor={member => member.id}
-              renderItem={renderMemberItem}
-              refreshing={isRefetching}
-              onRefresh={refetch}
-            />
-          </View>
-        )}
 
-        {/* Leave List section - only show for non-owners who are collaborators */}
-        {!!currentUserCollaborator && !isOwner && (
-          <View style={styles.leaveSection}>
-            <Text style={styles.sectionTitle}>Danger Zone</Text>
-            <Text style={styles.leaveDescription}>
-              Leaving this list will remove your access to all shared items.
-            </Text>
-            <Button
-              title="Leave List"
-              onPress={handleLeaveList}
-              variant="danger"
-              loading={leaving}
-              disabled={leaving}
-            />
-          </View>
-        )}
+          {activeCollaborators.length > 0 && (
+            <View style={styles.membersSection}>
+              <Text style={styles.sectionTitle}>Current Members</Text>
+              {activeCollaborators.map(member => {
+                const statusColor = getStatusColor(member.status, theme.colors);
+                const statusText = formatStatus(member.status);
+                return (
+                  <Pressable
+                    key={member.id}
+                    style={({pressed}) => [styles.memberCard, pressed && styles.pressed]}
+                    onPress={() => permissionsBottomSheetRef.current?.open(member)}
+                  >
+                    <View style={styles.memberInfo}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>
+                          {member.email?.[0]?.toUpperCase() || '?'}
+                        </Text>
+                      </View>
+                      <View style={styles.memberDetails}>
+                        <Text style={styles.memberName}>{member.email || 'Unknown'}</Text>
+                        <Text style={styles.memberEmail}>{member.email || ''}</Text>
+                        <View style={styles.statusContainer}>
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              {
+                                backgroundColor: statusColor + '20',
+                                borderColor: statusColor },
+                            ]}
+                          >
+                            <Text style={[styles.statusText, { color: statusColor }]}>
+                              {statusText}
+                            </Text>
+                          </View>
+                          {!!member.invitedAt && (
+                            <Text style={styles.invitedText}>
+                              Invited {new Date(member.invitedAt).toLocaleDateString()}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                    <Pressable
+                      onPress={e => {
+                        e?.stopPropagation?.();
+                        if (member.id) {
+                          handleRemoveMember(member.id);
+                        }
+                      }}
+                      style={({pressed}) => pressed && styles.pressed}
+                    >
+                      <Icon name="close" size={20} color={theme.colors.error} />
+                    </Pressable>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Leave List section - only show for non-owners who are collaborators */}
+          {!!currentUserCollaborator && !isOwner && (
+            <View style={styles.leaveSection}>
+              <Text style={styles.sectionTitle}>Danger Zone</Text>
+              <Text style={styles.leaveDescription}>
+                Leaving this list will remove your access to all shared items.
+              </Text>
+              <Button
+                title="Leave List"
+                onPress={handleLeaveList}
+                variant="danger"
+                loading={leaving}
+                disabled={leaving}
+              />
+            </View>
+          )}
+        </ScrollView>
 
         <CollaboratorPermissionsBottomSheet
           ref={permissionsBottomSheetRef}
@@ -314,6 +340,8 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background },
+  scrollContent: {
+    flexGrow: 1 },
   inviteSection: {
     padding: theme.spacing.md,
     borderBottomWidth: 1,

@@ -34,6 +34,7 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   item {
     id
     imageUrl
+    images { url kind }
   }
 }
 
@@ -291,6 +292,7 @@ fragment ItemDisplay on Item {
   id
   name
   imageUrl
+  images { url kind }
   netWeight
   displayUnit {
     id
@@ -404,6 +406,7 @@ fragment PantryItemDisplay on PantryItem {
   item {
     id
     imageUrl
+    images { url kind }
   }
   unit {
     id

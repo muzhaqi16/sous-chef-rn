@@ -13,11 +13,13 @@ describe('executeMutation', () => {
   });
 
   it('returns false on error', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation();
     const result = await executeMutation(
       () => Promise.reject(new Error('boom')),
       'mutation failed',
     );
     expect(result).toBe(false);
+    spy.mockRestore();
   });
 
   it('logs an error message on failure', async () => {
@@ -37,6 +39,7 @@ describe('executeCacheUpdate', () => {
   });
 
   it('calls refetch when the update throws', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
     const refetch = jest.fn();
     executeCacheUpdate(
       () => {
@@ -46,9 +49,11 @@ describe('executeCacheUpdate', () => {
       refetch,
     );
     expect(refetch).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 
   it('does not throw when refetch is omitted and update throws', () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
     expect(() =>
       executeCacheUpdate(
         () => {
@@ -57,6 +62,7 @@ describe('executeCacheUpdate', () => {
         'msg',
       ),
     ).not.toThrow();
+    spy.mockRestore();
   });
 
   it('logs a warning on failure', () => {
@@ -80,11 +86,13 @@ describe('executeQuery', () => {
   });
 
   it('returns null on error', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation();
     const result = await executeQuery(
       () => Promise.reject(new Error('query fail')),
       'query err',
     );
     expect(result).toBeNull();
+    spy.mockRestore();
   });
 
   it('logs an error message on failure', async () => {
@@ -124,9 +132,11 @@ describe('executeRefetch', () => {
   });
 
   it('does not throw on failure', async () => {
+    const spy = jest.spyOn(console, 'warn').mockImplementation();
     await expect(
       executeRefetch(() => Promise.reject(new Error('r')), 'refetch err'),
     ).resolves.toBeUndefined();
+    spy.mockRestore();
   });
 
   it('logs a warning on failure', async () => {

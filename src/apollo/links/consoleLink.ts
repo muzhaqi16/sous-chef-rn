@@ -1,8 +1,13 @@
 import {ApolloLink, Observable} from '@apollo/client';
+import performance from 'react-native-performance';
 import {serializeError, safeStringifyError, isTimerCircularStructureError} from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
+
+// Cold-start detection: first N operations have inflated timing due to JS thread contention
+const COLD_START_THRESHOLD = 5;
+let operationsSeen = 0;
 
 export const createConsoleLink = (
   options: {
@@ -28,17 +33,18 @@ export const createConsoleLink = (
       return forward(operation);
     }
 
-    const startTime = Date.now();
     const operationName = operation.operationName || 'Unknown';
     const operationType =
       operation.query.definitions[0]?.kind === 'OperationDefinition'
         ? operation.query.definitions[0]?.operation?.toUpperCase()
         : 'UNKNOWN';
+    const isSubscription = operationType === 'SUBSCRIPTION';
+    const startTime = isSubscription ? 0 : performance.now();
+    const operationIndex = isSubscription ? -1 : operationsSeen++;
 
     return new Observable(observer => {
       const subscription = forward(operation).subscribe({
         next: (result: any) => {
-          const duration = Date.now() - startTime;
           const hasErrors = result.errors && result.errors.length > 0;
 
           // Check for timer errors FIRST - skip ALL logging for these
@@ -61,17 +67,29 @@ export const createConsoleLink = (
           if (hasErrors) {
             emoji = '❌';
             style = 'color: #ef4444; font-weight: bold';
-          } else if (duration > slowQueryThreshold) {
-            emoji = '⚠️';
-            style = 'color: #f59e0b; font-weight: bold';
+          } else if (!isSubscription) {
+            const duration = Math.round(performance.now() - startTime);
+            if (duration > slowQueryThreshold) {
+              emoji = '⚠️';
+              style = 'color: #f59e0b; font-weight: bold';
+            }
           }
 
           // Log timing info
           if (logTiming) {
-            console.log(
-              `%c🚀 ${emoji} ${operationType} ${operationName} ${duration}ms`,
-              style
-            );
+            if (isSubscription) {
+              console.log(
+                `%c🚀 ${emoji} ${operationType} ${operationName}`,
+                style
+              );
+            } else {
+              const duration = Math.round(performance.now() - startTime);
+              const coldTag = operationIndex < COLD_START_THRESHOLD ? ' [cold]' : '';
+              console.log(
+                `%c🚀 ${emoji} ${operationType} ${operationName} ${duration}ms${coldTag}`,
+                style
+              );
+            }
           }
 
           // Log variables as expandable object
