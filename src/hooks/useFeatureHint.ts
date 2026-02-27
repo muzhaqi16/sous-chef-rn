@@ -190,3 +190,16 @@ export const resetAllFeatureHints = (): void => {
     }
   });
 };
+
+// --- Login count tracking (used to space out post-login modals) ---
+
+const LOGIN_COUNT_PREFIX = 'login_count_';
+
+export const getLoginCount = (userId: string): number => {
+  return storage.getNumber(`${LOGIN_COUNT_PREFIX}${userId}`) ?? 0;
+};
+
+export const incrementLoginCount = (userId: string): void => {
+  const key = `${LOGIN_COUNT_PREFIX}${userId}`;
+  storage.set(key, (storage.getNumber(key) ?? 0) + 1);
+};

@@ -53,7 +53,8 @@ export function useUnitAutocomplete() {
     requiresNetwork: true,
     fallbackItems,
     filterFallback,
-    maxResults: 10 });
+    maxResults: 10,
+    localFirst: true });
 
   return autocomplete;
 }

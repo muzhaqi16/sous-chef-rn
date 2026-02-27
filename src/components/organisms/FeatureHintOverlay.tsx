@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Modal } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeOut } from 'react-native-reanimated';
 import { Icon } from '#utils/iconUtils';
 
 export interface FeatureHintConfig {
@@ -41,50 +41,56 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
   } = config;
 
   return (
-    <Animated.View
-      style={styles.overlay}
-      entering={FadeIn.duration(300)}
-      exiting={FadeOut.duration(200)}
-      testID="feature-hint-overlay"
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onDismiss}
     >
-      <Pressable
-        style={styles.backdrop}
-        onPress={onDismiss}
-        testID="feature-hint-overlay-backdrop"
+      <Animated.View
+        style={styles.overlay}
+        testID="feature-hint-overlay"
       >
-        <Animated.View
-          style={styles.hintContainer}
-          exiting={FadeOut.duration(200)}
+        <Pressable
+          style={styles.backdrop}
+          onPress={onDismiss}
+          testID="feature-hint-overlay-backdrop"
         >
-          <View style={styles.hintContent}>
-            {/* Custom animated element or default icon */}
-            {animatedElement ? (
-              animatedElement
-            ) : icon ? (
-              <View style={styles.iconContainer}>
-                <Icon
-                  name={icon.name}
-                  size={icon.size || 32}
-                  color={theme.colors.primary}
-                  library={icon.library}
-                />
-              </View>
-            ) : null}
-
-            <Text style={styles.hintTitle}>{title}</Text>
-            {subtitle ? <Text style={styles.hintSubtitle}>{subtitle}</Text> : null}
-          </View>
-
-          <Pressable
-            style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
-            onPress={onDismiss}
-            testID="feature-hint-overlay-dismiss"
+          <Animated.View
+            style={styles.hintContainer}
+            exiting={FadeOut.duration(200)}
           >
-            <Text style={styles.dismissButtonText}>{dismissText}</Text>
-          </Pressable>
-        </Animated.View>
-      </Pressable>
-    </Animated.View>
+            <View style={styles.hintContent}>
+              {/* Custom animated element or default icon */}
+              {animatedElement ? (
+                animatedElement
+              ) : icon ? (
+                <View style={styles.iconContainer}>
+                  <Icon
+                    name={icon.name}
+                    size={icon.size || 32}
+                    color={theme.colors.primary}
+                    library={icon.library}
+                  />
+                </View>
+              ) : null}
+
+              <Text style={styles.hintTitle}>{title}</Text>
+              {subtitle ? <Text style={styles.hintSubtitle}>{subtitle}</Text> : null}
+            </View>
+
+            <Pressable
+              style={({pressed}) => [styles.dismissButton, pressed && styles.pressed]}
+              onPress={onDismiss}
+              testID="feature-hint-overlay-dismiss"
+            >
+              <Text style={styles.dismissButtonText}>{dismissText}</Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Animated.View>
+    </Modal>
   );
 };
 
@@ -94,7 +100,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.overlays.heavy,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 9999,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

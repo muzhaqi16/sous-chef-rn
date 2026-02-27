@@ -80,17 +80,20 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   const [skeletonMounted, setSkeletonMounted] = useState(!hasPurchasedTabShownContent);
   const skeletonOpacity = useSharedValue(hasPurchasedTabShownContent ? 0 : 1);
 
+  // Adjusting state during render: mount skeleton immediately when showSkeletons becomes true
+  if (showSkeletons && !skeletonMounted) {
+    setSkeletonMounted(true);
+  }
+
   useEffect(() => {
     if (showSkeletons) {
-      setSkeletonMounted(true);
       skeletonOpacity.set(withTiming(1, { duration: 200 }));
     } else if (skeletonMounted) {
       skeletonOpacity.set(withTiming(0, { duration: 200 }));
       const timer = setTimeout(() => setSkeletonMounted(false), 250);
       return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- skeletonMounted read but intentionally omitted to avoid re-triggering
-  }, [showSkeletons]);
+  }, [showSkeletons, skeletonMounted, skeletonOpacity]);
 
   const skeletonAnimatedStyle = useAnimatedStyle(() => ({
     opacity: skeletonOpacity.value,

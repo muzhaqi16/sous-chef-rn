@@ -13,6 +13,26 @@
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
   bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
 
+### Autocomplete Local-First Search
+
+All autocomplete hooks use `useAutocompleteSearch` from `src/hooks/ui/useAutocompleteSearch.ts`.
+When a hook provides `fallbackItems` + `filterFallback`, it can opt into **local-first** search
+by passing `localFirst: true`. This filters cached/local items first and only fires the API
+if no local matches exist — eliminating unnecessary network requests for common lookups.
+
+**Current status:**
+
+| Hook                             | `localFirst` | Notes                                       |
+|----------------------------------|:------------:|---------------------------------------------|
+| `useUnitAutocomplete`            | `true`       | Uses `cachedUnits` from Zustand             |
+| `useBrandAutocomplete`           | `false`      | Has `suggestedBrands` fallback — ready to opt in when desired |
+| `useCategoryAutocomplete`        | `false`      | No cached data yet — add when categories are cached |
+| `useItemAutocomplete`            | `false`      | No cached data yet — add when items are cached |
+| `useStorageLocationAutocomplete` | N/A          | Fully local, doesn't use `useAutocompleteSearch` |
+
+When adding cached data to a new autocomplete hook, pass `localFirst: true` along with
+`fallbackItems` and `filterFallback` to enable local-first behavior.
+
 ### Verification Commands
 
 After implementing fixes, run:

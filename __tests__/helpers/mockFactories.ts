@@ -1,3 +1,5 @@
+import { DocumentNode } from 'graphql';
+import { MockedResponse } from '@apollo/client/testing/react';
 import { MembershipRole, StorageState } from '#generated';
 
 let idCounter = 0;
@@ -128,5 +130,92 @@ export function createMockNotification(overrides?: Record<string, unknown>) {
     readAt: null,
     isRead: false,
     ...overrides,
+  };
+}
+
+export function createMockShoppingList(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    name: 'Test Shopping List',
+    isDefault: false,
+    homeId: 'test-home-id',
+    itemsConnection: createMockConnection([]),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    ...overrides,
+  };
+}
+
+export function createMockMealPlanDay(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    date: new Date().toISOString().split('T')[0],
+    meals: [],
+    ...overrides,
+  };
+}
+
+export function createMockMealPlan(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    name: 'Test Meal Plan',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    days: [createMockMealPlanDay()],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function createMockPantry(overrides?: Record<string, unknown>) {
+  return {
+    id: nextId(),
+    name: 'Test Pantry',
+    homeId: 'test-home-id',
+    itemsConnection: createMockConnection([]),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    ...overrides,
+  };
+}
+
+export function createMockAuthResponse(overrides?: Record<string, unknown>) {
+  const user = createMockUser();
+  return {
+    accessToken: 'test-access-token',
+    refreshToken: 'test-refresh-token',
+    user,
+    ...overrides,
+  };
+}
+
+export function createQueryMock<TData = Record<string, unknown>>(
+  document: DocumentNode,
+  data: TData,
+  variables?: Record<string, unknown>,
+): MockedResponse<TData> {
+  return {
+    request: {
+      query: document,
+      ...(variables ? { variables } : {}),
+    },
+    result: { data },
+  };
+}
+
+export function createMutationMock<TData = Record<string, unknown>>(
+  document: DocumentNode,
+  data: TData,
+  variables?: Record<string, unknown>,
+): MockedResponse<TData> {
+  return {
+    request: {
+      query: document,
+      ...(variables ? { variables } : {}),
+    },
+    result: { data },
   };
 }

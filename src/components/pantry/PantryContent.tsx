@@ -343,9 +343,17 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
   const awaitingDeferredItems = items.length === 0 && (totalCount ?? 0) > 0 && !loading;
   const showSkeletons = !hasShownContent && (!isReady || loading || awaitingDeferredItems);
 
+  // On return visits (hasEverShownContent === true) the animated style is bypassed
+  // entirely, avoiding a 1-frame Reanimated worklet initialisation delay.
+  // Plain variable is safe: the latch only transitions false→true, so once content
+  // has been shown the animated wrapper is permanently skipped.
+  const skipCrossfade = hasEverShownContent;
+
   // Crossfade animation - opacity-based transition to avoid gap
-  const skeletonOpacity = useSharedValue(1);
-  const contentOpacity = useSharedValue(0);
+  // When content was previously shown, start with content visible immediately
+  // to avoid a blank white flash on tab switch / remount.
+  const skeletonOpacity = useSharedValue(hasEverShownContent ? 0 : 1);
+  const contentOpacity = useSharedValue(hasEverShownContent ? 1 : 0);
 
   useEffect(() => {
     const duration = 200;
@@ -607,7 +615,7 @@ export const PantryContent = React.forwardRef<PantryContentRef, PantryContentPro
         <View style={styles.listContainer}>
           {/* Content layer - flex:1 normal flow so FlashList can measure properly */}
           <Animated.View
-            style={[styles.contentFill, contentAnimatedStyle]}
+            style={[styles.contentFill, skipCrossfade ? null : contentAnimatedStyle]}
             pointerEvents={showSkeletons ? 'none' : 'auto'}
           >
             <FlashList<PantryItem>

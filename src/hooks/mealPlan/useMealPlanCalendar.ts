@@ -22,12 +22,19 @@ interface UseMealPlanCalendarOptions {
   maxDate?: Date;
 }
 
+const clampToRange = (date: Date, min?: Date, max?: Date): Date => {
+  if (min && isBefore(startOfDay(date), startOfDay(min))) return min;
+  if (max && isAfter(startOfDay(date), startOfDay(max))) return max;
+  return date;
+};
+
 export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
   const { minDate, maxDate } = options ?? {};
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const initialDate = clampToRange(new Date(), minDate, maxDate);
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [viewMode, setViewMode] = useState<CalendarView>('week');
-  const [referenceDate, setReferenceDate] = useState(new Date());
+  const [referenceDate, setReferenceDate] = useState(initialDate);
 
   // Clamp selected/reference dates when boundaries change (plan loads)
   const minTime = minDate?.getTime();
@@ -42,15 +49,7 @@ export function useMealPlanCalendar(options?: UseMealPlanCalendarOptions) {
     setPrevMaxTime(maxTime);
 
     if (minDate || maxDate) {
-      const today = new Date();
-      const todayStart = startOfDay(today);
-
-      const withinBounds =
-        (!minDate || !isBefore(todayStart, startOfDay(minDate))) &&
-        (!maxDate || !isAfter(todayStart, startOfDay(maxDate)));
-
-      const clampedDate = withinBounds ? today : minDate ?? today;
-
+      const clampedDate = clampToRange(new Date(), minDate, maxDate);
       setSelectedDate(clampedDate);
       setReferenceDate(clampedDate);
     }

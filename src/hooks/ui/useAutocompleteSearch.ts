@@ -22,6 +22,8 @@ export interface AutocompleteSearchConfig<TItem> {
   filterFallback?: (term: string, items: TItem[]) => TItem[];
   /** Maximum results to display. Default: 10 */
   maxResults?: number;
+  /** Search fallbackItems locally first; only fire API if no local matches. Default: false */
+  localFirst?: boolean;
 }
 
 export interface AutocompleteSearchReturn<TItem> {
@@ -55,7 +57,8 @@ export function useAutocompleteSearch<TItem>(
     requiresNetwork = true,
     fallbackItems = [],
     filterFallback,
-    maxResults = 10 } = config;
+    maxResults = 10,
+    localFirst = false } = config;
 
   const [searchTerm, setSearchTerm] = useState('');
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,6 +84,14 @@ export function useAutocompleteSearch<TItem>(
     }
 
     if (shouldSearch) {
+      // Local-first: check fallbackItems before firing the API
+      if (localFirst && filterFallback) {
+        const matches = filterFallback(searchTerm, fallbackItems);
+        if (matches.length > 0) {
+          return;
+        }
+      }
+
       debounceTimerRef.current = setTimeout(() => {
         search(searchTerm);
       }, debounceMs);
@@ -92,7 +103,7 @@ export function useAutocompleteSearch<TItem>(
         debounceTimerRef.current = null;
       }
     };
-  }, [searchTerm, shouldSearch, search, debounceMs]);
+  }, [searchTerm, shouldSearch, search, debounceMs, localFirst, filterFallback, fallbackItems]);
 
   // Get current results
   const results = getResults();
@@ -119,6 +130,14 @@ export function useAutocompleteSearch<TItem>(
         return filterFallback(searchTerm, fallbackItems).slice(0, maxResults);
       }
       return fallbackItems.slice(0, maxResults);
+    }
+
+    // Local-first: return local matches if available
+    if (localFirst && filterFallback) {
+      const localMatches = filterFallback(searchTerm, fallbackItems);
+      if (localMatches.length > 0) {
+        return localMatches.slice(0, maxResults);
+      }
     }
 
     // Show current results if available

@@ -1,8 +1,8 @@
 import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react-native';
+import { render, renderHook, RenderOptions, RenderHookOptions } from '@testing-library/react-native';
 import { MockedProvider, MockedProviderProps } from '@apollo/client/testing/react';
 
-interface ProviderOptions {
+export interface ProviderOptions {
   apolloProps?: Omit<MockedProviderProps, 'children'>;
 }
 
@@ -25,5 +25,16 @@ export function renderWithProviders(
       <AllProviders apolloProps={apolloProps} {...props} />
     ),
     ...renderOptions,
+  });
+}
+
+export function renderHookWithProviders<Result, Props>(
+  callback: (props: Props) => Result,
+  options?: ProviderOptions & Omit<RenderHookOptions<Props>, 'wrapper'>,
+) {
+  const { apolloProps, ...hookOptions } = options || {};
+  return renderHook(callback, {
+    wrapper: (props) => <AllProviders apolloProps={apolloProps} {...props} />,
+    ...hookOptions,
   });
 }

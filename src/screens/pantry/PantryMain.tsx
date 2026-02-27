@@ -23,7 +23,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
 import { useGetHomeQuery, GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
-import { useFeatureHint } from '#hooks/useFeatureHint';
+import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
@@ -51,6 +51,7 @@ const PantryMainScreen: React.FC = () => {
   // User name/avatar come from the auth store (populated during login)
   // so the greeting renders immediately without a separate GetUserProfile query
   const { user: authUser } = useAuth();
+  const loginCount = getLoginCount(authUser?.id ?? '');
   // Track screen performance (deferred — telemetry not needed during initial render)
   useScreenTransition('PantryMain', { enabled: isInteractive });
   // Feature hint for home switch button
@@ -298,7 +299,11 @@ const PantryMainScreen: React.FC = () => {
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
     if (!isInteractive) return;
+    // loginCount is incremented in handleLogin before PantryMain mounts,
+    // so count=1 on 1st login (skip hint) and count=2+ on subsequent logins (show hint).
+    // This prevents FeatureHint from competing with biometric/RememberMe modals on 1st login.
     if (
+      loginCount >= 2 &&
       selectedHomeId &&
       locationFilteredItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
@@ -312,6 +317,7 @@ const PantryMainScreen: React.FC = () => {
     }
   }, [
     isInteractive,
+    loginCount,
     locationFilteredItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,

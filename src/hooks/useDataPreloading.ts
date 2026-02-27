@@ -3,6 +3,9 @@ import { useShallow } from 'zustand/shallow';
 import { useGetCommonUnitsLazyQuery } from '#generated';
 import { useAppStore, selectAuthState, selectIsPantryQueryComplete } from '#store/useAppStore';
 
+/** 24 hours in milliseconds — matches backend refresh cadence for common units */
+const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
 /**
  * Preloads essential reference data for offline access
  *
@@ -18,6 +21,10 @@ import { useAppStore, selectAuthState, selectIsPantryQueryComplete } from '#stor
  * Event-driven preloading:
  * - Waits for `isPantryQueryComplete` — fires only after GetPantry settles
  * - No artificial delays — the semantic gate provides correct ordering
+ *
+ * TTL-based freshness:
+ * - Skips network fetch if persisted units exist and were fetched within 24h
+ * - Reduces redundant network traffic on every app start
  */
 export function useDataPreloading() {
   // Access auth state directly from store to avoid circular dependency with useAuth
@@ -26,6 +33,8 @@ export function useDataPreloading() {
 
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
+  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const setLastUnitsFetchedAt = useAppStore(state => state.setLastUnitsFetchedAt);
   const isOnline = useAppStore(state => state.isOnline);
   const isPantryQueryComplete = useAppStore(selectIsPantryQueryComplete);
 
@@ -42,7 +51,7 @@ export function useDataPreloading() {
   // PERFORMANCE: Use lazy query for common units to defer execution
   // Units are only needed when user opens add item sheet - not at startup
   const [fetchCommonUnits, { data }] = useGetCommonUnitsLazyQuery({
-    fetchPolicy: 'cache-and-network', // Show cache, then update from network
+    fetchPolicy: 'cache-first', // Freshness controlled by TTL, not Apollo
     errorPolicy: 'ignore', // Don't fail on network errors, use cached data
   });
 
@@ -53,6 +62,19 @@ export function useDataPreloading() {
     hasPreloadedRef.current = true;
     hasUnitsQueryFetchedRef.current = true;
 
+    // Skip fetch if persisted units are still fresh
+    const isCacheFresh =
+      cachedUnits.length > 0 &&
+      lastUnitsFetchedAt !== null &&
+      Date.now() - lastUnitsFetchedAt < UNITS_CACHE_TTL;
+
+    if (isCacheFresh) {
+      if (__DEV__) {
+        console.log('📦 [useDataPreloading] Units cache still fresh — skipping fetch');
+      }
+      return;
+    }
+
     if (__DEV__) {
       console.log('📦 [useDataPreloading] GetPantry settled — fetching GetCommonUnits');
     }
@@ -60,13 +82,16 @@ export function useDataPreloading() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag before async fetch is intentional
     setUnitsLoading(true);
     fetchCommonUnits()
+      .then(() => {
+        setLastUnitsFetchedAt(Date.now());
+      })
       .catch(err => {
         setUnitsError(err instanceof Error ? err : new Error('Failed to fetch units'));
       })
       .finally(() => {
         setUnitsLoading(false);
       });
-  }, [isAuthenticated, isOnline, isPantryQueryComplete, fetchCommonUnits]);
+  }, [isAuthenticated, isOnline, isPantryQueryComplete, fetchCommonUnits, cachedUnits.length, lastUnitsFetchedAt, setLastUnitsFetchedAt]);
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
   // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)
@@ -83,8 +108,9 @@ export function useDataPreloading() {
       hasPreloadedRef.current = false;
       hasUnitsQueryFetchedRef.current = false;
       hasCachedUnitsRef.current = false;
+      setLastUnitsFetchedAt(0);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setLastUnitsFetchedAt]);
 
   return {
     isPreloading: unitsLoading,

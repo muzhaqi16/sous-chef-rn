@@ -50,17 +50,6 @@ mutation RegisterDevice($input: DeviceRegistrationInput!) {
     success
     message
     code
-    device {
-      id
-      deviceId
-      deviceName
-      deviceType
-      platform
-      isActive
-      isTrusted
-      lastSeenAt
-      createdAt
-    }
   }
 }
 

@@ -15,12 +15,13 @@ const PantryAnalytics = React.lazy(
 );
 
 export const PantryStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 250,
     fullScreenGestureEnabled: true,
-  },
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     PantryMain: {
       screen: PantryMain,
