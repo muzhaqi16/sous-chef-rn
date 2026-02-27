@@ -33,6 +33,7 @@ export interface AppState {
   registrationPassword: string | null;
 
   cachedUnits: Unit[];
+  lastUnitsFetchedAt: number | null;
 
   setHydrated: (flag: boolean) => void;
   setLoggingOut: (flag: boolean) => void;
@@ -47,6 +48,7 @@ export interface AppState {
   clearRegistrationPassword: () => void;
 
   setCachedUnits: (units: Unit[]) => void;
+  setLastUnitsFetchedAt: (timestamp: number) => void;
 }
 
 export const initialAppState = {
@@ -60,6 +62,7 @@ export const initialAppState = {
   registrationPassword: null,
 
   cachedUnits: [],
+  lastUnitsFetchedAt: null,
 };
 
 export const createAppSlice: StateCreator<
@@ -93,4 +96,5 @@ export const createAppSlice: StateCreator<
   },
 
   setCachedUnits: units => set({cachedUnits: units}),
+  setLastUnitsFetchedAt: timestamp => set({lastUnitsFetchedAt: timestamp}),
 });

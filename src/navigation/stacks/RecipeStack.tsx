@@ -5,12 +5,13 @@ import { RecipeSearch } from '#screens/recipe/RecipeSearch';
 import { RecipeFormScreen } from '#screens/recipe/RecipeForm';
 
 export const RecipeStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 250,
     fullScreenGestureEnabled: true,
-  },
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     RecipeMain: RecipeMain,
     RecipeDetail: RecipeDetail,

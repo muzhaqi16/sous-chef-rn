@@ -112,6 +112,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
             showsVerticalScrollIndicator={false}
             onEndReached={hasMore ? loadMore : undefined}
             onEndReachedThreshold={0.5}
+            drawDistance={200}
           />
         )}
       </BottomSheetView>

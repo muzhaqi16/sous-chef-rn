@@ -278,10 +278,8 @@ const ShoppingListMainContent: React.FC<ShoppingListMainContentProps> =
     // Track screen view once on mount (avoid re-firing on every item/list change)
     useScreenTelemetry('ShoppingListMain', () => ({
       list_id: currentListId,
-      item_count: items.length,
-      purchased_count: items.filter(
-        (item: { purchaseInfo?: { isPurchased?: boolean } }) => item.purchaseInfo?.isPurchased,
-      ).length,
+      item_count: (totalCountUnpurchased ?? 0) + (totalCountPurchased ?? 0),
+      purchased_count: totalCountPurchased ?? 0,
       has_lists: lists.length > 0 }));
 
     // Set up scanner button

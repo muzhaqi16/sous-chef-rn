@@ -86,7 +86,6 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   // We can build a tree from the flat list as a fallback.
   const [fetchTree, { data: treeData }] = useGetStorageLocationTreeLazyQuery({
     fetchPolicy: 'cache-first',
-    nextFetchPolicy: 'cache-and-network',
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 

@@ -22,7 +22,6 @@ jest.mock('../src/services/performance/NativePerformanceService', () => ({
 }));
 jest.mock('react-native-screens', () => ({
   enableScreens: jest.fn(),
-  enableFreeze: jest.fn(),
 }));
 
 // Apollo client creates WebSocket links / polling timers that keep Jest alive

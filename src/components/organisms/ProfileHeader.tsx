@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   interpolate,
@@ -30,6 +30,8 @@ export interface ProfileHeaderProps {
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   avatarUrl,
+  name,
+  subtitle,
   onBack,
   onMore,
   onAvatarPress,
@@ -59,7 +61,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return { width: size, height: size, borderRadius: size / 2 };
   });
 
-  const editIconAnimatedStyle = useAnimatedStyle(() => {
+  const fadeAnimatedStyle = useAnimatedStyle(() => {
     if (!scrollY) return {};
     const opacity = interpolate(
       scrollY.value,
@@ -71,47 +73,55 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   });
 
   return (
-    <Animated.View style={[styles.header, headerAnimatedStyle]}>
-      <BackButton
-        onPress={onBack}
-        color={theme.colors.textPrimary}
-      />
-      <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
-        {avatarUrl ? (
-          <Animated.View style={[styles.avatarBase, avatarAnimatedStyle]}>
-            <CachedImage
-              uri={avatarUrl}
-              style={styles.avatarImage}
-              displaySize={80}
-              onFailure={() =>
-                console.log('Avatar image failed to load:', avatarUrl)
-              }
-            />
-          </Animated.View>
-        ) : (
-          <Animated.View style={[styles.avatarBase, styles.avatarPlaceholder, avatarAnimatedStyle]}>
+    <View>
+      <Animated.View style={[styles.header, headerAnimatedStyle]}>
+        <BackButton
+          onPress={onBack}
+          color={theme.colors.textPrimary}
+        />
+        <Pressable onPress={onAvatarPress} style={({pressed}) => [styles.avatarContainer, pressed && styles.pressed]}>
+          {avatarUrl ? (
+            <Animated.View style={[styles.avatarBase, avatarAnimatedStyle]}>
+              <CachedImage
+                uri={avatarUrl}
+                style={styles.avatarImage}
+                displaySize={80}
+                onFailure={() =>
+                  console.log('Avatar image failed to load:', avatarUrl)
+                }
+              />
+            </Animated.View>
+          ) : (
+            <Animated.View style={[styles.avatarBase, styles.avatarPlaceholder, avatarAnimatedStyle]}>
+              <Icon
+                name="person"
+                size={32}
+                color={theme.colors.textSecondary}
+              />
+            </Animated.View>
+          )}
+          <Animated.View style={[styles.profileAction, fadeAnimatedStyle]}>
             <Icon
-              name="person"
-              size={32}
-              color={theme.colors.textSecondary}
+              color={theme.colors.iconOnPrimary}
+              name="create"
+              size={15}
             />
           </Animated.View>
-        )}
-        <Animated.View style={[styles.profileAction, editIconAnimatedStyle]}>
-          <Icon
-            color={theme.colors.iconOnPrimary}
-            name="create"
-            size={15}
-          />
+        </Pressable>
+        <IconButton
+          name="ellipsis-vertical"
+          onPress={onMore}
+          color={theme.colors.textPrimary}
+          accessibilityLabel="More options"
+        />
+      </Animated.View>
+      {(!!name || !!subtitle) && (
+        <Animated.View style={[styles.userInfo, fadeAnimatedStyle]}>
+          {!!name && <Text style={styles.nameText}>{name}</Text>}
+          {!!subtitle && <Text style={styles.subtitleText}>{subtitle}</Text>}
         </Animated.View>
-      </Pressable>
-      <IconButton
-        name="ellipsis-vertical"
-        onPress={onMore}
-        color={theme.colors.textPrimary}
-        accessibilityLabel="More options"
-      />
-    </Animated.View>
+      )}
+    </View>
   );
 };
 
@@ -149,6 +159,21 @@ const styles = StyleSheet.create(theme => ({
     height: 28,
     borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
+  },
+  userInfo: {
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  nameText: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+  },
+  subtitleText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   pressed: {
     opacity: theme.opacity.pressed,

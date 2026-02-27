@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -20,9 +21,9 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { useAppStore } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
-import { useGetHomeQuery, GetStorageLocationsQuery, StorageState } from '#generated';
+import { GetStorageLocationsQuery, StorageState } from '#generated';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
-import { useFeatureHint } from '#hooks/useFeatureHint';
+import { useFeatureHint, getLoginCount } from '#hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { Telemetry } from '#services/telemetry';
@@ -50,6 +51,7 @@ const PantryMainScreen: React.FC = () => {
   // User name/avatar come from the auth store (populated during login)
   // so the greeting renders immediately without a separate GetUserProfile query
   const { user: authUser } = useAuth();
+  const loginCount = getLoginCount(authUser?.id ?? '');
   // Track screen performance (deferred — telemetry not needed during initial render)
   useScreenTransition('PantryMain', { enabled: isInteractive });
   // Feature hint for home switch button
@@ -91,8 +93,20 @@ const PantryMainScreen: React.FC = () => {
   const selectorRef = useRef<ItemSelectorRef>(null);
   const pantryContentRef = useRef<PantryContentRef>(null);
   const pendingPantryScrollToTopRef = useRef(pendingPantryScrollToTop);
+  const client = useApolloClient();
+  const itemsAddedRef = useRef(false);
   const handleItemAdded = () => {
-    pantryContentRef.current?.scrollToTop();
+    itemsAddedRef.current = true;
+    // Background sync: silently refetch pantry to ensure cache consistency
+    client.refetchQueries({ include: ['GetPantry'] });
+  };
+  const handleAddSheetClose = () => {
+    const shouldScroll = itemsAddedRef.current;
+    itemsAddedRef.current = false;
+    setAddSheetVisible(false);
+    if (shouldScroll) {
+      pantryContentRef.current?.scrollToTop();
+    }
   };
   useEffect(() => {
     pendingPantryScrollToTopRef.current = pendingPantryScrollToTop;
@@ -130,17 +144,6 @@ const PantryMainScreen: React.FC = () => {
     setSelectedPantryId,
     isReady,
   } = useCurrentPantry();
-  // Keep query for pull-to-refresh
-  // Gate query with isReady to prevent firing before home selection is complete
-  // freezeOnBlur handles suppressing updates when screen is not focused
-  const shouldFetchHome =
-    isInteractive && isReady && !!selectedHomeId && !currentHome;
-  const { refetch: refetchHome } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId! },
-    skip: !shouldFetchHome,
-    fetchPolicy: 'cache-and-network',
-    nextFetchPolicy: 'cache-first',
-  });
   // Set up scanner button (deferred — scanner not needed during initial render)
   useScannerSetup({
     enabled: isInteractive,
@@ -285,7 +288,11 @@ const PantryMainScreen: React.FC = () => {
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
     if (!isInteractive) return;
+    // loginCount is incremented in handleLogin before PantryMain mounts,
+    // so count=1 on 1st login (skip hint) and count=2+ on subsequent logins (show hint).
+    // This prevents FeatureHint from competing with biometric/RememberMe modals on 1st login.
     if (
+      loginCount >= 2 &&
       selectedHomeId &&
       locationFilteredItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
@@ -299,6 +306,7 @@ const PantryMainScreen: React.FC = () => {
     }
   }, [
     isInteractive,
+    loginCount,
     locationFilteredItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
@@ -316,7 +324,7 @@ const PantryMainScreen: React.FC = () => {
     };
   const handleLowStockNavigate = () => navigate('LowStockItems');
   const handleRefresh = async () => {
-    await Promise.all([refetch(), refetchHome()]);
+    await refetch();
   };
   // Determine loading state - only show loading if we have no data at all and no error
   // If there's an error, stop showing loading state to prevent infinite spinner
@@ -407,7 +415,7 @@ const PantryMainScreen: React.FC = () => {
         <AddToPantrySheet
           visible={addSheetVisible}
           pantryId={pantry?.id}
-          onClose={() => setAddSheetVisible(false)}
+          onClose={handleAddSheetClose}
           onItemAdded={handleItemAdded}
         />
       )}

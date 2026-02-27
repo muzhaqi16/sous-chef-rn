@@ -667,6 +667,7 @@ subscription PantryAlerts($pantryId: ID!) {
         id
         name
         imageUrl
+        images { url kind }
       }
     }
     items {
@@ -677,6 +678,7 @@ subscription PantryAlerts($pantryId: ID!) {
         id
         name
         imageUrl
+        images { url kind }
       }
     }
     message

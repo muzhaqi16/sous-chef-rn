@@ -24,6 +24,16 @@ export const SPRING = {
 } as const;
 
 /**
+ * Bottom-sheet / modal animation constants.
+ */
+export const SHEET = {
+  SLIDE_DISTANCE: 300,
+  BACKDROP_OPACITY: 0.5,
+  BACKDROP_FADE_IN: 100,
+  BACKDROP_FADE_OUT: 300,
+} as const;
+
+/**
  * Named timing duration presets (in ms).
  */
 export const TIMING = {

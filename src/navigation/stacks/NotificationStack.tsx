@@ -4,11 +4,13 @@ import { NotificationDetailScreen } from '#screens/notifications/NotificationDet
 import { NotificationSettingsScreen } from '#screens/notifications/NotificationSettingsScreen';
 
 export const NotificationStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'fade_from_bottom',
     animationDuration: 200,
-  },
+    fullScreenGestureEnabled: true,
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     NotificationList: {
       screen: NotificationListScreen,

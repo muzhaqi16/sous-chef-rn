@@ -21,8 +21,6 @@ interface TransformOptions {
  * Pass multiple arrays to transform them all in a single hook call.
  */
 interface MultiSourceTransformOptions {
-  /** All items (for backwards compatibility) */
-  items: ShoppingListItemDisplayFragment[];
   /** Pre-filtered unpurchased items (from pagination) */
   rawUnpurchasedItems: ShoppingListItemDisplayFragment[];
   /** Pre-filtered purchased items (from pagination) */
@@ -145,18 +143,12 @@ export function useShoppingListTransform(
  * ```
  */
 export function useShoppingListTransformMulti(options: MultiSourceTransformOptions) {
-  const { items, rawUnpurchasedItems, rawPurchasedItems } = options;
+  const { rawUnpurchasedItems, rawPurchasedItems } = options;
   const showImages = useShowShoppingListImages();
 
-  // Transform all arrays
-  const result = {
-    // All items (for backwards compatibility / search)
-    sortableItems: transformItems(items, undefined, showImages),
-    // Paginated unpurchased items (force isPurchased: false for checkbox consistency)
-    unpurchasedItems: transformItems(rawUnpurchasedItems, false, showImages),
-    // Paginated purchased items (force isPurchased: true for checkbox consistency)
-    purchasedItems: transformItems(rawPurchasedItems, true, showImages),
-  };
+  // Transform only the two partitioned arrays (skip redundant combined transform)
+  const unpurchasedItems = transformItems(rawUnpurchasedItems, false, showImages);
+  const purchasedItems = transformItems(rawPurchasedItems, true, showImages);
 
-  return result;
+  return { unpurchasedItems, purchasedItems };
 }

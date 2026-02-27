@@ -6,10 +6,12 @@ module.exports = {
   moduleNameMapper: {
     // Binary assets (fonts, images, etc.)
     '\\.(ttf|otf|png|jpg|jpeg|gif|webp|svg)$':
-      '<rootDir>/src/test-utils/__mocks__/fileMock.js',
+      '<rootDir>/__tests__/__mocks__/fileMock.js',
     // Native module that needs to be mocked before anything imports unistyles
     'react-native-nitro-modules':
-      '<rootDir>/src/test-utils/__mocks__/react-native-nitro-modules.js',
+      '<rootDir>/__tests__/__mocks__/react-native-nitro-modules.js',
+    // Test utilities (moved out of src/ to keep production code clean)
+    '^#/test-utils/(.*)$': '<rootDir>/__tests__/helpers/$1',
     // Path aliases matching tsconfig.json / babel module-resolver
     '^#/(.*)$': '<rootDir>/src/$1',
     '^#assets(.*)$': '<rootDir>/src/assets$1',
@@ -29,7 +31,7 @@ module.exports = {
     '^#types(.*)$': '<rootDir>/src/types$1',
     '^#utils(.*)$': '<rootDir>/src/utils$1',
   },
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/__tests__/helpers/', '/__tests__/__mocks__/'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/graphql/generated/**',
@@ -73,7 +75,8 @@ module.exports = {
       'zustand|' +
       'uuid|' +
       'react-native-launch-arguments|' +
-      'react-native-performance' +
+      'react-native-performance|' +
+      'fractional-indexing' +
       ')/)',
   ],
 };

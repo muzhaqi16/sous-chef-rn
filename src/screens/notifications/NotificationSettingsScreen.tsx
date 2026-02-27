@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Alert, Platform, Linking, AppState } from 'react-native';
+import { View, Text, Alert, Platform, Linking, AppState, Pressable } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -8,12 +8,31 @@ import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper
 import { useNotificationSettings } from '#hooks/notifications/useNotificationSettings';
 import { useNotificationPermissions } from '#hooks/notifications/useNotificationPermissions';
 import { ExpirationFrequency } from '#generated';
-import { Picker } from '@react-native-picker/picker';
+import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+
+const FREQUENCY_OPTIONS = [
+  { label: 'Real-time (as items expire)', value: ExpirationFrequency.RealTime },
+  { label: 'Daily - Morning', value: ExpirationFrequency.DailyMorning },
+  { label: 'Daily - Evening', value: ExpirationFrequency.DailyEvening },
+  { label: 'Weekly Digest', value: ExpirationFrequency.WeeklyDigest },
+  { label: 'Never', value: ExpirationFrequency.Never },
+];
+
+const THRESHOLD_OPTIONS = [
+  { label: 'Same day (0 days)', value: '0' },
+  { label: '1 day before', value: '1' },
+  { label: '2 days before', value: '2' },
+  { label: '3 days before', value: '3' },
+  { label: '5 days before', value: '5' },
+  { label: '7 days before', value: '7' },
+];
 
 export const NotificationSettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
+  const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
   const { hasPermission, requestPermissions, checkPermissions } = useNotificationPermissions();
 
   const {
@@ -236,42 +255,47 @@ export const NotificationSettingsScreen: React.FC = () => {
         />
 
         {!!settings.expirationNotifications && <>
-            <View style={styles.indentedSetting}>
+            <Pressable
+              style={styles.pickerRow}
+              onPress={() => setFrequencyPickerVisible(true)}
+            >
               <Text style={styles.settingLabel}>Notification Frequency</Text>
-              <Picker
-                selectedValue={settings.expirationNotificationFrequency}
-                onValueChange={(value) =>
-                  handleSettingChange('expirationNotificationFrequency', value)
-                }
-                style={styles.picker}
-              >
-                <Picker.Item label="Real-time (as items expire)" value={ExpirationFrequency.RealTime} />
-                <Picker.Item label="Daily - Morning" value={ExpirationFrequency.DailyMorning} />
-                <Picker.Item label="Daily - Evening" value={ExpirationFrequency.DailyEvening} />
-                <Picker.Item label="Weekly Digest" value={ExpirationFrequency.WeeklyDigest} />
-                <Picker.Item label="Never" value={ExpirationFrequency.Never} />
-              </Picker>
-            </View>
-
-            <View style={styles.indentedSetting}>
-              <Text style={styles.settingLabel}>
-                Alert threshold: {settings.expirationDaysThreshold} day{settings.expirationDaysThreshold !== 1 ? 's' : ''} before expiration
+              <Text style={styles.pickerValue}>
+                {FREQUENCY_OPTIONS.find(o => o.value === settings.expirationNotificationFrequency)?.label ?? 'Select'}
               </Text>
-              <Picker
-                selectedValue={settings.expirationDaysThreshold}
-                onValueChange={(value) =>
-                  handleSettingChange('expirationDaysThreshold', Number(value))
-                }
-                style={styles.picker}
-              >
-                <Picker.Item label="Same day (0 days)" value={0} />
-                <Picker.Item label="1 day before" value={1} />
-                <Picker.Item label="2 days before" value={2} />
-                <Picker.Item label="3 days before" value={3} />
-                <Picker.Item label="5 days before" value={5} />
-                <Picker.Item label="7 days before" value={7} />
-              </Picker>
-            </View>
+            </Pressable>
+            <ModalPicker
+              label="Notification Frequency"
+              visible={frequencyPickerVisible}
+              options={FREQUENCY_OPTIONS}
+              selected={settings.expirationNotificationFrequency}
+              onSelect={(value) => {
+                handleSettingChange('expirationNotificationFrequency', value);
+                setFrequencyPickerVisible(false);
+              }}
+              onCancel={() => setFrequencyPickerVisible(false)}
+            />
+
+            <Pressable
+              style={styles.pickerRow}
+              onPress={() => setThresholdPickerVisible(true)}
+            >
+              <Text style={styles.settingLabel}>Alert Threshold</Text>
+              <Text style={styles.pickerValue}>
+                {THRESHOLD_OPTIONS.find(o => o.value === String(settings.expirationDaysThreshold))?.label ?? 'Select'}
+              </Text>
+            </Pressable>
+            <ModalPicker
+              label="Alert Threshold"
+              visible={thresholdPickerVisible}
+              options={THRESHOLD_OPTIONS}
+              selected={String(settings.expirationDaysThreshold)}
+              onSelect={(value) => {
+                handleSettingChange('expirationDaysThreshold', Number(value));
+                setThresholdPickerVisible(false);
+              }}
+              onCancel={() => setThresholdPickerVisible(false)}
+            />
           </>}
 
         <SettingSwitch
@@ -439,23 +463,24 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
-  indentedSetting: {
-    marginLeft: theme.spacing.xl,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    marginBottom: theme.spacing.sm,
-  },
   settingLabel: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
     fontWeight: theme.fonts.weight.medium,
   },
-  picker: {
-    height: 50,
-    width: '100%',
+  pickerRow: {
+    marginLeft: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  pickerValue: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
+    marginTop: theme.spacing.xs,
   },
   quietHoursInfo: {
     marginLeft: theme.spacing.xl,

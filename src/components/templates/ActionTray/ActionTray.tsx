@@ -58,26 +58,52 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         open: () => {
           if (isOpenRef.current) return;
           if (enableBackdrop) {
-            showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
+            showBackdrop({ opacity: 0.5, onPress: () => {
+              if (isOpenRef.current && enableBackdrop) {
+                hideBackdrop();
+                isOpenRef.current = false;
+              }
+              bottomSheetRef.current?.dismiss();
+            }});
           }
           bottomSheetRef.current?.present();
         },
-        close: () => bottomSheetRef.current?.dismiss(),
+        close: () => {
+          if (isOpenRef.current && enableBackdrop) {
+            hideBackdrop();
+            isOpenRef.current = false;
+          }
+          bottomSheetRef.current?.dismiss();
+        },
         toggle: () => {
           if (isOpenRef.current) {
+            if (enableBackdrop) {
+              hideBackdrop();
+              isOpenRef.current = false;
+            }
             bottomSheetRef.current?.dismiss();
           } else {
             if (enableBackdrop) {
-              showBackdrop({ opacity: 0.5, onPress: () => bottomSheetRef.current?.dismiss() });
+              showBackdrop({ opacity: 0.5, onPress: () => {
+                if (isOpenRef.current && enableBackdrop) {
+                  hideBackdrop();
+                  isOpenRef.current = false;
+                }
+                bottomSheetRef.current?.dismiss();
+              }});
             }
             bottomSheetRef.current?.present();
           }
         },
         isActive: () => isOpenRef.current }),
-      [enableBackdrop, showBackdrop],
+      [enableBackdrop, showBackdrop, hideBackdrop],
     );
 
     const handleClose = () => {
+      if (isOpenRef.current && enableBackdrop) {
+        hideBackdrop();
+        isOpenRef.current = false;
+      }
       bottomSheetRef.current?.dismiss();
     };
 

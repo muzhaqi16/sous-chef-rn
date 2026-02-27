@@ -7,6 +7,7 @@ import Animated, {
   type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
+import { SHEET } from '#constants/animations';
 
 interface ShowBackdropOptions {
   opacity?: number;
@@ -51,14 +52,14 @@ export const OverlayBackdropProvider: React.FC<OverlayBackdropProviderProps> = (
     const targetOpacity = options?.opacity ?? 0.5;
     onPressCallbackRef.current = options?.onPress ?? null;
     setIsVisible(true);
-    opacity.set(withTiming(targetOpacity, { duration: 100 }));
+    opacity.set(withTiming(targetOpacity, { duration: SHEET.BACKDROP_FADE_IN }));
   };
 
   const hideBackdrop = () => {
     activeCountRef.current = Math.max(0, activeCountRef.current - 1);
     if (activeCountRef.current === 0) {
       onPressCallbackRef.current = null;
-      opacity.set(withTiming(0, { duration: 100 }, (finished) => {
+      opacity.set(withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, (finished) => {
         if (finished) {
           scheduleOnRN(setIsVisible, false);
         }

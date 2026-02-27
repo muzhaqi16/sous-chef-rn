@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import Animated from 'react-native-reanimated';
 import {
   useGetPantryItemQuery,
@@ -351,23 +350,6 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
   const netWeightText = formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
   const remainingNetWeightText = formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
   const quantityBreakdownText = formatQuantityBreakdown(item?.quantityBreakdown, item?.unit?.symbol);
-
-  const renderSuggestedRecipeItem = ({ item: recipe }: { item: RecipeInformation }) => (
-      <Pressable
-        style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
-        onPress={() => handleRecipePress(recipe.id)}
-      >
-        <Animated.Image
-          source={{ uri: recipe.image }}
-          style={styles.recipeImage}
-          resizeMode="cover"
-          sharedTransitionTag={`recipe-image-${recipe.id}`}
-        />
-        <Text style={styles.recipeTitle} numberOfLines={2}>
-          {recipe.title}
-        </Text>
-      </Pressable>
-    );
 
   if (!item) {
     return (
@@ -729,14 +711,29 @@ export const PantryItemDetail: React.FC<StaticScreenProps<{
               style={styles.recipesLoading}
             />
           ) : suggestedRecipes.length > 0 ? (
-            <FlashList
+            <ScrollView
               horizontal
-              data={suggestedRecipes}
-              keyExtractor={recipe => String(recipe.id)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.recipesList}
-              renderItem={renderSuggestedRecipeItem}
-            />
+            >
+              {suggestedRecipes.map(recipe => (
+                <Pressable
+                  key={String(recipe.id)}
+                  style={({pressed}) => [styles.recipeCard, pressed && styles.pressed]}
+                  onPress={() => handleRecipePress(recipe.id)}
+                >
+                  <Animated.Image
+                    source={{ uri: recipe.image }}
+                    style={styles.recipeImage}
+                    resizeMode="cover"
+                    sharedTransitionTag={`recipe-image-${recipe.id}`}
+                  />
+                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                    {recipe.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           ) : (
             <Text style={styles.noRecipes}>
               No recipe suggestions available

@@ -32,6 +32,7 @@ module.exports = api => {
           '.json',
         ],
         alias: {
+          '#/test-utils': './__tests__/helpers',
           '#': './src',
           '#assets': './src/assets',
           '#components': './src/components',

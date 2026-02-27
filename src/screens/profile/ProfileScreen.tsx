@@ -97,7 +97,7 @@ export const ProfileScreen = () => {
     >
       <ProfileHeader
         avatarUrl={profile?.avatar}
-        name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
+        name={profile?.displayName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
         subtitle={user?.email || ''}
         onBack={() => goBack()}
         onMore={handleMorePress}

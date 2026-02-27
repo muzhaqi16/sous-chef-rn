@@ -17,6 +17,7 @@ import { useStore } from '#store';
 import {
   saveTempRegistrationPassword,
   clearTempRegistrationPassword } from '#/storage/keychain';
+import { incrementLoginCount } from '#/hooks/useFeatureHint';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -79,7 +80,7 @@ export interface AuthOperationsReturn {
     loginResponse: any,
     shouldRemember?: boolean,
     loginCredentials?: LoginCredentials,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   handleRegistration: (registerResponse: any, shouldRemember?: boolean) => Promise<void>;
   handleAuthSuccess: (message: string) => void;
   handleAuthError: (error: any, operation?: string) => void;
@@ -126,7 +127,7 @@ function handleAuthErrorImpl(
 async function autoLoginImpl(
   credentialStorage: CredentialStorageEvents,
   loginMutation: (opts: any) => Promise<any>,
-  handleLogin: (response: any, shouldRemember?: boolean) => Promise<void>,
+  handleLogin: (response: any, shouldRemember?: boolean) => Promise<boolean>,
   handleAuthError: (error: any, operation?: string) => void,
 ): Promise<boolean> {
   const result = await executeMutationWithErrorHandler(
@@ -188,7 +189,7 @@ async function loginImpl(
   input: LoginInput,
   showRememberPrompt: boolean,
   loginMutation: (opts: any) => Promise<any>,
-  handleLogin: (response: any, shouldRemember?: boolean, credentials?: LoginCredentials) => Promise<void>,
+  handleLogin: (response: any, shouldRemember?: boolean, credentials?: LoginCredentials) => Promise<boolean>,
   handleAuthError: (error: any, operation?: string) => void,
   credentialStorage: CredentialStorageEvents,
   rememberMe: RememberMeEvents,
@@ -207,9 +208,9 @@ async function loginImpl(
           email: input.email,
           password: input.password };
 
-        await handleLogin(mutationResult.data.login, true, loginCredentials);
+        const biometricTriggered = await handleLogin(mutationResult.data.login, true, loginCredentials);
 
-        if (showRememberPrompt) {
+        if (showRememberPrompt && !biometricTriggered) {
           const hasStoredCreds = await credentialStorage.onCredentialCheck(input.email);
           if (!hasStoredCreds && shouldShowCredentialPrompt()) {
             rememberMe.onShowRememberMe(loginCredentials);
@@ -395,9 +396,9 @@ export const useAuthOperations = ({
       loginResponse: any,
       shouldRemember?: boolean,
       loginCredentials?: LoginCredentials,
-    ) => {
+    ): Promise<boolean> => {
       if (!loginResponse?.user) {
-        return;
+        return false;
       }
 
       const { user, accessToken, refreshToken } = loginResponse;
@@ -426,16 +427,17 @@ export const useAuthOperations = ({
 
       handleAuthSuccess('Login successful');
       registerDeviceInBackground();
+      incrementLoginCount(user.id);
 
       // **EXPLICIT NAVIGATION FLOW CONTROL**
       if (!user.emailVerified) {
         navigation.onNavigate('verification');
-        return;
+        return false;
       }
 
       if (!user.onBoarded) {
         navigation.onNavigate('onboarding');
-        return;
+        return false;
       }
 
       // User is fully authenticated - check biometric setup eligibility
@@ -455,12 +457,13 @@ export const useAuthOperations = ({
 
         if (biometricResult?.shouldShow) {
           biometricSetup.onShowBiometricSetup(loginCredentials);
-          return;
+          return true;
         }
       }
 
       // Default: navigate to main app
       navigation.onNavigate('main_app');
+      return false;
     };
 
   const handleRegistration = async (registerResponse: any, shouldRemember?: boolean) => {

@@ -6,6 +6,8 @@ import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
 
 export type PreferredSize = ImageSize['size'];
 
+type ImageVariant = { url: string; kind?: string | null };
+
 const SIZE_PRIORITY: PreferredSize[] = [
   'small',
   'medium',
@@ -13,6 +15,29 @@ const SIZE_PRIORITY: PreferredSize[] = [
   'xlarge',
   'thumbnail',
 ];
+
+const PREFERRED_SIZE_TO_KIND: Partial<Record<PreferredSize, string>> = {
+  thumbnail: 'THUMBNAIL',
+  small: 'THUMBNAIL',
+  medium: 'SIZE_512',
+  large: 'SIZE_512',
+};
+
+/**
+ * Pick the best URL from API-generated image variants.
+ * Falls back to MAIN kind if the preferred kind is missing.
+ */
+export function pickImageUrl(
+  images: ImageVariant[] | null | undefined,
+  preferredKind: string,
+): string | null {
+  if (!images || images.length === 0) return null;
+  return (
+    images.find(img => img.kind === preferredKind)?.url
+    ?? images.find(img => img.kind === 'MAIN')?.url
+    ?? null
+  );
+}
 
 /**
  * Resolves the best available image URL from any common data shape.
@@ -28,19 +53,33 @@ export function resolveImageUrl(
 ): string | null {
   if (!source) return null;
 
-  // 1. Try own imageUrl (validates it's a full URL)
+  const kind = PREFERRED_SIZE_TO_KIND[preferredSize];
+
+  // 1. Try API-generated variants from nested .item.images
+  if (kind && Array.isArray(source.item?.images)) {
+    const variant = pickImageUrl(source.item.images as ImageVariant[], kind);
+    if (variant) return variant;
+  }
+
+  // 2. Try API-generated variants from own images array
+  if (kind && Array.isArray(source.images)) {
+    const variant = pickImageUrl(source.images as ImageVariant[], kind);
+    if (variant) return variant;
+  }
+
+  // 3. Try own imageUrl (validates it's a full URL)
   const ownUrl = source.imageUrl;
   if (ownUrl && (ownUrl.startsWith('http://') || ownUrl.startsWith('https://'))) {
     return ownUrl;
   }
 
-  // 2. Try nested .item via getItemImageUrl (handles imageUrl + images fallback)
+  // 4. Try nested .item via getItemImageUrl (handles imageUrl + legacy images fallback)
   if (source.item) {
     const fromItem = getItemImageUrl(source.item, preferredSize);
     if (fromItem) return fromItem;
   }
 
-  // 3. Try own images array (for direct Item objects)
+  // 5. Try own images array via legacy path (for direct Item objects)
   if (source.images) {
     return getItemImageUrl(source, preferredSize);
   }
@@ -52,6 +91,14 @@ export const getItemImageUrl = (
   item: { imageUrl?: string | null; images?: unknown } | null | undefined,
   preferredSize: PreferredSize = 'small',
 ): string | null => {
+  // 1. Try API-generated variants first
+  const kind = PREFERRED_SIZE_TO_KIND[preferredSize];
+  if (kind && Array.isArray(item?.images)) {
+    const variant = pickImageUrl(item.images as ImageVariant[], kind);
+    if (variant) return variant;
+  }
+
+  // 2. Try imageUrl (original upload)
   const imageUrl = item?.imageUrl;
   if (imageUrl) {
     // Only return valid URLs - filenames without full path are invalid
@@ -63,7 +110,7 @@ export const getItemImageUrl = (
     return imageUrl;
   }
 
-  // Fallback: extract from images JSON array (used when imageUrl is not populated)
+  // 3. Fallback: extract from legacy images JSON array (perspective/sizes structure)
   if (item?.images) {
     const parsed = parseImages(item.images);
     const primary = getPrimaryImage(parsed);

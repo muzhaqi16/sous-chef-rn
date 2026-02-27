@@ -43,7 +43,7 @@ export const PurchaseHistoryScreen: React.FC<{
   };
 
   const renderPurchaseItem: ListRenderItem<RouteParams['purchases'][0]> = ({ item: purchase, index }) => (
-      <View key={purchase.id} style={styles.purchaseCard}>
+      <View style={styles.purchaseCard}>
         <View style={styles.purchaseHeader}>
           <View style={styles.purchaseNumber}>
             <Text style={styles.purchaseNumberText}>

@@ -1,4 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import type { SortableShoppingListItem } from '../SortableShoppingList/types';
 import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
@@ -36,6 +43,7 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   items,
   onRefresh,
   refreshing,
+  loading,
   disabled,
   onEndReached,
   canRemoveItems = true,
@@ -68,23 +76,40 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   }, [hasShownContent]);
 
   // Show skeletons only on the very first data load
-  const showSkeletons = !hasShownContent && (!isReady || isTransitioning);
-  if (showSkeletons) {
-    return <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />;
+  const showSkeletons = !hasShownContent && (!isReady || isTransitioning || !!loading);
+
+  // Skeleton overlay: fade-out with delayed unmount so it stays in the tree
+  // during the opacity animation. Content is always at full opacity underneath.
+  const [skeletonMounted, setSkeletonMounted] = useState(!hasShoppingTabShownContent);
+  const skeletonOpacity = useSharedValue(hasShoppingTabShownContent ? 0 : 1);
+
+  // Adjusting state during render: mount skeleton immediately when showSkeletons becomes true
+  if (showSkeletons && !skeletonMounted) {
+    setSkeletonMounted(true);
   }
 
-  // Empty state for shopping tab
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        icon={<ShoppingEmptyIllustration size="medium" />}
-        title="Your list is empty"
-        description="Add items to start your shopping list"
-      />
-    );
-  }
+  useEffect(() => {
+    if (showSkeletons) {
+      skeletonOpacity.set(withTiming(1, { duration: 200 }));
+    } else if (skeletonMounted) {
+      skeletonOpacity.set(withTiming(0, { duration: 200 }));
+      const timer = setTimeout(() => setSkeletonMounted(false), 250);
+      return () => clearTimeout(timer);
+    }
+  }, [showSkeletons, skeletonMounted, skeletonOpacity]);
 
-  return (
+  const skeletonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: skeletonOpacity.value,
+  }));
+
+  // Content to render (empty state or list) — always mounted so FlashList pre-initializes
+  const content = items.length === 0 && !showSkeletons ? (
+    <EmptyState
+      icon={<ShoppingEmptyIllustration size="medium" />}
+      title="Your list is empty"
+      description="Add items to start your shopping list"
+    />
+  ) : (
     <StaggeredEntryProvider>
       <StaggeredTabContent
         items={items}
@@ -107,6 +132,37 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
       />
     </StaggeredEntryProvider>
   );
+
+  return (
+    <View style={tabStyles.container}>
+      {/* Content layer — always at full opacity, renders behind skeleton */}
+      <View style={tabStyles.contentFill} pointerEvents={skeletonMounted ? 'none' : 'auto'}>
+        {content}
+      </View>
+
+      {/* Skeleton overlay — fades out, then unmounts */}
+      {!!skeletonMounted && (
+        <Animated.View
+          style={[tabStyles.absoluteFill, skeletonAnimatedStyle]}
+          pointerEvents="none"
+        >
+          <SkeletonList SkeletonComponent={ShoppingListItemSkeleton} />
+        </Animated.View>
+      )}
+    </View>
+  );
 };
+
+const tabStyles = StyleSheet.create({
+  container: { flex: 1 },
+  contentFill: { flex: 1 },
+  absoluteFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+});
 
 export const ShoppingTab = ShoppingTabComponent;

@@ -7,12 +7,13 @@ import { ShoppingListItemDetail } from '#screens/shoppingList/ItemDetail';
 import { PurchaseHistoryScreen } from '#screens/shoppingList/PurchaseHistoryScreen';
 
 export const ShoppingListStack = createNativeStackNavigator({
-  screenOptions: {
+  screenOptions: ({ theme }) => ({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 250,
     fullScreenGestureEnabled: true,
-  },
+    contentStyle: { backgroundColor: theme.colors.background },
+  }),
   screens: {
     ShoppingListMain: {
       screen: ShoppingListMain,
